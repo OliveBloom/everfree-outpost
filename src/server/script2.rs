@@ -1,4 +1,6 @@
+use std::marker::PhantomData;
 use std::mem;
+use std::ops::{Deref, DerefMut};
 use std::ptr;
 use libc::{c_char, c_int, c_uint, c_void};
 
@@ -39,30 +41,32 @@ static mut FFI_METHOD_DEFS: [PyMethodDef; 2] = [BLANK_METHOD_DEF; 2];
 pub fn ffi_module_preinit() {
     unsafe {
         assert!(!py::is_initialized());
-
-        FFI_MOD_DEF.m_name = MOD_NAME.as_ptr() as *const c_char;
-        FFI_MOD_DEF.m_methods = FFI_METHOD_DEFS.as_mut_ptr();
-
-        FFI_METHOD_DEFS[0] = PyMethodDef {
-            ml_name: "test_func\0".as_ptr() as *const c_char,
-            ml_meth: Some(unsafe { mem::transmute(test_func) }),
-            ml_flags: METH_NOARGS,
-            ml_doc: ptr::null(),
-        };
-
-        PyImport_AppendInittab(FFI_MOD_DEF.m_name, Some(ffi_module_init));
+        let x = PyImport_AppendInittab(MOD_NAME.as_ptr() as *const c_char,
+                               Some(ffi_module_init));
     }
 }
 
-extern "C" fn ffi_module_init() -> *mut PyObject {
-    let m = unsafe { py::module::create(&mut FFI_MOD_DEF) };
-    let rust_ref_type = build_rust_ref_type();
-    py::object::set_attr_str(m.borrow(), "RustRef", rust_ref_type.borrow());
-    m.unwrap()
+pub fn ffi_module_postinit() {
+    py::import(&MOD_NAME[.. MOD_NAME.len() - 1]);
 }
 
-fn get_ffi_module() -> PyBox {
-    py::module::find(unsafe { &mut FFI_MOD_DEF })
+static mut FFI_MODULE: *mut PyObject = 0 as *mut _;
+static mut RUST_REF_TYPE: *mut PyObject = 0 as *mut _;
+
+extern "C" fn ffi_module_init() -> *mut PyObject {
+    unsafe {
+        FFI_MOD_DEF.m_name = MOD_NAME.as_ptr() as *const c_char;
+        FFI_MOD_DEF.m_methods = FFI_METHOD_DEFS.as_mut_ptr();
+
+        let module = py::module::create(&mut FFI_MOD_DEF);
+
+        let rust_ref_type = build_rust_ref_type();
+        py::object::set_attr_str(module.borrow(), "RustRef", rust_ref_type.borrow());
+
+        FFI_MODULE = module.clone().unwrap();
+        RUST_REF_TYPE = rust_ref_type.clone().unwrap();
+        module.unwrap()
+    }
 }
 
 
@@ -81,18 +85,30 @@ static mut RUST_REF_SPEC: PyType_Spec = PyType_Spec {
     slots: 0 as *mut _,
 };
 
-static mut RUST_REF_SLOTS: [PyType_Slot; 1] = [BLANK_TYPE_SLOT; 1];
+static mut RUST_REF_SLOTS: [PyType_Slot; 2] = [BLANK_TYPE_SLOT; 2];
 
-static mut RUST_REF_METHODS: [PyMethodDef; 1] = [BLANK_METHOD_DEF; 1];
+static mut RUST_REF_METHODS: [PyMethodDef; 2] = [BLANK_METHOD_DEF; 2];
 
 fn build_rust_ref_type() -> PyBox {
     unsafe {
         RUST_REF_SPEC = PyType_Spec {
-            name: "RustRef\0".as_ptr() as *const c_char,
+            name: "_outpost_server.RustRef\0".as_ptr() as *const c_char,
             basicsize: mem::size_of::<RustRef>() as c_int,
             itemsize: 0,
-            flags: (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE) as c_uint,
+            flags: (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE) as c_uint,
             slots: RUST_REF_SLOTS.as_mut_ptr(),
+        };
+
+        RUST_REF_METHODS[0] = PyMethodDef {
+            ml_name: "test_method\0".as_ptr() as *const c_char,
+            ml_meth: Some(unsafe { mem::transmute(test_ref_method) }),
+            ml_flags: METH_NOARGS,
+            ml_doc: ptr::null(),
+        };
+
+        RUST_REF_SLOTS[0] = PyType_Slot {
+            slot: Py_tp_methods,
+            pfunc: RUST_REF_METHODS.as_mut_ptr() as *mut _,
         };
 
         py::type_::from_spec(&mut RUST_REF_SPEC)
@@ -100,8 +116,130 @@ fn build_rust_ref_type() -> PyBox {
 }
 
 
-unsafe extern "C" fn test_func(obj: *mut PyObject) -> *mut PyObject {
-    let m = get_ffi_module();
-    let ty = py::object::get_attr_str(m.borrow(), "RustRef");
-    py::type_::instantiate(ty.borrow()).unwrap()
+fn ffi_module() -> PyRef<'static> {
+    unsafe { PyRef::new(FFI_MODULE) }
 }
+
+fn rust_ref_type() -> PyRef<'static> {
+    unsafe { PyRef::new(RUST_REF_TYPE) }
+}
+
+
+unsafe fn build_rust_ref<T>(val: &T) -> PyBox {
+    let obj = py::type_::instantiate(rust_ref_type());
+    {
+        let rr = &mut *(obj.as_ptr() as *mut RustRef);
+        rr.ptr = val as *const _ as *mut c_void;
+        rr.valid = true;
+        rr.mutable = false;
+    }
+
+    obj
+}
+
+unsafe fn build_rust_ref_mut<T>(val: &mut T) -> PyBox {
+    let obj = py::type_::instantiate(rust_ref_type());
+    {
+        let rr = &mut *(obj.as_ptr() as *mut RustRef);
+        rr.ptr = val as *mut _ as *mut c_void;
+        rr.valid = true;
+        rr.mutable = true;
+    }
+
+    obj
+}
+
+/// `obj` must refer to a RustRef.
+unsafe fn invalidate_rust_ref(obj: PyRef) {
+    let rr = &mut *(obj.as_ptr() as *mut RustRef);
+    rr.valid = false;
+}
+
+/// The object must be a RustRef (checked) that refers to a value of type T (not checked).
+unsafe fn unpack_rust_ref<'a, T>(obj: PyRef<'a>) -> RustRefGuard<'a, T> {
+    assert!(py::object::is_instance(obj, rust_ref_type()));
+    let rr = &mut *(obj.as_ptr() as *mut RustRef);
+    assert!(rr.valid);
+    rr.valid = false;
+    RustRefGuard {
+        obj: rr,
+        _marker: PhantomData,
+    }
+}
+
+/// The object must be a RustRef (checked) that refers to a value of type T (not checked).
+unsafe fn unpack_rust_ref_mut<'a, T>(obj: PyRef<'a>) -> RustRefGuardMut<'a, T> {
+    assert!(py::object::is_instance(obj, rust_ref_type()));
+    let rr = &mut *(obj.as_ptr() as *mut RustRef);
+    assert!(rr.valid);
+    assert!(rr.mutable);
+    rr.valid = false;
+    RustRefGuardMut {
+        obj: rr,
+        _marker: PhantomData,
+    }
+}
+
+pub fn with_ref<T, F>(val: &T, f: F)
+        where F: FnOnce(PyRef) {
+    unsafe {
+        let obj = build_rust_ref(val);
+        f(obj.borrow());
+        invalidate_rust_ref(obj.borrow());
+    }
+}
+
+
+unsafe extern "C" fn test_ref_method(obj: *mut PyObject) -> *mut PyObject {
+    let guard = unpack_rust_ref::<::storage::Storage>(PyRef::new(obj));
+    let path = guard.script_dir();
+    py::unicode::from_str(path.to_str().unwrap()).unwrap()
+}
+
+
+
+struct RustRefGuard<'a, T: 'a> {
+    obj: &'a mut RustRef,
+    _marker: PhantomData<&'a mut T>,
+}
+
+impl<'a, T> Drop for RustRefGuard<'a, T> {
+    fn drop(&mut self) {
+        self.obj.valid = true;
+    }
+}
+
+impl<'a, T> Deref for RustRefGuard<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { & *(self.obj.ptr as *const T) }
+    }
+}
+
+
+struct RustRefGuardMut<'a, T: 'a> {
+    obj: &'a mut RustRef,
+    _marker: PhantomData<&'a mut T>,
+}
+
+impl<'a, T> Drop for RustRefGuardMut<'a, T> {
+    fn drop(&mut self) {
+        self.obj.valid = true;
+    }
+}
+
+impl<'a, T> Deref for RustRefGuardMut<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        unsafe { & *(self.obj.ptr as *const T) }
+    }
+}
+
+impl<'a, T> DerefMut for RustRefGuardMut<'a, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        unsafe { &mut *(self.obj.ptr as *mut T) }
+    }
+}
+

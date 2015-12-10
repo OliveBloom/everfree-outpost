@@ -119,12 +119,16 @@ fn main() {
         use std::path::Path;
         script2::ffi_module_preinit();
         py::initialize();
+        script2::ffi_module_postinit();
         //let ctx = script2::ScriptContext::new();
         //py::run_file(&storage.script_dir().join("boot.py"));
         py::run_file(&Path::new("scripts2/boot.py"));
-        let init_mod = py::import("outpost_server.core.init");
-        let init_func = py::object::get_attr_str(init_mod.borrow(), "init");
-        py::object::call(init_func.borrow(), py::tuple::pack0().borrow(), None);
+        script2::with_ref(&storage, |storage| {
+            let init_mod = py::import("outpost_server.core.init");
+            let init_func = py::object::get_attr_str(init_mod.borrow(), "init");
+            let args = py::tuple::pack1(storage.to_box());
+            py::object::call(init_func.borrow(), args.borrow(), None);
+        });
     }
 
     /*

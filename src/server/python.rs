@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
-use std::ptr;
 use core::nonzero::NonZero;
 
 use python3_sys::*;
@@ -128,6 +127,10 @@ pub mod object {
             };
             PyBox::new(PyObject_Call(callable.as_ptr(), args.as_ptr(), kw_ptr))
         }
+    }
+
+    pub fn is_instance(obj: PyRef, cls: PyRef) -> bool {
+        unsafe { PyObject_IsInstance(obj.as_ptr(), cls.as_ptr()) != 0 }
     }
 
 
@@ -285,7 +288,6 @@ pub mod module {
 }
 
 pub mod type_ {
-    use std::ffi::{CString, CStr};
     use python3_sys::*;
     use super::{PyBox, PyRef};
 
