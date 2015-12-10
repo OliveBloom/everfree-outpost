@@ -10,6 +10,7 @@
     fnbox,
     iter_cmp,
     mpsc_select,
+    nonzero,
     num_bits_bytes,
     raw,
     scoped,
@@ -35,6 +36,7 @@ extern crate linked_hash_map;
 extern crate lru_cache;
 extern crate rusqlite;
 extern crate libsqlite3_sys as rusqlite_ffi;
+extern crate python3_sys;
 
 extern crate physics as libphysics;
 extern crate terrain_gen as libterrain_gen;
@@ -47,6 +49,7 @@ use std::io::{self, Read};
 use rustc_serialize::json;
 
 
+/*
 #[macro_use] mod util;
 #[macro_use] mod engine;
 
@@ -68,6 +71,10 @@ mod terrain_gen;
 mod vision;
 mod logic;
 mod cache;
+*/
+
+mod python;
+mod script2;
 
 mod data {
     pub use libserver_config::data::*;
@@ -107,6 +114,20 @@ fn main() {
                                      animation_json,
                                      loot_table_json).unwrap();
 
+    {
+        use python as py;
+        use std::path::Path;
+        script2::ffi_module_preinit();
+        py::initialize();
+        //let ctx = script2::ScriptContext::new();
+        //py::run_file(&storage.script_dir().join("boot.py"));
+        py::run_file(&Path::new("scripts2/boot.py"));
+        let init_mod = py::import("outpost_server.core.init");
+        let init_func = py::object::get_attr_str(init_mod.borrow(), "init");
+        py::object::call(init_func.borrow(), py::tuple::pack0().borrow(), None);
+    }
+
+    /*
     let (req_send, req_recv) = channel();
     let (resp_send, resp_recv) = channel();
 
@@ -122,4 +143,5 @@ fn main() {
 
     let mut engine = engine::Engine::new(&data, &storage, req_recv, resp_send);
     engine.run();
+    */
 }
