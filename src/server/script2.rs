@@ -22,6 +22,8 @@ const BLANK_TYPE_SLOT: PyType_Slot = PyType_Slot {
 };
 
 
+// FFI builtin module
+
 const MOD_NAME: &'static str = "_outpost_server\0";
 
 static mut FFI_MOD_DEF: PyModuleDef = PyModuleDef {
@@ -51,7 +53,6 @@ pub fn ffi_module_postinit() {
 }
 
 static mut FFI_MODULE: *mut PyObject = 0 as *mut _;
-static mut RUST_REF_TYPE: *mut PyObject = 0 as *mut _;
 
 extern "C" fn ffi_module_init() -> *mut PyObject {
     unsafe {
@@ -69,6 +70,12 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
     }
 }
 
+fn ffi_module() -> PyRef<'static> {
+    unsafe { PyRef::new(FFI_MODULE) }
+}
+
+
+// RustRef and related functionality
 
 pub struct RustRef {
     base: PyObject,
@@ -76,126 +83,6 @@ pub struct RustRef {
     mutable: bool,
     valid: bool,
 }
-
-static mut RUST_REF_SPEC: PyType_Spec = PyType_Spec {
-    name: 0 as *const _,
-    basicsize: 0,
-    itemsize: 0,
-    flags: 0,
-    slots: 0 as *mut _,
-};
-
-static mut RUST_REF_SLOTS: [PyType_Slot; 2] = [BLANK_TYPE_SLOT; 2];
-
-static mut RUST_REF_METHODS: [PyMethodDef; 2] = [BLANK_METHOD_DEF; 2];
-
-fn build_rust_ref_type() -> PyBox {
-    unsafe {
-        RUST_REF_SPEC = PyType_Spec {
-            name: "_outpost_server.RustRef\0".as_ptr() as *const c_char,
-            basicsize: mem::size_of::<RustRef>() as c_int,
-            itemsize: 0,
-            flags: (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE) as c_uint,
-            slots: RUST_REF_SLOTS.as_mut_ptr(),
-        };
-
-        RUST_REF_METHODS[0] = PyMethodDef {
-            ml_name: "test_method\0".as_ptr() as *const c_char,
-            ml_meth: Some(unsafe { mem::transmute(test_ref_method) }),
-            ml_flags: METH_NOARGS,
-            ml_doc: ptr::null(),
-        };
-
-        RUST_REF_SLOTS[0] = PyType_Slot {
-            slot: Py_tp_methods,
-            pfunc: RUST_REF_METHODS.as_mut_ptr() as *mut _,
-        };
-
-        py::type_::from_spec(&mut RUST_REF_SPEC)
-    }
-}
-
-
-fn ffi_module() -> PyRef<'static> {
-    unsafe { PyRef::new(FFI_MODULE) }
-}
-
-fn rust_ref_type() -> PyRef<'static> {
-    unsafe { PyRef::new(RUST_REF_TYPE) }
-}
-
-
-unsafe fn build_rust_ref<T>(val: &T) -> PyBox {
-    let obj = py::type_::instantiate(rust_ref_type());
-    {
-        let rr = &mut *(obj.as_ptr() as *mut RustRef);
-        rr.ptr = val as *const _ as *mut c_void;
-        rr.valid = true;
-        rr.mutable = false;
-    }
-
-    obj
-}
-
-unsafe fn build_rust_ref_mut<T>(val: &mut T) -> PyBox {
-    let obj = py::type_::instantiate(rust_ref_type());
-    {
-        let rr = &mut *(obj.as_ptr() as *mut RustRef);
-        rr.ptr = val as *mut _ as *mut c_void;
-        rr.valid = true;
-        rr.mutable = true;
-    }
-
-    obj
-}
-
-/// `obj` must refer to a RustRef.
-unsafe fn invalidate_rust_ref(obj: PyRef) {
-    let rr = &mut *(obj.as_ptr() as *mut RustRef);
-    rr.valid = false;
-}
-
-/// The object must be a RustRef (checked) that refers to a value of type T (not checked).
-unsafe fn unpack_rust_ref<'a, T>(obj: PyRef<'a>) -> RustRefGuard<'a, T> {
-    assert!(py::object::is_instance(obj, rust_ref_type()));
-    let rr = &mut *(obj.as_ptr() as *mut RustRef);
-    assert!(rr.valid);
-    rr.valid = false;
-    RustRefGuard {
-        obj: rr,
-        _marker: PhantomData,
-    }
-}
-
-/// The object must be a RustRef (checked) that refers to a value of type T (not checked).
-unsafe fn unpack_rust_ref_mut<'a, T>(obj: PyRef<'a>) -> RustRefGuardMut<'a, T> {
-    assert!(py::object::is_instance(obj, rust_ref_type()));
-    let rr = &mut *(obj.as_ptr() as *mut RustRef);
-    assert!(rr.valid);
-    assert!(rr.mutable);
-    rr.valid = false;
-    RustRefGuardMut {
-        obj: rr,
-        _marker: PhantomData,
-    }
-}
-
-pub fn with_ref<T, F>(val: &T, f: F)
-        where F: FnOnce(PyRef) {
-    unsafe {
-        let obj = build_rust_ref(val);
-        f(obj.borrow());
-        invalidate_rust_ref(obj.borrow());
-    }
-}
-
-
-unsafe extern "C" fn test_ref_method(obj: *mut PyObject) -> *mut PyObject {
-    let guard = unpack_rust_ref::<::storage::Storage>(PyRef::new(obj));
-    let path = guard.script_dir();
-    py::unicode::from_str(path.to_str().unwrap()).unwrap()
-}
-
 
 
 struct RustRefGuard<'a, T: 'a> {
@@ -242,4 +129,135 @@ impl<'a, T> DerefMut for RustRefGuardMut<'a, T> {
         unsafe { &mut *(self.obj.ptr as *mut T) }
     }
 }
+
+
+/// The returned PyBox must be a Python type object whose representation is compatible with the
+/// `RustRef` struct.
+pub unsafe trait GetTypeObject {
+    fn get_type_object() -> PyBox;
+}
+
+
+unsafe fn build_rust_ref<T: GetTypeObject>(val: &T) -> PyBox {
+    let ty = T::get_type_object();
+    build_rust_ref_internal(val as *const _ as *mut c_void, ty, false)
+}
+
+unsafe fn build_rust_ref_mut<T: GetTypeObject>(val: &mut T) -> PyBox {
+    let ty = T::get_type_object();
+    build_rust_ref_internal(val as *mut _ as *mut c_void, ty, true)
+}
+
+unsafe fn build_rust_ref_internal(val: *mut c_void, ty: PyBox, mutable: bool) -> PyBox {
+    let obj = py::type_::instantiate(ty.borrow());
+    {
+        let rr = &mut *(obj.as_ptr() as *mut RustRef);
+        rr.ptr = val;
+        rr.valid = true;
+        rr.mutable = mutable;
+    }
+    obj
+}
+
+/// `obj` must refer to a RustRef.
+unsafe fn invalidate_rust_ref(obj: PyRef) {
+    let rr = &mut *(obj.as_ptr() as *mut RustRef);
+    rr.valid = false;
+}
+
+/// The object must be a RustRef (checked) that refers to a value of type T (not checked).
+unsafe fn unpack_rust_ref<'a, T: GetTypeObject>(obj: PyRef<'a>) -> RustRefGuard<'a, T> {
+    let ty = T::get_type_object();
+    assert!(py::object::is_instance(obj, ty.borrow()));
+    let rr = &mut *(obj.as_ptr() as *mut RustRef);
+    assert!(rr.valid);
+    rr.valid = false;
+    RustRefGuard {
+        obj: rr,
+        _marker: PhantomData,
+    }
+}
+
+/// The object must be a RustRef (checked) that refers to a value of type T (not checked).
+unsafe fn unpack_rust_ref_mut<'a, T: GetTypeObject>(obj: PyRef<'a>) -> RustRefGuardMut<'a, T> {
+    let ty = T::get_type_object();
+    assert!(py::object::is_instance(obj, ty.borrow()));
+    let rr = &mut *(obj.as_ptr() as *mut RustRef);
+    assert!(rr.valid);
+    assert!(rr.mutable);
+    rr.valid = false;
+    RustRefGuardMut {
+        obj: rr,
+        _marker: PhantomData,
+    }
+}
+
+pub fn with_ref<T, F>(val: &T, f: F)
+        where T: GetTypeObject, F: FnOnce(PyRef) {
+    unsafe {
+        let obj = build_rust_ref(val);
+        f(obj.borrow());
+        invalidate_rust_ref(obj.borrow());
+    }
+}
+
+
+// Storage ref definition
+
+static mut RUST_REF_TYPE: *mut PyObject = 0 as *mut _;
+
+static mut RUST_REF_SPEC: PyType_Spec = PyType_Spec {
+    name: 0 as *const _,
+    basicsize: 0,
+    itemsize: 0,
+    flags: 0,
+    slots: 0 as *mut _,
+};
+
+static mut RUST_REF_SLOTS: [PyType_Slot; 2] = [BLANK_TYPE_SLOT; 2];
+
+static mut RUST_REF_METHODS: [PyMethodDef; 2] = [BLANK_METHOD_DEF; 2];
+
+fn build_rust_ref_type() -> PyBox {
+    unsafe {
+        RUST_REF_SPEC = PyType_Spec {
+            name: "_outpost_server.RustRef\0".as_ptr() as *const c_char,
+            basicsize: mem::size_of::<RustRef>() as c_int,
+            itemsize: 0,
+            flags: (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE) as c_uint,
+            slots: RUST_REF_SLOTS.as_mut_ptr(),
+        };
+
+        RUST_REF_METHODS[0] = PyMethodDef {
+            ml_name: "test_method\0".as_ptr() as *const c_char,
+            ml_meth: Some(unsafe { mem::transmute(test_ref_method) }),
+            ml_flags: METH_NOARGS,
+            ml_doc: ptr::null(),
+        };
+
+        RUST_REF_SLOTS[0] = PyType_Slot {
+            slot: Py_tp_methods,
+            pfunc: RUST_REF_METHODS.as_mut_ptr() as *mut _,
+        };
+
+        py::type_::from_spec(&mut RUST_REF_SPEC)
+    }
+}
+
+fn rust_ref_type() -> PyRef<'static> {
+    unsafe { PyRef::new(RUST_REF_TYPE) }
+}
+
+unsafe impl GetTypeObject for ::storage::Storage {
+    fn get_type_object() -> PyBox {
+        rust_ref_type().to_box()
+    }
+}
+
+unsafe extern "C" fn test_ref_method(obj: *mut PyObject) -> *mut PyObject {
+    let guard = unpack_rust_ref::<::storage::Storage>(PyRef::new(obj));
+    let path = guard.script_dir();
+    py::unicode::from_str(path.to_str().unwrap()).unwrap()
+}
+
 
