@@ -1,16 +1,15 @@
 use core::prelude::*;
 use core::ptr;
 
-use physics::v3::{V3, V2, scalar, Region, RegionPoints};
+use physics::v3::{V3, V2, Vn, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
+use physics::Shape;
 use ATLAS_SIZE;
+use LOCAL_SIZE;
 
 use IntrusiveCorner;
 use {emit_quad, remaining_quads};
 use types::{BlockData, LocalChunks};
-
-
-const LOCAL_SIZE: i32 = 8;
 
 
 /// Vertex attributes for terrain.
@@ -96,3 +95,13 @@ impl<'a> GeomGen<'a> {
         true
     }
 }
+
+
+pub fn floodfill_terrain(center: V3,
+                         radius: u8,
+                         block_data: &[BlockData],
+                         local_chunks: &LocalChunks,
+                         grid: &mut [u8],
+                         queue: &mut [(u8, u8)]) {
+}
+

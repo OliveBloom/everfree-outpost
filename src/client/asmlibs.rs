@@ -191,6 +191,20 @@ pub extern fn find_ceiling(layers: &[ShapeLayers; 1 << (2 * LOCAL_BITS)],
     z
 }
 
+#[export_name = "floodfill_ceiling"]
+pub unsafe extern fn floodfill_ceiling(layers: &[ShapeLayers; 1 << (2 * LOCAL_BITS)],
+                                       pos: &V3,
+                                       radius: u8,
+                                       grid_ptr: *mut u8,
+                                       grid_byte_len: usize,
+                                       queue_ptr: *mut (u8, u8),
+                                       queue_byte_len: usize) {
+    let grid = make_slice_mut(grid_ptr, grid_byte_len);
+    let queue = make_slice_mut(queue_ptr, queue_byte_len);
+    let chunk = AsmJsShapeSource { layers: layers };
+    physics::floodfill_ceiling(*pos >> TILE_BITS, radius, &chunk, grid, queue);
+}
+
 
 // Graphics
 
@@ -236,6 +250,29 @@ pub unsafe extern fn terrain_geom_generate(geom: &mut terrain::GeomGen,
 
     result.vertex_count = idx;
     result.more = more as u8;
+}
+
+#[export_name = "terrain_floodfill"]
+pub unsafe extern fn terrain_floodfill(center_x: i32,
+                                       center_y: i32,
+                                       center_z: i32,
+                                       radius: u8,
+                                       block_data_ptr: *const gfx_types::BlockData,
+                                       block_data_byte_len: usize,
+                                       local_chunks: &'static gfx_types::LocalChunks,
+                                       grid_ptr: *mut u8,
+                                       grid_byte_len: usize,
+                                       queue_ptr: *mut (u8, u8),
+                                       queue_byte_len: usize) {
+    let block_data = make_slice(block_data_ptr, block_data_byte_len);
+    let grid = make_slice_mut(grid_ptr, grid_byte_len);
+    let queue = make_slice_mut(queue_ptr, queue_byte_len);
+    terrain::floodfill_terrain(V3::new(center_x, center_y, center_z),
+                               radius,
+                               block_data,
+                               local_chunks,
+                               grid,
+                               queue);
 }
 
 

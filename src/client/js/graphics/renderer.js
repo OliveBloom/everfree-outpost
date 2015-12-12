@@ -14,6 +14,7 @@ var Buffer = require('graphics/glutil').Buffer;
 var Framebuffer = require('graphics/glutil').Framebuffer;
 var makeShaders = require('graphics/shaders').makeShaders;
 var BufferCache = require('graphics/buffers').BufferCache;
+var CavernMap = require('graphics/cavernmap').CavernMap;
 
 var GlObject = require('graphics/glutil').GlObject;
 var uniform = require('graphics/glutil').uniform;
@@ -95,6 +96,8 @@ function Renderer(gl) {
             more = result.more;
         }
     });
+
+    this.cavern_map = new CavernMap(gl, 32);
 }
 exports.Renderer = Renderer;
 
@@ -219,6 +222,7 @@ Renderer.prototype.loadBlockData = function(blocks) {
         out16(  6, block.bottom);
 
         out8(   8, block.light_color, 3);
+        out8(  11, block.shape);
         out16( 12, block.light_radius);
     }
 };
@@ -227,6 +231,7 @@ Renderer.prototype.loadChunk = function(i, j, chunk) {
     this._asm.chunkView(j, i).set(chunk._tiles);
 
     this.terrain_buf.invalidate(j, i);
+    this.cavern_map.invalidate();
 };
 
 Renderer.prototype.loadTemplateData = function(templates) {
@@ -317,6 +322,7 @@ Renderer.prototype._invalidateStructure = function(x, y, z, template) {
     if (template.flags & 4) {   // HAS_LIGHT
         this.light_buf.invalidate(cx, cy);
     }
+    this.cavern_map.invalidate();
 };
 
 
@@ -329,6 +335,7 @@ Renderer.prototype.render = function(s, draw_extra) {
     var size = s.camera_size;
     var slice_radius = [s.slice_frac * Math.max(size[0], size[1]) / 2.0];
     var slice_z = [s.slice_z];
+    var slice_center = s.slice_center;
 
     var anim_now_val = s.now / 1000 % ANIM_MODULUS;
     if (anim_now_val < 0) {
@@ -338,7 +345,7 @@ Renderer.prototype.render = function(s, draw_extra) {
 
     this.terrain.setUniformValue('cameraPos', pos);
     this.terrain.setUniformValue('cameraSize', size);
-    this.terrain.setUniformValue('sliceRadius', slice_radius);
+    this.terrain.setUniformValue('sliceCenter', slice_center);
     this.terrain.setUniformValue('sliceZ', slice_z);
     this.structure.setUniformValue('cameraPos', pos);
     this.structure.setUniformValue('cameraSize', size);
@@ -404,7 +411,9 @@ Renderer.prototype.render = function(s, draw_extra) {
 
         var buf = this_.terrain_buf.getBuffer();
         var len = this_.terrain_buf.getSize();
-        this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {});
+        this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {
+            'cavernTex': this_.cavern_map.getTexture(),
+        });
 
         var buf = this_.structure_buf.getBuffer();
         var len = this_.structure_buf.getSize();
@@ -436,7 +445,8 @@ Renderer.prototype.render = function(s, draw_extra) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE);
     // clearColor sets the ambient light color+intensity
-    var amb = s.ambient_color;
+    //var amb = s.ambient_color;
+    var amb = [255, 255, 255];
     var amb_intensity = 0.2126 * amb[0] + 0.7152 * amb[1] + 0.0722 * amb[2];
     gl.clearColor(amb[0] / 255, amb[1] / 255, amb[2] / 255, amb_intensity / 255);
 
