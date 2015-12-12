@@ -1,5 +1,10 @@
 precision mediump float;
 
+const float TILE_SIZE = 32.0;
+const float CAVERN_MAP_RADIUS = 32.0;
+const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
+const float CAVERN_CUTOFF = 1.5 / 255.0;
+
 #extension GL_EXT_draw_buffers : enable
 
 #ifdef GL_EXT_draw_buffers
@@ -7,12 +12,6 @@ precision mediump float;
 #else
 # define emit(idx, val)   if (idx == OUTPUT_IDX) gl_FragData[0] = (val)
 #endif
-
-const float TILE_SIZE = 32.0;
-const float CAVERN_MAP_RADIUS = 32.0;
-const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
-const float CAVERN_STEP = 1.0 / CAVERN_MAP_SIZE;
-const float CAVERN_SLICED = 3.0 / 255.0;
 
 uniform sampler2D atlasTex;
 uniform sampler2D cavernTex;
@@ -36,7 +35,7 @@ void main(void) {
 
         vec2 cavernTexCoord = cavernPos / CAVERN_MAP_SIZE + 0.5;
         float centerVal = texture2D(cavernTex, cavernTexCoord).r;
-        if (centerVal >= 1.5 / 255.0) {
+        if (centerVal >= CAVERN_CUTOFF) {
             discard;
         }
     }

@@ -349,12 +349,12 @@ Renderer.prototype.render = function(s, draw_extra) {
     this.terrain.setUniformValue('sliceZ', slice_z);
     this.structure.setUniformValue('cameraPos', pos);
     this.structure.setUniformValue('cameraSize', size);
-    this.structure.setUniformValue('sliceRadius', slice_radius);
+    this.structure.setUniformValue('sliceCenter', slice_center);
     this.structure.setUniformValue('sliceZ', slice_z);
     this.structure.setUniformValue('now', anim_now);
     this.structure_shadow.setUniformValue('cameraPos', pos);
     this.structure_shadow.setUniformValue('cameraSize', size);
-    this.structure_shadow.setUniformValue('sliceRadius', slice_radius);
+    this.structure_shadow.setUniformValue('sliceCenter', slice_center);
     this.structure_shadow.setUniformValue('sliceZ', slice_z);
     this.structure_shadow.setUniformValue('now', anim_now);
     this.light_static.setUniformValue('cameraPos', pos);
@@ -417,7 +417,9 @@ Renderer.prototype.render = function(s, draw_extra) {
 
         var buf = this_.structure_buf.getBuffer();
         var len = this_.structure_buf.getSize();
-        this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {});
+        this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+            'cavernTex': this_.cavern_map.getTexture(),
+        });
 
         for (var i = 0; i < s.sprites.length; ++i) {
             var sprite = s.sprites[i];
@@ -434,7 +436,9 @@ Renderer.prototype.render = function(s, draw_extra) {
 
         var buf = this_.structure_buf.getBuffer();
         var len = this_.structure_buf.getSize();
-        this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {});
+        this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+            'cavernTex': this_.cavern_map.getTexture(),
+        });
     });
 
     gl.disable(gl.DEPTH_TEST);

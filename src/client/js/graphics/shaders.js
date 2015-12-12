@@ -88,7 +88,7 @@ function makeShaders(shaders, gl, assets, make_texture) {
     var structure_uniforms = new Uniforms()
         .vec2('cameraPos')
         .vec2('cameraSize')
-        .float_('sliceRadius')
+        .vec2('sliceCenter')
         .float_('sliceZ')
         .float_('now');
 
@@ -103,7 +103,8 @@ function makeShaders(shaders, gl, assets, make_texture) {
             .field(18, gl.UNSIGNED_SHORT, 1, 'animStep');
 
     var structure_textures = new Textures()
-        .texture('sheetTex', ctx.makeAssetTexture('structures0'));
+        .texture('sheetTex', ctx.makeAssetTexture('structures0'))
+        .texture('cavernTex', null);
 
     shaders.structure = ctx.start('structure2.vert', 'structure2.frag', 2)
         .uniforms(structure_uniforms)
