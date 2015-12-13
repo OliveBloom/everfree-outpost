@@ -9,16 +9,25 @@ use python::{PyBox, PyRef};
 use python3_sys::*;
 
 
-const BLANK_METHOD_DEF: PyMethodDef = PyMethodDef {
-    ml_name: 0 as *const _,
-    ml_meth: None,
-    ml_flags: 0,
-    ml_doc: 0 as *const _,
+
+const BLANK_TYPE_SPEC: PyType_Spec = PyType_Spec {
+    name: 0 as *const _,
+    basicsize: 0,
+    itemsize: 0,
+    flags: 0,
+    slots: 0 as *mut _,
 };
 
 const BLANK_TYPE_SLOT: PyType_Slot = PyType_Slot {
     slot: 0,
     pfunc: 0 as *mut _,
+};
+
+const BLANK_METHOD_DEF: PyMethodDef = PyMethodDef {
+    ml_name: 0 as *const _,
+    ml_meth: None,
+    ml_flags: 0,
+    ml_doc: 0 as *const _,
 };
 
 
@@ -61,11 +70,9 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
 
         let module = py::module::create(&mut FFI_MOD_DEF);
 
-        let rust_ref_type = build_rust_ref_type();
-        py::object::set_attr_str(module.borrow(), "RustRef", rust_ref_type.borrow());
+        rust_ref_init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
-        RUST_REF_TYPE = rust_ref_type.clone().unwrap();
         module.unwrap()
     }
 }
@@ -202,62 +209,237 @@ pub fn with_ref<T, F>(val: &T, f: F)
 }
 
 
+
+trait Unpack<'a> {
+    fn unpack(obj: PyRef<'a>) -> Self;
+}
+
+impl<'a> Unpack<'a> for () {
+    fn unpack(obj: PyRef<'a>) -> () {
+        assert!(py::tuple::check(obj));
+        assert!(py::tuple::size(obj) == 0);
+    }
+}
+
+impl<'a, A> Unpack<'a> for (A,)
+        where A: Unpack<'a> {
+    fn unpack(obj: PyRef<'a>) -> (A,) {
+        assert!(py::tuple::check(obj));
+        assert!(py::tuple::size(obj) == 1);
+        (Unpack::unpack(py::tuple::get_item(obj, 0)),
+        )
+    }
+}
+
+impl<'a, A, B> Unpack<'a> for (A, B)
+        where A: Unpack<'a>,
+              B: Unpack<'a> {
+    fn unpack(obj: PyRef<'a>) -> (A, B) {
+        assert!(py::tuple::check(obj));
+        assert!(py::tuple::size(obj) == 2);
+        (Unpack::unpack(py::tuple::get_item(obj, 0)),
+         Unpack::unpack(py::tuple::get_item(obj, 1)),
+        )
+    }
+}
+
+impl<'a, A, B, C> Unpack<'a> for (A, B, C)
+        where A: Unpack<'a>,
+              B: Unpack<'a>,
+              C: Unpack<'a> {
+    fn unpack(obj: PyRef<'a>) -> (A, B, C) {
+        assert!(py::tuple::check(obj));
+        assert!(py::tuple::size(obj) == 3);
+        (Unpack::unpack(py::tuple::get_item(obj, 0)),
+         Unpack::unpack(py::tuple::get_item(obj, 1)),
+         Unpack::unpack(py::tuple::get_item(obj, 2)),
+        )
+    }
+}
+
+
+trait Pack {
+    fn pack(self) -> PyBox;
+}
+
+impl Pack for () {
+    fn pack(self) -> PyBox {
+        py::tuple::pack0()
+    }
+}
+
+impl<A> Pack for (A,)
+        where A: Pack {
+    fn pack(self) -> PyBox {
+        let (a,) = self;
+        py::tuple::pack1(
+            Pack::pack(a),
+        )
+    }
+}
+
+impl<A, B> Pack for (A, B)
+        where A: Pack,
+              B: Pack {
+    fn pack(self) -> PyBox {
+        let (a, b) = self;
+        py::tuple::pack2(
+            Pack::pack(a),
+            Pack::pack(b),
+        )
+    }
+}
+
+impl<A, B, C> Pack for (A, B, C)
+        where A: Pack,
+              B: Pack,
+              C: Pack {
+    fn pack(self) -> PyBox {
+        let (a, b, c) = self;
+        py::tuple::pack3(
+            Pack::pack(a),
+            Pack::pack(b),
+            Pack::pack(c),
+        )
+    }
+}
+
+impl Pack for PyBox {
+    fn pack(self) -> PyBox {
+        self
+    }
+}
+
+
 // Storage ref definition
 
-static mut RUST_REF_TYPE: *mut PyObject = 0 as *mut _;
+macro_rules! one {
+    ( $any:tt ) => { 1 };
+}
 
-static mut RUST_REF_SPEC: PyType_Spec = PyType_Spec {
-    name: 0 as *const _,
-    basicsize: 0,
-    itemsize: 0,
-    flags: 0,
-    slots: 0 as *mut _,
-};
+macro_rules! define_rust_ref_func2 {
+    ( $ty:ty, $fname:ident, ( &$this:ident $(, $aname:ident : $aty:ty )* ), $ret_ty:ty, $body:block ) => {
+        unsafe extern "C" fn $fname(slf: *mut PyObject,
+                                    args: *mut PyObject) -> *mut PyObject {
+            let slf = PyRef::new(slf);
+            let args = PyRef::new(args);
+            let guard = unpack_rust_ref::<$ty>(slf);
 
-static mut RUST_REF_SLOTS: [PyType_Slot; 2] = [BLANK_TYPE_SLOT; 2];
+            fn $fname($this: &$ty, ($($aname,)*) : ($($aty,)*)) -> $ret_ty {
+                $body
+            }
 
-static mut RUST_REF_METHODS: [PyMethodDef; 2] = [BLANK_METHOD_DEF; 2];
+            let result = $fname(&*guard, Unpack::unpack(args));
+            Pack::pack(result).unwrap()
+        }
+    };
 
-fn build_rust_ref_type() -> PyBox {
-    unsafe {
-        RUST_REF_SPEC = PyType_Spec {
-            name: "_outpost_server.RustRef\0".as_ptr() as *const c_char,
-            basicsize: mem::size_of::<RustRef>() as c_int,
-            itemsize: 0,
-            flags: (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE) as c_uint,
-            slots: RUST_REF_SLOTS.as_mut_ptr(),
-        };
+    ( $ty:ty, $fname:ident, ( &mut $this:ident $(, $aname:ident : $aty:ty )* ), $ret_ty:ty, $body:block ) => {
+        unsafe extern "C" fn $fname(slf: *mut PyObject,
+                                    args: *mut PyObject) -> *mut PyObject {
+            let slf = PyRef::new(slf);
+            let args = PyRef::new(args);
+            let mut guard = unpack_rust_ref_mut::<$ty>(slf);
 
-        RUST_REF_METHODS[0] = PyMethodDef {
-            ml_name: "test_method\0".as_ptr() as *const c_char,
-            ml_meth: Some(unsafe { mem::transmute(test_ref_method) }),
-            ml_flags: METH_NOARGS,
-            ml_doc: ptr::null(),
-        };
+            fn $fname($this: &mut $ty, ($($aname,)*) : ($($aty,)*)) -> $ret_ty {
+                $body
+            }
 
-        RUST_REF_SLOTS[0] = PyType_Slot {
-            slot: Py_tp_methods,
-            pfunc: RUST_REF_METHODS.as_mut_ptr() as *mut _,
-        };
+            let result = $fname(&mut *guard, Unpack::unpack(args));
+            Pack::pack(result).unwrap()
+        }
+    };
+}
 
-        py::type_::from_spec(&mut RUST_REF_SPEC)
+macro_rules! define_rust_ref_func {
+    ( $ty:ty, $fname:ident, $args:tt, $ret_ty:ty, $body:block ) => {
+        define_rust_ref_func2!($ty, $fname, $args, $ret_ty, $body)
+    };
+    ( $ty:ty, $fname:ident, $args:tt, , $body:expr ) => {
+        define_rust_ref_func2!($ty, $fname, $args, (), $body)
+    };
+}
+
+macro_rules! define_rust_ref {
+    (
+        class $name:ident : $ty:ty {
+            initializer $init_name:ident;
+            accessor $acc_name:ident;
+            $(
+                fn $fname:ident $args:tt $( -> $ret_ty:ty )* { $( $body:tt )* }
+            )*
+        }
+    ) => {
+        static mut TYPE_OBJ: *mut PyObject = 0 as *mut _;
+
+        fn $init_name(module: PyRef) {
+            unsafe {
+                assert!(py::is_initialized());
+
+                const NUM_METHODS: usize = 0 $( + one!($fname) )*;
+                static mut TYPE_SPEC: PyType_Spec = BLANK_TYPE_SPEC;
+                static mut TYPE_SLOTS: [PyType_Slot; 2] = [BLANK_TYPE_SLOT; 2];
+                static mut METHODS: [PyMethodDef; 1 + NUM_METHODS] =
+                        [BLANK_METHOD_DEF; 1 + NUM_METHODS];
+
+                TYPE_SPEC = PyType_Spec {
+                    name: concat!("_outpost_server.", stringify!($name), "\0")
+                            .as_ptr() as *const c_char,
+                    basicsize: mem::size_of::<RustRef>() as c_int,
+                    itemsize: 0,
+                    flags: Py_TPFLAGS_DEFAULT as c_uint,
+                    slots: TYPE_SLOTS.as_mut_ptr(),
+                };
+
+                TYPE_SLOTS[0] = PyType_Slot {
+                    slot: Py_tp_methods,
+                    pfunc: METHODS.as_mut_ptr() as *mut _,
+                };
+
+                let mut i = 0;
+                $(
+                    define_rust_ref_func!($ty, $fname, $args, $( $ret_ty )*, { $( $body )* });
+
+                    METHODS[i] = PyMethodDef {
+                        ml_name: concat!(stringify!($fname), "\0")
+                                .as_ptr() as *const c_char,
+                        ml_meth: Some(mem::transmute($fname)),
+                        ml_flags: METH_VARARGS,
+                        ml_doc: ptr::null(),
+                    };
+                    i += 1;
+                )*
+
+                let type_obj = py::type_::from_spec(&mut TYPE_SPEC);
+                py::object::set_attr_str(module, stringify!($name), type_obj.borrow());
+                TYPE_OBJ = type_obj.unwrap();
+            }
+        }
+
+        fn $acc_name() -> PyRef<'static> {
+            unsafe {
+                PyRef::new(TYPE_OBJ)
+            }
+        }
+
+        unsafe impl GetTypeObject for $ty {
+            fn get_type_object() -> PyBox {
+                $acc_name().to_box()
+            }
+        }
+    };
+}
+
+define_rust_ref! {
+    class RustRef : ::storage::Storage {
+        initializer rust_ref_init;
+        accessor rust_ref_type;
+
+        fn test_method(&this) -> PyBox {
+            py::unicode::from_str(this.script_dir().to_str().unwrap())
+        }
+
     }
-}
-
-fn rust_ref_type() -> PyRef<'static> {
-    unsafe { PyRef::new(RUST_REF_TYPE) }
-}
-
-unsafe impl GetTypeObject for ::storage::Storage {
-    fn get_type_object() -> PyBox {
-        rust_ref_type().to_box()
-    }
-}
-
-unsafe extern "C" fn test_ref_method(obj: *mut PyObject) -> *mut PyObject {
-    let guard = unpack_rust_ref::<::storage::Storage>(PyRef::new(obj));
-    let path = guard.script_dir();
-    py::unicode::from_str(path.to_str().unwrap()).unwrap()
 }
 
 

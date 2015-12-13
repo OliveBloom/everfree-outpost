@@ -227,6 +227,18 @@ pub mod tuple {
         unsafe { PyBox::new(PyTuple_New(len as Py_ssize_t)) }
     }
 
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyTuple_Check(obj.as_ptr()) != 0 }
+    }
+
+    pub fn size(t: PyRef) -> usize {
+        unsafe { PyTuple_Size(t.as_ptr()) as usize }
+    }
+
+    pub fn get_item<'a>(t: PyRef<'a>, pos: usize) -> PyRef<'a> {
+        unsafe { PyRef::new(PyTuple_GetItem(t.as_ptr(), pos as Py_ssize_t)) }
+    }
+
     pub unsafe fn set_item(t: PyRef, pos: usize, val: PyBox) {
         let ret = PyTuple_SetItem(t.as_ptr(), pos as Py_ssize_t, val.unwrap());
         assert!(ret == 0);
