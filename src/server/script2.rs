@@ -538,6 +538,19 @@ define_rust_ref! {
         fn recipe_station(&this, id: RecipeId) -> Option<Option<TemplateId>> {
             this.recipes.get_recipe(id).map(|r| r.station)
         }
+
+
+        fn template_count(&this) -> usize {
+            this.structure_templates.len()
+        }
+
+        fn template_by_name(&this, name: String) -> Option<TemplateId> {
+            this.structure_templates.find_id(&name)
+        }
+
+        fn template_name(&this, id: TemplateId) -> Option<PyBox> {
+            this.structure_templates.get_template(id).map(|t| Pack::pack(&t.name as &str))
+        }
     }
 }
 

@@ -382,6 +382,10 @@ impl StructureTemplates {
         })
     }
 
+    pub fn len(&self) -> usize {
+        self.templates.len()
+    }
+
     pub fn template(&self, id: TemplateId) -> &StructureTemplate {
         self.get_template(id).unwrap()
     }
