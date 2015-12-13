@@ -70,7 +70,7 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
 
         let module = py::module::create(&mut FFI_MOD_DEF);
 
-        rust_ref_init(module.borrow());
+        storage_ref_init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
         module.unwrap()
@@ -214,6 +214,18 @@ trait Unpack<'a> {
     fn unpack(obj: PyRef<'a>) -> Self;
 }
 
+impl<'a> Unpack<'a> for PyRef<'a> {
+    fn unpack(obj: PyRef<'a>) -> PyRef<'a> {
+        obj
+    }
+}
+
+impl<'a> Unpack<'a> for PyBox {
+    fn unpack(obj: PyRef<'a>) -> PyBox {
+        obj.to_box()
+    }
+}
+
 impl<'a> Unpack<'a> for () {
     fn unpack(obj: PyRef<'a>) -> () {
         assert!(py::tuple::check(obj));
@@ -262,6 +274,18 @@ trait Pack {
     fn pack(self) -> PyBox;
 }
 
+impl Pack for PyBox {
+    fn pack(self) -> PyBox {
+        self
+    }
+}
+
+impl<'a> Pack for PyRef<'a> {
+    fn pack(self) -> PyBox {
+        self.to_box()
+    }
+}
+
 impl Pack for () {
     fn pack(self) -> PyBox {
         py::tuple::pack0()
@@ -301,12 +325,6 @@ impl<A, B, C> Pack for (A, B, C)
             Pack::pack(b),
             Pack::pack(c),
         )
-    }
-}
-
-impl Pack for PyBox {
-    fn pack(self) -> PyBox {
-        self
     }
 }
 
@@ -431,14 +449,13 @@ macro_rules! define_rust_ref {
 }
 
 define_rust_ref! {
-    class RustRef : ::storage::Storage {
-        initializer rust_ref_init;
-        accessor rust_ref_type;
+    class StorageRef: ::storage::Storage {
+        initializer storage_ref_init;
+        accessor storage_ref_type;
 
-        fn test_method(&this) -> PyBox {
+        fn script_dir(&this) -> PyBox {
             py::unicode::from_str(this.script_dir().to_str().unwrap())
         }
-
     }
 }
 

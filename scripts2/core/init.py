@@ -3,23 +3,12 @@ def init(*args):
 
     r, = args
     print(r)
-    print(r.test_method)
+    print(r.script_dir)
     for i in range(2):
-        print(r.test_method())
-    print(r.test_method)
+        print(r.script_dir())
+    print(r.script_dir)
     print(r)
     import _outpost_server
     print(_outpost_server)
-    print(_outpost_server.RustRef)
-    return
-
-    import _outpost_server
-    print(_outpost_server)
-    print(_outpost_server.RustRef)
-    for i in range(100):
-        x = _outpost_server.test_func()
-
-    print(_outpost_server.test_func)
-    print(_outpost_server.RustRef)
-    print(_outpost_server.test_func())
+    print(_outpost_server.StorageRef)
     return
