@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Deref, DerefMut};
@@ -54,7 +56,7 @@ static mut FFI_METHOD_DEFS: [PyMethodDef; 2] = [BLANK_METHOD_DEF; 2];
 pub fn ffi_module_preinit() {
     unsafe {
         assert!(!py::is_initialized());
-        let x = PyImport_AppendInittab(MOD_NAME.as_ptr() as *const c_char,
+        PyImport_AppendInittab(MOD_NAME.as_ptr() as *const c_char,
                                Some(ffi_module_init));
     }
 }
@@ -261,6 +263,26 @@ impl<A: Pack> Pack for Option<A> {
     }
 }
 
+impl<'a> Pack for &'a str {
+    fn pack(self) -> PyBox {
+        py::unicode::from_str(self)
+    }
+}
+
+impl<'a, K, V> Pack for &'a HashMap<K, V>
+        where K: Clone + Pack + Eq + Hash,
+              V: Clone + Pack {
+    fn pack(self) -> PyBox {
+        let dct = py::dict::new();
+        for (k, v) in self {
+            let k = Pack::pack(k.clone());
+            let v = Pack::pack(v.clone());
+            py::dict::set_item(dct.borrow(), k.borrow(), v.borrow());
+        }
+        dct
+    }
+}
+
 
 macro_rules! tuple_impls {
     ($count:expr, $pack:ident: ($($A:ident $idx:expr),*)) => {
@@ -275,6 +297,7 @@ macro_rules! tuple_impls {
         }
 
         impl<$($A: Pack,)*> Pack for ($($A,)*) {
+            #[allow(non_snake_case)]
             fn pack(self) -> PyBox {
                 let ($($A,)*) = self;
                 py::tuple::$pack(
@@ -325,8 +348,17 @@ macro_rules! int_impls {
     };
 }
 
+int_impls!(u8, unsigned);
 int_impls!(u16, unsigned);
+int_impls!(u32, unsigned);
+int_impls!(u64, unsigned);
+int_impls!(usize, unsigned);
+
+int_impls!(i8, signed);
 int_impls!(i16, signed);
+int_impls!(i32, signed);
+int_impls!(i64, signed);
+int_impls!(isize, signed);
 
 
 
@@ -392,6 +424,7 @@ macro_rules! define_rust_ref {
     ) => {
         static mut $type_obj: *mut PyObject = 0 as *mut _;
 
+        #[allow(unused_assignments)]
         fn $init_name(module: PyRef) {
             unsafe {
                 assert!(py::is_initialized());
@@ -468,12 +501,42 @@ define_rust_ref! {
         initializer data_ref_init;
         accessor data_ref_type;
 
+
+        fn item_count(&this) -> usize {
+            this.item_data.len()
+        }
+
         fn item_by_name(&this, name: String) -> Option<ItemId> {
             this.item_data.find_id(&name)
         }
 
         fn item_name(&this, id: ItemId) -> Option<PyBox> {
-            this.item_data.get_name(id).map(|s| py::unicode::from_str(s))
+            this.item_data.get_name(id).map(|s| Pack::pack(s))
+        }
+
+
+        fn recipe_count(&this) -> usize {
+            this.recipes.len()
+        }
+
+        fn recipe_by_name(&this, name: String) -> Option<RecipeId> {
+            this.recipes.find_id(&name)
+        }
+
+        fn recipe_name(&this, id: RecipeId) -> Option<PyBox> {
+            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.name as &str))
+        }
+
+        fn recipe_inputs(&this, id: RecipeId) -> Option<PyBox> {
+            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.inputs))
+        }
+
+        fn recipe_outputs(&this, id: RecipeId) -> Option<PyBox> {
+            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.outputs))
+        }
+
+        fn recipe_station(&this, id: RecipeId) -> Option<Option<TemplateId>> {
+            this.recipes.get_recipe(id).map(|r| r.station)
         }
     }
 }

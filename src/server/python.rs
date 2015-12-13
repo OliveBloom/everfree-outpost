@@ -258,6 +258,13 @@ pub mod dict {
     pub fn set_item_str(dct: PyRef, key: &str, val: PyRef) {
         set_item_cstr(dct, &CString::new(key).unwrap(), val)
     }
+
+    pub fn set_item(dct: PyRef, key: PyRef, val: PyRef) {
+        unsafe {
+            let ret = PyDict_SetItem(dct.as_ptr(), key.as_ptr(), val.as_ptr());
+            assert!(ret == 0);
+        }
+    }
 }
 
 pub mod tuple {

@@ -196,6 +196,10 @@ impl ItemData {
         })
     }
 
+    pub fn len(&self) -> usize {
+        self.names.len()
+    }
+
     pub fn name(&self, id: ItemId) -> &str {
         &*self.names[id as usize]
     }
@@ -281,6 +285,10 @@ impl RecipeData {
             recipes: recipes,
             name_to_id: name_to_id,
         })
+    }
+
+    pub fn len(&self) -> usize {
+        self.recipes.len()
     }
 
     pub fn recipe(&self, id: RecipeId) -> &Recipe {
