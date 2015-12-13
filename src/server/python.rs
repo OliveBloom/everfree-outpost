@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
+use std::slice;
+use std::str;
 use core::nonzero::NonZero;
 
 use python3_sys::*;
@@ -158,8 +160,11 @@ pub mod object {
 }
 
 pub mod unicode {
+    use std::ptr;
+    use std::slice;
+    use std::str;
     use python3_sys::*;
-    use super::PyBox;
+    use super::{PyBox, PyRef};
 
     pub fn from_str(s: &str) -> PyBox {
         assert!(s.len() as u64 <= PY_SSIZE_T_MAX as u64);
@@ -168,6 +173,43 @@ pub mod unicode {
                                                       s.len() as Py_ssize_t);
             PyBox::new(ptr)
         }
+    }
+
+    pub fn encode_utf8(obj: PyRef) -> PyBox {
+        unsafe { PyBox::new(PyUnicode_AsUTF8String(obj.as_ptr())) }
+    }
+
+    pub fn as_string(obj: PyRef) -> String {
+        let bytes = encode_utf8(obj);
+        unsafe {
+            let mut ptr = ptr::null_mut();
+            let mut len = 0;
+            let ret = PyBytes_AsStringAndSize(bytes.as_ptr(), &mut ptr, &mut len);
+            assert!(ret == 0);
+            let bytes = slice::from_raw_parts(ptr as *const u8, len as usize);
+            str::from_utf8_unchecked(bytes).to_owned()
+        }
+    }
+}
+
+pub mod int {
+    use python3_sys::*;
+    use super::{PyBox, PyRef};
+
+    pub fn from_u64(val: u64) -> PyBox {
+        unsafe { PyBox::new(PyLong_FromUnsignedLongLong(val)) }
+    }
+
+    pub fn from_i64(val: i64) -> PyBox {
+        unsafe { PyBox::new(PyLong_FromLongLong(val)) }
+    }
+
+    pub fn as_u64(obj: PyRef) -> u64 {
+        unsafe { PyLong_AsUnsignedLongLong(obj.as_ptr()) }
+    }
+
+    pub fn as_i64(obj: PyRef) -> i64 {
+        unsafe { PyLong_AsLongLong(obj.as_ptr()) }
     }
 }
 

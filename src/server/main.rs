@@ -57,7 +57,9 @@ mod msg;
 mod wire;
 mod tasks;
 mod timer;
+*/
 mod types;
+/*
 mod input;
 mod lua;
 mod script;
@@ -124,10 +126,12 @@ fn main() {
         //py::run_file(&storage.script_dir().join("boot.py"));
         py::run_file(&Path::new("scripts2/boot.py"));
         script2::with_ref(&storage, |storage| {
-            let init_mod = py::import("outpost_server.core.init");
-            let init_func = py::object::get_attr_str(init_mod.borrow(), "init");
-            let args = py::tuple::pack1(storage.to_box());
-            py::object::call(init_func.borrow(), args.borrow(), None);
+            script2::with_ref(&data, |data| {
+                let init_mod = py::import("outpost_server.core.init");
+                let init_func = py::object::get_attr_str(init_mod.borrow(), "init");
+                let args = py::tuple::pack2(storage.to_box(), data.to_box());
+                py::object::call(init_func.borrow(), args.borrow(), None);
+            });
         });
     }
 

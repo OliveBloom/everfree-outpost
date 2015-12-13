@@ -4,6 +4,8 @@ use std::ops::{Deref, DerefMut};
 use std::ptr;
 use libc::{c_char, c_int, c_uint, c_void};
 
+use types::*;
+
 use python as py;
 use python::{PyBox, PyRef};
 use python3_sys::*;
@@ -71,6 +73,7 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
         let module = py::module::create(&mut FFI_MOD_DEF);
 
         storage_ref_init(module.borrow());
+        data_ref_init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
         module.unwrap()
@@ -226,46 +229,9 @@ impl<'a> Unpack<'a> for PyBox {
     }
 }
 
-impl<'a> Unpack<'a> for () {
-    fn unpack(obj: PyRef<'a>) -> () {
-        assert!(py::tuple::check(obj));
-        assert!(py::tuple::size(obj) == 0);
-    }
-}
-
-impl<'a, A> Unpack<'a> for (A,)
-        where A: Unpack<'a> {
-    fn unpack(obj: PyRef<'a>) -> (A,) {
-        assert!(py::tuple::check(obj));
-        assert!(py::tuple::size(obj) == 1);
-        (Unpack::unpack(py::tuple::get_item(obj, 0)),
-        )
-    }
-}
-
-impl<'a, A, B> Unpack<'a> for (A, B)
-        where A: Unpack<'a>,
-              B: Unpack<'a> {
-    fn unpack(obj: PyRef<'a>) -> (A, B) {
-        assert!(py::tuple::check(obj));
-        assert!(py::tuple::size(obj) == 2);
-        (Unpack::unpack(py::tuple::get_item(obj, 0)),
-         Unpack::unpack(py::tuple::get_item(obj, 1)),
-        )
-    }
-}
-
-impl<'a, A, B, C> Unpack<'a> for (A, B, C)
-        where A: Unpack<'a>,
-              B: Unpack<'a>,
-              C: Unpack<'a> {
-    fn unpack(obj: PyRef<'a>) -> (A, B, C) {
-        assert!(py::tuple::check(obj));
-        assert!(py::tuple::size(obj) == 3);
-        (Unpack::unpack(py::tuple::get_item(obj, 0)),
-         Unpack::unpack(py::tuple::get_item(obj, 1)),
-         Unpack::unpack(py::tuple::get_item(obj, 2)),
-        )
+impl<'a> Unpack<'a> for String {
+    fn unpack(obj: PyRef<'a>) -> String {
+        py::unicode::as_string(obj)
     }
 }
 
@@ -286,47 +252,82 @@ impl<'a> Pack for PyRef<'a> {
     }
 }
 
-impl Pack for () {
+impl<A: Pack> Pack for Option<A> {
     fn pack(self) -> PyBox {
-        py::tuple::pack0()
+        match self {
+            Some(a) => Pack::pack(a),
+            None => py::none().to_box(),
+        }
     }
 }
 
-impl<A> Pack for (A,)
-        where A: Pack {
-    fn pack(self) -> PyBox {
-        let (a,) = self;
-        py::tuple::pack1(
-            Pack::pack(a),
-        )
-    }
+
+macro_rules! tuple_impls {
+    ($count:expr, $pack:ident: ($($A:ident $idx:expr),*)) => {
+        impl<'a, $($A: Unpack<'a>,)*> Unpack<'a> for ($($A,)*) {
+            fn unpack(obj: PyRef<'a>) -> ($($A,)*) {
+                assert!(py::tuple::check(obj));
+                assert!(py::tuple::size(obj) == $count);
+                (
+                    $( Unpack::unpack(py::tuple::get_item(obj, $idx)), )*
+                )
+            }
+        }
+
+        impl<$($A: Pack,)*> Pack for ($($A,)*) {
+            fn pack(self) -> PyBox {
+                let ($($A,)*) = self;
+                py::tuple::$pack(
+                    $(Pack::pack($A),)*
+                )
+            }
+        }
+    };
 }
 
-impl<A, B> Pack for (A, B)
-        where A: Pack,
-              B: Pack {
-    fn pack(self) -> PyBox {
-        let (a, b) = self;
-        py::tuple::pack2(
-            Pack::pack(a),
-            Pack::pack(b),
-        )
-    }
+tuple_impls!(0, pack0: ());
+tuple_impls!(1, pack1: (A 0));
+tuple_impls!(2, pack2: (A 0, B 1));
+tuple_impls!(3, pack3: (A 0, B 1, C 2));
+
+macro_rules! int_impls {
+    ($ty:ident, unsigned) => {
+        impl<'a> Unpack<'a> for $ty {
+            fn unpack(obj: PyRef<'a>) -> $ty {
+                let raw = py::int::as_u64(obj);
+                assert!(raw <= ::std::$ty::MAX as u64);
+                raw as $ty
+            }
+        }
+
+        impl Pack for $ty {
+            fn pack(self) -> PyBox {
+                py::int::from_u64(self as u64)
+            }
+        }
+    };
+
+    ($ty:ident, signed) => {
+        impl<'a> Unpack<'a> for $ty {
+            fn unpack(obj: PyRef<'a>) -> $ty {
+                let raw = py::int::as_i64(obj);
+                assert!(raw >= ::std::$ty::MIN as i64);
+                assert!(raw <= ::std::$ty::MAX as i64);
+                raw as $ty
+            }
+        }
+
+        impl Pack for $ty {
+            fn pack(self) -> PyBox {
+                py::int::from_i64(self as i64)
+            }
+        }
+    };
 }
 
-impl<A, B, C> Pack for (A, B, C)
-        where A: Pack,
-              B: Pack,
-              C: Pack {
-    fn pack(self) -> PyBox {
-        let (a, b, c) = self;
-        py::tuple::pack3(
-            Pack::pack(a),
-            Pack::pack(b),
-            Pack::pack(c),
-        )
-    }
-}
+int_impls!(u16, unsigned);
+int_impls!(i16, signed);
+
 
 
 // Storage ref definition
@@ -381,6 +382,7 @@ macro_rules! define_rust_ref_func {
 macro_rules! define_rust_ref {
     (
         class $name:ident : $ty:ty {
+            type_obj $type_obj:ident;
             initializer $init_name:ident;
             accessor $acc_name:ident;
             $(
@@ -388,7 +390,7 @@ macro_rules! define_rust_ref {
             )*
         }
     ) => {
-        static mut TYPE_OBJ: *mut PyObject = 0 as *mut _;
+        static mut $type_obj: *mut PyObject = 0 as *mut _;
 
         fn $init_name(module: PyRef) {
             unsafe {
@@ -430,13 +432,13 @@ macro_rules! define_rust_ref {
 
                 let type_obj = py::type_::from_spec(&mut TYPE_SPEC);
                 py::object::set_attr_str(module, stringify!($name), type_obj.borrow());
-                TYPE_OBJ = type_obj.unwrap();
+                $type_obj = type_obj.unwrap();
             }
         }
 
         fn $acc_name() -> PyRef<'static> {
             unsafe {
-                PyRef::new(TYPE_OBJ)
+                PyRef::new($type_obj)
             }
         }
 
@@ -450,6 +452,7 @@ macro_rules! define_rust_ref {
 
 define_rust_ref! {
     class StorageRef: ::storage::Storage {
+        type_obj STORAGE_REF_TYPE;
         initializer storage_ref_init;
         accessor storage_ref_type;
 
@@ -459,4 +462,19 @@ define_rust_ref! {
     }
 }
 
+define_rust_ref! {
+    class DataRef: ::data::Data {
+        type_obj DATA_REF_TYPE;
+        initializer data_ref_init;
+        accessor data_ref_type;
+
+        fn item_by_name(&this, name: String) -> Option<ItemId> {
+            this.item_data.find_id(&name)
+        }
+
+        fn item_name(&this, id: ItemId) -> Option<PyBox> {
+            this.item_data.get_name(id).map(|s| py::unicode::from_str(s))
+        }
+    }
+}
 
