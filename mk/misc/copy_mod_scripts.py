@@ -15,6 +15,8 @@ def build_parser():
             help='directory to contain the copied files')
     args.add_argument('--stamp',
             help='path to the stamp file')
+    args.add_argument('--ext',
+            help='file extension for standalone scripts')
 
     return args
 
@@ -24,8 +26,8 @@ def main(args):
     os.makedirs(ns.output_dir, exist_ok=True)
 
     # The mod can provide either `foo/scripts/` or `foo/scripts.lua`.
-    file_in = ns.input_dir + '.lua'
-    file_out = os.path.join(ns.output_dir, ns.mod_name + '.lua')
+    file_in = ns.input_dir + '.' + ns.ext
+    file_out = os.path.join(ns.output_dir, ns.mod_name + '.' + ns.ext)
 
     dir_in = ns.input_dir
     dir_out = os.path.join(ns.output_dir, ns.mod_name)

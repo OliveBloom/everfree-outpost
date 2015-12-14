@@ -373,6 +373,7 @@ class Checker(object):
                     'rusqlite',
                     'linked_hash_map',
                     'lru_cache',
+                    'python3_sys',
                     )
             for missing_lib in self.detect_rust_libraries(libs):
                 errs.append('Cannot find Rust library %s' % missing_lib)
