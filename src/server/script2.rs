@@ -632,7 +632,7 @@ macro_rules! engine_ref_func {
             let er = &mut *(slf.as_ptr() as *mut EngineRef);
             let ref_flags = er.flags;
             let target_flags = <$aty1 as PartFlags>::flags();
-            assert!(ref_flags & target_flags == ref_flags);
+            assert!(ref_flags & target_flags == target_flags);
 
             fn $fname($aname1: $aty1, ($($aname,)*): ($($aty,)*)) -> $ret_ty {
                 $body

@@ -107,6 +107,7 @@ class TemplateProxy(object):
 def startup(eng):
     sys.stderr.write('hello %s\n' % eng)
     sys.stderr.write('hello %s\n' % DATA.recipe('anvil'))
+    sys.stderr.write('hello %s\n' % eng.now())
     sys.stderr.flush()
 
 def init(storage, data, hooks):
