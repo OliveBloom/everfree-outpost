@@ -10,7 +10,7 @@ use types::*;
 
 use data::Data;
 use engine::Engine;
-use engine::split::{Part, PartFlags};
+use engine::split::{self, Part, PartFlags};
 use storage::Storage;
 use python as py;
 use python::{PyBox, PyRef};
@@ -80,6 +80,7 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
 
         storage_ref_init(module.borrow());
         data_ref_init(module.borrow());
+        hooks_ref_init(module.borrow());
         engine_ref_init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
@@ -218,9 +219,18 @@ pub fn with_ref<T, F>(val: &T, f: F)
     }
 }
 
+pub fn with_ref_mut<T, F>(val: &mut T, f: F)
+        where T: GetTypeObject, F: FnOnce(PyRef) {
+    unsafe {
+        let obj = build_rust_ref_mut(val);
+        f(obj.borrow());
+        invalidate_rust_ref(obj.borrow());
+    }
+}
 
 
-trait Unpack<'a> {
+
+pub trait Unpack<'a> {
     fn unpack(obj: PyRef<'a>) -> Self;
 }
 
@@ -243,7 +253,7 @@ impl<'a> Unpack<'a> for String {
 }
 
 
-trait Pack {
+pub trait Pack {
     fn pack(self) -> PyBox;
 }
 
@@ -408,11 +418,11 @@ macro_rules! rust_ref_func {
 }
 
 macro_rules! define_func {
+    ( $mac:ident, $fname:ident, $args:tt, , $body:block ) => {
+        $mac!($fname, $args, (), $body)
+    };
     ( $mac:ident, $fname:ident, $args:tt, $ret_ty:ty, $body:block ) => {
         $mac!($fname, $args, $ret_ty, $body)
-    };
-    ( $mac:ident, $fname:ident, $args:tt, , $body:expr ) => {
-        $mac!($fname, $args, (), $body)
     };
 }
 
@@ -577,6 +587,30 @@ unsafe impl GetTypeObject for Data {
 }
 
 
+macro_rules! hooks_ref_func {
+    ( $($all:tt)* ) => ( rust_ref_func!(ScriptHooks, $($all)*) );
+}
+
+define_python_class! {
+    class HooksRef: RustRef {
+        type_obj HOOKS_REF_TYPE;
+        initializer hooks_ref_init;
+        accessor hooks_ref_type;
+        method_macro hooks_ref_func!;
+
+        fn set_startup(&mut this, f: PyBox) {
+            this.set_startup(f);
+        }
+    }
+}
+
+unsafe impl GetTypeObject for ScriptHooks {
+    fn get_type_object() -> PyBox {
+        hooks_ref_type().to_box()
+    }
+}
+
+
 struct EngineRef {
     base: PyObject,
     ptr: *mut Engine<'static>,
@@ -648,5 +682,41 @@ fn with_engine_ref<E, F>(mut e: E, f: F)
     }
 }
 
+pub fn call<A: Pack, R: for <'a> Unpack<'a>>(f: PyRef, args: A) -> R {
+    let args = Pack::pack(args);
+    let result = py::object::call(f, args.borrow(), None);
+    Unpack::unpack(result.borrow())
+}
+
+pub fn call_void<A: Pack>(f: PyRef, args: A) {
+    let args = Pack::pack(args);
+    py::object::call(f, args.borrow(), None);
+}
+
 engine_part_typedef!(OnlyWorld(world));
 engine_part_typedef!(EmptyPart());
+
+
+pub struct ScriptHooks {
+    startup: Option<PyBox>,
+}
+
+impl ScriptHooks {
+    pub fn new() -> ScriptHooks {
+        ScriptHooks {
+            startup: None,
+        }
+    }
+
+    pub fn set_startup(&mut self, func: PyBox) {
+        self.startup = Some(func);
+    }
+
+    pub fn call_startup(&self, eng: split::EngineRef) {
+        if let Some(ref func) = self.startup {
+            with_engine_ref(eng, |eng| {
+                call_void(func.borrow(), (eng,));
+            });
+        }
+    }
+}

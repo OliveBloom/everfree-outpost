@@ -49,6 +49,8 @@ pub fn start_up(mut eng: EngineRef) {
         let stable_pid = eng.as_hidden_world_fragment().create_plane(name).unwrap().stable_id();
         assert!(stable_pid == STABLE_PLANE_FOREST);
     }
+
+    eng.script_hooks().call_startup(eng.borrow())
 }
 
 

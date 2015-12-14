@@ -1,4 +1,6 @@
+import sys
 
+DATA = None
 _DATA = None
 
 class DataProxy(object):
@@ -102,16 +104,18 @@ class TemplateProxy(object):
         return _DATA.recipe_name(self._id)
 
 
-def init(storage, data):
-    global _DATA
+def startup(eng):
+    sys.stderr.write('hello %s\n' % eng)
+    sys.stderr.write('hello %s\n' % DATA.recipe('anvil'))
+    sys.stderr.flush()
+
+def init(storage, data, hooks):
+    global _DATA, DATA
     _DATA = data
+    DATA = DataProxy()
 
     ItemProxy.INSTANCES = [None] * data.item_count()
     RecipeProxy.INSTANCES = [None] * data.recipe_count()
     TemplateProxy.INSTANCES = [None] * data.template_count()
 
-    d = DataProxy()
-    print(d.item('anvil'))
-    print(d.recipe('axe'))
-    print(d.recipe('axe').inputs)
-    print(d.recipe('axe').station)
+    hooks.set_startup(startup)

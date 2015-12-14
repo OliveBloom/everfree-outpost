@@ -17,6 +17,7 @@ use messages::{ControlResponse, WireResponse, ClientResponse};
 use msg::{Request, Response};
 use physics::Physics;
 use script::ScriptEngine;
+use script2::ScriptHooks;
 use storage::Storage;
 use terrain_gen::{TerrainGen, TerrainGenEvent};
 use terrain_gen::Fragment as TerrainGen_Fragment;
@@ -34,6 +35,7 @@ pub mod glue;
 pub struct Engine<'d> {
     pub data: &'d Data,
     pub storage: &'d Storage,
+    pub script_hooks: &'d ScriptHooks,
     pub now: Time,
 
     pub world: World<'d>,
@@ -60,12 +62,14 @@ enum HandlerResult {
 
 impl<'d> Engine<'d> {
     pub fn new(data: &'d Data,
-           storage: &'d Storage,
-           receiver: Receiver<(WireId, Request)>,
-           sender: Sender<(WireId, Response)>) -> Engine<'d> {
+               storage: &'d Storage,
+               script_hooks: &'d ScriptHooks,
+               receiver: Receiver<(WireId, Request)>,
+               sender: Sender<(WireId, Response)>) -> Engine<'d> {
         Engine {
             data: data,
             storage: storage,
+            script_hooks: script_hooks,
             now: TIME_MIN,
 
             world: World::new(data),

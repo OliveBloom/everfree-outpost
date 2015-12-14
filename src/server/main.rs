@@ -46,6 +46,7 @@ extern crate server_types as libserver_types;
 
 use std::fs::File;
 use std::io::{self, Read};
+use std::path::Path;
 use rustc_serialize::json;
 
 
@@ -96,6 +97,7 @@ fn main() {
 
     env_logger::init().unwrap();
 
+    // Initialize engine environment.
     let args = env::args().collect::<Vec<_>>();
     let storage = storage::Storage::new(&args[1]);
 
@@ -112,26 +114,13 @@ fn main() {
                                      animation_json,
                                      loot_table_json).unwrap();
 
-    {
-        use python as py;
-        use std::path::Path;
-        script2::ffi_module_preinit();
-        py::initialize();
-        script2::ffi_module_postinit();
-        //let ctx = script2::ScriptContext::new();
-        //py::run_file(&storage.script_dir().join("boot.py"));
-        py::run_file(&Path::new("scripts2/boot.py"));
-        script2::with_ref(&storage, |storage| {
-            script2::with_ref(&data, |data| {
-                let init_mod = py::import("outpost_server.core.init");
-                let init_func = py::object::get_attr_str(init_mod.borrow(), "init");
-                let args = py::tuple::pack2(storage.to_box(), data.to_box());
-                py::object::call(init_func.borrow(), args.borrow(), None);
-            });
-        });
-    }
+    script2::ffi_module_preinit();
+    python::initialize();
+    script2::ffi_module_postinit();
+    python::run_file(&Path::new("scripts2/boot.py"));
 
-    /*
+
+    // Start background threads.
     let (req_send, req_recv) = channel();
     let (resp_send, resp_recv) = channel();
 
@@ -145,7 +134,25 @@ fn main() {
         tasks::run_output(writer, resp_recv).unwrap();
     });
 
-    let mut engine = engine::Engine::new(&data, &storage, req_recv, resp_send);
-    engine.run();
-    */
+
+    // Run the engine.  The engine runs inside the two `with_ref`s so that the data and storage
+    // refs will be valid for the lifetime of the server.
+    script2::with_ref(&storage, |storage_ref| {
+        script2::with_ref(&data, |data_ref| {
+            let mut script_hooks = script2::ScriptHooks::new();
+            script2::with_ref_mut(&mut script_hooks, |hooks_ref| {
+                let init_mod = python::import("outpost_server.core.init");
+                let init_func = python::object::get_attr_str(init_mod.borrow(), "init");
+                script2::call_void(init_func.borrow(), (storage_ref, data_ref, hooks_ref));
+            });
+            let script_hooks = script_hooks;
+
+            let mut engine = engine::Engine::new(&data,
+                                                 &storage,
+                                                 &script_hooks,
+                                                 req_recv,
+                                                 resp_send);
+            engine.run();
+        });
+    });
 }
