@@ -49,7 +49,6 @@ use std::io::{self, Read};
 use rustc_serialize::json;
 
 
-/*
 #[macro_use] mod util;
 #[macro_use] mod engine;
 
@@ -57,9 +56,7 @@ mod msg;
 mod wire;
 mod tasks;
 mod timer;
-*/
 mod types;
-/*
 mod input;
 mod lua;
 mod script;
@@ -73,7 +70,6 @@ mod terrain_gen;
 mod vision;
 mod logic;
 mod cache;
-*/
 
 mod python;
 mod script2;

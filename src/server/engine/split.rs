@@ -33,6 +33,10 @@ macro_rules! EnginePart_decl {
                 }
             }
 
+            pub fn as_ptr(&self) -> *mut Engine<'d> {
+                self.ptr
+            }
+
             pub fn borrow<'b>(&'b mut self) -> EnginePart<'b, 'd, $($tv),*> {
                 unsafe { EnginePart::from_raw(self.ptr) }
             }
@@ -133,6 +137,7 @@ macro_rules! EnginePart_decl {
             fn from_part(part: Self::P) -> Self;
             fn to_part(self) -> Self::P;
             unsafe fn from_ptr(ptr: *mut Engine) -> Self;
+            fn as_ptr(&self) -> *mut Engine<'static>;
         }
     };
 }
@@ -334,6 +339,12 @@ macro_rules! engine_part_typedef_impls {
 
             unsafe fn from_ptr(ptr: *mut $crate::engine::Engine) -> $name<'a, 'd> {
                 ::std::mem::transmute(ptr)
+            }
+
+            fn as_ptr(&self) -> *mut $crate::engine::Engine<'static> {
+                // Shouldn't need a transmute here, but apparently you can't directly cast between
+                // *mut T<'a> and *mut T<'b>...
+                unsafe { ::std::mem::transmute(self.0.as_ptr()) }
             }
         }
 

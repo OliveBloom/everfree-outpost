@@ -8,6 +8,10 @@ use libc::{c_char, c_int, c_uint, c_void};
 
 use types::*;
 
+use data::Data;
+use engine::Engine;
+use engine::split::{Part, PartFlags};
+use storage::Storage;
 use python as py;
 use python::{PyBox, PyRef};
 use python3_sys::*;
@@ -76,6 +80,7 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
 
         storage_ref_init(module.borrow());
         data_ref_init(module.borrow());
+        engine_ref_init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
         module.unwrap()
@@ -368,7 +373,7 @@ macro_rules! one {
     ( $any:tt ) => { 1 };
 }
 
-macro_rules! define_rust_ref_func2 {
+macro_rules! rust_ref_func {
     ( $ty:ty, $fname:ident, ( &$this:ident $(, $aname:ident : $aty:ty )* ), $ret_ty:ty, $body:block ) => {
         unsafe extern "C" fn $fname(slf: *mut PyObject,
                                     args: *mut PyObject) -> *mut PyObject {
@@ -402,21 +407,22 @@ macro_rules! define_rust_ref_func2 {
     };
 }
 
-macro_rules! define_rust_ref_func {
-    ( $ty:ty, $fname:ident, $args:tt, $ret_ty:ty, $body:block ) => {
-        define_rust_ref_func2!($ty, $fname, $args, $ret_ty, $body)
+macro_rules! define_func {
+    ( $mac:ident, $fname:ident, $args:tt, $ret_ty:ty, $body:block ) => {
+        $mac!($fname, $args, $ret_ty, $body)
     };
-    ( $ty:ty, $fname:ident, $args:tt, , $body:expr ) => {
-        define_rust_ref_func2!($ty, $fname, $args, (), $body)
+    ( $mac:ident, $fname:ident, $args:tt, , $body:expr ) => {
+        $mac!($fname, $args, (), $body)
     };
 }
 
-macro_rules! define_rust_ref {
+macro_rules! define_python_class {
     (
         class $name:ident : $ty:ty {
             type_obj $type_obj:ident;
             initializer $init_name:ident;
             accessor $acc_name:ident;
+            method_macro $define_func:ident !;
             $(
                 fn $fname:ident $args:tt $( -> $ret_ty:ty )* { $( $body:tt )* }
             )*
@@ -438,7 +444,7 @@ macro_rules! define_rust_ref {
                 TYPE_SPEC = PyType_Spec {
                     name: concat!("_outpost_server.", stringify!($name), "\0")
                             .as_ptr() as *const c_char,
-                    basicsize: mem::size_of::<RustRef>() as c_int,
+                    basicsize: mem::size_of::<$ty>() as c_int,
                     itemsize: 0,
                     flags: Py_TPFLAGS_DEFAULT as c_uint,
                     slots: TYPE_SLOTS.as_mut_ptr(),
@@ -451,7 +457,7 @@ macro_rules! define_rust_ref {
 
                 let mut i = 0;
                 $(
-                    define_rust_ref_func!($ty, $fname, $args, $( $ret_ty )*, { $( $body )* });
+                    define_func!($define_func, $fname, $args, $( $ret_ty )*, { $( $body )* });
 
                     METHODS[i] = PyMethodDef {
                         ml_name: concat!(stringify!($fname), "\0")
@@ -474,20 +480,19 @@ macro_rules! define_rust_ref {
                 PyRef::new($type_obj)
             }
         }
-
-        unsafe impl GetTypeObject for $ty {
-            fn get_type_object() -> PyBox {
-                $acc_name().to_box()
-            }
-        }
     };
 }
 
-define_rust_ref! {
-    class StorageRef: ::storage::Storage {
+macro_rules! storage_ref_func {
+    ( $($all:tt)* ) => ( rust_ref_func!(Storage, $($all)*) );
+}
+
+define_python_class! {
+    class StorageRef: RustRef {
         type_obj STORAGE_REF_TYPE;
         initializer storage_ref_init;
         accessor storage_ref_type;
+        method_macro storage_ref_func!;
 
         fn script_dir(&this) -> PyBox {
             py::unicode::from_str(this.script_dir().to_str().unwrap())
@@ -495,12 +500,23 @@ define_rust_ref! {
     }
 }
 
-define_rust_ref! {
-    class DataRef: ::data::Data {
+unsafe impl GetTypeObject for Storage {
+    fn get_type_object() -> PyBox {
+        storage_ref_type().to_box()
+    }
+}
+
+
+macro_rules! data_ref_func {
+    ( $($all:tt)* ) => ( rust_ref_func!(Data, $($all)*) );
+}
+
+define_python_class! {
+    class DataRef: RustRef {
         type_obj DATA_REF_TYPE;
         initializer data_ref_init;
         accessor data_ref_type;
-
+        method_macro data_ref_func!;
 
         fn item_count(&this) -> usize {
             this.item_data.len()
@@ -554,3 +570,83 @@ define_rust_ref! {
     }
 }
 
+unsafe impl GetTypeObject for Data {
+    fn get_type_object() -> PyBox {
+        data_ref_type().to_box()
+    }
+}
+
+
+struct EngineRef {
+    base: PyObject,
+    ptr: *mut Engine<'static>,
+    flags: usize,
+}
+
+macro_rules! engine_ref_func {
+    ( $fname:ident,
+      ( $aname1:ident : $aty1:path, $( $aname:ident : $aty:ty ),* ),
+      $ret_ty:ty,
+      $body:block ) => {
+
+        unsafe extern "C" fn $fname(slf: *mut PyObject,
+                                    args: *mut PyObject) -> *mut PyObject {
+            let slf = PyRef::new(slf);
+            let args = PyRef::new(args);
+            assert!(py::object::is_instance(slf, engine_ref_type()));
+
+            let er = &mut *(slf.as_ptr() as *mut EngineRef);
+            let ref_flags = er.flags;
+            let target_flags = <$aty1 as PartFlags>::flags();
+            assert!(ref_flags & target_flags == ref_flags);
+
+            fn $fname($aname1: $aty1, ($($aname,)*): ($($aty,)*)) -> $ret_ty {
+                $body
+            }
+
+            er.flags = 0;
+            let result = {
+                let target = <$aty1 as Part>::from_ptr(er.ptr);
+                $fname(target, Unpack::unpack(args))
+            };
+            er.flags = ref_flags;
+            Pack::pack(result).unwrap()
+        }
+
+    };
+}
+
+define_python_class! {
+    class EngineRef: EngineRef {
+        type_obj ENGINE_REF_TYPE;
+        initializer engine_ref_init;
+        accessor engine_ref_type;
+        method_macro engine_ref_func!;
+
+        fn now(eng: EmptyPart,) -> Time {
+            eng.now()
+        }
+    }
+}
+
+fn with_engine_ref<E, F>(mut e: E, f: F)
+        where E: Part + PartFlags, F: FnOnce(PyRef) {
+    unsafe {
+        let obj = py::type_::instantiate(engine_ref_type());
+        {
+            let er = &mut *(obj.as_ptr() as *mut EngineRef);
+            er.ptr = e.as_ptr();
+            er.flags = <E as PartFlags>::flags();
+        }
+
+        f(obj.borrow());
+
+        {
+            let er = &mut *(obj.as_ptr() as *mut EngineRef);
+            er.flags = 0;
+        }
+    }
+}
+
+engine_part_typedef!(OnlyWorld(world));
+engine_part_typedef!(EmptyPart());
