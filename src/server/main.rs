@@ -117,7 +117,7 @@ fn main() {
     script2::ffi_module_preinit();
     python::initialize();
     script2::ffi_module_postinit();
-    python::run_file(&Path::new("scripts2/boot.py"));
+    python::run_file(&storage.script2_dir().join("boot.py"));
 
 
     // Start background threads.

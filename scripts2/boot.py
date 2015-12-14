@@ -14,4 +14,6 @@ class FakePackage(object):
         self.__package__ = name
         self.__path__ = [path]
 
-sys.modules['outpost_server'] = FakePackage('outpost_server', os.path.abspath('scripts2'))
+if __name__ == '__main__':
+    script_dir = os.path.dirname(__file__)
+    sys.modules['outpost_server'] = FakePackage('outpost_server', script_dir)
