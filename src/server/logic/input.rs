@@ -42,8 +42,7 @@ pub fn unsubscribe_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId
 }
 
 
-
-pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
+        /*
     // TODO: move this into a script
     if &*msg == "/count" {
         let count = eng.messages().clients_len();
@@ -53,6 +52,11 @@ pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
         eng.messages_mut().send_client(cid, ClientResponse::ChatUpdate(msg_out));
     } else if msg.starts_with("/") {
         warn_on_err!(script::ScriptEngine::cb_chat_command(eng.unwrap(), cid, &*msg));
+        */
+
+pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
+    if msg.starts_with("/") {
+        eng.script_hooks().call_client_chat_command(eng, cid, &msg);
     } else {
         if msg.len() > 400 {
             warn!("{:?}: bad request: chat message too long ({})", cid, msg.len());

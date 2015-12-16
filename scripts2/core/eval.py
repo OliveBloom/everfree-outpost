@@ -8,7 +8,5 @@ def do_eval(eng, code):
     except Exception as e:
         return repr(e)
 
-    hooks.set_eval(do_eval)
-
 def init(hooks):
-    hooks.set_eval(do_eval)
+    hooks.eval(do_eval)

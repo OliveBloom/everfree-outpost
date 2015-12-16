@@ -15,6 +15,7 @@ use storage::Storage;
 use python as py;
 use python::{PyBox, PyRef};
 use python3_sys::*;
+use script::ScriptEngine;
 
 
 
@@ -375,6 +376,30 @@ int_impls!(i32, signed);
 int_impls!(i64, signed);
 int_impls!(isize, signed);
 
+macro_rules! id_impls {
+    ($ty:ident) => {
+        impl<'a> Unpack<'a> for $ty {
+            fn unpack(obj: PyRef<'a>) -> $ty {
+                $ty(Unpack::unpack(obj))
+            }
+        }
+
+        impl Pack for $ty {
+            fn pack(self) -> PyBox {
+                Pack::pack(self.unwrap())
+            }
+        }
+    };
+}
+
+id_impls!(WireId);
+id_impls!(ClientId);
+id_impls!(EntityId);
+id_impls!(InventoryId);
+id_impls!(PlaneId);
+id_impls!(TerrainChunkId);
+id_impls!(StructureId);
+
 
 
 // Storage ref definition
@@ -587,33 +612,6 @@ unsafe impl GetTypeObject for Data {
 }
 
 
-macro_rules! hooks_ref_func {
-    ( $($all:tt)* ) => ( rust_ref_func!(ScriptHooks, $($all)*) );
-}
-
-define_python_class! {
-    class HooksRef: RustRef {
-        type_obj HOOKS_REF_TYPE;
-        initializer hooks_ref_init;
-        accessor hooks_ref_type;
-        method_macro hooks_ref_func!;
-
-        fn set_server_startup(&mut this, f: PyBox) {
-            this.set_server_startup(f);
-        }
-
-        fn set_eval(&mut this, f: PyBox) {
-            this.set_eval(f);
-        }
-    }
-}
-
-unsafe impl GetTypeObject for ScriptHooks {
-    fn get_type_object() -> PyBox {
-        hooks_ref_type().to_box()
-    }
-}
-
 
 struct EngineRef {
     base: PyObject,
@@ -664,6 +662,20 @@ define_python_class! {
         fn now(eng: EmptyPart,) -> Time {
             eng.now()
         }
+
+        fn script_cb_chat_command(eng: split::EngineRef, cid: ClientId, msg: String) {
+            warn_on_err!(ScriptEngine::cb_chat_command(eng.unwrap(), cid, &msg));
+        }
+
+        fn messages_clients_len(eng: OnlyMessages,) -> usize {
+            eng.messages().clients_len()
+        }
+
+        fn messages_send_chat_update(eng: OnlyMessages, cid: ClientId, msg: String) {
+            use messages::ClientResponse;
+            let resp = ClientResponse::ChatUpdate(msg);
+            eng.messages().send_client(cid, resp);
+        }
     }
 }
 
@@ -700,36 +712,59 @@ pub fn call_void<A: Pack>(f: PyRef, args: A) {
 }
 
 engine_part_typedef!(OnlyWorld(world));
+engine_part_typedef!(OnlyMessages(messages));
 engine_part_typedef!(EmptyPart());
 
 
-pub struct ScriptHooks {
-    server_startup: Option<PyBox>,
-
-    eval: Option<PyBox>,
+macro_rules! hooks_ref_func {
+    ( $($all:tt)* ) => ( rust_ref_func!(ScriptHooks, $($all)*) );
 }
 
-impl ScriptHooks {
-    pub fn new() -> ScriptHooks {
-        ScriptHooks {
-            server_startup: None,
-
-            eval: None,
+macro_rules! define_script_hooks {
+    ($($name:ident,)*) => {
+        pub struct ScriptHooks {
+            $($name: Option<PyBox>,)*
         }
-    }
 
+        impl ScriptHooks {
+            pub fn new() -> ScriptHooks {
+                ScriptHooks {
+                    $($name: None,)*
+                }
+            }
+        }
 
-    pub fn set_server_startup(&mut self, func: PyBox) {
-        self.server_startup = Some(func);
-    }
+        define_python_class! {
+            class HooksRef: RustRef {
+                type_obj HOOKS_REF_TYPE;
+                initializer hooks_ref_init;
+                accessor hooks_ref_type;
+                method_macro hooks_ref_func!;
 
+                $(
+                    fn $name(&mut this, f: PyBox) {
+                        this.$name = Some(f);
+                    }
+                )*
+            }
+        }
+    };
+}
+
+define_script_hooks!(
+    server_startup, server_shutdown,
+    eval,
+
+    client_chat_command,
+);
+
+impl ScriptHooks {
     pub fn call_server_startup(&self, eng: split::EngineRef) {
         call_with_engine0(&self.server_startup, eng);
     }
 
-
-    pub fn set_eval(&mut self, func: PyBox) {
-        self.eval = Some(func);
+    pub fn call_server_shutdown(&self, eng: split::EngineRef) {
+        call_with_engine0(&self.server_shutdown, eng);
     }
 
     pub fn call_eval(&self, eng: split::EngineRef, s: &str) -> String {
@@ -740,6 +775,19 @@ impl ScriptHooks {
         } else {
             String::new()
         }
+    }
+
+    pub fn call_client_chat_command(&self,
+                                    eng: split::EngineRef,
+                                    cid: ClientId,
+                                    msg: &str) {
+        call_with_engine2(&self.client_chat_command, eng, cid, msg);
+    }
+}
+
+unsafe impl GetTypeObject for ScriptHooks {
+    fn get_type_object() -> PyBox {
+        hooks_ref_type().to_box()
     }
 }
 

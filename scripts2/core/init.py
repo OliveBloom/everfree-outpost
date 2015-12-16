@@ -18,8 +18,18 @@ def startup(eng):
     sys.stderr.write('hello %s\n' % eng.now())
     sys.stderr.flush()
 
+def chat_command(eng, cid, cmd):
+    print('chat command: %s' % cmd)
+    if cmd == '/count':
+        count = eng.messages_clients_len()
+        msg = '***\t%d player%s online' % (count, 's' if count != 1 else '')
+        eng.messages_send_chat_update(cid, msg)
+    else:
+        eng.script_cb_chat_command(cid, cmd)
+
 def init(storage, data, hooks):
     core.data.init(data)
     core.eval.init(hooks)
 
-    hooks.set_server_startup(startup)
+    hooks.server_startup(startup)
+    hooks.client_chat_command(chat_command)

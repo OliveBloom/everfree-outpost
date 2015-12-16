@@ -68,6 +68,8 @@ pub fn shut_down(mut eng: EngineRef) {
         logic::chunks::unload_plane(eng.borrow(), pid);
     }
 
+    eng.script_hooks().call_server_shutdown(eng.borrow());
+
     {
         let (h, eng) = eng.borrow().0.split_off();
         let h = SaveWriteHooks(h);
