@@ -110,6 +110,17 @@ def startup(eng):
     sys.stderr.write('hello %s\n' % eng.now())
     sys.stderr.flush()
 
+def do_eval(eng, code):
+    print(repr(code))
+    try:
+        if '\n' in code[:-1]:
+            exec(code)
+            return ''
+        else:
+            return str(eval(code))
+    except Exception as e:
+        return repr(e)
+
 def init(storage, data, hooks):
     global _DATA, DATA
     _DATA = data
@@ -119,4 +130,5 @@ def init(storage, data, hooks):
     RecipeProxy.INSTANCES = [None] * data.recipe_count()
     TemplateProxy.INSTANCES = [None] * data.template_count()
 
-    hooks.set_startup(startup)
+    hooks.set_server_startup(startup)
+    hooks.set_eval(do_eval)

@@ -167,13 +167,18 @@ impl<'d> Engine<'d> {
             },
 
             ReplCommand(cookie, msg) => {
-                match ScriptEngine::cb_eval(self, &*msg) {
-                    Ok(result) => self.messages.send_control(ReplResult(cookie, result)),
-                    Err(e) => {
-                        warn!("eval error: {}", e);
-                        let resp = ReplResult(cookie, String::from("eval error"));
-                        self.messages.send_control(resp);
-                    },
+                if msg.starts_with("@") {
+                    let result = self.script_hooks.call_eval(self.as_ref(), &msg[1..]);
+                    self.messages.send_control(ReplResult(cookie, result));
+                } else {
+                    match ScriptEngine::cb_eval(self, &*msg) {
+                        Ok(result) => self.messages.send_control(ReplResult(cookie, result)),
+                        Err(e) => {
+                            warn!("eval error: {}", e);
+                            let resp = ReplResult(cookie, String::from("eval error"));
+                            self.messages.send_control(resp);
+                        },
+                    }
                 }
             },
 

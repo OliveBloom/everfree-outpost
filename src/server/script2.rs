@@ -598,8 +598,12 @@ define_python_class! {
         accessor hooks_ref_type;
         method_macro hooks_ref_func!;
 
-        fn set_startup(&mut this, f: PyBox) {
-            this.set_startup(f);
+        fn set_server_startup(&mut this, f: PyBox) {
+            this.set_server_startup(f);
+        }
+
+        fn set_eval(&mut this, f: PyBox) {
+            this.set_eval(f);
         }
     }
 }
@@ -663,8 +667,8 @@ define_python_class! {
     }
 }
 
-fn with_engine_ref<E, F>(mut e: E, f: F)
-        where E: Part + PartFlags, F: FnOnce(PyRef) {
+fn with_engine_ref<E, F, R>(mut e: E, f: F) -> R
+        where E: Part + PartFlags, F: FnOnce(PyRef) -> R {
     unsafe {
         let obj = py::type_::instantiate(engine_ref_type());
         {
@@ -673,12 +677,14 @@ fn with_engine_ref<E, F>(mut e: E, f: F)
             er.flags = <E as PartFlags>::flags();
         }
 
-        f(obj.borrow());
+        let result = f(obj.borrow());
 
         {
             let er = &mut *(obj.as_ptr() as *mut EngineRef);
             er.flags = 0;
         }
+
+        result
     }
 }
 
@@ -698,25 +704,72 @@ engine_part_typedef!(EmptyPart());
 
 
 pub struct ScriptHooks {
-    startup: Option<PyBox>,
+    server_startup: Option<PyBox>,
+
+    eval: Option<PyBox>,
 }
 
 impl ScriptHooks {
     pub fn new() -> ScriptHooks {
         ScriptHooks {
-            startup: None,
+            server_startup: None,
+
+            eval: None,
         }
     }
 
-    pub fn set_startup(&mut self, func: PyBox) {
-        self.startup = Some(func);
+
+    pub fn set_server_startup(&mut self, func: PyBox) {
+        self.server_startup = Some(func);
     }
 
-    pub fn call_startup(&self, eng: split::EngineRef) {
-        if let Some(ref func) = self.startup {
+    pub fn call_server_startup(&self, eng: split::EngineRef) {
+        call_with_engine0(&self.server_startup, eng);
+    }
+
+
+    pub fn set_eval(&mut self, func: PyBox) {
+        self.eval = Some(func);
+    }
+
+    pub fn call_eval(&self, eng: split::EngineRef, s: &str) -> String {
+        if let Some(ref func) = self.eval {
             with_engine_ref(eng, |eng| {
-                call_void(func.borrow(), (eng,));
-            });
+                call(func.borrow(), (eng, s))
+            })
+        } else {
+            String::new()
         }
+    }
+}
+
+fn call_with_engine0(opt_func: &Option<PyBox>, eng: split::EngineRef) {
+    if let Some(ref func) = *opt_func {
+        with_engine_ref(eng, |eng| {
+            call_void(func.borrow(), (eng,));
+        });
+    }
+}
+
+fn call_with_engine1<A>(opt_func: &Option<PyBox>,
+                        eng: split::EngineRef,
+                        a: A)
+        where A: Pack {
+    if let Some(ref func) = *opt_func {
+        with_engine_ref(eng, |eng| {
+            call_void(func.borrow(), (eng, a));
+        });
+    }
+}
+
+fn call_with_engine2<A, B>(opt_func: &Option<PyBox>,
+                           eng: split::EngineRef,
+                           a: A,
+                           b: B)
+        where A: Pack, B: Pack {
+    if let Some(ref func) = *opt_func {
+        with_engine_ref(eng, |eng| {
+            call_void(func.borrow(), (eng, a, b));
+        });
     }
 }

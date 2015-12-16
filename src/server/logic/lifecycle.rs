@@ -50,7 +50,7 @@ pub fn start_up(mut eng: EngineRef) {
         assert!(stable_pid == STABLE_PLANE_FOREST);
     }
 
-    eng.script_hooks().call_startup(eng.borrow())
+    eng.script_hooks().call_server_startup(eng.borrow())
 }
 
 
