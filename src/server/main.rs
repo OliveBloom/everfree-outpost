@@ -141,9 +141,7 @@ fn main() {
         script2::with_ref(&data, |data_ref| {
             let mut script_hooks = script2::ScriptHooks::new();
             script2::with_ref_mut(&mut script_hooks, |hooks_ref| {
-                let init_mod = python::import("outpost_server.core.init");
-                let init_func = python::object::get_attr_str(init_mod.borrow(), "init");
-                script2::call_void(init_func.borrow(), (storage_ref, data_ref, hooks_ref));
+                script2::call_init(storage_ref, data_ref, hooks_ref);
             });
             let script_hooks = script_hooks;
 
