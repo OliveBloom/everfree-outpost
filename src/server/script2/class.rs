@@ -1,6 +1,3 @@
-use python3_sys::*;
-
-
 macro_rules! one {
     ( $any:tt ) => { 1 };
 }

@@ -1,21 +1,9 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::marker::PhantomData;
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
-use libc::{c_char, c_int, c_uint, c_void};
+use libc::c_char;
 use python3_sys::*;
 
-use types::*;
-
-use data::Data;
-use engine::Engine;
-use engine::split::{self, Part, PartFlags};
-use storage::Storage;
+use engine::split::Part;
 use python as py;
-use python::{PyBox, PyRef};
-use script::ScriptEngine;
+use python::PyRef;
 
 pub use self::hooks::ScriptHooks;
 pub use self::pack::{Pack, Unpack};

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use libc::{c_char, c_int, c_uint, c_void};
+use libc::c_void;
 use python3_sys::*;
 
 use python as py;

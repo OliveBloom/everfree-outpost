@@ -1,7 +1,6 @@
 use types::*;
 
 use data::Data;
-use python as py;
 use python::PyBox;
 
 use super::Pack;

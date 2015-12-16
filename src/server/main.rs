@@ -3,24 +3,19 @@
 #![allow(dead_code)]
 
 #![feature(
-    as_slice,   // Option::as_slice
     convert,    // OsStr::to_cstring
     core,
     filling_drop,
     fnbox,
-    iter_cmp,
     mpsc_select,
     nonzero,
     num_bits_bytes,
     raw,
     scoped,
-    step_by,
     trace_macros,
     unboxed_closures,
     unsafe_no_drop_flag,
-    vec_push_all,
     vecmap,
-    zero_one,
 )]
 
 #[macro_use] extern crate bitflags;
@@ -46,7 +41,6 @@ extern crate server_types as libserver_types;
 
 use std::fs::File;
 use std::io::{self, Read};
-use std::path::Path;
 use rustc_serialize::json;
 
 

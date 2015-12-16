@@ -228,6 +228,7 @@ const INTERIOR_NAMES: [&'static str; 47] = [
 
 
 
+#[allow(non_snake_case)]    // for T, F
 pub fn set_cave<'d, F>(wf: &mut F,
                        pid: PlaneId,
                        center: V3) -> world::OpResult<bool>
@@ -235,8 +236,7 @@ pub fn set_cave<'d, F>(wf: &mut F,
     let mut mined = false;
     {
         let mut p = unwrap!(wf.get_plane_mut(pid));
-        let T = true;
-        let F = false;
+        let (T, F) = (true, false);
         mined |= try!(set_cave_single(&mut p, center + V3::new( 0,  0, 0), [T,T,T,T]));
 
         mined |= try!(set_cave_single(&mut p, center + V3::new( 1,  0, 0), [T,F,F,T]));
@@ -269,8 +269,8 @@ pub fn set_cave_single<'a, 'd, F>(p: &mut ObjectRefMut<'a, 'd, world::Plane, F>,
     let idx = tc.bounds().index(pos);
     let old_name = block_data.name(tc.blocks()[idx]);
 
-    let mut cave_key_str = "";
-    let mut floor_type = "";
+    let cave_key_str;
+    let floor_type;
     {
         // Match against the pattern: cave/<key>/z0/<floor_type>
         // We `return Ok(false)` if this fails anywhere, since that just means the player is trying

@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
-use std::slice;
-use std::str;
 use core::nonzero::NonZero;
 
 use python3_sys::*;

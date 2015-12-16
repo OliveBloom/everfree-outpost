@@ -37,6 +37,7 @@ pub struct TerrainGen<'d> {
 }
 
 impl<'d> TerrainGen<'d> {
+    #[allow(deprecated)]    // for thread::scoped
     pub fn new(data: &'d Data, storage: &'d Storage) -> TerrainGen<'d> {
         let (send_cmd, recv_cmd) = mpsc::channel();
         let (send_result, recv_result) = mpsc::channel();
@@ -103,7 +104,7 @@ pub trait Fragment<'d> {
                                                               base + gs.pos,
                                                               gs.template) {
                     Ok(mut s) => {
-                        s.set_attachment(StructureAttachment::Chunk);
+                        warn_on_err!(s.set_attachment(StructureAttachment::Chunk));
                         s.id()
                     },
                     Err(e) => {

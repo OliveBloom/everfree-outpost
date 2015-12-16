@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::u8;
 
 use types::*;

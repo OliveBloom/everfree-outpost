@@ -1,15 +1,10 @@
 use std::error::Error;
 
-use libphysics::CHUNK_SIZE;
-
 use types::*;
-use util::StringResult;
 
 use chunks;
 use engine::glue::*;
 use engine::split::EngineRef;
-use script::{self, ScriptEngine};
-use terrain_gen;
 use terrain_gen::Fragment as TerrainGen_Fragment;
 use world;
 use world::flags;

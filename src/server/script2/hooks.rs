@@ -1,6 +1,5 @@
 use types::*;
 
-use engine::Engine;
 use engine::split;
 use python as py;
 use python::{PyBox, PyRef};

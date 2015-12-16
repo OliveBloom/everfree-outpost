@@ -85,7 +85,7 @@ define_python_class! {
     }
 }
 
-pub fn with_engine_ref<E, F, R>(mut e: E, f: F) -> R
+pub fn with_engine_ref<E, F, R>(e: E, f: F) -> R
         where E: Part + PartFlags, F: FnOnce(PyRef) -> R {
     unsafe {
         let obj = py::type_::instantiate(get_type());

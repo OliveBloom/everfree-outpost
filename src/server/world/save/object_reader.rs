@@ -226,7 +226,6 @@ impl<R: io::Read> ObjectReader<R> {
     }
 
     fn read_inventory<'d, F: Fragment<'d>>(&mut self, f: &mut F) -> Result<InventoryId> {
-        use std::collections::hash_map::Entry::*;
         let (iid, stable_id) = try!(self.read_object_header(f));
 
         try!(f.with_world(|wf| -> Result<_> {
