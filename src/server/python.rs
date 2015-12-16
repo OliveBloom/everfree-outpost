@@ -17,7 +17,7 @@ pub struct PyBox {
 impl PyBox {
     pub unsafe fn new(ptr: *mut PyObject) -> PyBox {
         if ptr.is_null() {
-            PyErr_PrintEx(1);
+            err::print();
             assert!(!ptr.is_null());
         }
         PyBox {
@@ -83,7 +83,7 @@ pub struct PyRef<'a> {
 impl<'a> PyRef<'a> {
     pub unsafe fn new(ptr: *mut PyObject) -> PyRef<'a> {
         if ptr.is_null() {
-            PyErr_PrintEx(1);
+            err::print();
             assert!(!ptr.is_null());
         }
         PyRef {
@@ -363,6 +363,21 @@ pub mod type_ {
     pub fn instantiate(type_: PyRef) -> PyBox {
         assert!(check(type_));
         unsafe { PyBox::new(PyType_GenericAlloc(type_.as_ptr() as *mut PyTypeObject, 0)) }
+    }
+}
+
+pub mod err {
+    use python3_sys::*;
+
+    pub fn print() {
+        unsafe { PyErr_Print() };
+
+        // Call sys.stderr.flush().  This ensures we see the Python stack trace before the Rust one
+        // (if any).
+        let sys = super::import("sys");
+        let stderr = super::object::get_attr_str(sys.borrow(), "stderr");
+        let flush = super::object::get_attr_str(stderr.borrow(), "flush");
+        super::object::call(flush.borrow(), super::tuple::pack0().borrow(), None);
     }
 }
 
