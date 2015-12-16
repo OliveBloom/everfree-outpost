@@ -3,6 +3,7 @@ import sys
 
 from outpost_server import core
 import outpost_server.core.data
+import outpost_server.core.chat
 import outpost_server.core.eval
 
 
@@ -29,7 +30,9 @@ def chat_command(eng, cid, cmd):
 
 def init(storage, data, hooks):
     core.data.init(data)
+    core.chat.init(hooks)
     core.eval.init(hooks)
 
     hooks.server_startup(startup)
-    hooks.client_chat_command(chat_command)
+
+    import outpost_server.outpost

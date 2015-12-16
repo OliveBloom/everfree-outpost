@@ -27,78 +27,69 @@ def _by_id(cls, id):
 
 class ItemProxy(object):
     def __init__(self, id):
-        self._id = id
+        self.id = id
 
     INSTANCES = []
     by_id = _by_id
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.id)
 
     def __repr__(self):
-        return '<item #%d %r>' % (self._id, self.name)
-
-    def id(self):
-        return self._id
+        return '<item #%d %r>' % (self.id, self.name)
 
     @property
     def name(self):
-        return _DATA.item_name(self._id)
+        return _DATA.item_name(self.id)
 
 class RecipeProxy(object):
     def __init__(self, id):
-        self._id = id
+        self.id = id
 
     INSTANCES = []
     by_id = _by_id
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.id)
 
     def __repr__(self):
-        return '<recipe #%d %r>' % (self._id, self.name)
-
-    def id(self):
-        return self._id
+        return '<recipe #%d %r>' % (self.id, self.name)
 
     @property
     def name(self):
-        return _DATA.recipe_name(self._id)
+        return _DATA.recipe_name(self.id)
 
     @property
     def station(self):
-        id = _DATA.recipe_station(self._id)
+        id = _DATA.recipe_station(self.id)
         return TemplateProxy.by_id(id)
 
     @property
     def inputs(self):
-        dct = _DATA.recipe_inputs(self._id)
+        dct = _DATA.recipe_inputs(self.id)
         return {ItemProxy.by_id(k): v for k, v in dct.items()}
 
     @property
     def outputs(self):
-        dct = _DATA.recipe_outputs(self._id)
+        dct = _DATA.recipe_outputs(self.id)
         return {ItemProxy.by_id(k): v for k, v in dct.items()}
 
 class TemplateProxy(object):
     def __init__(self, id):
-        self._id = id
+        self.id = id
 
     INSTANCES = []
     by_id = _by_id
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.id)
 
     def __repr__(self):
-        return '<template #%d %r>' % (self._id, self.name)
-
-    def id(self):
-        return self._id
+        return '<template #%d %r>' % (self.id, self.name)
 
     @property
     def name(self):
-        return _DATA.recipe_name(self._id)
+        return _DATA.recipe_name(self.id)
 
 
 def init(data):
