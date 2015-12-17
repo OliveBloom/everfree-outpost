@@ -188,10 +188,6 @@ command.help.home = command.help.sethome
 
 
 no_op = function(...) end
-command.handler.ignore = no_op
-command.help.ignore = '/ignore <name>: Hide chat messages from named player'
-command.handler.unignore = no_op
-command.help.unignore = '/unignore <name>: Stop hiding chat messages from <name>'
 
 function command.handler.permit(c, arg)
     ward.permit(c, arg)
