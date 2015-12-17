@@ -5,6 +5,7 @@ use types::*;
 use engine::Engine;
 use engine::glue;
 use engine::split::{EngineRef, Part, PartFlags};
+use logic;
 use python as py;
 use python::PyRef;
 use script::ScriptEngine;
@@ -118,6 +119,7 @@ define_python_class! {
             eng.world().client(cid).pawn_id()
         }
 
+
         fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> V3 {
             eng.world().entity(eid).pos(eng.now())
         }
@@ -125,6 +127,27 @@ define_python_class! {
         fn world_entity_plane_id(eng: OnlyWorld, eid: EntityId) -> PlaneId {
             eng.world().entity(eid).plane_id()
         }
+
+        fn world_entity_teleport(eng: glue::WorldFragment,
+                                 eid: EntityId,
+                                 pos: V3) -> () {
+            logic::world::teleport_entity(eng, eid, pos).unwrap();
+        }
+
+        fn world_entity_teleport_plane(eng: glue::WorldFragment,
+                                       eid: EntityId,
+                                       pid: PlaneId,
+                                       pos: V3) -> () {
+            logic::world::teleport_entity_plane(eng, eid, pid, pos).unwrap();
+        }
+
+        fn world_entity_teleport_stable_plane(eng: glue::WorldFragment,
+                                              eid: EntityId,
+                                              stable_pid: Stable<PlaneId>,
+                                              pos: V3) -> () {
+            logic::world::teleport_entity_stable_plane(eng, eid, stable_pid, pos).unwrap();
+        }
+
 
         fn world_plane_stable_id(eng: glue::WorldFragment, pid: PlaneId) -> Stable<PlaneId> {
             let mut eng = eng;

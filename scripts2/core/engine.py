@@ -60,6 +60,13 @@ class EntityProxy(object):
         pid = self._eng.world_entity_plane_id(self.id)
         return PlaneProxy(self._eng, pid)
 
+    def teleport(self, pos):
+        self._eng.world_entity_teleport(self.id, pos)
+
+    def teleport_plane(self, stable_pid, pos):
+        self._eng.world_entity_teleport_stable_plane(self.id, stable_pid, pos)
+
+
 
 class PlaneProxy(object):
     def __init__(self, eng, id):

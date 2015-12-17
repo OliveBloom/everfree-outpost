@@ -95,6 +95,51 @@ macro_rules! rust_val_repr_slot {
     };
 }
 
+/// NB: return type must be identical to the class representation type ($ty)
+macro_rules! rust_val_init_slot {
+    ( $fname:ident,
+      ( $( $aname:ident : $aty:ty ),* ),
+      $ret_ty:ty,
+      $body:block ) => {
+        unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
+                                    args: *mut ::python3_sys::PyObject,
+                                    _kwds: *mut ::python3_sys::PyObject)
+                                    -> ::libc::c_int {
+            fn $fname(($($aname,)*): ($($aty,)*)) -> $ret_ty {
+                $body
+            }
+
+            {
+                use $crate::python::PyRef;
+                use $crate::script2::Unpack;
+
+                let args = PyRef::new(args);
+                let result = $fname(Unpack::unpack(args));
+                {
+                    let r = &mut *(slf as *mut RustVal<$ret_ty>);
+                    r.val = result;
+                }
+                0
+            }
+        }
+    };
+}
+
+/// Ignores all arguments and body, and just calls `PyType_GenericNew`.
+macro_rules! rust_val_new_slot {
+    ( $fname:ident,
+      $args:tt,
+      $ret_ty:ty,
+      $body:block ) => {
+        unsafe extern "C" fn $fname(subtype: *mut ::python3_sys::PyTypeObject,
+                                    args: *mut ::python3_sys::PyObject,
+                                    kwds: *mut ::python3_sys::PyObject)
+                                    -> *mut ::python3_sys::PyObject {
+            PyType_GenericNew(subtype, args, kwds)
+        }
+    };
+}
+
 
 define_python_class! {
     class V3: RustVal<V3> {
@@ -111,6 +156,12 @@ define_python_class! {
     slots:
         fn(rust_val_repr_slot!) Py_tp_repr(this: V3,) -> String {
             format!("V3{:?}", this)
+        }
+
+        fn(rust_val_new_slot!) Py_tp_new() -> () { }
+
+        fn(rust_val_init_slot!) Py_tp_init(x: i32, y: i32, z: i32) -> V3 {
+            V3::new(x, y, z)
         }
 
     methods:

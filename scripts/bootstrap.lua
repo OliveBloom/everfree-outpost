@@ -156,16 +156,6 @@ end
 
 
 -- Commands
-function command.handler.where(client, args)
-    local pawn = client:pawn()
-    local plane = pawn:plane()
-    local pos = client:pawn():pos()
-    client:send_message('Location: ' .. plane:name() ..
-            ' (' .. plane:stable_id():id() .. '), ' ..
-            pos:x() .. ', ' .. pos:y() .. ', ' .. pos:z())
-end
-command.help.where = '/where: Show coordinates of your current position'
-
 local spawn_point = V3.new(32, 32, 0)
 PLANE_FOREST = 'Everfree Forest'
 
@@ -177,13 +167,6 @@ function check_forest(client)
         return true
     end
 end
-
-function command.handler.spawn(client, args)
-    --if not check_forest(client) then return end
-    --client:pawn():teleport(spawn_point)
-    client:pawn():teleport_stable_plane(client:world():get_forest_plane(), spawn_point)
-end
-command.help.spawn = '/spawn: Teleport to the spawn point'
 
 function command.handler.sethome(client, args)
     if not check_forest(client) then return end
@@ -209,9 +192,6 @@ command.handler.ignore = no_op
 command.help.ignore = '/ignore <name>: Hide chat messages from named player'
 command.handler.unignore = no_op
 command.help.unignore = '/unignore <name>: Stop hiding chat messages from <name>'
-
-command.handler.count = no_op
-command.help.count = '/count: Show the number of players currently online'
 
 function command.handler.permit(c, arg)
     ward.permit(c, arg)
