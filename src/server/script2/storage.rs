@@ -2,10 +2,10 @@ use storage::Storage;
 
 use python as py;
 use python::PyBox;
-use super::rust_ref::{RustRef, GetTypeObject};
+use super::rust_ref::{RustRef, RustRefType};
 
 macro_rules! storage_ref_func {
-    ( $($all:tt)* ) => ( rust_ref_func!(Storage, $($all)*) );
+    ( $($all:tt)* ) => ( rust_ref_func!(Storage, $($all)*); );
 }
 
 define_python_class! {
@@ -21,7 +21,7 @@ define_python_class! {
     }
 }
 
-unsafe impl GetTypeObject for Storage {
+unsafe impl RustRefType for Storage {
     fn get_type_object() -> PyBox {
         get_type().to_box()
     }

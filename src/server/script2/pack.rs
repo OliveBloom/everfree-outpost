@@ -30,6 +30,12 @@ impl<'a> Unpack<'a> for String {
     }
 }
 
+impl<'a, T> Unpack<'a> for Stable<T> {
+    fn unpack(obj: PyRef<'a>) -> Stable<T> {
+        Stable::new(Unpack::unpack(obj))
+    }
+}
+
 
 /// Types that can be converted to Python objects.
 pub trait Pack {
@@ -63,6 +69,12 @@ impl<'a> Pack for &'a str {
     }
 }
 
+impl Pack for String {
+    fn pack(self) -> PyBox {
+        py::unicode::from_str(&self)
+    }
+}
+
 impl<'a, K, V> Pack for &'a HashMap<K, V>
         where K: Clone + Pack + Eq + Hash,
               V: Clone + Pack {
@@ -74,6 +86,12 @@ impl<'a, K, V> Pack for &'a HashMap<K, V>
             py::dict::set_item(dct.borrow(), k.borrow(), v.borrow());
         }
         dct
+    }
+}
+
+impl<T> Pack for Stable<T> {
+    fn pack(self) -> PyBox {
+        Pack::pack(self.unwrap())
     }
 }
 

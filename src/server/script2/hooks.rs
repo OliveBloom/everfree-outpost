@@ -5,12 +5,12 @@ use python as py;
 use python::{PyBox, PyRef};
 
 use super::{Pack, Unpack};
-use super::rust_ref::{RustRef, GetTypeObject};
+use super::rust_ref::{RustRef, RustRefType};
 use super::engine::with_engine_ref;
 
 
 macro_rules! hooks_ref_func {
-    ( $($all:tt)* ) => ( rust_ref_func!(ScriptHooks, $($all)*) );
+    ( $($all:tt)* ) => ( rust_ref_func!(ScriptHooks, $($all)*); );
 }
 
 macro_rules! define_script_hooks {
@@ -78,7 +78,7 @@ impl ScriptHooks {
     }
 }
 
-unsafe impl GetTypeObject for ScriptHooks {
+unsafe impl RustRefType for ScriptHooks {
     fn get_type_object() -> PyBox {
         get_type().to_box()
     }

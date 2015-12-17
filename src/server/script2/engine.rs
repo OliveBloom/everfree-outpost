@@ -3,10 +3,13 @@ use python3_sys::*;
 use types::*;
 
 use engine::Engine;
+use engine::glue;
 use engine::split::{EngineRef, Part, PartFlags};
 use python as py;
 use python::PyRef;
 use script::ScriptEngine;
+use world::Fragment as World_Fragment;
+use world::object::*;
 
 
 /// A reference to an `Engine`.  Similar to `RustRef`, but keeps different metadata (engine part
@@ -58,33 +61,6 @@ macro_rules! engine_ref_func {
     };
 }
 
-define_python_class! {
-    class EngineRef: PyEngineRef {
-        type_obj ENGINE_REF_TYPE;
-        initializer init;
-        accessor get_type;
-        method_macro engine_ref_func!;
-
-        fn now(eng: EmptyPart,) -> Time {
-            eng.now()
-        }
-
-        fn script_cb_chat_command(eng: EngineRef, cid: ClientId, msg: String) {
-            warn_on_err!(ScriptEngine::cb_chat_command(eng.unwrap(), cid, &msg));
-        }
-
-        fn messages_clients_len(eng: OnlyMessages,) -> usize {
-            eng.messages().clients_len()
-        }
-
-        fn messages_send_chat_update(eng: OnlyMessages, cid: ClientId, msg: String) {
-            use messages::ClientResponse;
-            let resp = ClientResponse::ChatUpdate(msg);
-            eng.messages().send_client(cid, resp);
-        }
-    }
-}
-
 pub fn with_engine_ref<E, F, R>(e: E, f: F) -> R
         where E: Part + PartFlags, F: FnOnce(PyRef) -> R {
     unsafe {
@@ -109,3 +85,54 @@ pub fn with_engine_ref<E, F, R>(e: E, f: F) -> R
 engine_part_typedef!(OnlyWorld(world));
 engine_part_typedef!(OnlyMessages(messages));
 engine_part_typedef!(EmptyPart());
+
+
+define_python_class! {
+    class EngineRef: PyEngineRef {
+        type_obj ENGINE_REF_TYPE;
+        initializer init;
+        accessor get_type;
+        method_macro engine_ref_func!;
+
+        fn now(eng: EmptyPart,) -> Time {
+            eng.now()
+        }
+
+        fn script_cb_chat_command(eng: EngineRef, cid: ClientId, msg: String) {
+            warn_on_err!(ScriptEngine::cb_chat_command(eng.unwrap(), cid, &msg));
+        }
+
+        fn messages_clients_len(eng: OnlyMessages,) -> usize {
+            eng.messages().clients_len()
+        }
+
+        fn messages_send_chat_update(eng: OnlyMessages, cid: ClientId, msg: String) {
+            use messages::ClientResponse;
+            let resp = ClientResponse::ChatUpdate(msg);
+            eng.messages().send_client(cid, resp);
+        }
+
+
+        // TODO: error handling for all these functions
+        fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> Option<EntityId> {
+            eng.world().client(cid).pawn_id()
+        }
+
+        fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> V3 {
+            eng.world().entity(eid).pos(eng.now())
+        }
+
+        fn world_entity_plane_id(eng: OnlyWorld, eid: EntityId) -> PlaneId {
+            eng.world().entity(eid).plane_id()
+        }
+
+        fn world_plane_stable_id(eng: glue::WorldFragment, pid: PlaneId) -> Stable<PlaneId> {
+            let mut eng = eng;
+            eng.plane_mut(pid).stable_id()
+        }
+
+        fn world_plane_name(eng: OnlyWorld, pid: PlaneId) -> String {
+            eng.world().plane(pid).name().to_owned()
+        }
+    }
+}

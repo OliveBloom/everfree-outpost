@@ -70,20 +70,20 @@ impl<'a, T> DerefMut for RustRefGuardMut<'a, T> {
 ///
 /// The returned PyBox must be a Python type object whose representation is compatible with the
 /// `RustRef` struct.
-pub unsafe trait GetTypeObject {
+pub unsafe trait RustRefType {
     fn get_type_object() -> PyBox;
 }
 
 /// Wrap an immutable reference in a RustRef.  Unsafe because the Rust type system can't track the
 /// borrow.
-unsafe fn build_rust_ref<T: GetTypeObject>(val: &T) -> PyBox {
+unsafe fn build_rust_ref<T: RustRefType>(val: &T) -> PyBox {
     let ty = T::get_type_object();
     build_rust_ref_internal(val as *const _ as *mut c_void, ty, false)
 }
 
 /// Wrap a mutable reference in a RustRef.  Unsafe because the Rust type system can't track the
 /// borrow.
-unsafe fn build_rust_ref_mut<T: GetTypeObject>(val: &mut T) -> PyBox {
+unsafe fn build_rust_ref_mut<T: RustRefType>(val: &mut T) -> PyBox {
     let ty = T::get_type_object();
     build_rust_ref_internal(val as *mut _ as *mut c_void, ty, true)
 }
@@ -106,7 +106,7 @@ unsafe fn invalidate_rust_ref(obj: PyRef) {
 }
 
 /// The object must be a RustRef (checked) that refers to a value of type T (not checked).
-pub unsafe fn unpack_rust_ref<'a, T: GetTypeObject>(obj: PyRef<'a>) -> RustRefGuard<'a, T> {
+pub unsafe fn unpack_rust_ref<'a, T: RustRefType>(obj: PyRef<'a>) -> RustRefGuard<'a, T> {
     let ty = T::get_type_object();
     assert!(py::object::is_instance(obj, ty.borrow()));
     let rr = &mut *(obj.as_ptr() as *mut RustRef);
@@ -119,7 +119,7 @@ pub unsafe fn unpack_rust_ref<'a, T: GetTypeObject>(obj: PyRef<'a>) -> RustRefGu
 }
 
 /// The object must be a RustRef (checked) that refers to a value of type T (not checked).
-pub unsafe fn unpack_rust_ref_mut<'a, T: GetTypeObject>(obj: PyRef<'a>) -> RustRefGuardMut<'a, T> {
+pub unsafe fn unpack_rust_ref_mut<'a, T: RustRefType>(obj: PyRef<'a>) -> RustRefGuardMut<'a, T> {
     let ty = T::get_type_object();
     assert!(py::object::is_instance(obj, ty.borrow()));
     let rr = &mut *(obj.as_ptr() as *mut RustRef);
@@ -133,7 +133,7 @@ pub unsafe fn unpack_rust_ref_mut<'a, T: GetTypeObject>(obj: PyRef<'a>) -> RustR
 }
 
 pub fn with_ref<T, F, R>(val: &T, f: F) -> R
-        where T: GetTypeObject, F: FnOnce(PyRef) -> R {
+        where T: RustRefType, F: FnOnce(PyRef) -> R {
     unsafe {
         let obj = build_rust_ref(val);
         let result = f(obj.borrow());
@@ -143,7 +143,7 @@ pub fn with_ref<T, F, R>(val: &T, f: F) -> R
 }
 
 pub fn with_ref_mut<T, F, R>(val: &mut T, f: F) -> R
-        where T: GetTypeObject, F: FnOnce(PyRef) -> R {
+        where T: RustRefType, F: FnOnce(PyRef) -> R {
     unsafe {
         let obj = build_rust_ref_mut(val);
         let result = f(obj.borrow());

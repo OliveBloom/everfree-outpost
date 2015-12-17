@@ -4,10 +4,10 @@ use data::Data;
 use python::PyBox;
 
 use super::Pack;
-use super::rust_ref::{RustRef, GetTypeObject};
+use super::rust_ref::{RustRef, RustRefType};
 
 macro_rules! data_ref_func {
-    ( $($all:tt)* ) => ( rust_ref_func!(Data, $($all)*) );
+    ( $($all:tt)* ) => ( rust_ref_func!(Data, $($all)*); );
 }
 
 define_python_class! {
@@ -70,7 +70,7 @@ define_python_class! {
     }
 }
 
-unsafe impl GetTypeObject for Data {
+unsafe impl RustRefType for Data {
     fn get_type_object() -> PyBox {
         get_type().to_box()
     }

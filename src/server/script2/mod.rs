@@ -1,5 +1,6 @@
 use libc::c_char;
 use python3_sys::*;
+use python3_sys::structmember::PyMemberDef;
 
 use engine::split::Part;
 use python as py;
@@ -17,6 +18,7 @@ mod data;
 mod hooks;
 mod storage;
 mod engine;
+mod v3;
 
 
 
@@ -31,6 +33,14 @@ pub const BLANK_TYPE_SPEC: PyType_Spec = PyType_Spec {
 pub const BLANK_TYPE_SLOT: PyType_Slot = PyType_Slot {
     slot: 0,
     pfunc: 0 as *mut _,
+};
+
+pub const BLANK_MEMBER_DEF: PyMemberDef = PyMemberDef {
+    name: 0 as *mut _,
+    type_code: 0,
+    offset: 0,
+    flags: 0,
+    doc: 0 as *mut _,
 };
 
 pub const BLANK_METHOD_DEF: PyMethodDef = PyMethodDef {
@@ -84,8 +94,8 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
         data::init(module.borrow());
         hooks::init(module.borrow());
         storage::init(module.borrow());
-
         engine::init(module.borrow());
+        v3::init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
         module.unwrap()
