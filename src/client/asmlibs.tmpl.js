@@ -147,10 +147,12 @@ var asmlibs_code_raw = function(global, env, buffer) {
         set_region_shape: _set_region_shape,
         refresh_shape_cache: _refresh_shape_cache,
         find_ceiling: _find_ceiling,
+        floodfill_ceiling: _floodfill_ceiling,
 
         terrain_geom_init: _terrain_geom_init,
         terrain_geom_reset: _terrain_geom_reset,
         terrain_geom_generate: _terrain_geom_generate,
+        terrain_floodfill: _terrain_floodfill,
 
         structure_buffer_init: _structure_buffer_init,
         structure_buffer_insert: _structure_buffer_insert,

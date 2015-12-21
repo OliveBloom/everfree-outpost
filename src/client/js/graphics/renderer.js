@@ -14,6 +14,7 @@ var Buffer = require('graphics/glutil').Buffer;
 var Framebuffer = require('graphics/glutil').Framebuffer;
 var makeShaders = require('graphics/shaders').makeShaders;
 var BufferCache = require('graphics/buffers').BufferCache;
+var CavernMap = require('graphics/cavernmap').CavernMap;
 
 var GlObject = require('graphics/glutil').GlObject;
 var uniform = require('graphics/glutil').uniform;
@@ -95,6 +96,8 @@ function Renderer(gl) {
             more = result.more;
         }
     });
+
+    this.cavern_map = new CavernMap(gl, 32);
 }
 exports.Renderer = Renderer;
 
@@ -219,6 +222,7 @@ Renderer.prototype.loadBlockData = function(blocks) {
         out16(  6, block.bottom);
 
         out8(   8, block.light_color, 3);
+        out8(  11, block.shape);
         out16( 12, block.light_radius);
     }
 };
@@ -227,6 +231,7 @@ Renderer.prototype.loadChunk = function(i, j, chunk) {
     this._asm.chunkView(j, i).set(chunk._tiles);
 
     this.terrain_buf.invalidate(j, i);
+    this.cavern_map.invalidate();
 };
 
 Renderer.prototype.loadTemplateData = function(templates) {
@@ -317,6 +322,7 @@ Renderer.prototype._invalidateStructure = function(x, y, z, template) {
     if (template.flags & 4) {   // HAS_LIGHT
         this.light_buf.invalidate(cx, cy);
     }
+    this.cavern_map.invalidate();
 };
 
 
@@ -329,6 +335,7 @@ Renderer.prototype.render = function(s, draw_extra) {
     var size = s.camera_size;
     var slice_radius = [s.slice_frac * Math.max(size[0], size[1]) / 2.0];
     var slice_z = [s.slice_z];
+    var slice_center = s.slice_center;
 
     var anim_now_val = s.now / 1000 % ANIM_MODULUS;
     if (anim_now_val < 0) {
@@ -338,16 +345,16 @@ Renderer.prototype.render = function(s, draw_extra) {
 
     this.terrain.setUniformValue('cameraPos', pos);
     this.terrain.setUniformValue('cameraSize', size);
-    this.terrain.setUniformValue('sliceRadius', slice_radius);
+    this.terrain.setUniformValue('sliceCenter', slice_center);
     this.terrain.setUniformValue('sliceZ', slice_z);
     this.structure.setUniformValue('cameraPos', pos);
     this.structure.setUniformValue('cameraSize', size);
-    this.structure.setUniformValue('sliceRadius', slice_radius);
+    this.structure.setUniformValue('sliceCenter', slice_center);
     this.structure.setUniformValue('sliceZ', slice_z);
     this.structure.setUniformValue('now', anim_now);
     this.structure_shadow.setUniformValue('cameraPos', pos);
     this.structure_shadow.setUniformValue('cameraSize', size);
-    this.structure_shadow.setUniformValue('sliceRadius', slice_radius);
+    this.structure_shadow.setUniformValue('sliceCenter', slice_center);
     this.structure_shadow.setUniformValue('sliceZ', slice_z);
     this.structure_shadow.setUniformValue('now', anim_now);
     this.light_static.setUniformValue('cameraPos', pos);
@@ -404,11 +411,15 @@ Renderer.prototype.render = function(s, draw_extra) {
 
         var buf = this_.terrain_buf.getBuffer();
         var len = this_.terrain_buf.getSize();
-        this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {});
+        this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {
+            'cavernTex': this_.cavern_map.getTexture(),
+        });
 
         var buf = this_.structure_buf.getBuffer();
         var len = this_.structure_buf.getSize();
-        this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {});
+        this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+            'cavernTex': this_.cavern_map.getTexture(),
+        });
 
         for (var i = 0; i < s.sprites.length; ++i) {
             var sprite = s.sprites[i];
@@ -425,7 +436,9 @@ Renderer.prototype.render = function(s, draw_extra) {
 
         var buf = this_.structure_buf.getBuffer();
         var len = this_.structure_buf.getSize();
-        this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {});
+        this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+            'cavernTex': this_.cavern_map.getTexture(),
+        });
     });
 
     gl.disable(gl.DEPTH_TEST);

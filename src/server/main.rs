@@ -10,6 +10,7 @@
     mpsc_select,
     nonzero,
     num_bits_bytes,
+    plugin,
     raw,
     scoped,
     trace_macros,
@@ -17,6 +18,8 @@
     unsafe_no_drop_flag,
     vecmap,
 )]
+
+#![plugin(syntax_exts)]
 
 #[macro_use] extern crate bitflags;
 extern crate core;

@@ -27,7 +27,7 @@ pub mod lights;
 const ATLAS_SIZE: u16 = 32;
 
 const LOCAL_BITS: usize = 3;
-const LOCAL_SIZE: u16 = 1 << LOCAL_BITS;
+const LOCAL_SIZE: i32 = 1 << LOCAL_BITS;
 
 
 pub trait IntrusiveCorner {

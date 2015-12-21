@@ -2,6 +2,9 @@ precision highp float;
 
 const float TILE_SIZE = 32.0;
 const float CHUNK_SIZE = 16.0;
+const float CAVERN_MAP_RADIUS = 32.0;
+const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
+const float CAVERN_CUTOFF = 1.5 / 255.0;
 
 #extension GL_EXT_draw_buffers : enable
 
@@ -12,18 +15,28 @@ const float CHUNK_SIZE = 16.0;
 #endif
 
 uniform sampler2D sheetTex;
-uniform sampler2D depthTex;
+uniform sampler2D cavernTex;
+uniform vec2 cameraPos;
 uniform vec2 cameraSize;
-uniform float sliceRadius;
+uniform vec2 sliceCenter;
 uniform float sliceZ;
 
 varying vec2 texCoord;
 varying float baseZ;
 
 void main(void) {
-    if (sliceRadius > 0.0 && baseZ >= sliceZ) {
-        vec2 pixelPos = gl_FragCoord.xy - cameraSize * 0.5;
-        if (dot(pixelPos, pixelPos) < sliceRadius * sliceRadius) {
+    if (baseZ >= sliceZ) {
+        float pixelX = cameraPos.x + gl_FragCoord.x;
+        float pixelY = cameraPos.y + cameraSize.y - gl_FragCoord.y + baseZ * TILE_SIZE;
+        vec2 pixelPos = vec2(pixelX, pixelY);
+        //vec2 tilePos = floor(pixelPos / TILE_SIZE);
+        vec2 tilePos = pixelPos / TILE_SIZE;
+        vec2 pixelOffset = pixelPos - tilePos * TILE_SIZE;
+        vec2 cavernPos = tilePos - sliceCenter;
+
+        vec2 cavernTexCoord = cavernPos / CAVERN_MAP_SIZE + 0.5;
+        float centerVal = texture2D(cavernTex, cavernTexCoord).r;
+        if (centerVal >= CAVERN_CUTOFF) {
             discard;
         }
     }

@@ -7,87 +7,10 @@ use vision::{self, Vision};
 use world::{self, World};
 
 
-// This macro defines all the EnginePart typedefs used in the engine.  We use a macro so we can
-// define parts in terms of other parts.
-macro_rules! part2 {
-    // Normal WorldFragment.  Changes through this fragment will be propagated to scripts, clients,
-    // and the chunk cache.
-    (WorldFragment, $($x:tt)*) => {
-        part2!(world, WorldHooks, $($x)*);
-    };
-    (WorldHooks, $($x:tt)*) => {
-        part2!(world, script, timer, extra, vision, cache, VisionFragment, $($x)*);
-    };
-    (VisionFragment, $($x:tt)*) => {
-        part2!(vision, VisionHooks, $($x)*);
-    };
-    (VisionHooks, $($x:tt)*) => {
-        part2!(world, messages, $($x)*);
-    };
-
-    // Hidden WorldFragment.  Changes through this fragment will be propagated to server data
-    // structures but NOT to clients.
-    (HiddenWorldFragment, $($x:tt)*) => {
-        part2!(world, HiddenWorldHooks, $($x)*);
-    };
-    (HiddenWorldHooks, $($x:tt)*) => {
-        part2!(world, script, timer, extra, cache, HiddenVisionFragment, $($x)*);
-    };
-    (HiddenVisionFragment, $($x:tt)*) => {
-        part2!(vision, $($x)*);
-    };
-
-    // Terrain generation produces a description of the chunk, but doesn't add it to the World
-    // directly.
-    (TerrainGenFragment, $($x:tt)*) => {
-        part2!(terrain_gen, /*script, WorldFragment,*/ WorldHooks, $($x)*);
-    };
-
-    // Chunk lifecycle events only occur on chunks that are not visible to clients, so it can use
-    // HiddenWorldFragment.  This prevents a dependency cycle (WorldFragment relies on Chunks to
-    // provide up-to-date block info).
-    (ChunksFragment, $($x:tt)*) => {
-        part2!(chunks, world, ChunkProvider, $($x)*);
-    };
-    (ChunkProvider, $($x:tt)*) => {
-        part2!(/*HiddenWorldFragment,*/ SaveReadFragment, TerrainGenFragment, $($x)*);
-    };
-
-    (PhysicsFragment, $($x:tt)*) => {
-        part2!(physics, world, cache, WorldFragment, $($x)*);
-    };
-
-    // Save read/write handling operates on HiddenWorldFragment for simplicity.  Higher-level code
-    // can explicitly propagate create/destroy events to clients, 
-    (SaveReadFragment, $($x:tt)*) => {
-        part2!(/*HiddenWorldFragment,*/ SaveReadHooks, $($x)*);
-    };
-    (SaveReadHooks, $($x:tt)*) => {
-        part2!(script, timer, messages, HiddenWorldFragment, $($x)*);
-    };
-    (SaveWriteHooks, $($x:tt)*) => {
-        part2!(script, timer, messages, $($x)*);
-    };
-
-
-    (_done / $name:ident / $($y:ident,)*) => {
-        engine_part_typedef!(pub $name($($y),*));
-    };
-    ($other:ident, $($x:ident),* / $name:ident / $($y:ident,)*) => {
-        part2!($($x),* / $name / $($y,)* $other,);
-    };
-}
-
-macro_rules! part {
-    ($name:ident) => {
-        part2!($name, _done / $name /);
-    };
-}
-
 macro_rules! parts {
     ($($name:ident),* ,) => { parts!($($name),*) };
     ($($name:ident),*) => {
-        $( part!($name); )*
+        $( engine_part_typedef!(pub $name); )*
     }
 }
 

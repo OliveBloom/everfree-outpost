@@ -2,7 +2,7 @@
 #![no_std]
 
 #![feature(no_std)]
-#![feature(core, core_prelude)]
+#![feature(core, core_prelude, core_slice_ext)]
 
 #[macro_use] extern crate core;
 #[macro_use] extern crate bitflags;
@@ -145,4 +145,88 @@ fn walk_path<S, CB>(chunk: &S, start_pos: V3, _size: V3, velocity: V3,
     }
 
     pos
+}
+
+
+struct CeilingResult {
+    inside: bool,
+    blocked: bool,
+}
+
+fn check_ceiling<S>(chunk: &S, pos: V3) -> CeilingResult
+        where S: ShapeSource {
+    let blocked = chunk.get_shape(pos) == Shape::Solid;
+
+    let mut inside = false;
+    for z in pos.z + 1 .. CHUNK_SIZE {
+        if chunk.get_shape(pos.with_z(z)) != Shape::Empty {
+            inside = true;
+            break;
+        }
+    }
+
+    CeilingResult {
+        inside: inside,
+        blocked: blocked,
+    }
+}
+
+pub fn floodfill_ceiling<S>(center: V3,
+                            radius: u8,
+                            chunk: &S,
+                            grid: &mut [u8],
+                            queue: &mut [(u8, u8)])
+        where S: ShapeSource {
+    let size = radius * 2;
+    assert!(grid.len() == size as usize * size as usize);
+
+    queue[0] = (radius, radius);
+    let mut queue_len = 1;
+    let base = center - V3::new(radius as i32, radius as i32, 0);
+    while queue_len > 0 {
+        queue_len -= 1;
+        let (x, y) = queue[queue_len];
+        let idx = y as usize * size as usize + x as usize;
+
+        // Possible grid values:
+        // - 0: not processed yet
+        // - 1: currently in queue
+        // - 2: already processed, not sliced
+        // - 3: already processed, sliced
+        if grid[idx] > 1 {
+            continue;
+        }
+
+        let pos = base + V3::new(x as i32, y as i32, 0);
+        let r = check_ceiling(chunk, pos);
+        if r.inside {
+            grid[idx] = 3;
+        } else {
+            grid[idx] = 2;
+        }
+
+        if r.inside && !r.blocked {
+            let mut maybe_enqueue = |x, y| {
+                let idx = y as usize * size as usize + x as usize;
+                if grid[idx] == 0 {
+                    grid[idx] = 1;
+                    queue[queue_len] = (x, y);
+                    queue_len += 1;
+                }
+            };
+
+            if x > 0 {
+                maybe_enqueue(x - 1, y);
+            }
+            if x < size - 1 {
+                maybe_enqueue(x + 1, y);
+            }
+            if y > 0 {
+                maybe_enqueue(x, y - 1);
+            }
+            if y < size - 1 {
+                maybe_enqueue(x, y + 1);
+            }
+        }
+    }
 }

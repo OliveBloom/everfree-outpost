@@ -16,8 +16,8 @@ var STATIC_END = STATIC_START + STATIC_SIZE;
 
 // Align STACK_START to an 8-byte boundary.
 var STACK_START = (STATIC_END + 7) & ~7;
-// Give at least 4k for stack, and align to 4k boundary.
-var STACK_END = (STACK_START + 0x1000 + 0x0fff) & ~0x0fff;
+// Give at least 8k for stack, and align to 4k boundary.
+var STACK_END = (STACK_START + 0x2000 + 0x0fff) & ~0x0fff;
 var STACK_SIZE = STACK_END - STACK_START;
 console.assert(STACK_SIZE >= 0x1000, 'want at least 4kb for stack');
 
@@ -304,6 +304,31 @@ Asm.prototype.findCeiling = function(pos) {
     return result;
 };
 
+Asm.prototype.floodfillCeiling = function(pos, radius) {
+    var size = radius * 2;
+    var len = size * size;
+
+    var pos_buf = this._stackAlloc(Int32Array, 3);
+    this._storeVec(pos_buf, 0, pos);
+    var grid = this._stackAlloc(Uint8Array, len);
+    grid.fill(0);
+    var queue = this._stackAlloc(Uint8Array, len);
+
+    this._raw['floodfill_ceiling'](
+            SHAPE_LAYERS_START,
+            pos_buf.byteOffset, radius,
+            grid.byteOffset, len,
+            queue.byteOffset, len);
+
+    var result = grid.slice();
+
+    this._stackFree(queue);
+    this._stackFree(grid);
+    this._stackFree(pos_buf);
+
+    return result;
+};
+
 exports.getPhysicsHeapSize = function() {
     return PHYSICS_HEAP_END - PHYSICS_HEAP_START;
 };
@@ -422,6 +447,31 @@ AsmGraphics.prototype.terrainGeomGenerate = function() {
                           vertex_count * SIZEOF.TerrainVertex),
         more: more,
     };
+};
+
+AsmGraphics.prototype.terrainFloodfill = function(cx, cy, cz, radius) {
+    var size = radius * 2 + 1;
+    var len = size * size;
+
+    var grid = this._stackAlloc(Uint8Array, len);
+    grid.fill(0);
+    var queue = this._stackAlloc(Uint8Array, len);
+
+    console.log(grid.toString());
+    this._raw['terrain_floodfill'](
+            cx, cy, cz, radius,
+            this.BLOCK_DATA,
+            this.block_data_bytes,
+            this.LOCAL_CHUNKS,
+            grid.byteOffset, len,
+            queue.byteOffset, len);
+
+    var result = grid.slice();
+
+    this._stackFree(queue);
+    this._stackFree(grid);
+
+    return result;
 };
 
 

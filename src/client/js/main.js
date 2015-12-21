@@ -1181,6 +1181,8 @@ function frame(ac, client_now) {
         if (slice_radius.velocity <= 0) {
             slice_radius.setVelocity(predict_now, 2);
         }
+        var slice_center = pos.divScalar(TILE_SIZE);
+        s.slice_center = [slice_center.x, slice_center.y];
     } else {
         if (slice_radius.velocity >= 0) {
             slice_radius.setVelocity(predict_now, -2);
@@ -1194,6 +1196,13 @@ function frame(ac, client_now) {
         }
     }
 
+    if (renderer.cavern_map.needsUpdate(pos)) {
+        // TODO: hacky.  The issue here is that cavern_map is mostly a
+        // graphics-related thing, but updating it requires access to the
+        // PhysicsAsm object.
+        renderer.cavern_map.update(physics._asm, pos);
+    }
+
     s.camera_pos = [camera_pos.x, camera_pos.y];
     s.camera_size = [camera_size.x, camera_size.y];
     s.ambient_color = day_night.getAmbientColor(predict_now);
@@ -1204,7 +1213,6 @@ function frame(ac, client_now) {
         s.slice_z = 2 + (pony.position(predict_now).z / TILE_SIZE)|0;
     }
     renderer.render(s, draw_extra);
-
 
     if (show_cursor && pony != null) {
         var facing = FACINGS[pony.animId() % FACINGS.length];
@@ -1217,4 +1225,12 @@ function frame(ac, client_now) {
     debug.updateJobs(runner);
     debug.updateTiming(timing);
     debug.updateGraphics(renderer);
+}
+
+function debug_player_pos() {
+    var e = entities[player_entity];
+    if (e == null) {
+        return null;
+    }
+    return e.position(timing.visibleNow());
 }

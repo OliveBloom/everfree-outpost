@@ -1,4 +1,4 @@
-use physics::CHUNK_BITS;
+use physics::{CHUNK_BITS, Shape};
 use LOCAL_BITS;
 
 
@@ -13,7 +13,7 @@ pub struct BlockData {
 
     // 8
     pub light_color: (u8, u8, u8),
-    pub _pad1: u8,
+    pub shape: Shape,
     pub light_radius: u16,
     pub _pad2: u16,
 

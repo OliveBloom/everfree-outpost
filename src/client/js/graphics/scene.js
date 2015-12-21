@@ -8,6 +8,7 @@ function Scene() {
     this.lights = [];
     this.slice_z = 16;
     this.slice_frac = 0;
+    this.slice_center = [0, 0];
     this.ambient_color = [0, 0, 0];
     this.now = 0;
 }

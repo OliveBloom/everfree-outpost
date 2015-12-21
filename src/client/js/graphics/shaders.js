@@ -41,7 +41,7 @@ function makeShaders(shaders, gl, assets, make_texture) {
     shaders.terrain = ctx.start('terrain2.vert', 'terrain2.frag', 2)
         .uniformVec2('cameraPos')
         .uniformVec2('cameraSize')
-        .uniformFloat('sliceRadius')
+        .uniformVec2('sliceCenter')
         .uniformFloat('sliceZ')
         .attributes(new Attributes(SIZEOF.TerrainVertex)
                 .field(0, gl.UNSIGNED_BYTE, 2, 'corner')
@@ -49,6 +49,7 @@ function makeShaders(shaders, gl, assets, make_texture) {
                 .field(5, gl.UNSIGNED_BYTE, 1, 'side')
                 .field(6, gl.UNSIGNED_BYTE, 2, 'tileCoord'))
         .texture('atlasTex', ctx.makeAssetTexture('tiles'))
+        .texture('cavernTex', null)
         .finish();
 
 
@@ -87,7 +88,7 @@ function makeShaders(shaders, gl, assets, make_texture) {
     var structure_uniforms = new Uniforms()
         .vec2('cameraPos')
         .vec2('cameraSize')
-        .float_('sliceRadius')
+        .vec2('sliceCenter')
         .float_('sliceZ')
         .float_('now');
 
@@ -102,7 +103,8 @@ function makeShaders(shaders, gl, assets, make_texture) {
             .field(18, gl.UNSIGNED_SHORT, 1, 'animStep');
 
     var structure_textures = new Textures()
-        .texture('sheetTex', ctx.makeAssetTexture('structures0'));
+        .texture('sheetTex', ctx.makeAssetTexture('structures0'))
+        .texture('cavernTex', null);
 
     shaders.structure = ctx.start('structure2.vert', 'structure2.frag', 2)
         .uniforms(structure_uniforms)
