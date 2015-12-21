@@ -199,6 +199,7 @@ if __name__ == '__main__':
             '',
             '# Native',
             native.rules(i),
+            native.rust('syntax_exts', 'dylib', (), extra_flags='-C prefer-dynamic'),
             native.rust('physics', 'lib', ()),
             native.rust('server_types', 'lib', ('physics',)),
             native.rust('server_util', 'lib', ('server_types',)),
@@ -210,8 +211,10 @@ if __name__ == '__main__':
                 # builds (3000+ ms to generate each chunk).
                 build_type='release'),
             native.rust('backend', 'bin',
-                ('physics', 'terrain_gen', 'server_config', 'server_types', 'server_util'),
-                '$root/src/server/main.rs'),
+                ('physics', 'terrain_gen',
+                    'server_config', 'server_types', 'server_util'),
+                dyn_deps=('syntax_exts',),
+                src_file='$root/src/server/main.rs'),
             native.cxx('wrapper', 'bin',
                 ('$root/src/wrapper/%s' % f
                     for f in os.listdir(os.path.join(i.root_dir, 'src', 'wrapper'))

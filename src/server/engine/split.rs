@@ -207,101 +207,6 @@ impl<'a> SplitOffRHS<'a, ()> for () {
 }
 
 
-macro_rules! engine_part_typedef_helper {
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     world, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            ::world::World<'d>, $sc, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     script, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, ::script::ScriptEngine, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     extra, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, ::logic::extra::Extra, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     messages, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, ::messages::Messages, $ti, $ph, $vi, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     timer, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, ::timer::Timer, $ph, $vi, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     physics, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, $ti, ::physics::Physics<'d>, $vi, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     vision, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, $ti, $ph, ::vision::Vision, $au, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     auth, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, $ti, $ph, $vi, ::auth::Auth, $ch, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     chunks, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, $ti, $ph, $vi, $au, ::chunks::Chunks<'d>, $ca, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     cache, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, $ti, $ph, $vi, $au, $ch, ::cache::TerrainCache, $tg,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /
-     terrain_gen, $($x:ident,)*) => {
-        engine_part_typedef_helper!(
-            $wr, $sc, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, ::terrain_gen::TerrainGen<'d>,
-            / $m $name / $($x,)*);
-    };
-
-    ($wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty,
-     / $m:ident $name:ident /) => {
-        $m!($name, $wr, $sc, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg);
-    };
-}
-
 macro_rules! engine_part_typedef_pub {
     ($name:ident, $wr:ty, $sc:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty) => {
         pub struct $name<'a, 'd: 'a>(pub ::engine::split::EnginePart<'a, 'd, $wr, $sc, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>);
@@ -373,24 +278,7 @@ macro_rules! engine_part_typedef_impls {
     };
 }
 
-/// Macro for generating typedefs of EnginePart with only specific parts enabled (and the rest set
-/// to ()).
-macro_rules! engine_part_typedef {
-    (pub $name:ident($($part:ident),*)) => {
-        engine_part_typedef_helper!(
-            (), (), (), (), (), (), (), (), (), (), (),
-            / engine_part_typedef_pub $name / $($part,)*);
-    };
-
-    ($name:ident($($part:ident),*)) => {
-        engine_part_typedef_helper!(
-            (), (), (), (), (), (), (), (), (), (), (),
-            / engine_part_typedef_priv $name / $($part,)*);
-    };
-}
-
-engine_part_typedef!(pub EngineRef(
-        world, script, extra, messages, timer, physics, vision, auth, cache, chunks, terrain_gen));
+engine_part_typedef!(pub EngineRef);
 
 impl<'a, 'd> EngineRef<'a, 'd> {
     pub fn new(e: &'a mut Engine<'d>) -> Self {

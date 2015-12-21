@@ -11,6 +11,7 @@
     iter_cmp,
     mpsc_select,
     num_bits_bytes,
+    plugin,
     raw,
     scoped,
     step_by,
@@ -21,6 +22,8 @@
     vecmap,
     zero_one,
 )]
+
+#![plugin(syntax_exts)]
 
 #[macro_use] extern crate bitflags;
 extern crate core;

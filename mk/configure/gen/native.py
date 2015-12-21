@@ -38,6 +38,11 @@ def rules(i):
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
+        rule rustc_native_dylib
+            command = %rustc_base --crate-type=dylib $rustflags
+            depfile = $b_native/$crate_name.d
+            description = RUSTC $out
+
         rule rustc_native_staticlib
             command = %rustc_base --crate-type=staticlib $rustflags_lto $rustflags
             depfile = $b_native/$crate_name.d
@@ -62,10 +67,12 @@ def rules(i):
             description = LD $out
     ''', **locals())
 
-def rust(crate_name, crate_type, deps, src_file=None, build_type='default'):
+def rust(crate_name, crate_type, deps, dyn_deps=(),
+        src_file=None, build_type='default', extra_flags=''):
     src_template, output_template, can_lto = {
             'bin': ('$root/src/%s/main.rs', '%s$_exe', True),
             'lib': ('$root/src/lib%s/lib.rs', 'lib%s.rlib', False),
+            'dylib': ('$root/src/lib%s/lib.rs', 'lib%s$_so', False),
             'staticlib': ('$root/src/lib%s/lib.rs', 'lib%s$_a', True),
             }[crate_type]
 
@@ -74,10 +81,11 @@ def rust(crate_name, crate_type, deps, src_file=None, build_type='default'):
 
     return template('''
         build $b_native/%output_name: rustc_native_%crate_type %src_file $
-            | %for d in deps% $b_native/lib%{d}.rlib %end%
+            | %for d in deps% $b_native/lib%{d}.rlib %end% $
+              %for d in dyn_deps% $b_native/lib%{d}$_so %end%
             crate_name = %crate_name
             crate_type = %crate_type
-            rustflags = $rustflags_%build_type
+            rustflags = $rustflags_%build_type %extra_flags
     ''', **locals())
 
 def cxx(out_name, out_type, src_files, link_extra=[], **kwargs):
