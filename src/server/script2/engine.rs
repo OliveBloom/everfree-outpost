@@ -25,7 +25,7 @@ macro_rules! engine_ref_func {
     ( $fname:ident,
       ( $aname1:ident : $aty1:path, $( $aname:ident : $aty:ty ),* ),
       $ret_ty:ty,
-      $body:block ) => {
+      $body:expr ) => {
 
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)

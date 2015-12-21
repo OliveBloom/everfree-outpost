@@ -6,15 +6,6 @@ macro_rules! one {
     ( $any:tt ) => { 1 };
 }
 
-macro_rules! define_func {
-    ( $mac:ident, $fname:ident, $args:tt, , $body:block ) => {
-        $mac!($fname, $args, (), $body);
-    };
-    ( $mac:ident, $fname:ident, $args:tt, $ret_ty:ty, $body:block ) => {
-        $mac!($fname, $args, $ret_ty, $body);
-    };
-}
-
 /// Backend implementation for `define_python_class!` from `libsyntax_exts`.
 macro_rules! define_python_class_impl {
     (
@@ -31,12 +22,8 @@ macro_rules! define_python_class_impl {
 
         #[allow(non_snake_case)]
         pub fn $init_name(module: $crate::python::PyRef) {
-            $(
-                define_func!($smacro, $sname, $sargs, $sret, { $sbody });
-            )*
-            $(
-                define_func!($fmacro, $fname, $fargs, $fret, { $fbody });
-            )*
+            $( $smacro!($sname, $sargs, $sret, $sbody); )*
+            $( $fmacro!($fname, $fargs, $fret, $fbody); )*
 
             #[allow(
                 unused_assignments,

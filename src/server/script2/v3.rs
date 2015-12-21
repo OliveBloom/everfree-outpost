@@ -49,7 +49,7 @@ macro_rules! rust_val_func {
     ( $fname:ident,
       ( $aname1:ident : $aty1:path, $( $aname:ident : $aty:ty ),* ),
       $ret_ty:ty,
-      $body:block ) => {
+      $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
@@ -75,7 +75,7 @@ macro_rules! rust_val_repr_slot {
     ( $fname:ident,
       ( $aname1:ident : $aty1:path, ),
       $ret_ty:ty,
-      $body:block ) => {
+      $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
             fn $fname($aname1: $aty1) -> $ret_ty {
@@ -100,7 +100,7 @@ macro_rules! rust_val_init_slot {
     ( $fname:ident,
       ( $( $aname:ident : $aty:ty ),* ),
       $ret_ty:ty,
-      $body:block ) => {
+      $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject,
                                     _kwds: *mut ::python3_sys::PyObject)
@@ -130,7 +130,7 @@ macro_rules! rust_val_new_slot {
     ( $fname:ident,
       $args:tt,
       $ret_ty:ty,
-      $body:block ) => {
+      $body:expr ) => {
         unsafe extern "C" fn $fname(subtype: *mut ::python3_sys::PyTypeObject,
                                     args: *mut ::python3_sys::PyObject,
                                     kwds: *mut ::python3_sys::PyObject)
