@@ -15,67 +15,27 @@ macro_rules! define_func {
     };
 }
 
-/// Generate code to initialize a Python class.
-macro_rules! define_python_class {
+/// Backend implementation for `define_python_class!` from `libsyntax_exts`.
+macro_rules! define_python_class_impl {
     (
-        class $name:ident : $ty:ty {
-            type_obj $type_obj:ident;
-            initializer $init_name:ident;
-            accessor $acc_name:ident;
-            method_macro $define_func:ident !;
-            $(
-                fn $fname:ident $fargs:tt $( -> $fret:ty )* { $( $fbody:tt )* }
-            )*
-        }
-
-    ) => {
-        define_python_class! {
-            class $name: $ty {
-                type_obj $type_obj;
-                initializer $init_name;
-                accessor $acc_name;
-                method_macro $define_func!;
-            members:
-            slots:
-            methods:
-                $(
-                    fn $fname $fargs $( -> $fret )* { $($fbody)* }
-                )*
-            }
-        }
-    };
-    (
-        class $name:ident : $ty:ty {
-            type_obj $type_obj:ident;
-            initializer $init_name:ident;
-            accessor $acc_name:ident;
-            method_macro $define_func:ident !;
-
-        members:
-            $(
-                let $mname:ident := $($mpart:ident).+ ;
-            )*
-
-        slots:
-            $(
-                fn($smacro:ident!) $sname:ident $sargs:tt $( -> $sret:ty )* { $( $sbody:tt )* }
-            )*
-
-        methods:
-            $(
-                fn $fname:ident $fargs:tt $( -> $fret:ty )* { $( $fbody:tt )* }
-            )*
-        }
+        $name:ident, $ty:ty,
+        $type_obj:ident, $init_name:ident, $acc_name:ident,
+        // Methods
+        { $( $fmacro:ident, $fname:ident, $fargs:tt, $fret:ty, $fbody:expr; )* }
+        // Slots
+        { $( $smacro:ident, $sname:ident, $sargs:tt, $sret:ty, $sbody:expr; )* }
+        // Members
+        { $( $mname:ident, $($mpart:ident).+; )* }
     ) => {
         static mut $type_obj: *mut ::python3_sys::PyObject = 0 as *mut _;
 
         #[allow(non_snake_case)]
         pub fn $init_name(module: $crate::python::PyRef) {
             $(
-                define_func!($smacro, $sname, $sargs, $( $sret )*, { $( $sbody )* });
+                define_func!($smacro, $sname, $sargs, $sret, { $sbody });
             )*
             $(
-                define_func!($define_func, $fname, $fargs, $( $fret )*, { $( $fbody )* });
+                define_func!($fmacro, $fname, $fargs, $fret, { $fbody });
             )*
 
             #[allow(
