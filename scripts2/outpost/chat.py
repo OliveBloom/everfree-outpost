@@ -1,5 +1,10 @@
 from outpost_server.core import chat
-from outpost_server.core import V3
+from outpost_server.core.types import V3
+from outpost_server.core.engine import StablePlaneId
+
+# TODO: move somewhere more appropriate
+STABLE_PLANE_FOREST = StablePlaneId(2)
+SPAWN_POINT = V3(32, 32, 0)
 
 @chat.command('/count: Show the number of players currently online')
 def count(client, args):
@@ -18,16 +23,38 @@ def where(client, args):
 
 @chat.command('/spawn: Teleport to the spawn point')
 def spawn(client, args):
-    # TODO: constants for PLANE_FOREST and spawn point
-    client.pawn().teleport_plane(2, V3(32, 32, 0))
+    client.pawn().teleport_plane(STABLE_PLANE_FOREST, SPAWN_POINT)
 
 HOME_HELP = (
     '/sethome: Set custom teleport destination',
     '/home: Teleport to custom destination',
 )
+
 @chat.command(HOME_HELP)
 def sethome(client, args):
-    print(client.pawn().extra())
+    pawn = client.pawn()
+    if pawn.plane().stable_id() != STABLE_PLANE_FOREST:
+        client.send_message("That command doesn't work here.")
+        return
+
+    pos = pawn.pos()
+    pawn.extra()['home'] = pos
+
+@chat.command(HOME_HELP)
+def home(client, args):
+    pawn = client.pawn()
+    if pawn.plane().stable_id() != STABLE_PLANE_FOREST:
+        client.send_message("That command doesn't work here.")
+        return
+
+    extra = pawn.extra()
+    print('checking')
+    if 'home' in extra:
+        pos = extra['home']
+    else:
+        pos = V3(32, 32, 0)
+    print('checked')
+    pawn.teleport(pos)
 
 # Client-side commands (included here for /help purposes only)
 
