@@ -4,7 +4,7 @@ use python3_sys::structmember::PyMemberDef;
 
 use engine::split::Part;
 use python as py;
-use python::PyRef;
+use python::{PyRef, PyResult};
 
 pub use self::hooks::ScriptHooks;
 pub use self::pack::{Pack, Unpack};
@@ -79,7 +79,7 @@ pub fn ffi_module_preinit() {
 }
 
 pub fn ffi_module_postinit() {
-    py::import(&MOD_NAME[.. MOD_NAME.len() - 1]);
+    py::import(&MOD_NAME[.. MOD_NAME.len() - 1]).unwrap();
 }
 
 static mut FFI_MODULE: *mut PyObject = 0 as *mut _;
@@ -89,7 +89,7 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
         FFI_MOD_DEF.m_name = MOD_NAME.as_ptr() as *const c_char;
         FFI_MOD_DEF.m_methods = FFI_METHOD_DEFS.as_mut_ptr();
 
-        let module = py::module::create(&mut FFI_MOD_DEF);
+        let module = py::module::create(&mut FFI_MOD_DEF).unwrap();
 
         data::init(module.borrow());
         hooks::init(module.borrow());
@@ -103,27 +103,13 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
 }
 
 fn ffi_module() -> PyRef<'static> {
-    unsafe { PyRef::new(FFI_MODULE) }
+    unsafe { PyRef::new_non_null(FFI_MODULE) }
 }
 
-pub fn call_init(data: PyRef, storage: PyRef, hooks: PyRef) {
-    let module = py::import("outpost_server.core.init");
-    let func = py::object::get_attr_str(module.borrow(), "init");
-    let args = py::tuple::pack3(data.to_box(), storage.to_box(), hooks.to_box());
-    py::object::call(func.borrow(), args.borrow(), None);
+pub fn call_init(data: PyRef, storage: PyRef, hooks: PyRef) -> PyResult<()> {
+    let module = try!(py::import("outpost_server.core.init"));
+    let func = try!(py::object::get_attr_str(module.borrow(), "init"));
+    let args = try!(py::tuple::pack3(data.to_box(), storage.to_box(), hooks.to_box()));
+    try!(py::object::call(func.borrow(), args.borrow(), None));
+    Ok(())
 }
-
-
-// RustRef and related functionality
-
-
-
-
-
-
-
-// Storage ref definition
-
-
-
-

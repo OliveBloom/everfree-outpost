@@ -1,7 +1,7 @@
 use types::*;
 
 use data::Data;
-use python::PyBox;
+use python::{PyBox, PyResult};
 
 use super::Pack;
 use super::rust_ref::{RustRef, RustRefType};
@@ -26,7 +26,7 @@ define_python_class! {
             this.item_data.find_id(&name)
         }
 
-        fn item_name(&this, id: ItemId) -> Option<PyBox> {
+        fn item_name(&this, id: ItemId) -> Option<PyResult<PyBox>> {
             this.item_data.get_name(id).map(|s| Pack::pack(s))
         }
 
@@ -39,15 +39,15 @@ define_python_class! {
             this.recipes.find_id(&name)
         }
 
-        fn recipe_name(&this, id: RecipeId) -> Option<PyBox> {
+        fn recipe_name(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
             this.recipes.get_recipe(id).map(|r| Pack::pack(&r.name as &str))
         }
 
-        fn recipe_inputs(&this, id: RecipeId) -> Option<PyBox> {
+        fn recipe_inputs(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
             this.recipes.get_recipe(id).map(|r| Pack::pack(&r.inputs))
         }
 
-        fn recipe_outputs(&this, id: RecipeId) -> Option<PyBox> {
+        fn recipe_outputs(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
             this.recipes.get_recipe(id).map(|r| Pack::pack(&r.outputs))
         }
 
@@ -64,7 +64,7 @@ define_python_class! {
             this.structure_templates.find_id(&name)
         }
 
-        fn template_name(&this, id: TemplateId) -> Option<PyBox> {
+        fn template_name(&this, id: TemplateId) -> Option<PyResult<PyBox>> {
             this.structure_templates.get_template(id).map(|t| Pack::pack(&t.name as &str))
         }
     }

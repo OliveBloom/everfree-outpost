@@ -1,9 +1,11 @@
+use std::error::Error;
+
 use python3_sys::*;
 
 use types::*;
 
 use python as py;
-use python::{PyBox, PyRef};
+use python::{PyBox, PyRef, PyResult};
 use script2::{Pack, Unpack};
 
 pub struct RustVal<T: RustValType> {
@@ -16,12 +18,12 @@ pub unsafe trait RustValType: Copy {
 }
 
 
-pub fn pack_rust_val<T: RustValType>(val: T) -> PyBox {
+pub fn pack_rust_val<T: RustValType>(val: T) -> PyResult<PyBox> {
     unsafe {
-        let obj = py::type_::instantiate(T::get_type_object().borrow());
+        let obj = try!(py::type_::instantiate(T::get_type_object().borrow()));
         let r = &mut *(obj.as_ptr() as *mut RustVal<T>);
         r.val = val;
-        obj
+        Ok(obj)
     }
 }
 
@@ -29,20 +31,13 @@ pub fn is_rust_val<T: RustValType>(obj: PyRef) -> bool {
     py::object::is_instance(obj, T::get_type_object().borrow())
 }
 
-pub fn unpack_rust_val<T: RustValType>(obj: PyRef) -> T {
-    unpack_rust_val_opt(obj).unwrap()
-}
-
-pub fn unpack_rust_val_opt<T: RustValType>(obj: PyRef) -> Option<T> {
-    if !is_rust_val::<T>(obj) {
-        return None;
-    }
-
+pub fn unpack_rust_val<T: RustValType>(obj: PyRef) -> PyResult<T> {
+    pyassert!(is_rust_val::<T>(obj), type_error);
     let result = unsafe {
         let r = &mut *(obj.as_ptr() as *mut RustVal<T>);
         r.val
     };
-    Some(result)
+    Ok(result)
 }
 
 macro_rules! rust_val_func {
@@ -58,38 +53,39 @@ macro_rules! rust_val_func {
             }
 
             {
+                use $crate::python as py;
                 use $crate::python::PyRef;
                 use $crate::script2::{Pack, Unpack};
 
-                let slf = PyRef::new(slf);
-                let args = PyRef::new(args);
+                let slf = PyRef::new_non_null(slf);
+                let args = PyRef::new_non_null(args);
 
-                let result = $fname(Unpack::unpack(slf), Unpack::unpack(args));
-                Pack::pack(result).unwrap()
+                let result = $fname(try!(Unpack::unpack(slf)),
+                                    try!(Unpack::unpack(args)));
+                py::return_result(Pack::pack(result))
             }
         }
     };
 }
 
 macro_rules! rust_val_repr_slot {
-    ( $fname:ident,
-      ( $aname1:ident : $aty1:path, ),
-      $ret_ty:ty,
-      $body:expr ) => {
+    ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
-            fn $fname($aname1: $aty1) -> $ret_ty {
-                $body
+            method_imp1!(imp, $args, $ret_ty, $body);
+
+            fn wrap(slf: $crate::python::PyRef)
+                    -> $crate::python::PyResult<$crate::python::PyBox> {
+                use $crate::script2::{Pack, Unpack};
+                let result = imp(try!(Unpack::unpack(slf)), ());
+                Pack::pack(result)
             }
 
             {
+                use $crate::python as py;
                 use $crate::python::PyRef;
-                use $crate::script2::{Pack, Unpack};
-
-                let slf = PyRef::new(slf);
-
-                let result = $fname(Unpack::unpack(slf));
-                Pack::pack(result).unwrap()
+                let slf = PyRef::new_non_null(slf);
+                py::return_result(wrap(slf))
             }
         }
     };
@@ -113,8 +109,15 @@ macro_rules! rust_val_init_slot {
                 use $crate::python::PyRef;
                 use $crate::script2::Unpack;
 
-                let args = PyRef::new(args);
-                let result = $fname(Unpack::unpack(args));
+                let args = PyRef::new_non_null(args);
+                let rust_args = match Unpack::unpack(args) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        warn!("error in init slot: {}", e.description());
+                        return -1;
+                    }
+                };
+                let result = $fname(rust_args);
                 {
                     let r = &mut *(slf as *mut RustVal<$ret_ty>);
                     r.val = result;
@@ -175,13 +178,13 @@ unsafe impl RustValType for V3 {
 }
 
 impl Pack for V3 {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         pack_rust_val(self)
     }
 }
 
 impl<'a> Unpack<'a> for V3 {
-    fn unpack(obj: PyRef<'a>) -> V3 {
+    fn unpack(obj: PyRef<'a>) -> PyResult<V3> {
         unpack_rust_val(obj)
     }
 }

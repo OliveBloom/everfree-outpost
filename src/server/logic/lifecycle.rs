@@ -50,7 +50,7 @@ pub fn start_up(mut eng: EngineRef) {
         assert!(stable_pid == STABLE_PLANE_FOREST);
     }
 
-    eng.script_hooks().call_server_startup(eng.borrow())
+    warn_on_err!(eng.script_hooks().call_server_startup(eng.borrow()));
 }
 
 
@@ -68,7 +68,7 @@ pub fn shut_down(mut eng: EngineRef) {
         logic::chunks::unload_plane(eng.borrow(), pid);
     }
 
-    eng.script_hooks().call_server_shutdown(eng.borrow());
+    warn_on_err!(eng.script_hooks().call_server_shutdown(eng.borrow()));
 
     {
         let (h, eng) = eng.borrow().0.split_off();

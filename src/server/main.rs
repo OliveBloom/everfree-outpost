@@ -50,6 +50,7 @@ use rustc_serialize::json;
 
 #[macro_use] mod util;
 #[macro_use] mod engine;
+#[macro_use] mod python;
 
 mod msg;
 mod wire;
@@ -70,7 +71,6 @@ mod vision;
 mod logic;
 mod cache;
 
-mod python;
 mod script2;
 
 mod data {
@@ -115,7 +115,9 @@ fn main() {
     script2::ffi_module_preinit();
     python::initialize();
     script2::ffi_module_postinit();
-    python::run_file(&storage.script2_dir().join("boot.py"));
+    // Python init failures turn into panics, since they are likely to leave the Python context in
+    // an invalid state.
+    python::run_file(&storage.script2_dir().join("boot.py")).unwrap();
 
 
     // Start background threads.
@@ -139,7 +141,7 @@ fn main() {
         script2::with_ref(&data, |data_ref| {
             let mut script_hooks = script2::ScriptHooks::new();
             script2::with_ref_mut(&mut script_hooks, |hooks_ref| {
-                script2::call_init(storage_ref, data_ref, hooks_ref);
+                script2::call_init(storage_ref, data_ref, hooks_ref).unwrap();
             });
             let script_hooks = script_hooks;
 

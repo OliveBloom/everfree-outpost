@@ -126,8 +126,8 @@ macro_rules! define_python_class_impl {
                     )*
                 }
 
-                let type_obj = py::type_::from_spec(&mut TYPE_SPEC);
-                py::object::set_attr_str(module, stringify!($name), type_obj.borrow());
+                let type_obj = py::type_::from_spec(&mut TYPE_SPEC).unwrap();
+                py::object::set_attr_str(module, stringify!($name), type_obj.borrow()).unwrap();
                 $type_obj = type_obj.unwrap();
             }
 
@@ -136,7 +136,7 @@ macro_rules! define_python_class_impl {
 
         pub fn $acc_name() -> $crate::python::PyRef<'static> {
             unsafe {
-                $crate::python::PyRef::new($type_obj)
+                $crate::python::PyRef::new_non_null($type_obj)
             }
         }
     };
@@ -181,4 +181,90 @@ pub fn decay<T>(ptr: &mut T) -> *mut T {
 
 pub fn get_ptr_type_code<T: MemberType>(_: *mut T) -> libc::c_int {
     <T as MemberType>::get_type_code()
+}
+
+
+macro_rules! method_imp0 {
+    ( $imp:ident,
+      ( $( $aname:ident : $aty:ty, )*),
+      $ret_ty:ty,
+      $body:expr ) => {
+        fn $imp(($($aname,)*): ($($aty,)*)) -> $ret_ty {
+            $body
+        }
+    };
+    ( $imp:ident, ( $( $aname:ident : $aty:ty ),* ), $ret_ty:ty, $body:expr ) => {
+        method_imp0!($imp, ($($aname: $aty,)*), $ret_ty, $body);
+    };
+}
+
+macro_rules! method_imp1 {
+    ( $imp:ident,
+      ( $aname1:ident : $aty1:ty,
+        $( $aname:ident : $aty:ty, )*),
+      $ret_ty:ty,
+      $body:expr ) => {
+        fn $imp($aname1: $aty1,
+                ($($aname,)*): ($($aty,)*)) -> $ret_ty {
+            $body
+        }
+    };
+    ( $imp:ident, ( $( $aname:ident : $aty:ty ),* ), $ret_ty:ty, $body:expr ) => {
+        method_imp1!($imp, ($($aname: $aty,)*), $ret_ty, $body);
+    };
+}
+
+macro_rules! method_imp2 {
+    ( $imp:ident,
+      ( $aname1:ident : $aty1:ty,
+        $aname2:ident : $aty2:ty,
+        $( $aname:ident : $aty:ty, )*),
+      $ret_ty:ty,
+      $body:expr ) => {
+        fn $imp($aname1: $aty1,
+                $aname2: $aty2,
+                ($($aname,)*): ($($aty,)*)) -> $ret_ty {
+            $body
+        }
+    };
+    ( $imp:ident, ( $( $aname:ident : $aty:ty ),* ), $ret_ty:ty, $body:expr ) => {
+        method_imp2!($imp, ($($aname: $aty,)*), $ret_ty, $body);
+    };
+}
+
+macro_rules! call_wrapper {
+    ( $wrap:ident, $slf:ident, $args:ident ) => {
+        {
+            use $crate::python as py;
+            use $crate::python::PyRef;
+            let slf = PyRef::new_non_null($slf);
+            let args = PyRef::new_non_null($args);
+            py::return_result($wrap(slf, args))
+        }
+    };
+}
+
+macro_rules! default_wrapper {
+    ( $wrap:ident, $imp:ident ) => {
+        fn $wrap(slf: $crate::python::PyRef,
+                 args: $crate::python::PyRef)
+                 -> $crate::python::PyResult<$crate::python::PyBox> {
+            use $crate::script2::{Pack, Unpack};
+            let result = $imp(try!(Unpack::unpack(slf)),
+                              try!(Unpack::unpack(args)));
+            Pack::pack(result)
+        }
+    };
+}
+
+macro_rules! raw_func {
+    ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
+        unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
+                                    args: *mut ::python3_sys::PyObject)
+                                    -> *mut ::python3_sys::PyObject {
+            method_imp1!(imp, $args, $ret_ty, $body);
+            default_wrapper!(wrap, imp);
+            call_wrapper!(wrap, slf, args)
+        }
+    };
 }

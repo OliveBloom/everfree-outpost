@@ -56,7 +56,7 @@ pub fn unsubscribe_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId
 
 pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
     if msg.starts_with("/") {
-        eng.script_hooks().call_client_chat_command(eng, cid, &msg);
+        warn_on_err!(eng.script_hooks().call_client_chat_command(eng, cid, &msg));
     } else {
         if msg.len() > 400 {
             warn!("{:?}: bad request: chat message too long ({})", cid, msg.len());

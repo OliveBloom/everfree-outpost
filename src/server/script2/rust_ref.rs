@@ -89,7 +89,7 @@ unsafe fn build_rust_ref_mut<T: RustRefType>(val: &mut T) -> PyBox {
 }
 
 unsafe fn build_rust_ref_internal(val: *mut c_void, ty: PyBox, mutable: bool) -> PyBox {
-    let obj = py::type_::instantiate(ty.borrow());
+    let obj = py::type_::instantiate(ty.borrow()).unwrap();
     {
         let rr = &mut *(obj.as_ptr() as *mut RustRef);
         rr.ptr = val;
@@ -159,19 +159,26 @@ macro_rules! rust_ref_func {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
-            fn $fname($this: &$ty, ($($aname,)*) : ($($aty,)*)) -> $ret_ty {
+            fn imp($this: &$ty, ($($aname,)*) : ($($aty,)*)) -> $ret_ty {
                 $body
             }
 
-            {
-                use $crate::python::PyRef;
-                use $crate::script2::{rust_ref, Pack, Unpack};
-                let slf = PyRef::new(slf);
-                let args = PyRef::new(args);
-                let guard = rust_ref::unpack_rust_ref::<$ty>(slf);
+            fn wrap(slf: $crate::python::PyRef,
+                    args: $crate::python::PyRef)
+                    -> $crate::python::PyResult<$crate::python::PyBox> {
+                use $crate::script2::rust_ref;
+                use $crate::script2::{Pack, Unpack};
+                let guard = unsafe { rust_ref::unpack_rust_ref::<$ty>(slf) };
+                let result = imp(&*guard, try!(Unpack::unpack(args)));
+                Pack::pack(result)
+            }
 
-                let result = $fname(&*guard, Unpack::unpack(args));
-                Pack::pack(result).unwrap()
+            {
+                use $crate::python as py;
+                use $crate::python::PyRef;
+                let slf = PyRef::new_non_null(slf);
+                let args = PyRef::new_non_null(args);
+                py::return_result(wrap(slf, args))
             }
         }
     };
@@ -180,20 +187,26 @@ macro_rules! rust_ref_func {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
-            fn $fname($this: &mut $ty, ($($aname,)*) : ($($aty,)*)) -> $ret_ty {
+            fn imp($this: &mut $ty, ($($aname,)*) : ($($aty,)*)) -> $ret_ty {
                 $body
             }
 
+            fn wrap(slf: $crate::python::PyRef,
+                    args: $crate::python::PyRef)
+                    -> $crate::python::PyResult<$crate::python::PyBox> {
+                use $crate::script2::rust_ref;
+                use $crate::script2::{Pack, Unpack};
+                let mut guard = unsafe { rust_ref::unpack_rust_ref_mut::<$ty>(slf) };
+                let result = imp(&mut *guard, try!(Unpack::unpack(args)));
+                Pack::pack(result)
+            }
+
             {
+                use $crate::python as py;
                 use $crate::python::PyRef;
-                use $crate::script2::{rust_ref, Pack, Unpack};
-
-                let slf = PyRef::new(slf);
-                let args = PyRef::new(args);
-                let mut guard = rust_ref::unpack_rust_ref_mut::<$ty>(slf);
-
-                let result = $fname(&mut *guard, Unpack::unpack(args));
-                Pack::pack(result).unwrap()
+                let slf = PyRef::new_non_null(slf);
+                let args = PyRef::new_non_null(args);
+                py::return_result(wrap(slf, args))
             }
         }
     };

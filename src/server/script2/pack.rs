@@ -4,52 +4,53 @@ use std::hash::Hash;
 use types::*;
 
 use python as py;
-use python::{PyBox, PyRef};
+use python::{PyBox, PyRef, PyResult};
 
 
 /// Types that can be converted from Python objects.
 pub trait Unpack<'a> {
-    fn unpack(obj: PyRef<'a>) -> Self;
+    fn unpack(obj: PyRef<'a>) -> PyResult<Self>;
 }
 
 impl<'a> Unpack<'a> for PyRef<'a> {
-    fn unpack(obj: PyRef<'a>) -> PyRef<'a> {
-        obj
+    fn unpack(obj: PyRef<'a>) -> PyResult<PyRef<'a>> {
+        Ok(obj)
     }
 }
 
 impl<'a> Unpack<'a> for PyBox {
-    fn unpack(obj: PyRef<'a>) -> PyBox {
-        obj.to_box()
+    fn unpack(obj: PyRef<'a>) -> PyResult<PyBox> {
+        Ok(obj.to_box())
     }
 }
 
 impl<'a> Unpack<'a> for String {
-    fn unpack(obj: PyRef<'a>) -> String {
+    fn unpack(obj: PyRef<'a>) -> PyResult<String> {
         py::unicode::as_string(obj)
     }
 }
 
 impl<'a, T> Unpack<'a> for Stable<T> {
-    fn unpack(obj: PyRef<'a>) -> Stable<T> {
-        Stable::new(Unpack::unpack(obj))
+    fn unpack(obj: PyRef<'a>) -> PyResult<Stable<T>> {
+        let raw = try!(Unpack::unpack(obj));
+        Ok(Stable::new(raw))
     }
 }
 
 impl<'a> Unpack<'a> for bool {
-    fn unpack(obj: PyRef<'a>) -> bool {
+    fn unpack(obj: PyRef<'a>) -> PyResult<bool> {
         if obj == py::bool::true_() {
-            true
+            Ok(true)
         } else if obj == py::bool::false_() {
-            false
+            Ok(false)
         } else {
-            panic!("expected an instance of bool");
+            pyraise!(type_error, "expected an instance of bool");
         }
     }
 }
 
 impl<'a> Unpack<'a> for f64 {
-    fn unpack(obj: PyRef<'a>) -> f64 {
+    fn unpack(obj: PyRef<'a>) -> PyResult<f64> {
         py::float::as_f64(obj)
     }
 }
@@ -57,38 +58,44 @@ impl<'a> Unpack<'a> for f64 {
 
 /// Types that can be converted to Python objects.
 pub trait Pack {
-    fn pack(self) -> PyBox;
+    fn pack(self) -> PyResult<PyBox>;
+}
+
+impl<T: Pack> Pack for PyResult<T> {
+    fn pack(self) -> PyResult<PyBox> {
+        self.and_then(|x| Pack::pack(x))
+    }
 }
 
 impl Pack for PyBox {
-    fn pack(self) -> PyBox {
-        self
+    fn pack(self) -> PyResult<PyBox> {
+        Ok(self)
     }
 }
 
 impl<'a> Pack for PyRef<'a> {
-    fn pack(self) -> PyBox {
-        self.to_box()
+    fn pack(self) -> PyResult<PyBox> {
+        Ok(self.to_box())
     }
 }
 
 impl<A: Pack> Pack for Option<A> {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         match self {
             Some(a) => Pack::pack(a),
-            None => py::none().to_box(),
+            None => Ok(py::none().to_box()),
         }
     }
 }
 
 impl<'a> Pack for &'a str {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         py::unicode::from_str(self)
     }
 }
 
 impl Pack for String {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         py::unicode::from_str(&self)
     }
 }
@@ -96,35 +103,35 @@ impl Pack for String {
 impl<'a, K, V> Pack for &'a HashMap<K, V>
         where K: Clone + Pack + Eq + Hash,
               V: Clone + Pack {
-    fn pack(self) -> PyBox {
-        let dct = py::dict::new();
+    fn pack(self) -> PyResult<PyBox> {
+        let dct = try!(py::dict::new());
         for (k, v) in self {
-            let k = Pack::pack(k.clone());
-            let v = Pack::pack(v.clone());
-            py::dict::set_item(dct.borrow(), k.borrow(), v.borrow());
+            let k = try!(Pack::pack(k.clone()));
+            let v = try!(Pack::pack(v.clone()));
+            try!(py::dict::set_item(dct.borrow(), k.borrow(), v.borrow()));
         }
-        dct
+        Ok(dct)
     }
 }
 
 impl<T> Pack for Stable<T> {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         Pack::pack(self.unwrap())
     }
 }
 
 impl Pack for bool {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         if self {
-            py::bool::true_().to_box()
+            Ok(py::bool::true_().to_box())
         } else {
-            py::bool::false_().to_box()
+            Ok(py::bool::false_().to_box())
         }
     }
 }
 
 impl Pack for f64 {
-    fn pack(self) -> PyBox {
+    fn pack(self) -> PyResult<PyBox> {
         py::float::from_f64(self)
     }
 }
@@ -135,21 +142,22 @@ impl Pack for f64 {
 macro_rules! tuple_impls {
     ($count:expr, $pack:ident: ($($A:ident $idx:expr),*)) => {
         impl<'a, $($A: Unpack<'a>,)*> Unpack<'a> for ($($A,)*) {
-            fn unpack(obj: PyRef<'a>) -> ($($A,)*) {
-                assert!(py::tuple::check(obj));
-                assert!(py::tuple::size(obj) == $count);
-                (
-                    $( Unpack::unpack(py::tuple::get_item(obj, $idx)), )*
-                )
+            fn unpack(obj: PyRef<'a>) -> PyResult<($($A,)*)> {
+                pyassert!(py::tuple::check(obj), type_error);
+                pyassert!(try!(py::tuple::size(obj)) == $count, value_error);
+                Ok((
+                    $( try!(Unpack::unpack(
+                                try!(py::tuple::get_item(obj, $idx)))), )*
+                ))
             }
         }
 
         impl<$($A: Pack,)*> Pack for ($($A,)*) {
             #[allow(non_snake_case)]
-            fn pack(self) -> PyBox {
+            fn pack(self) -> PyResult<PyBox> {
                 let ($($A,)*) = self;
                 py::tuple::$pack(
-                    $(Pack::pack($A),)*
+                    $(try!(Pack::pack($A)),)*
                 )
             }
         }
@@ -165,15 +173,15 @@ tuple_impls!(3, pack3: (A 0, B 1, C 2));
 macro_rules! int_impls {
     ($ty:ident, unsigned) => {
         impl<'a> Unpack<'a> for $ty {
-            fn unpack(obj: PyRef<'a>) -> $ty {
-                let raw = py::int::as_u64(obj);
-                assert!(raw <= ::std::$ty::MAX as u64);
-                raw as $ty
+            fn unpack(obj: PyRef<'a>) -> PyResult<$ty> {
+                let raw = try!(py::int::as_u64(obj));
+                pyassert!(raw <= ::std::$ty::MAX as u64, value_error);
+                Ok(raw as $ty)
             }
         }
 
         impl Pack for $ty {
-            fn pack(self) -> PyBox {
+            fn pack(self) -> PyResult<PyBox> {
                 py::int::from_u64(self as u64)
             }
         }
@@ -181,16 +189,16 @@ macro_rules! int_impls {
 
     ($ty:ident, signed) => {
         impl<'a> Unpack<'a> for $ty {
-            fn unpack(obj: PyRef<'a>) -> $ty {
-                let raw = py::int::as_i64(obj);
-                assert!(raw >= ::std::$ty::MIN as i64);
-                assert!(raw <= ::std::$ty::MAX as i64);
-                raw as $ty
+            fn unpack(obj: PyRef<'a>) -> PyResult<$ty> {
+                let raw = try!(py::int::as_i64(obj));
+                pyassert!(raw >= ::std::$ty::MIN as i64, value_error);
+                pyassert!(raw <= ::std::$ty::MAX as i64, value_error);
+                Ok(raw as $ty)
             }
         }
 
         impl Pack for $ty {
-            fn pack(self) -> PyBox {
+            fn pack(self) -> PyResult<PyBox> {
                 py::int::from_i64(self as i64)
             }
         }
@@ -213,13 +221,14 @@ int_impls!(isize, signed);
 macro_rules! id_impls {
     ($ty:ident) => {
         impl<'a> Unpack<'a> for $ty {
-            fn unpack(obj: PyRef<'a>) -> $ty {
-                $ty(Unpack::unpack(obj))
+            fn unpack(obj: PyRef<'a>) -> PyResult<$ty> {
+                let raw = try!(Unpack::unpack(obj));
+                Ok($ty(raw))
             }
         }
 
         impl Pack for $ty {
-            fn pack(self) -> PyBox {
+            fn pack(self) -> PyResult<PyBox> {
                 Pack::pack(self.unwrap())
             }
         }

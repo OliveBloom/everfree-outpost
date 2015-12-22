@@ -169,7 +169,11 @@ impl<'d> Engine<'d> {
             ReplCommand(cookie, msg) => {
                 if msg.starts_with("@") {
                     let result = self.script_hooks.call_eval(self.as_ref(), &msg[1..]);
-                    self.messages.send_control(ReplResult(cookie, result));
+                    let result_str = match result {
+                        Ok(s) => s,
+                        Err(e) => format!("[exception: {}]", e),
+                    };
+                    self.messages.send_control(ReplResult(cookie, result_str));
                 } else {
                     match ScriptEngine::cb_eval(self, &*msg) {
                         Ok(result) => self.messages.send_control(ReplResult(cookie, result)),
