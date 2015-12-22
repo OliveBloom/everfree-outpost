@@ -223,6 +223,41 @@ pub mod eval {
     }
 }
 
+pub mod bool {
+    use python3_sys::*;
+    use super::PyRef;
+
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyBool_Check(obj.as_ptr()) != 0 }
+    }
+
+    pub fn false_() -> PyRef<'static> {
+        unsafe { PyRef::new(Py_False()) }
+    }
+
+    pub fn true_() -> PyRef<'static> {
+        unsafe { PyRef::new(Py_True()) }
+    }
+}
+
+pub mod float {
+    use python3_sys::*;
+    use super::{PyBox, PyRef};
+
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyFloat_Check(obj.as_ptr()) != 0 }
+    }
+
+    pub fn from_f64(val: f64) -> PyBox {
+        unsafe { PyBox::new(PyFloat_FromDouble(val)) }
+    }
+
+    pub fn as_f64(obj: PyRef) -> f64 {
+        assert!(check(obj));
+        unsafe { PyFloat_AsDouble(obj.as_ptr()) }
+    }
+}
+
 pub mod dict {
     use std::ffi::{CString, CStr};
     use python3_sys::*;
@@ -234,7 +269,6 @@ pub mod dict {
         }
     }
 
-
     pub fn get_item_cstr<'a>(dct: PyRef<'a>, key: &CStr) -> Option<PyRef<'a>> {
         unsafe {
             PyRef::new_opt(PyDict_GetItemString(dct.as_ptr(), key.as_ptr()))
@@ -244,7 +278,6 @@ pub mod dict {
     pub fn get_item_str<'a>(dct: PyRef<'a>, key: &str) -> Option<PyRef<'a>> {
         get_item_cstr(dct, &CString::new(key).unwrap())
     }
-
 
     pub fn set_item_cstr(dct: PyRef, key: &CStr, val: PyRef) {
         unsafe {
@@ -260,6 +293,22 @@ pub mod dict {
     pub fn set_item(dct: PyRef, key: PyRef, val: PyRef) {
         unsafe {
             let ret = PyDict_SetItem(dct.as_ptr(), key.as_ptr(), val.as_ptr());
+            assert!(ret == 0);
+        }
+    }
+}
+
+pub mod list {
+    use python3_sys::*;
+    use super::{PyBox, PyRef};
+
+    pub fn new() -> PyBox {
+        unsafe { PyBox::new(PyList_New(0)) }
+    }
+
+    pub fn append(l: PyRef, item: PyRef) {
+        unsafe {
+            let ret = PyList_Append(l.as_ptr(), item.as_ptr());
             assert!(ret == 0);
         }
     }

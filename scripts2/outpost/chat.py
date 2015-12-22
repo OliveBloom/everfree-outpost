@@ -21,6 +21,14 @@ def spawn(client, args):
     # TODO: constants for PLANE_FOREST and spawn point
     client.pawn().teleport_plane(2, V3(32, 32, 0))
 
+HOME_HELP = (
+    '/sethome: Set custom teleport destination',
+    '/home: Teleport to custom destination',
+)
+@chat.command(HOME_HELP)
+def sethome(client, args):
+    print(client.pawn().extra())
+
 # Client-side commands (included here for /help purposes only)
 
 @chat.command('/ignore <name>: Hide chat messages from named player')

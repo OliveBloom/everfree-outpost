@@ -36,6 +36,24 @@ impl<'a, T> Unpack<'a> for Stable<T> {
     }
 }
 
+impl<'a> Unpack<'a> for bool {
+    fn unpack(obj: PyRef<'a>) -> bool {
+        if obj == py::bool::true_() {
+            true
+        } else if obj == py::bool::false_() {
+            false
+        } else {
+            panic!("expected an instance of bool");
+        }
+    }
+}
+
+impl<'a> Unpack<'a> for f64 {
+    fn unpack(obj: PyRef<'a>) -> f64 {
+        py::float::as_f64(obj)
+    }
+}
+
 
 /// Types that can be converted to Python objects.
 pub trait Pack {
@@ -92,6 +110,22 @@ impl<'a, K, V> Pack for &'a HashMap<K, V>
 impl<T> Pack for Stable<T> {
     fn pack(self) -> PyBox {
         Pack::pack(self.unwrap())
+    }
+}
+
+impl Pack for bool {
+    fn pack(self) -> PyBox {
+        if self {
+            py::bool::true_().to_box()
+        } else {
+            py::bool::false_().to_box()
+        }
+    }
+}
+
+impl Pack for f64 {
+    fn pack(self) -> PyBox {
+        py::float::from_f64(self)
     }
 }
 

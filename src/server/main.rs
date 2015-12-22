@@ -17,6 +17,7 @@
     unboxed_closures,
     unsafe_no_drop_flag,
     vecmap,
+    wrapping,
 )]
 
 #![plugin(syntax_exts)]

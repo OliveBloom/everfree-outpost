@@ -3,6 +3,7 @@ use std::u8;
 use types::*;
 
 use input::InputBits;
+use world::extra::Extra;
 
 pub use super::World;
 pub use super::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
@@ -98,6 +99,14 @@ impl super::Entity {
 
     pub fn attachment(&self) -> EntityAttachment {
         self.attachment
+    }
+
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
     }
 }
 

@@ -16,6 +16,7 @@ pub use self::types::{
     Motion,
 };
 pub use self::world::{EntitiesById, StructuresById, InventoriesById};
+use self::extra::Extra;
 
 macro_rules! bad {
     ($ok:expr, $msg:expr) => { bad!($ok, $msg,) };
@@ -42,6 +43,7 @@ pub mod hooks;
 mod types;
 pub mod fragment;
 pub mod flags;
+pub mod extra;
 
 
 // Structs must be declared at top level so that the submodules can access their private fields.
@@ -96,6 +98,7 @@ pub struct Entity {
     target_velocity: V3,
     appearance: u32,
 
+    extra: Box<Extra>,
     stable_id: StableId,
     attachment: EntityAttachment,
     child_inventories: HashSet<InventoryId>,
