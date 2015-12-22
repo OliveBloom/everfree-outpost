@@ -1,6 +1,10 @@
+use std::cell::RefCell;
+use std::error;
+use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
 use std::path::Path;
+use std::ptr;
 use core::nonzero::NonZero;
 
 use python3_sys::*;
@@ -112,6 +116,234 @@ impl<'a> PyRef<'a> {
 }
 
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct ExcPython {
+    type_: Option<PyBox>,
+    value: Option<PyBox>,
+    traceback: Option<PyBox>,
+    normalized: bool,
+}
+
+impl ExcPython {
+    fn from_rust(exc: &ExcRust) -> ExcPython {
+        let type_ = exc.type_.clone();
+        let msg = unicode::from_str(&exc.msg);
+        let value = object::call(type_.borrow(), tuple::pack1(msg).borrow(), None);
+
+        ExcPython {
+            type_: Some(type_),
+            value: Some(value),
+            traceback: None,
+            normalized: false,
+        }
+    }
+
+    fn normalize(&mut self) {
+        err::normalize_exception(&mut self.type_, &mut self.value, &mut self.traceback);
+        self.normalized = true;
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct ExcRust {
+    type_: PyBox,
+    msg: String,
+}
+
+impl ExcRust {
+    fn from_python(exc: &ExcPython) -> ExcRust {
+        let msg =
+            if let Some(ref value) = exc.value {
+                object::repr(value.borrow())
+            } else if let Some(ref type_) = exc.type_ {
+                object::repr(type_.borrow())
+            } else {
+                format!("<no message>")
+            };
+
+        let type_ = exc.type_.clone().unwrap_or_else(|| exc::system_error().to_box());
+
+        ExcRust {
+            type_: type_,
+            msg: msg,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PyExc {
+    python: RefCell<Option<ExcPython>>,
+    rust: RefCell<Option<ExcRust>>,
+}
+
+impl PyExc {
+    pub fn new(ty: PyRef, msg: String) -> PyExc {
+        let rust = ExcRust {
+            type_: ty.to_box(),
+            msg: msg,
+        };
+
+        PyExc {
+            python: RefCell::new(None),
+            rust: RefCell::new(Some(rust)),
+        }
+    }
+
+    fn from_python(type_: Option<PyBox>,
+                   value: Option<PyBox>,
+                   traceback: Option<PyBox>) -> PyExc {
+        let python = ExcPython {
+            type_: type_,
+            value: value,
+            traceback: traceback,
+            normalized: false,
+        };
+
+        PyExc {
+            python: RefCell::new(Some(python)),
+            rust: RefCell::new(None),
+        }
+    }
+
+    fn ensure_python(&self) {
+        let mut py = self.python.borrow_mut();
+        if py.is_none() {
+            *py = Some(ExcPython::from_rust(self.get_rust()));
+        }
+    }
+
+    fn ensure_python_normalized(&self) {
+        let mut py = self.python.borrow_mut();
+        if py.is_none() {
+            *py = Some(ExcPython::from_rust(self.get_rust()));
+        }
+        let py_ref = py.as_mut().unwrap();
+        if !py_ref.normalized {
+            py_ref.normalize();
+        }
+    }
+
+    fn ensure_rust(&self) {
+        let mut r = self.rust.borrow_mut();
+        if r.is_none() {
+            *r = Some(ExcRust::from_python(self.get_python()));
+        }
+    }
+
+
+    fn get_raw_python(&self) -> &ExcPython {
+        self.ensure_python();
+        unsafe { mem::transmute(self.python.borrow().as_ref().unwrap() as &ExcPython) }
+    }
+
+    fn get_python(&self) -> &ExcPython {
+        self.ensure_python_normalized();
+        unsafe { mem::transmute(self.python.borrow().as_ref().unwrap() as &ExcPython) }
+    }
+
+    fn get_rust(&self) -> &ExcRust {
+        self.ensure_rust();
+        unsafe { mem::transmute(self.rust.borrow().as_ref().unwrap() as &ExcRust) }
+    }
+
+
+    fn unwrap_python_raw(self) -> ExcPython {
+        self.ensure_python();
+        self.python.into_inner().unwrap()
+    }
+
+    fn unwrap_python(self) -> ExcPython {
+        self.ensure_python_normalized();
+        self.python.into_inner().unwrap()
+    }
+
+    fn unwrap_rust(self) -> ExcRust {
+        self.ensure_rust();
+        self.rust.into_inner().unwrap()
+    }
+}
+
+impl error::Error for PyExc {
+    fn description(&self) -> &str {
+        &self.get_rust().msg
+    }
+}
+
+impl fmt::Display for PyExc {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.get_rust().msg, f)
+    }
+}
+
+pub type PyResult<T> = Result<T, PyExc>;
+
+pub fn return_result(r: PyResult<PyBox>) -> *mut PyObject {
+    match r {
+        Ok(b) => b.unwrap(),
+        Err(e) => {
+            err::raise(e);
+            ptr::null_mut()
+        },
+    }
+}
+
+macro_rules! pyexc {
+    ($ty:ident, $($msg_parts:tt)*) => {
+        $crate::python::PyExc::new($crate::python::exc::$ty(),
+                                   format!($($msg_parts)*))
+    };
+}
+
+macro_rules! pyraise {
+    ($ty:ident, $($msg_parts:tt)*) => {
+        return Err(pyexc!($ty, $($msg_parts)*))
+    };
+}
+
+macro_rules! pyassert {
+    ($cond:expr) => {
+        pyassert!($cond, runtime_error)
+    };
+    ($cond:expr, $exc_ty:ident) => {
+        pyassert!($cond,
+                  $exc_ty,
+                  concat!(file!(), ": assertion failed: `", stringify!($cond), "`"))
+    };
+    ($cond:expr, $exc_ty:ident, $msg:expr) => {
+        if !$cond {
+            pyraise!($exc_ty, $msg);
+        }
+    };
+    ($cond:expr, $exc_ty:ident, $msg:expr, $($msg_args:tt)*) => {
+        if !$cond {
+            pyraise!($exc_ty, $msg, $($msg_args)*);
+        }
+    };
+}
+
+macro_rules! pyunwrap {
+    ($opt:expr) => {
+        pyunwrap!($opt, runtime_error)
+    };
+    ($opt:expr, $exc_ty:ident) => {
+        pyunwrap!($opt,
+                  $exc_ty,
+                  concat!(file!(), ": `", stringify!($opt), "` produced `None`"))
+    };
+    ($opt:expr, $exc_ty:ident, $msg:expr) => {
+        match $opt {
+            Some(x) => x,
+            None => pyraise!($exc_ty, $msg),
+        }
+    };
+    ($cond:expr, $exc_ty:ident, $msg:expr, $($msg_args:tt)*) => {
+        match $opt {
+            Some(x) => x,
+            None => pyraise!($exc_ty, $msg, $($msg_args)*),
+        }
+    };
+}
+
 
 pub mod object {
     use std::ffi::{CString, CStr};
@@ -154,6 +386,11 @@ pub mod object {
 
     pub fn set_attr_str(dct: PyRef, attr_name: &str, val: PyRef) {
         set_attr_cstr(dct, &CString::new(attr_name).unwrap(), val)
+    }
+
+    pub fn repr(obj: PyRef) -> String {
+        let s = unsafe { PyBox::new(PyObject_Repr(obj.as_ptr())) };
+        super::unicode::as_string(s.borrow())
     }
 }
 
@@ -414,7 +651,9 @@ pub mod type_ {
 }
 
 pub mod err {
+    use std::ptr;
     use python3_sys::*;
+    use super::{PyBox, PyExc};
 
     pub fn print() {
         unsafe { PyErr_Print() };
@@ -425,6 +664,71 @@ pub mod err {
         let stderr = super::object::get_attr_str(sys.borrow(), "stderr");
         let flush = super::object::get_attr_str(stderr.borrow(), "flush");
         super::object::call(flush.borrow(), super::tuple::pack0().borrow(), None);
+    }
+
+    pub fn normalize_exception(type_: &mut Option<PyBox>,
+                               value: &mut Option<PyBox>,
+                               traceback: &mut Option<PyBox>) {
+        unsafe {
+            let mut raw_type = type_.take().map_or(ptr::null_mut(), |b| b.as_ptr());
+            let mut raw_value = value.take().map_or(ptr::null_mut(), |b| b.as_ptr());
+            let mut raw_traceback = traceback.take().map_or(ptr::null_mut(), |b| b.as_ptr());
+            PyErr_NormalizeException(&mut raw_type, &mut raw_value, &mut raw_traceback);
+            *type_ = PyBox::new_opt(raw_type);
+            *value = PyBox::new_opt(raw_value);
+            *traceback = PyBox::new_opt(raw_traceback);
+        }
+    }
+
+    pub fn fetch() -> PyExc {
+        let mut raw_type = ptr::null_mut();
+        let mut raw_value = ptr::null_mut();
+        let mut raw_traceback = ptr::null_mut();
+        unsafe { 
+            PyErr_Fetch(&mut raw_type, &mut raw_value, &mut raw_traceback);
+            PyExc::from_python(PyBox::new_opt(raw_type),
+                               PyBox::new_opt(raw_value),
+                               PyBox::new_opt(raw_traceback))
+        }
+    }
+
+    pub fn raise(exc: PyExc) {
+        let exc = exc.unwrap_python_raw();
+        unsafe {
+            let raw_type = exc.type_.map_or(ptr::null_mut(), |b| b.unwrap());
+            let raw_value = exc.value.map_or(ptr::null_mut(), |b| b.unwrap());
+            let raw_traceback = exc.traceback.map_or(ptr::null_mut(), |b| b.unwrap());
+            PyErr_Restore(raw_type, raw_value, raw_traceback);
+        }
+    }
+}
+
+pub mod exc {
+    use python3_sys::*;
+    use super::PyRef;
+
+    pub fn system_error() -> PyRef<'static> {
+        unsafe { PyRef::new(PyExc_SystemError) }
+    }
+
+    pub fn runtime_error() -> PyRef<'static> {
+        unsafe { PyRef::new(PyExc_RuntimeError) }
+    }
+
+    pub fn type_error() -> PyRef<'static> {
+        unsafe { PyRef::new(PyExc_TypeError) }
+    }
+
+    pub fn key_error() -> PyRef<'static> {
+        unsafe { PyRef::new(PyExc_KeyError) }
+    }
+
+    pub fn value_error() -> PyRef<'static> {
+        unsafe { PyRef::new(PyExc_ValueError) }
+    }
+
+    pub fn index_error() -> PyRef<'static> {
+        unsafe { PyRef::new(PyExc_IndexError) }
     }
 }
 
