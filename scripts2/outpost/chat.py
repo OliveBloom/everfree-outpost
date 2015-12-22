@@ -25,12 +25,10 @@ def where(client, args):
 def spawn(client, args):
     client.pawn().teleport_plane(STABLE_PLANE_FOREST, SPAWN_POINT)
 
-HOME_HELP = (
-    '/sethome: Set custom teleport destination',
-    '/home: Teleport to custom destination',
-)
-
-@chat.command(HOME_HELP)
+@chat.command('''
+    /sethome: Set custom teleport destination
+    /home: Teleport to custom destination
+''')
 def sethome(client, args):
     pawn = client.pawn()
     if pawn.plane().stable_id() != STABLE_PLANE_FOREST:
@@ -40,7 +38,7 @@ def sethome(client, args):
     pos = pawn.pos()
     pawn.extra()['home'] = pos
 
-@chat.command(HOME_HELP)
+@chat.command(sethome.doc)
 def home(client, args):
     pawn = client.pawn()
     if pawn.plane().stable_id() != STABLE_PLANE_FOREST:
@@ -48,12 +46,7 @@ def home(client, args):
         return
 
     extra = pawn.extra()
-    print('checking')
-    if 'home' in extra:
-        pos = extra['home']
-    else:
-        pos = V3(32, 32, 0)
-    print('checked')
+    pos = extra.get('home_pos', SPAWN_POINT)
     pawn.teleport(pos)
 
 # Client-side commands (included here for /help purposes only)

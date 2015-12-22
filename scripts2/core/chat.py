@@ -61,6 +61,8 @@ def help(client, args):
         client.send_message('Commands: %s' % (', '.join(sorted(_HANDLERS.keys()))))
         client.send_message('Use "/help <command>" for more information')
         return
+    if cmd.startswith('/'):
+        cmd = cmd[1:]
     if cmd not in _HANDLERS:
         client.send_message('Unknown command: /%s' % cmd)
         return
@@ -70,7 +72,7 @@ def help(client, args):
         client.send_message('No information is available on /%s' % cmd)
         return
 
-    for line in doc.splitlines():
+    for line in doc.strip().splitlines():
         client.send_message(line.strip())
 
 def init(hooks):

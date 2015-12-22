@@ -392,19 +392,21 @@ define_python_class! {
         }
 
 
-        fn(raw_func!) is_valid(this: PyRef,) -> bool {
-            assert!(py::object::is_instance(this, get_extra_type()));
+        fn(raw_func!) is_valid(this: PyRef,) -> PyResult<bool> {
+            pyassert!(py::object::is_instance(this, get_extra_type()),
+                      type_error, "expected an ExtraRef");
             unsafe {
                 let er = &mut *(this.as_ptr() as *mut ExtraRef);
-                er.base.valid()
+                Ok(er.base.valid())
             }
         }
 
-        fn(raw_func!) get_ptr(this: PyRef,) -> usize {
-            assert!(py::object::is_instance(this, get_extra_type()));
+        fn(raw_func!) get_ptr(this: PyRef,) -> PyResult<usize> {
+            pyassert!(py::object::is_instance(this, get_extra_type()),
+                      type_error, "expected an ExtraRef");
             unsafe {
                 let er = &mut *(this.as_ptr() as *mut ExtraRef);
-                er.ptr as usize
+                Ok(er.ptr as usize)
             }
         }
 
@@ -671,6 +673,7 @@ define_python_class! {
                                                py_this: PyRef,
                                                idx: usize) -> PyResult<PyBox> {
             if let Extra::Array(ref mut v) = *this {
+                pyassert!(idx < v.len(), index_error, "out of range: {} >= {}", idx, v.len());
                 unsafe { derive_extra_ref(&mut v[idx], py_this) }
             } else {
                 pyraise!(type_error, "expected an Extra::Array");
@@ -722,12 +725,12 @@ define_python_class! {
 
         fn(extra_ref_func_with_ref!) hash_get(this: &mut Extra,
                                               py_this: PyRef,
-                                              key: String) -> PyResult<Option<PyBox>> {
+                                              key: String) -> PyResult<PyBox> {
             if let Extra::Hash(ref mut h) = *this {
                 if let Some(elt) = h.get_mut(&key) {
-                    Ok(Some(try!(unsafe { derive_extra_ref(elt, py_this) })))
+                    Ok(try!(unsafe { derive_extra_ref(elt, py_this) }))
                 } else {
-                    Ok(None)
+                    pyraise!(key_error, "not found: {:?}", key);
                 }
             } else {
                 pyraise!(type_error, "expected an Extra::Hash");
@@ -753,5 +756,23 @@ define_python_class! {
                 pyraise!(type_error, "expected an Extra::Hash");
             }
         }
+
+        fn hash_len(this: &Extra) -> PyResult<usize> {
+            if let Extra::Hash(ref h) = *this {
+                Ok(h.len())
+            } else {
+                pyraise!(type_error, "expected an Extra::Hash");
+            }
+        }
+
+        fn hash_contains(this: &Extra,
+                         key: String) -> PyResult<bool> {
+            if let Extra::Hash(ref h) = *this {
+                Ok(h.contains_key(&key))
+            } else {
+                pyraise!(type_error, "expected an Extra::Hash");
+            }
+        }
+
     }
 }

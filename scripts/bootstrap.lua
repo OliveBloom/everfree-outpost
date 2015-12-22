@@ -168,24 +168,6 @@ function check_forest(client)
     end
 end
 
-function command.handler.sethome(client, args)
-    if not check_forest(client) then return end
-    local home = client:pawn():pos()
-    client:extra().home_pos = home
-    client:send_message('Set home to ' .. tostring(home))
-end
-command.help.sethome = {
-    '/sethome: Set custom teleport destination',
-    '/home: Teleport to custom destination'
-}
-
-function command.handler.home(client, args)
-    if not check_forest(client) then return end
-    local home = client:extra().home_pos or spawn_point
-    client:pawn():teleport(home)
-end
-command.help.home = command.help.sethome
-
 
 no_op = function(...) end
 

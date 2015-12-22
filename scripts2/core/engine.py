@@ -1,4 +1,4 @@
-from outpost_server.core.extra import ExtraProxy
+from outpost_server.core.extra import ExtraHashProxy
 from outpost_server.core.types import *
 
 def check_type(obj, ty):
@@ -77,7 +77,7 @@ class EntityProxy(object):
         self._eng.world_entity_teleport_stable_plane(self._id, stable_pid.raw, pos)
 
     def extra(self):
-        return ExtraProxy(self._eng.world_entity_extra(self._id))
+        return ExtraHashProxy(self._eng.world_entity_extra(self._id))
 
 
 class PlaneProxy(object):

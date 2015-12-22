@@ -755,9 +755,18 @@ pub mod err {
             if raw_type.is_null() {
                 raw_type = super::exc::system_error().to_box().unwrap();
             }
-            PyExc::from_python(PyBox::new_opt(raw_type),
-                               PyBox::new_opt(raw_value),
-                               PyBox::new_opt(raw_traceback))
+            let exc = PyExc::from_python(PyBox::new_opt(raw_type),
+                                         PyBox::new_opt(raw_value),
+                                         PyBox::new_opt(raw_traceback));
+
+            // TODO: only do this for exceptions not caught (i.e., those that flow into an unwrap()
+            // or warn_on_err!()).
+            warn!("caught python exception: {}", exc.get_rust().msg);
+            if let Some(ref tb) = exc.get_python().traceback {
+                super::traceback::print(tb.borrow());
+            }
+
+            exc
         }
     }
 
@@ -773,6 +782,28 @@ pub mod err {
             let raw_traceback = exc.traceback.map_or(ptr::null_mut(), |b| b.unwrap());
             PyErr_Restore(raw_type, raw_value, raw_traceback);
         }
+    }
+}
+
+pub mod traceback {
+    use python3_sys::*;
+    use super::{PyRef, PyResult};
+
+    fn print_(tb: PyRef) -> PyResult<()> {
+        let sys = try!(super::import("sys"));
+        let stderr = try!(super::object::get_attr_str(sys.borrow(), "stderr"));
+        let ret = unsafe { PyTraceBack_Print(tb.as_ptr(), stderr.as_ptr()) };
+        pycheck!(ret == 0);
+
+        let flush = try!(super::object::get_attr_str(stderr.borrow(), "flush"));
+        let unit = try!(super::tuple::pack0());
+        try!(super::object::call(flush.borrow(), unit.borrow(), None));
+
+        Ok(())
+    }
+
+    pub fn print(tb: PyRef) {
+        warn_on_err!(print_(tb));
     }
 }
 
