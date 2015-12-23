@@ -123,6 +123,7 @@ def header(i):
         b_data = %{b('data')}
         b_js = %{b('js')}
         b_scripts = %{b('scripts')}
+        b_scripts2 = %{b('scripts2')}
 
         mods = %{','.join(i.mod_list)}
 

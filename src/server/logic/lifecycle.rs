@@ -49,6 +49,8 @@ pub fn start_up(mut eng: EngineRef) {
         let stable_pid = eng.as_hidden_world_fragment().create_plane(name).unwrap().stable_id();
         assert!(stable_pid == STABLE_PLANE_FOREST);
     }
+
+    warn_on_err!(eng.script_hooks().call_server_startup(eng.borrow()));
 }
 
 
@@ -65,6 +67,8 @@ pub fn shut_down(mut eng: EngineRef) {
     while let Some(pid) = eng.world().planes().next().map(|p| p.id()) {
         logic::chunks::unload_plane(eng.borrow(), pid);
     }
+
+    warn_on_err!(eng.script_hooks().call_server_shutdown(eng.borrow()));
 
     {
         let (h, eng) = eng.borrow().0.split_off();

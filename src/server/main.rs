@@ -3,24 +3,21 @@
 #![allow(dead_code)]
 
 #![feature(
-    as_slice,   // Option::as_slice
     convert,    // OsStr::to_cstring
     core,
     filling_drop,
     fnbox,
-    iter_cmp,
     mpsc_select,
+    nonzero,
     num_bits_bytes,
     plugin,
     raw,
     scoped,
-    step_by,
     trace_macros,
     unboxed_closures,
     unsafe_no_drop_flag,
-    vec_push_all,
     vecmap,
-    zero_one,
+    wrapping,
 )]
 
 #![plugin(syntax_exts)]
@@ -38,6 +35,7 @@ extern crate linked_hash_map;
 extern crate lru_cache;
 extern crate rusqlite;
 extern crate libsqlite3_sys as rusqlite_ffi;
+extern crate python3_sys;
 
 extern crate physics as libphysics;
 extern crate terrain_gen as libterrain_gen;
@@ -52,6 +50,7 @@ use rustc_serialize::json;
 
 #[macro_use] mod util;
 #[macro_use] mod engine;
+#[macro_use] mod python;
 
 mod msg;
 mod wire;
@@ -71,6 +70,8 @@ mod terrain_gen;
 mod vision;
 mod logic;
 mod cache;
+
+mod script2;
 
 mod data {
     pub use libserver_config::data::*;
@@ -94,6 +95,7 @@ fn main() {
 
     env_logger::init().unwrap();
 
+    // Initialize engine environment.
     let args = env::args().collect::<Vec<_>>();
     let storage = storage::Storage::new(&args[1]);
 
@@ -110,6 +112,15 @@ fn main() {
                                      animation_json,
                                      loot_table_json).unwrap();
 
+    script2::ffi_module_preinit();
+    python::initialize();
+    script2::ffi_module_postinit();
+    // Python init failures turn into panics, since they are likely to leave the Python context in
+    // an invalid state.
+    python::run_file(&storage.script2_dir().join("boot.py")).unwrap();
+
+
+    // Start background threads.
     let (req_send, req_recv) = channel();
     let (resp_send, resp_recv) = channel();
 
@@ -123,6 +134,23 @@ fn main() {
         tasks::run_output(writer, resp_recv).unwrap();
     });
 
-    let mut engine = engine::Engine::new(&data, &storage, req_recv, resp_send);
-    engine.run();
+
+    // Run the engine.  The engine runs inside the two `with_ref`s so that the data and storage
+    // refs will be valid for the lifetime of the server.
+    script2::with_ref(&storage, |storage_ref| {
+        script2::with_ref(&data, |data_ref| {
+            let mut script_hooks = script2::ScriptHooks::new();
+            script2::with_ref_mut(&mut script_hooks, |hooks_ref| {
+                script2::call_init(storage_ref, data_ref, hooks_ref).unwrap();
+            });
+            let script_hooks = script_hooks;
+
+            let mut engine = engine::Engine::new(&data,
+                                                 &storage,
+                                                 &script_hooks,
+                                                 req_recv,
+                                                 resp_send);
+            engine.run();
+        });
+    });
 }

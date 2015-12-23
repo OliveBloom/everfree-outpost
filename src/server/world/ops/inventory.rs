@@ -1,5 +1,4 @@
 use std::cmp;
-use std::collections::HashMap;
 use std::mem::replace;
 use std::u8;
 
@@ -180,7 +179,7 @@ pub fn transfer_receive<'d, F>(f: &mut F,
                 }
             },
 
-            Item::Special(extra, item_id) => {
+            Item::Special(_, _) => {
                 let i = unwrap!(f.world_mut().inventories.get_mut(iid));
 
                 if slot_id == NO_SLOT {

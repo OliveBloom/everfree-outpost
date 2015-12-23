@@ -14,6 +14,7 @@ pub mod writer;
 pub mod reader;
 mod object_writer;
 mod object_reader;
+mod extra;
 
 
 type SaveId = u32;
@@ -62,7 +63,7 @@ impl ToAnyId for StructureId {
 }
 
 
-const CURRENT_VERSION: u32 = 6;
+const CURRENT_VERSION: u32 = 7;
 
 
 fn padding(len: usize) -> usize {

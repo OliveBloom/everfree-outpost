@@ -2,7 +2,6 @@ use std::mem;
 use std::path::Path;
 use std::ptr;
 use libc::c_int;
-use rand::XorShiftRng;
 
 use types::*;
 use util::{StringError, StringResult};

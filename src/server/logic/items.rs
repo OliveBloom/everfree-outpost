@@ -1,5 +1,4 @@
 use std::cmp;
-use std::u8;
 
 use types::*;
 use util::StrResult;

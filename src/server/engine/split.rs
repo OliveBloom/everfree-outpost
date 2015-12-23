@@ -5,6 +5,7 @@ use types::*;
 
 use data::Data;
 use engine::Engine;
+use script2::ScriptHooks;
 use storage::Storage;
 
 
@@ -14,12 +15,14 @@ macro_rules! EnginePart_decl {
             ptr: *mut Engine<'d>,
             _marker0: PhantomData<&'d Data>,
             _marker1: PhantomData<&'d Storage>,
+            _marker2: PhantomData<&'d ScriptHooks>,
             $($field: PhantomData<&'a mut $tv>,)*
         }
 
         pub struct Open<'a, 'd, $($tv: 'a),*> {
             pub data: &'d Data,
             pub storage: &'d Storage,
+            pub script_hooks: &'d ScriptHooks,
             $( pub $field: &'a mut $tv, )*
         }
 
@@ -29,8 +32,13 @@ macro_rules! EnginePart_decl {
                     ptr: e,
                     _marker0: PhantomData,
                     _marker1: PhantomData,
+                    _marker2: PhantomData,
                     $($field: PhantomData,)*
                 }
+            }
+
+            pub fn as_ptr(&self) -> *mut Engine<'d> {
+                self.ptr
             }
 
             pub fn borrow<'b>(&'b mut self) -> EnginePart<'b, 'd, $($tv),*> {
@@ -64,10 +72,12 @@ macro_rules! EnginePart_decl {
             pub fn open<'b>(&'b mut self) -> Open<'b, 'd, $($tv),*> {
                 let data = self.data();
                 let storage = self.storage();
+                let script_hooks = self.script_hooks();
                 unsafe {
                     Open {
                         data: data,
                         storage: storage,
+                        script_hooks: script_hooks,
                         $( $field: mem::transmute(&mut (*self.ptr).$field), )*
                     }
                 }
@@ -79,6 +89,10 @@ macro_rules! EnginePart_decl {
 
             pub fn storage(&self) -> &'d Storage {
                 unsafe { (*self.ptr).storage }
+            }
+
+            pub fn script_hooks(&self) -> &'d ScriptHooks {
+                unsafe { (*self.ptr).script_hooks }
             }
 
             pub fn now(&self) -> Time {
@@ -133,6 +147,7 @@ macro_rules! EnginePart_decl {
             fn from_part(part: Self::P) -> Self;
             fn to_part(self) -> Self::P;
             unsafe fn from_ptr(ptr: *mut Engine) -> Self;
+            fn as_ptr(&self) -> *mut Engine<'static>;
         }
     };
 }
@@ -239,6 +254,12 @@ macro_rules! engine_part_typedef_impls {
 
             unsafe fn from_ptr(ptr: *mut $crate::engine::Engine) -> $name<'a, 'd> {
                 ::std::mem::transmute(ptr)
+            }
+
+            fn as_ptr(&self) -> *mut $crate::engine::Engine<'static> {
+                // Shouldn't need a transmute here, but apparently you can't directly cast between
+                // *mut T<'a> and *mut T<'b>...
+                unsafe { ::std::mem::transmute(self.0.as_ptr()) }
             }
         }
 
