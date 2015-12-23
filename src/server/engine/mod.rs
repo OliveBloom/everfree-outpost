@@ -170,8 +170,12 @@ impl<'d> Engine<'d> {
                 if msg.starts_with("@") {
                     let result = self.script_hooks.call_eval(self.as_ref(), &msg[1..]);
                     let result_str = match result {
-                        Ok(s) => s,
-                        Err(e) => format!("[exception: {}]", e),
+                        Ok(s) => {
+                            let mut s = s;
+                            s.push_str("\n");
+                            s
+                        },
+                        Err(e) => format!("[exception: {}]\n", e),
                     };
                     self.messages.send_control(ReplResult(cookie, result_str));
                 } else {

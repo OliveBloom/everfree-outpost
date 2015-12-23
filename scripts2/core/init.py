@@ -8,8 +8,8 @@ import outpost_server.core.eval
 
 
 old_print = builtins.print
-def err_print(*args, file=sys.stderr, flush=True, **kwargs):
-    old_print(*args, file=file, flush=flush, **kwargs)
+def err_print(*args, file=None, flush=True, **kwargs):
+    old_print(*args, file=file or sys.stderr, flush=flush, **kwargs)
 builtins.print = err_print
 
 def startup(eng):
