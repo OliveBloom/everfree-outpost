@@ -172,6 +172,8 @@ pub fn with_engine_ref<E, F, R>(e: E, f: F) -> R
         {
             let er = &mut *(obj.as_ptr() as *mut PyEngineRef);
             er.flags = 0;
+            // Invalidate all ExtraRefs derived from `er`.
+            er.base.incr_version();
         }
 
         result
