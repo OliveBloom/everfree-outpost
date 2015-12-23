@@ -1,0 +1,16 @@
+tiles/lpc-base-tiles/grass.png:
+    derived-from: adrix89-tiled-terrains
+    attribution: >
+        Snow tiles are specifically by Daniel Eddeland (original sand tileset),
+        Nushio (sand -> snow recolor), and Adrix89 (additional snow recoloring)
+
+structures/tree-top-round.png:
+    derived-from: supermata-trees-and-terrain
+structures/tree-top-cone.png:
+    derived-from: supermata-trees-and-terrain
+
+tiles/farmland-interior-parts.png:
+    derived-from: daneeklu-farming-tilesets, adrix89-tiled-terrains
+    attribution:
+        Derived from Daneeklu's farming tilesets (same as the standard
+        farmland-interior-parts.png), with grass replaced by Adrix89's snow
