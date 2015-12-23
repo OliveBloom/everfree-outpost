@@ -17,6 +17,7 @@ Dependencies:
  - jgallagher/rusqlite e896738
  - contain-rs/linked-hash-map 4f944c6
  - contain-rs/lru-cache dc58d49
+ - dgrunwald/rust-cpython 0.0.4-33-g049bcb3 (`libpython3_sys` only)
  - python3
  - python3-pillow
  - python3-yaml

@@ -44,6 +44,10 @@ in_dir rustc-serialize  build rustc_serialize
 
 in_dir time  build time
 
+in_dir rust-cpython/python3-sys  build python3_sys -lpython3.4m \
+    --cfg Py_LIMITED_API  --cfg Py_3_4 \
+    --cfg 'py_sys_config="WITH_THREAD"'
+
 in_dir rusqlite/libsqlite3-sys  build libsqlite3_sys -lsqlite3
 in_dir rusqlite  build rusqlite
 
