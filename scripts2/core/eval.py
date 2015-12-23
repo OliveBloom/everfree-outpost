@@ -30,6 +30,10 @@ class RPCContext(object):
     def get_obj(self, idx):
         return self._objs[idx]
 
+    def reset(self):
+        self._objs = []
+        self._free_objs = []
+
     def set_engine_ref(self, eng):
         self._eng = eng
 
@@ -76,6 +80,9 @@ class RPCContext(object):
 
     def op_import(self, name):
         return importlib.import_module(name)
+
+    def op_import_raw(self, name, fromlist=()):
+        return builtins.__import__(name, fromlist=fromlist)
 
     def op_getattr(self, obj, key):
         return getattr(obj, key)
