@@ -20,6 +20,7 @@ use world::ops;
 
 use super::Result;
 use super::{AnyId, ToAnyId};
+use super::extra::ExtraReader;
 use super::reader::{Reader, ReaderWrapper, ReadId};
 use super::CURRENT_VERSION;
 
@@ -175,11 +176,6 @@ impl<R: io::Read> ObjectReader<R> {
 
         try!(f.with_world(|wf| -> Result<_> {
             {
-                let w = world::Fragment::world_mut(wf);
-                try!(w.entities.set_stable_id(eid, stable_id));
-
-                let e = &mut w.entities[eid];
-
                 let (stable_plane,
                      start_pos,
                      end_pos,
@@ -188,6 +184,12 @@ impl<R: io::Read> ObjectReader<R> {
                      facing,
                      target_velocity,
                      appearance) = try!(self.r.read());
+                let extra = try!(self.r.read_extra(wf));
+
+                let w = world::Fragment::world_mut(wf);
+                try!(w.entities.set_stable_id(eid, stable_id));
+
+                let e = &mut w.entities[eid];
 
                 e.stable_plane = Stable::new(stable_plane);
                 e.plane = PLANE_LIMBO;
@@ -201,6 +203,8 @@ impl<R: io::Read> ObjectReader<R> {
                 e.facing = facing;
                 e.target_velocity = target_velocity;
                 e.appearance = appearance;
+
+                e.extra = Box::new(extra);
             }
             ops::entity::post_init(wf, eid);
             /*

@@ -15,6 +15,7 @@ use world::object::*;
 
 use super::Result;
 use super::{AnyId, ToAnyId};
+use super::extra::ExtraWriter;
 use super::writer::{Writer, WriterWrapper};
 use super::CURRENT_VERSION;
 
@@ -128,6 +129,7 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
                            e.facing,
                            e.target_velocity,
                            e.appearance)));
+        try!(self.w.write_extra(&e.extra));
 
         try!(self.hooks.post_write_entity(&mut self.w, e));
 
