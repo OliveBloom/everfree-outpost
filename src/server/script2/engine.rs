@@ -215,9 +215,10 @@ define_python_class! {
         }
 
 
-        // TODO: error handling for all these functions
-        fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> Option<EntityId> {
-            eng.world().client(cid).pawn_id()
+        fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> PyResult<Option<EntityId>> {
+            let c = pyunwrap!(eng.world().get_client(cid),
+                              runtime_error, "no client with that ID");
+            Ok(c.pawn_id())
         }
 
 
@@ -225,49 +226,62 @@ define_python_class! {
                                                          eng_ref: PyRef,
                                                          eid: EntityId) -> PyResult<PyBox> {
             let mut eng = eng;
-            let mut e = eng.entity_mut(eid);
+            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+                                  runtime_error, "no entity with that ID");
             let extra = e.extra_mut();
             unsafe {
                 derive_extra_ref(extra, eng_ref)
             }
         }
 
-        fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> V3 {
-            eng.world().entity(eid).pos(eng.now())
+        fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> PyResult<V3> {
+            let e = pyunwrap!(eng.world().get_entity(eid),
+                              runtime_error, "no entity with that ID");
+            Ok(e.pos(eng.now()))
         }
 
-        fn world_entity_plane_id(eng: OnlyWorld, eid: EntityId) -> PlaneId {
-            eng.world().entity(eid).plane_id()
+        fn world_entity_plane_id(eng: OnlyWorld, eid: EntityId) -> PyResult<PlaneId> {
+            let e = pyunwrap!(eng.world().get_entity(eid),
+                              runtime_error, "no entity with that ID");
+            Ok(e.plane_id())
         }
 
         fn world_entity_teleport(eng: glue::WorldFragment,
                                  eid: EntityId,
-                                 pos: V3) -> () {
-            logic::world::teleport_entity(eng, eid, pos).unwrap();
+                                 pos: V3) -> PyResult<()> {
+            try!(logic::world::teleport_entity(eng, eid, pos));
+            Ok(())
         }
 
         fn world_entity_teleport_plane(eng: glue::WorldFragment,
                                        eid: EntityId,
                                        pid: PlaneId,
-                                       pos: V3) -> () {
-            logic::world::teleport_entity_plane(eng, eid, pid, pos).unwrap();
+                                       pos: V3) -> PyResult<()> {
+            try!(logic::world::teleport_entity_plane(eng, eid, pid, pos));
+            Ok(())
         }
 
         fn world_entity_teleport_stable_plane(eng: glue::WorldFragment,
                                               eid: EntityId,
                                               stable_pid: Stable<PlaneId>,
-                                              pos: V3) -> () {
-            logic::world::teleport_entity_stable_plane(eng, eid, stable_pid, pos).unwrap();
+                                              pos: V3) -> PyResult<()> {
+            try!(logic::world::teleport_entity_stable_plane(eng, eid, stable_pid, pos));
+            Ok(())
         }
 
 
-        fn world_plane_stable_id(eng: glue::WorldFragment, pid: PlaneId) -> Stable<PlaneId> {
+        fn world_plane_stable_id(eng: glue::WorldFragment,
+                                 pid: PlaneId) -> PyResult<Stable<PlaneId>> {
             let mut eng = eng;
-            eng.plane_mut(pid).stable_id()
+            let mut p = pyunwrap!(eng.get_plane_mut(pid),
+                                  runtime_error, "no plane with that ID");
+            Ok(p.stable_id())
         }
 
-        fn world_plane_name(eng: OnlyWorld, pid: PlaneId) -> String {
-            eng.world().plane(pid).name().to_owned()
+        fn world_plane_name(eng: OnlyWorld, pid: PlaneId) -> PyResult<String> {
+            let p = pyunwrap!(eng.world().get_plane(pid),
+                              runtime_error, "no plane with that ID");
+            Ok(p.name().to_owned())
         }
     }
 }

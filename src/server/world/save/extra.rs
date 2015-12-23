@@ -72,7 +72,6 @@ primitive_enum! {
 
 pub trait ExtraWriter: Writer {
     fn write_extra(&mut self, e: &Extra) -> Result<()> {
-        info!("writing extra");
         match *e {
             Extra::Null =>
                 self.write(Tag::Null as u8),
@@ -106,7 +105,6 @@ pub trait ExtraWriter: Writer {
             Extra::Hash(ref h) => {
                 try!(write_tag_and_len(self, h.len(), Tag::SmallHash, Tag::LargeHash));
                 for (k, v) in h {
-                    info!("  extra key: {}", k);
                     try!(self.write_str(k));
                     try!(self.write_extra(v));
                 }
@@ -210,7 +208,6 @@ pub trait ExtraReader: Reader {
     fn read_extra<'d, F: Fragment<'d>>(&mut self, f: &mut F) -> Result<Extra> {
         let (raw_tag, a, b): (u8, u8, u16) = try!(self.read());
         let tag = unwrap!(Tag::from_primitive(raw_tag));
-        info!("reading extra ({:?})", tag);
         match tag {
             Tag::Null =>
                 Ok(Extra::Null),
@@ -354,7 +351,6 @@ fn read_hash<'d, R: ?Sized, F>(r: &mut R,
     let mut h = HashMap::with_capacity(len);
     for _ in 0 .. len {
         let k = try!(r.read_str());
-        info!("  read key: {}", k);
         let v = try!(r.read_extra(f));
         h.insert(k, v);
     }

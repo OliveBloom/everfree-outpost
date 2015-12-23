@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::convert::From;
 use std::error;
 use std::fmt;
 use std::marker::PhantomData;
@@ -8,6 +9,8 @@ use std::ptr;
 use core::nonzero::NonZero;
 
 use python3_sys::*;
+
+use util::StrError;
 
 #[unsafe_no_drop_flag]
 #[allow(raw_pointer_derive)]
@@ -324,6 +327,13 @@ pub fn return_result(r: PyResult<PyBox>) -> *mut PyObject {
             err::raise(*e);
             ptr::null_mut()
         },
+    }
+}
+
+impl From<StrError> for Box<PyExc> {
+    fn from(err: StrError) -> Box<PyExc> {
+        Box::new(PyExc::new(exc::runtime_error(),
+                            err.msg.to_owned()))
     }
 }
 
