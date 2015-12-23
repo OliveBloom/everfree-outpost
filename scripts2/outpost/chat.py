@@ -36,7 +36,7 @@ def sethome(client, args):
         return
 
     pos = pawn.pos()
-    pawn.extra()['home'] = pos
+    pawn.extra()['home_pos'] = pos
 
 @chat.command(sethome.doc)
 def home(client, args):
