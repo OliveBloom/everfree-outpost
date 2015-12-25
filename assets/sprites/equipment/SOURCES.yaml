@@ -10,3 +10,7 @@ explorer-hat.*:
 party-hat*.*:
     title: Party Hat
     author: Stuart Pernsteiner
+
+santa-hat*.*:
+    title: Santa Hat
+    author: Stuart Pernsteiner

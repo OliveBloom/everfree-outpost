@@ -15,6 +15,7 @@ end
 
 make_hat('hat', 1)
 make_hat('party_hat', 2)
+make_hat('santa_hat', 3)
 
 function action.use_ability.remove_hat(c, inv)
     c:pawn():inventory('ability'):update('ability/remove_hat', -1)

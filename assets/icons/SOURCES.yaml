@@ -16,6 +16,10 @@ party-hat-icon.*:
     title: Party Hat
     author: Stuart Pernsteiner
 
+santa-hat-icon.*:
+    title: Santa Hat
+    author: Stuart Pernsteiner
+
 key.png:
     derived-from: williamson-roguelike-items
 

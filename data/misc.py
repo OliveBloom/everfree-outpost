@@ -34,6 +34,7 @@ def init():
 
     mk_item('hat', 'Hat', icons('equip_hat_icon.png'))
     mk_item('party_hat', 'Party Hat', icons('party-hat-icon.png'))
+    mk_item('santa_hat', 'Santa Hat', icons('santa-hat-icon.png'))
 
 
     sign = mk_solid_structure('sign', structures('sign.png'), (1, 1, 1))

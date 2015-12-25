@@ -143,3 +143,14 @@ def init():
     hat_m = mk_sprite('pony/m/equip0/party', group, (96, 96),
             pony_sprites.mk_hat_sheets(hat_base_m, group, offsets['stallion'], 130))
     slots['m']['equip0'].add_variant('party', hat_m)
+
+
+    hat_base_f = sprites('equipment/santa-hat-f.png')
+    hat_f = mk_sprite('pony/f/equip0/santa', group, (96, 96),
+            pony_sprites.mk_hat_sheets(hat_base_f, group, offsets['mare'], 130))
+    slots['f']['equip0'].add_variant('santa', hat_f)
+
+    hat_base_m = sprites('equipment/santa-hat-m.png')
+    hat_m = mk_sprite('pony/m/equip0/santa', group, (96, 96),
+            pony_sprites.mk_hat_sheets(hat_base_m, group, offsets['stallion'], 130))
+    slots['m']['equip0'].add_variant('santa', hat_m)

@@ -10,6 +10,7 @@
 [choose_item cave/chest/large]
 (1) hat
 (2) 10-20 book
+(3) santa_hat
 
 
 [choose_structure cave/floor]
@@ -47,6 +48,7 @@
 (1) hat
 (2) 25-40 book
 (3) trophy
+(3) santa_hat
 
 
 [choose_structure no_structure]
