@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::mem;
 use std::num::wrapping::OverflowingOps;
 use std::ptr;
 use python3_sys::*;
@@ -12,14 +13,19 @@ use logic;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 use script::ScriptEngine;
-use world::extra::Extra;
+use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
 use world::Fragment as World_Fragment;
 use world::object::*;
+
+use super::{Pack, Unpack};
+use super::{types, v3};
 
 
 pub fn init(module: PyRef) {
     init_engine(module);
     init_extra(module);
+    init_extra_hash(module);
+    init_extra_array(module);
 }
 
 
@@ -287,84 +293,241 @@ define_python_class! {
 }
 
 
+impl<'a> Unpack<'a> for Value {
+    fn unpack(obj: PyRef<'a>) -> PyResult<Value> {
+        // IDs
+        if py::object::is_instance(obj, types::get_client_id_type()) {
+            Ok(Value::ClientId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_entity_id_type()) {
+            Ok(Value::EntityId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_inventory_id_type()) {
+            Ok(Value::InventoryId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_plane_id_type()) {
+            Ok(Value::PlaneId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_terrain_chunk_id_type()) {
+            Ok(Value::TerrainChunkId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_structure_id_type()) {
+            Ok(Value::StructureId(try!(Unpack::unpack(obj))))
+
+        // Stable IDs
+        } else if py::object::is_instance(obj, types::get_stable_client_id_type()) {
+            Ok(Value::StableClientId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_stable_entity_id_type()) {
+            Ok(Value::StableEntityId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_stable_inventory_id_type()) {
+            Ok(Value::StableInventoryId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_stable_plane_id_type()) {
+            Ok(Value::StablePlaneId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_stable_terrain_chunk_id_type()) {
+            Ok(Value::StableTerrainChunkId(try!(Unpack::unpack(obj))))
+        } else if py::object::is_instance(obj, types::get_stable_structure_id_type()) {
+            Ok(Value::StableStructureId(try!(Unpack::unpack(obj))))
+
+        // Vn/Region
+        } else if py::object::is_instance(obj, v3::get_v3_type()) {
+            Ok(Value::V3(try!(Unpack::unpack(obj))))
+
+        // Primitives
+        } else if py::bool::check(obj) {
+            Ok(Value::Bool(try!(Unpack::unpack(obj))))
+        } else if py::int::check(obj) {
+            Ok(Value::Int(try!(Unpack::unpack(obj))))
+        } else if py::float::check(obj) {
+            Ok(Value::Float(try!(Unpack::unpack(obj))))
+        } else if py::unicode::check(obj) {
+            Ok(Value::Str(try!(Unpack::unpack(obj))))
+        } else if obj == py::none() {
+            Ok(Value::Null)
+
+        // Error case
+        } else {
+            pyraise!(type_error, "expected something convertible to Value");
+        }
+    }
+}
+
+impl Pack for Value {
+    fn pack(self) -> PyResult<PyBox> {
+        match self {
+            Value::Null => Ok(py::none().to_box()),
+            Value::Bool(b) => Pack::pack(b),
+            Value::Int(i) => Pack::pack(i),
+            Value::Float(f) => Pack::pack(f),
+            Value::Str(s) => Pack::pack(s),
+
+            Value::ClientId(cid) => Pack::pack(cid),
+            Value::EntityId(eid) => Pack::pack(eid),
+            Value::InventoryId(iid) => Pack::pack(iid),
+            Value::PlaneId(pid) => Pack::pack(pid),
+            Value::TerrainChunkId(tcid) => Pack::pack(tcid),
+            Value::StructureId(sid) => Pack::pack(sid),
+
+            Value::StableClientId(cid) => Pack::pack(cid),
+            Value::StableEntityId(eid) => Pack::pack(eid),
+            Value::StableInventoryId(iid) => Pack::pack(iid),
+            Value::StablePlaneId(pid) => Pack::pack(pid),
+            Value::StableTerrainChunkId(tcid) => Pack::pack(tcid),
+            Value::StableStructureId(sid) => Pack::pack(sid),
+
+            Value::V2(v2) => pyraise!(type_error, "V2 is not supported"),
+            Value::V3(v3) => Pack::pack(v3),
+            Value::Region2(region2) => pyraise!(type_error, "Region2 is not supported"),
+            Value::Region3(region3) => pyraise!(type_error, "Region3 is not supported"),
+        }
+    }
+}
+
+
 /// Reference to an `Extra` value.
 struct ExtraRef {
     base: NestedRefBase,
     ptr: *mut Extra,
 }
 
+struct ExtraArrayRef {
+    base: NestedRefBase,
+    ptr: *mut (),
+}
+
+struct ExtraHashRef {
+    base: NestedRefBase,
+    ptr: *mut (),
+}
+
 /// Unsafe because it loses the borrow.  It's also memory-unsafe to call this function twice
 /// without incrementing the version of the parent.
-unsafe fn derive_extra_ref(extra: &mut Extra, parent: PyRef) -> PyResult<PyBox> {
+unsafe fn derive_extra_ref(x: &mut Extra, parent: PyRef) -> PyResult<PyBox> {
     let obj = try!(py::type_::instantiate(get_extra_type()));
     {
         let r = &mut *(obj.as_ptr() as *mut ExtraRef);
         r.base.set_parent(parent);
-        r.ptr = extra as *mut _;
+        r.ptr = x as *mut _;
     }
     Ok(obj)
 }
 
-macro_rules! extra_ref_func {
-    ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
+unsafe fn derive_extra_array_ref(x: ArrayViewMut, parent: PyRef) -> PyResult<PyBox> {
+    let obj = try!(py::type_::instantiate(get_extra_array_type()));
+    {
+        let r = &mut *(obj.as_ptr() as *mut ExtraArrayRef);
+        r.base.set_parent(parent);
+        r.ptr = mem::transmute(x);
+    }
+    Ok(obj)
+}
+
+unsafe fn derive_extra_hash_ref(x: HashViewMut, parent: PyRef) -> PyResult<PyBox> {
+    let obj = try!(py::type_::instantiate(get_extra_hash_type()));
+    {
+        let r = &mut *(obj.as_ptr() as *mut ExtraHashRef);
+        r.base.set_parent(parent);
+        r.ptr = mem::transmute(x);
+    }
+    Ok(obj)
+}
+
+trait NestedRefType {
+    fn get_type() -> PyRef<'static>;
+}
+
+impl NestedRefType for ExtraRef {
+    fn get_type() -> PyRef<'static> {
+        get_extra_type()
+    }
+}
+
+impl NestedRefType for ExtraArrayRef {
+    fn get_type() -> PyRef<'static> {
+        get_extra_array_type()
+    }
+}
+
+impl NestedRefType for ExtraHashRef {
+    fn get_type() -> PyRef<'static> {
+        get_extra_hash_type()
+    }
+}
+
+macro_rules! nested_ref_wrapper {
+    ( $T:ty, $wrap:ident, $slf:ident, $slf_ref:ident, $args:ident; $call:expr ) => {
+        fn $wrap($slf_ref: $crate::python::PyRef,
+                 args: $crate::python::PyRef)
+                 -> $crate::python::PyResult<$crate::python::PyBox> {
+            use $crate::script2::{Pack, Unpack};
+
+            pyassert!(py::object::is_instance($slf_ref, <$T as NestedRefType>::get_type()),
+                      type_error,
+                      concat!("expected ", stringify!($T)));
+            unsafe {
+                let $slf = &mut *($slf_ref.as_ptr() as *mut $T);
+                pyassert!($slf.base.valid(),
+                          runtime_error,
+                          concat!(stringify!($T), " has expired"));
+
+                $slf.base.incr_version();
+                let $args = try!(Unpack::unpack(args));
+                let result = $call;
+                Pack::pack(result)
+            }
+        }
+    };
+}
+
+macro_rules! any_extra_ref_func {
+    ( $T:ty, $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
             method_imp1!(imp, $args, $ret_ty, $body);
-
-            fn wrap(slf: $crate::python::PyRef,
-                    args: $crate::python::PyRef)
-                    -> $crate::python::PyResult<$crate::python::PyBox> {
-                use $crate::script2::{Pack, Unpack};
-
-                pyassert!(py::object::is_instance(slf, get_extra_type()),
-                          type_error, "expected an ExtraRef");
-                unsafe {
-                    let er = &mut *(slf.as_ptr() as *mut ExtraRef);
-                    pyassert!(er.base.valid(),
-                              runtime_error, "ExtraRef has expired");
-
-                    er.base.incr_version();
-                    let result = imp(&mut *er.ptr, try!(Unpack::unpack(args)));
-                    Pack::pack(result)
-                }
-            }
-
+            nested_ref_wrapper!($T, wrap, slf, _slf_ref, args;
+                                // Convert *mut Extra -> &mut Extra, or for view refs,
+                                // convert *mut () -> Hash/ArrayViewMut
+                                imp(mem::transmute(slf.ptr), args));
             call_wrapper!(wrap, slf, args)
         }
     };
 }
 
-macro_rules! extra_ref_func_with_ref {
-    ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
-
+macro_rules! any_extra_ref_func_with_ref {
+    ( $T:ty, $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
             method_imp2!(imp, $args, $ret_ty, $body);
-
-            fn wrap(slf: $crate::python::PyRef,
-                    args: $crate::python::PyRef)
-                    -> $crate::python::PyResult<$crate::python::PyBox> {
-                use $crate::script2::{Pack, Unpack};
-
-                pyassert!(py::object::is_instance(slf, get_extra_type()),
-                          type_error, "expected an ExtraRef");
-                unsafe {
-                    let er = &mut *(slf.as_ptr() as *mut ExtraRef);
-                    pyassert!(er.base.valid(),
-                              runtime_error, "ExtraRef has expired");
-
-                    er.base.incr_version();
-                    let result = imp(&mut *er.ptr, slf, try!(Unpack::unpack(args)));
-                    Pack::pack(result)
-                }
-            }
-
+            nested_ref_wrapper!($T, wrap, slf, slf_ref, args;
+                                imp(mem::transmute(slf.ptr), slf_ref, args));
             call_wrapper!(wrap, slf, args)
         }
-
     };
+}
+
+macro_rules! extra_ref_func {
+    ( $($args:tt)* ) => ( any_extra_ref_func!(ExtraRef, $($args)*) );
+}
+macro_rules! extra_ref_func_with_ref {
+    ( $($args:tt)* ) => ( any_extra_ref_func_with_ref!(ExtraRef, $($args)*) );
+}
+
+macro_rules! extra_array_ref_func {
+    ( $($args:tt)* ) => ( any_extra_ref_func!(ExtraArrayRef, $($args)*) );
+}
+macro_rules! extra_array_ref_func_with_ref {
+    ( $($args:tt)* ) => ( any_extra_ref_func_with_ref!(ExtraArrayRef, $($args)*) );
+}
+
+macro_rules! extra_hash_ref_func {
+    ( $($args:tt)* ) => ( any_extra_ref_func!(ExtraHashRef, $($args)*) );
+}
+macro_rules! extra_hash_ref_func_with_ref {
+    ( $($args:tt)* ) => ( any_extra_ref_func_with_ref!(ExtraHashRef, $($args)*) );
+}
+
+unsafe fn pack_view(this_ref: PyRef, view: ViewMut) -> PyResult<PyBox> {
+    match view {
+        ViewMut::Value(v) => Pack::pack(v),
+        ViewMut::Array(a) => unsafe { derive_extra_array_ref(a, this_ref) },
+        ViewMut::Hash(h) => unsafe { derive_extra_hash_ref(h, this_ref) },
+    }
 }
 
 define_python_class! {
@@ -373,40 +536,6 @@ define_python_class! {
         initializer init_extra;
         accessor get_extra_type;
         method_macro extra_ref_func!;
-
-        fn get_type(this: &Extra,) -> String {
-            use world::extra::Extra::*;
-            (match *this {
-                Null => "null",
-                Bool(_) => "bool",
-                Int(_) => "int",
-                Float(_) => "float",
-                Str(_) => "str",
-
-                Array(_) => "array",
-                Hash(_) => "hash",
-
-                ClientId(_) => "client_id",
-                EntityId(_) => "entity_id",
-                InventoryId(_) => "inventory_id",
-                PlaneId(_) => "plane_id",
-                TerrainChunkId(_) => "terrain_chunk_id",
-                StructureId(_) => "structure_id",
-
-                StableClientId(_) => "stable_client_id",
-                StableEntityId(_) => "stable_entity_id",
-                StableInventoryId(_) => "stable_inventory_id",
-                StablePlaneId(_) => "stable_plane_id",
-                StableTerrainChunkId(_) => "stable_terrain_chunk_id",
-                StableStructureId(_) => "stable_structure_id",
-
-                V2(_) => "v2",
-                V3(_) => "v3",
-                Region2(_) => "region2",
-                Region3(_) => "region3",
-            }).to_owned()
-        }
-
 
         fn(raw_func!) is_valid(this: PyRef,) -> PyResult<bool> {
             pyassert!(py::object::is_instance(this, get_extra_type()),
@@ -417,378 +546,173 @@ define_python_class! {
             }
         }
 
-        fn(raw_func!) get_ptr(this: PyRef,) -> PyResult<usize> {
-            pyassert!(py::object::is_instance(this, get_extra_type()),
-                      type_error, "expected an ExtraRef");
+        fn(extra_ref_func_with_ref!) get(this: &mut Extra,
+                                         this_ref: PyRef,
+                                         key: String) -> PyResult<PyBox> {
+            let view = pyunwrap!(this.get_mut(&key),
+                                 key_error, "key not present: {:?}", key);
+            unsafe { pack_view(this_ref, view) }
+        }
+
+        fn set_value(this: &mut Extra, key: String, val: Value) {
+            this.set(&key, val);
+        }
+
+        fn set_array(this: &mut Extra, key: String) {
+            this.set_array(&key);
+        }
+
+        fn set_hash(this: &mut Extra, key: String) {
+            this.set_hash(&key);
+        }
+
+        fn remove(this: &mut Extra, key: String) {
+            this.remove(&key);
+        }
+
+        fn contains(this: &mut Extra, key: String) -> bool {
+            this.contains(&key)
+        }
+
+        fn len(this: &mut Extra) -> usize {
+            this.len()
+        }
+
+        fn(extra_ref_func_with_ref!) convert(this: &mut Extra,
+                                             this_ref: PyRef) -> PyResult<PyBox> {
+            let dict = try!(py::dict::new());
+            for (key, val) in this.iter_mut() {
+                let py_val = try!(unsafe { pack_view(this_ref, val) });
+                try!(py::dict::set_item_str(dict.borrow(), key, py_val.borrow()));
+            }
+            Ok(dict)
+        }
+    }
+}
+
+define_python_class! {
+    class ExtraArrayRef: ExtraArrayRef {
+        type_obj EXTRA_ARRAY_REF_TYPE;
+        initializer init_extra_array;
+        accessor get_extra_array_type;
+        method_macro extra_array_ref_func!;
+
+        fn(raw_func!) is_valid(this: PyRef,) -> PyResult<bool> {
+            pyassert!(py::object::is_instance(this, get_extra_array_type()),
+                      type_error, "expected an ExtraArrayRef");
             unsafe {
-                let er = &mut *(this.as_ptr() as *mut ExtraRef);
-                Ok(er.ptr as usize)
+                let er = &mut *(this.as_ptr() as *mut ExtraArrayRef);
+                Ok(er.base.valid())
             }
         }
 
-
-        fn set_null(this: &mut Extra,) {
-            *this = Extra::Null;
-        }
-
-        fn get_bool(this: &Extra,) -> PyResult<bool> {
-            match *this {
-                Extra::Bool(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::Bool"),
-            }
-        }
-
-        fn set_bool(this: &mut Extra, val: bool) {
-            *this = Extra::Bool(val);
-        }
-
-        fn get_int(this: &Extra,) -> PyResult<i64> {
-            match *this {
-                Extra::Int(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::Int"),
-            }
-        }
-
-        fn set_int(this: &mut Extra, val: i64) {
-            *this = Extra::Int(val);
-        }
-
-        fn get_float(this: &Extra,) -> PyResult<f64> {
-            match *this {
-                Extra::Float(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::Float"),
-            }
-        }
-
-        fn set_float(this: &mut Extra, val: f64) {
-            *this = Extra::Float(val);
-        }
-
-        fn get_str(this: &Extra,) -> PyResult<String> {
-            match *this {
-                Extra::Str(ref val) => Ok(val.clone()),
-                _ => pyraise!(type_error, "expected an Extra::Str"),
-            }
-        }
-
-        fn set_str(this: &mut Extra, val: String) {
-            *this = Extra::Str(val);
-        }
-
-
-        fn set_array(this: &mut Extra,) {
-            *this = Extra::Array(Vec::new());
-        }
-
-
-        fn set_hash(this: &mut Extra,) {
-            *this = Extra::Hash(HashMap::new());
-        }
-
-
-        fn get_client_id(this: &Extra,) -> PyResult<ClientId> {
-            match *this {
-                Extra::ClientId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::ClientId"),
-            }
-        }
-
-        fn set_client_id(this: &mut Extra, val: ClientId) {
-            *this = Extra::ClientId(val);
-        }
-
-        fn get_entity_id(this: &Extra,) -> PyResult<EntityId> {
-            match *this {
-                Extra::EntityId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::EntityId"),
-            }
-        }
-
-        fn set_entity_id(this: &mut Extra, val: EntityId) {
-            *this = Extra::EntityId(val);
-        }
-
-        fn get_inventory_id(this: &Extra,) -> PyResult<InventoryId> {
-            match *this {
-                Extra::InventoryId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::InventoryId"),
-            }
-        }
-
-        fn set_inventory_id(this: &mut Extra, val: InventoryId) {
-            *this = Extra::InventoryId(val);
-        }
-
-        fn get_plane_id(this: &Extra,) -> PyResult<PlaneId> {
-            match *this {
-                Extra::PlaneId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::PlaneId"),
-            }
-        }
-
-        fn set_plane_id(this: &mut Extra, val: PlaneId) {
-            *this = Extra::PlaneId(val);
-        }
-
-        fn get_terrain_chunk_id(this: &Extra,) -> PyResult<TerrainChunkId> {
-            match *this {
-                Extra::TerrainChunkId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::TerrainChunkId"),
-            }
-        }
-
-        fn set_terrain_chunk_id(this: &mut Extra, val: TerrainChunkId) {
-            *this = Extra::TerrainChunkId(val);
-        }
-
-        fn get_structure_id(this: &Extra,) -> PyResult<StructureId> {
-            match *this {
-                Extra::StructureId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StructureId"),
-            }
-        }
-
-        fn set_structure_id(this: &mut Extra, val: StructureId) {
-            *this = Extra::StructureId(val);
-        }
-
-
-        fn get_stable_client_id(this: &Extra,) -> PyResult<Stable<ClientId>> {
-            match *this {
-                Extra::StableClientId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StableClientId"),
-            }
-        }
-
-        fn set_stable_client_id(this: &mut Extra, val: Stable<ClientId>) {
-            *this = Extra::StableClientId(val);
-        }
-
-        fn get_stable_entity_id(this: &Extra,) -> PyResult<Stable<EntityId>> {
-            match *this {
-                Extra::StableEntityId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StableEntityId"),
-            }
-        }
-
-        fn set_stable_entity_id(this: &mut Extra, val: Stable<EntityId>) {
-            *this = Extra::StableEntityId(val);
-        }
-
-        fn get_stable_inventory_id(this: &Extra,) -> PyResult<Stable<InventoryId>> {
-            match *this {
-                Extra::StableInventoryId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StableInventoryId"),
-            }
-        }
-
-        fn set_stable_inventory_id(this: &mut Extra, val: Stable<InventoryId>) {
-            *this = Extra::StableInventoryId(val);
-        }
-
-        fn get_stable_plane_id(this: &Extra,) -> PyResult<Stable<PlaneId>> {
-            match *this {
-                Extra::StablePlaneId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StablePlaneId"),
-            }
-        }
-
-        fn set_stable_plane_id(this: &mut Extra, val: Stable<PlaneId>) {
-            *this = Extra::StablePlaneId(val);
-        }
-
-        fn get_stable_terrain_chunk_id(this: &Extra,) -> PyResult<Stable<TerrainChunkId>> {
-            match *this {
-                Extra::StableTerrainChunkId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StableTerrainChunkId"),
-            }
-        }
-
-        fn set_stable_terrain_chunk_id(this: &mut Extra, val: Stable<TerrainChunkId>) {
-            *this = Extra::StableTerrainChunkId(val);
-        }
-
-        fn get_stable_structure_id(this: &Extra,) -> PyResult<Stable<StructureId>> {
-            match *this {
-                Extra::StableStructureId(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::StableStructureId"),
-            }
-        }
-
-        fn set_stable_structure_id(this: &mut Extra, val: Stable<StructureId>) {
-            *this = Extra::StableStructureId(val);
-        }
-
-
-        /* TODO: V2 support
-        fn get_v2(this: &Extra,) -> V2 {
-            match *this {
-                Extra::V2(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::V2"),
-            }
-        }
-
-        fn set_v2(this: &mut Extra, val: V2) {
-            *this = Extra::V2(val);
-        }
-        */
-
-        fn get_v3(this: &Extra,) -> PyResult<V3> {
-            match *this {
-                Extra::V3(val) => Ok(val),
-                _ => pyraise!(type_error, "expected an Extra::V3"),
-            }
-        }
-
-        fn set_v3(this: &mut Extra, val: V3) {
-            *this = Extra::V3(val);
-        }
-
-        /* TODO: Region<V2> support
-        fn get_region2(this: &Extra,) -> Region<V2> {
-            match *this {
-                Extra::Region2(val) => val,
-                _ => pyraise!(type_error, "expected an Extra::Region2"),
-            }
-        }
-
-        fn set_region2(this: &mut Extra, val: Region<V2>) {
-            *this = Extra::Region2(val);
-        }
-        */
-
-        /* TODO: Region<V3> support
-        fn get_region3(this: &Extra,) -> Region<V3> {
-            match *this {
-                Extra::Region3(val) => val,
-                _ => pyraise!(type_error, "expected an Extra::Region3"),
-            }
-        }
-
-        fn set_region3(this: &mut Extra, val: Region<V3>) {
-            *this = Extra::Region3(val);
-        }
-        */
-
-
-        fn(extra_ref_func_with_ref!) get_array(this: &mut Extra,
-                                               py_this: PyRef) -> PyResult<PyBox> {
-            if let Extra::Array(ref mut v) = *this {
-                let list = try!(py::list::new());
-                for val in v.iter_mut() {
-                    let py_val = try!(unsafe { derive_extra_ref(val, py_this) });
-                    try!(py::list::append(list.borrow(), py_val.borrow()));
-                }
-                Ok(list)
-            } else {
-                pyraise!(type_error, "expected an Extra::Array");
-            }
-        }
-
-        fn(extra_ref_func_with_ref!) array_get(this: &mut Extra,
-                                               py_this: PyRef,
+        fn(extra_array_ref_func_with_ref!) get(this: ArrayViewMut,
+                                               this_ref: PyRef,
                                                idx: usize) -> PyResult<PyBox> {
-            if let Extra::Array(ref mut v) = *this {
-                pyassert!(idx < v.len(), index_error, "out of range: {} >= {}", idx, v.len());
-                unsafe { derive_extra_ref(&mut v[idx], py_this) }
-            } else {
-                pyraise!(type_error, "expected an Extra::Array");
+            let mut this = this;
+            let len = this.borrow().len();
+            pyassert!(idx < len,
+                      index_error, "the len is {} but the index is {}", len, idx);
+            let view = this.get_mut(idx);
+            unsafe { pack_view(this_ref, view) }
+        }
+
+        fn set_value(this: ArrayViewMut, idx: usize, val: Value) {
+            this.set(idx, val);
+        }
+
+        fn set_array(this: ArrayViewMut, idx: usize) {
+            this.set_array(idx);
+        }
+
+        fn set_hash(this: ArrayViewMut, idx: usize) {
+            this.set_hash(idx);
+        }
+
+        fn push(this: ArrayViewMut) {
+            this.push();
+        }
+
+        fn pop(this: ArrayViewMut) -> PyResult<()> {
+            let mut this = this;
+            pyassert!(this.borrow().len() > 0,
+                      value_error, "can't pop from empty list");
+            this.pop();
+            Ok(())
+        }
+
+        fn len(this: ArrayViewMut) -> usize {
+            this.len()
+        }
+
+        fn(extra_array_ref_func_with_ref!) convert(this: ArrayViewMut,
+                                                   this_ref: PyRef) -> PyResult<PyBox> {
+            let list = try!(py::list::new());
+            for val in this.iter_mut() {
+                let py_val = try!(unsafe { pack_view(this_ref, val) });
+                try!(py::list::append(list.borrow(), py_val.borrow()));
+            }
+            Ok(list)
+        }
+    }
+}
+
+define_python_class! {
+    class ExtraHashRef: ExtraHashRef {
+        type_obj EXTRA_HASH_REF_TYPE;
+        initializer init_extra_hash;
+        accessor get_extra_hash_type;
+        method_macro extra_hash_ref_func!;
+
+        fn(raw_func!) is_valid(this: PyRef,) -> PyResult<bool> {
+            pyassert!(py::object::is_instance(this, get_extra_hash_type()),
+                      type_error, "expected an ExtraHashRef");
+            unsafe {
+                let er = &mut *(this.as_ptr() as *mut ExtraHashRef);
+                Ok(er.base.valid())
             }
         }
 
-        fn(extra_ref_func_with_ref!) array_append(this: &mut Extra,
-                                                  py_this: PyRef,) -> PyResult<PyBox> {
-            if let Extra::Array(ref mut v) = *this {
-                v.push(Extra::Null);
-                let idx = v.len() - 1;
-                unsafe { derive_extra_ref(&mut v[idx], py_this) }
-            } else {
-                pyraise!(type_error, "expected an Extra::Array");
-            }
-        }
-
-        fn array_pop(this: &mut Extra,) -> PyResult<()> {
-            if let Extra::Array(ref mut v) = *this {
-                v.pop();
-                Ok(())
-            } else {
-                pyraise!(type_error, "expected an Extra::Array");
-            }
-        }
-
-        fn array_len(this: &Extra,) -> PyResult<usize> {
-            if let Extra::Array(ref v) = *this {
-                Ok(v.len())
-            } else {
-                pyraise!(type_error, "expected an Extra::Array");
-            }
-        }
-
-
-        fn(extra_ref_func_with_ref!) get_hash(this: &mut Extra,
-                                              py_this: PyRef,) -> PyResult<PyBox> {
-            if let Extra::Hash(ref mut h) = *this {
-                let dict = try!(py::dict::new());
-                for (key, val) in h.iter_mut() {
-                    let py_val = try!(unsafe { derive_extra_ref(val, py_this) });
-                    try!(py::dict::set_item_str(dict.borrow(), key, py_val.borrow()));
-                }
-                Ok(dict)
-            } else {
-                pyraise!(type_error, "expected an Extra::Hash");
-            }
-        }
-
-        fn(extra_ref_func_with_ref!) hash_get(this: &mut Extra,
-                                              py_this: PyRef,
+        fn(extra_hash_ref_func_with_ref!) get(this: HashViewMut,
+                                              this_ref: PyRef,
                                               key: String) -> PyResult<PyBox> {
-            if let Extra::Hash(ref mut h) = *this {
-                if let Some(elt) = h.get_mut(&key) {
-                    Ok(try!(unsafe { derive_extra_ref(elt, py_this) }))
-                } else {
-                    pyraise!(key_error, "not found: {:?}", key);
-                }
-            } else {
-                pyraise!(type_error, "expected an Extra::Hash");
-            }
+            let view = pyunwrap!(this.get_mut(&key),
+                                 key_error, "key not present: {:?}", key);
+            unsafe { pack_view(this_ref, view) }
         }
 
-        fn(extra_ref_func_with_ref!) hash_put(this: &mut Extra,
-                                              py_this: PyRef,
-                                              key: String) -> PyResult<PyBox> {
-            if let Extra::Hash(ref mut h) = *this {
-                let elt = h.entry(key).or_insert_with(|| Extra::Null);
-                unsafe { derive_extra_ref(elt, py_this) }
-            } else {
-                pyraise!(type_error, "expected an Extra::Hash");
-            }
+        fn set_value(this: HashViewMut, key: String, val: Value) {
+            this.set(&key, val);
         }
 
-        fn hash_delete(this: &mut Extra, key: String) -> PyResult<()> {
-            if let Extra::Hash(ref mut h) = *this {
-                h.remove(&key);
-                Ok(())
-            } else {
-                pyraise!(type_error, "expected an Extra::Hash");
-            }
+        fn set_array(this: HashViewMut, key: String) {
+            this.set_array(&key);
         }
 
-        fn hash_len(this: &Extra) -> PyResult<usize> {
-            if let Extra::Hash(ref h) = *this {
-                Ok(h.len())
-            } else {
-                pyraise!(type_error, "expected an Extra::Hash");
-            }
+        fn set_hash(this: HashViewMut, key: String) {
+            this.set_hash(&key);
         }
 
-        fn hash_contains(this: &Extra,
-                         key: String) -> PyResult<bool> {
-            if let Extra::Hash(ref h) = *this {
-                Ok(h.contains_key(&key))
-            } else {
-                pyraise!(type_error, "expected an Extra::Hash");
-            }
+        fn remove(this: HashViewMut, key: String) {
+            this.remove(&key);
         }
 
+        fn contains(this: HashViewMut, key: String) -> bool {
+            this.contains(&key)
+        }
+
+        fn len(this: HashViewMut) -> usize {
+            this.len()
+        }
+
+        fn(extra_hash_ref_func_with_ref!) convert(this: HashViewMut,
+                                                  this_ref: PyRef) -> PyResult<PyBox> {
+            let dict = try!(py::dict::new());
+            for (key, val) in this.iter_mut() {
+                let py_val = try!(unsafe { pack_view(this_ref, val) });
+                try!(py::dict::set_item_str(dict.borrow(), key, py_val.borrow()));
+            }
+            Ok(dict)
+        }
     }
 }

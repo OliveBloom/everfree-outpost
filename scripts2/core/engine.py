@@ -9,6 +9,9 @@ class EngineProxy(object):
     def __init__(self, eng):
         self._eng = eng
 
+    def __repr__(self):
+        return '<engine at 0x%x>' % id(self._eng)
+
     def num_clients(self):
         return self._eng.messages_clients_len()
 
@@ -17,14 +20,14 @@ class ClientProxy(object):
     def __init__(self, eng, id):
         self._eng = eng
         self._engine = None
-        self._id = id
-        self.id = ClientId(id)
+        assert isinstance(id, ClientId)
+        self.id = id
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.id)
 
     def __repr__(self):
-        return '<client #%d>' % self._id
+        return '<client #%d>' % self.id.raw
 
     @property
     def engine(self):
@@ -33,10 +36,10 @@ class ClientProxy(object):
         return self._engine
 
     def send_message(self, msg):
-        self._eng.messages_send_chat_update(self._id, '***\t' + msg)
+        self._eng.messages_send_chat_update(self.id, '***\t' + msg)
 
     def pawn(self):
-        eid = self._eng.world_client_pawn_id(self._id)
+        eid = self._eng.world_client_pawn_id(self.id)
         if eid is not None:
             return EntityProxy(self._eng, eid)
         else:
@@ -47,14 +50,14 @@ class EntityProxy(object):
     def __init__(self, eng, id):
         self._eng = eng
         self._engine = None
-        self._id = id
-        self.id = EntityId(id)
+        assert isinstance(id, EntityId)
+        self.id = id
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.id)
 
     def __repr__(self):
-        return '<entity #%d>' % self._id
+        return '<entity #%d>' % self.id.raw
 
     @property
     def engine(self):
@@ -63,35 +66,35 @@ class EntityProxy(object):
         return self._engine
 
     def pos(self):
-        return self._eng.world_entity_pos(self._id)
+        return self._eng.world_entity_pos(self.id)
 
     def plane(self):
-        pid = self._eng.world_entity_plane_id(self._id)
+        pid = self._eng.world_entity_plane_id(self.id)
         return PlaneProxy(self._eng, pid)
 
     def teleport(self, pos):
-        self._eng.world_entity_teleport(self._id, pos)
+        self._eng.world_entity_teleport(self.id, pos)
 
     def teleport_plane(self, stable_pid, pos):
         check_type(stable_pid, StablePlaneId)
-        self._eng.world_entity_teleport_stable_plane(self._id, stable_pid.raw, pos)
+        self._eng.world_entity_teleport_stable_plane(self.id, stable_pid.raw, pos)
 
     def extra(self):
-        return ExtraHashProxy(self._eng.world_entity_extra(self._id))
+        return ExtraHashProxy(self._eng.world_entity_extra(self.id))
 
 
 class PlaneProxy(object):
     def __init__(self, eng, id):
         self._eng = eng
         self._engine = None
-        self._id = id
-        self.id = PlaneId(id)
+        assert isinstance(id, PlaneId)
+        self.id = id
 
     def __hash__(self):
-        return hash(self._id)
+        return hash(self.id)
 
     def __repr__(self):
-        return '<plane #%d>' % self._id
+        return '<plane #%d>' % self.id.raw
 
     @property
     def engine(self):
@@ -101,7 +104,7 @@ class PlaneProxy(object):
 
     @property
     def name(self):
-        return self._eng.world_plane_name(self._id)
+        return self._eng.world_plane_name(self.id)
 
     def stable_id(self):
-        return StablePlaneId(self._eng.world_plane_stable_id(self._id))
+        return self._eng.world_plane_stable_id(self.id)

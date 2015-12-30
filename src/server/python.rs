@@ -400,7 +400,7 @@ macro_rules! pyunwrap {
             None => pyraise!($exc_ty, $msg),
         }
     };
-    ($cond:expr, $exc_ty:ident, $msg:expr, $($msg_args:tt)*) => {
+    ($opt:expr, $exc_ty:ident, $msg:expr, $($msg_args:tt)*) => {
         match $opt {
             Some(x) => x,
             None => pyraise!($exc_ty, $msg, $($msg_args)*),
@@ -466,6 +466,10 @@ pub mod unicode {
     use python3_sys::*;
     use super::{PyBox, PyRef, PyResult};
 
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyUnicode_Check(obj.as_ptr()) != 0 }
+    }
+
     pub fn from_str(s: &str) -> PyResult<PyBox> {
         pyassert!(s.len() as u64 <= PY_SSIZE_T_MAX as u64);
         unsafe {
@@ -495,6 +499,10 @@ pub mod unicode {
 pub mod int {
     use python3_sys::*;
     use super::{PyBox, PyRef, PyResult};
+
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyLong_Check(obj.as_ptr()) != 0 }
+    }
 
     pub fn from_u64(val: u64) -> PyResult<PyBox> {
         unsafe { PyBox::new(PyLong_FromUnsignedLongLong(val)) }

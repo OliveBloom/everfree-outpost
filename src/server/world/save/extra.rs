@@ -72,6 +72,8 @@ primitive_enum! {
 
 pub trait ExtraWriter: Writer {
     fn write_extra(&mut self, e: &Extra) -> Result<()> {
+        unimplemented!()
+        /*
         match *e {
             Extra::Null =>
                 self.write(Tag::Null as u8),
@@ -182,11 +184,13 @@ pub trait ExtraWriter: Writer {
                 Ok(())
             },
         }
+        */
     }
 }
 
 impl<W: Writer> ExtraWriter for W {}
 
+/*
 fn write_tag_and_len<W: ExtraWriter + ?Sized>(w: &mut W,
                                               len: usize,
                                               small_tag: Tag,
@@ -202,6 +206,7 @@ fn write_tag_and_len<W: ExtraWriter + ?Sized>(w: &mut W,
     }
     Ok(())
 }
+*/
 
 
 pub trait ExtraReader: Reader {
@@ -311,6 +316,7 @@ pub trait ExtraReader: Reader {
 
 impl<R: Reader> ExtraReader for R {}
 
+/*
 fn read_str<R: ?Sized>(r: &mut R,
                        opt_len: Option<usize>) -> Result<Extra>
         where R: ExtraReader {
@@ -356,3 +362,4 @@ fn read_hash<'d, R: ?Sized, F>(r: &mut R,
     }
     Ok(Extra::Hash(h))
 }
+*/

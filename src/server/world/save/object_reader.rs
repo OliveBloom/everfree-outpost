@@ -15,12 +15,12 @@ use world;
 use world::Item;
 use world::{EntityAttachment, StructureAttachment, InventoryAttachment};
 use world::{TerrainChunkFlags, StructureFlags};
+use world::extra;
 use world::object::*;
 use world::ops;
 
 use super::Result;
 use super::{AnyId, ToAnyId};
-use super::extra::ExtraReader;
 use super::reader::{Reader, ReaderWrapper, ReadId};
 use super::CURRENT_VERSION;
 
@@ -184,7 +184,7 @@ impl<R: io::Read> ObjectReader<R> {
                      facing,
                      target_velocity,
                      appearance) = try!(self.r.read());
-                let extra = try!(self.r.read_extra(wf));
+                let extra = try!(extra::read(&mut self.r, wf));
 
                 let w = world::Fragment::world_mut(wf);
                 try!(w.entities.set_stable_id(eid, stable_id));
@@ -204,7 +204,7 @@ impl<R: io::Read> ObjectReader<R> {
                 e.target_velocity = target_velocity;
                 e.appearance = appearance;
 
-                e.extra = Box::new(extra);
+                e.extra = extra;
             }
             ops::entity::post_init(wf, eid);
             /*

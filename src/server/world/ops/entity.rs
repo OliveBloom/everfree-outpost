@@ -27,7 +27,7 @@ pub fn create<'d, F>(f: &mut F,
         target_velocity: scalar(0),
         appearance: appearance,
 
-        extra: Box::new(Extra::new_hash()),
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         attachment: EntityAttachment::World,
         child_inventories: HashSet::new(),
@@ -51,7 +51,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> EntityId
         target_velocity: scalar(0),
         appearance: 0,
 
-        extra: Box::new(Extra::new_hash()),
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         attachment: EntityAttachment::World,
         child_inventories: HashSet::new(),

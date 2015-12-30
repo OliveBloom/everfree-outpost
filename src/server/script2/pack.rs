@@ -30,13 +30,6 @@ impl<'a> Unpack<'a> for String {
     }
 }
 
-impl<'a, T> Unpack<'a> for Stable<T> {
-    fn unpack(obj: PyRef<'a>) -> PyResult<Stable<T>> {
-        let raw = try!(Unpack::unpack(obj));
-        Ok(Stable::new(raw))
-    }
-}
-
 impl<'a> Unpack<'a> for bool {
     fn unpack(obj: PyRef<'a>) -> PyResult<bool> {
         if obj == py::bool::true_() {
@@ -111,12 +104,6 @@ impl<'a, K, V> Pack for &'a HashMap<K, V>
             try!(py::dict::set_item(dct.borrow(), k.borrow(), v.borrow()));
         }
         Ok(dct)
-    }
-}
-
-impl<T> Pack for Stable<T> {
-    fn pack(self) -> PyResult<PyBox> {
-        Pack::pack(self.unwrap())
     }
 }
 
@@ -216,29 +203,3 @@ int_impls!(i16, signed);
 int_impls!(i32, signed);
 int_impls!(i64, signed);
 int_impls!(isize, signed);
-
-
-macro_rules! id_impls {
-    ($ty:ident) => {
-        impl<'a> Unpack<'a> for $ty {
-            fn unpack(obj: PyRef<'a>) -> PyResult<$ty> {
-                let raw = try!(Unpack::unpack(obj));
-                Ok($ty(raw))
-            }
-        }
-
-        impl Pack for $ty {
-            fn pack(self) -> PyResult<PyBox> {
-                Pack::pack(self.unwrap())
-            }
-        }
-    };
-}
-
-id_impls!(WireId);
-id_impls!(ClientId);
-id_impls!(EntityId);
-id_impls!(InventoryId);
-id_impls!(PlaneId);
-id_impls!(TerrainChunkId);
-id_impls!(StructureId);

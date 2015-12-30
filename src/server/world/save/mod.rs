@@ -14,7 +14,6 @@ pub mod writer;
 pub mod reader;
 mod object_writer;
 mod object_reader;
-mod extra;
 
 
 type SaveId = u32;

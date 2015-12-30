@@ -19,6 +19,7 @@ mod engine;
 mod data;
 mod hooks;
 mod storage;
+mod types;
 
 
 
@@ -96,6 +97,7 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
         storage::init(module.borrow());
         engine::init(module.borrow());
         v3::init(module.borrow());
+        types::init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
         module.unwrap()

@@ -98,7 +98,7 @@ pub struct Entity {
     target_velocity: V3,
     appearance: u32,
 
-    extra: Box<Extra>,
+    extra: Extra,
     stable_id: StableId,
     attachment: EntityAttachment,
     child_inventories: HashSet<InventoryId>,
