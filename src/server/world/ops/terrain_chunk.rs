@@ -13,7 +13,9 @@ pub fn create<'d, F>(f: &mut F,
                      pid: PlaneId,
                      cpos: V2) -> OpResult<TerrainChunkId>
         where F: Fragment<'d> {
+    let stable_pid = f.world_mut().planes.pin(pid);
     let tc = TerrainChunk {
+        stable_plane: stable_pid,
         plane: pid,
         cpos: cpos,
         blocks: Box::new(PLACEHOLDER_CHUNK),
@@ -34,6 +36,7 @@ pub fn create<'d, F>(f: &mut F,
 pub fn create_unchecked<'d, F>(f: &mut F) -> TerrainChunkId
         where F: Fragment<'d> {
     let tcid = f.world_mut().terrain_chunks.insert(TerrainChunk {
+        stable_plane: Stable::new(0),
         plane: PlaneId(0),
         cpos: scalar(0),
         blocks: Box::new(EMPTY_CHUNK),

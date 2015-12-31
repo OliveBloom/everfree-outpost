@@ -26,7 +26,9 @@ pub fn create<'d, F>(f: &mut F,
         fail!("structure placement blocked by terrain or other structure");
     }
 
+    let stable_pid = f.world_mut().planes.pin(pid);
     let s = Structure {
+        stable_plane: stable_pid,
         plane: pid,
         pos: pos,
         template: tid,
@@ -47,6 +49,7 @@ pub fn create<'d, F>(f: &mut F,
 pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
         where F: Fragment<'d> {
     let sid = f.world_mut().structures.insert(Structure {
+        stable_plane: Stable::new(0),
         plane: PlaneId(0),
         pos: scalar(0),
         template: 0,

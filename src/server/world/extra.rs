@@ -8,6 +8,7 @@ use util::Convert;
 
 use world::fragment::Fragment;
 use world::save::{self, Reader, Writer};
+use world::bundle::export::{Export, Exporter};
 
 
 macro_rules! with_value_variants {
@@ -365,6 +366,7 @@ impl<'a> Iterator for HashViewIterMut<'a> {
 }
 
 
+#[derive(Clone)]
 pub struct Extra {
     h: Option<Box<HashMap<String, Repr>>>,
 }
@@ -856,4 +858,53 @@ fn read_hash<'d, R: ?Sized, F>(r: &mut R,
         h.insert(k, v);
     }
     Ok(h)
+}
+
+
+impl Export for Repr {
+    fn export_to(&self, e: &mut Exporter) -> Repr {
+        use self::Repr::*;
+        match *self {
+            Null => Null,
+            Array(ref v) => Array(v.iter().map(|x| e.export(x)).collect()),
+            Hash(ref h) => Hash(h.iter().map(|(k,v)| (k.clone(), e.export(v))).collect()),
+            Bool(b) => Bool(b),
+            Int(i) => Int(i),
+            Float(f) => Float(f),
+            Str(ref s) => Str(s.clone()),
+
+            ClientId(id) => ClientId(e.export(&id)),
+            EntityId(id) => EntityId(e.export(&id)),
+            InventoryId(id) => InventoryId(e.export(&id)),
+            PlaneId(id) => PlaneId(e.export(&id)),
+            TerrainChunkId(id) => TerrainChunkId(e.export(&id)),
+            StructureId(id) => StructureId(e.export(&id)),
+
+            StableClientId(id) => StableClientId(id),
+            StableEntityId(id) => StableEntityId(id),
+            StableInventoryId(id) => StableInventoryId(id),
+            StablePlaneId(id) => StablePlaneId(id),
+            StableTerrainChunkId(id) => StableTerrainChunkId(id),
+            StableStructureId(id) => StableStructureId(id),
+
+            V2(v) => V2(v),
+            V3(v) => V3(v),
+            Region2(r) => Region2(r),
+            Region3(r) => Region3(r),
+        }
+    }
+}
+
+impl Export for Extra {
+    fn export_to(&self, e: &mut Exporter) -> Extra {
+        if let Some(ref h) = self.h {
+            let mut h2 = HashMap::with_capacity(h.len());
+            for (k, v) in h.iter() {
+                h2.insert(k.clone(), e.export(v));
+            }
+            Extra { h: Some(Box::new(h2)) }
+        } else {
+            Extra { h: None }
+        }
+    }
 }
