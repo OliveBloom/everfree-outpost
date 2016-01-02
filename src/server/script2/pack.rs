@@ -24,9 +24,50 @@ impl<'a> Unpack<'a> for PyBox {
     }
 }
 
+impl<'a, A: Unpack<'a>> Unpack<'a> for Option<A> {
+    fn unpack(obj: PyRef<'a>) -> PyResult<Option<A>> {
+        if obj == py::none() {
+            Ok(None)
+        } else {
+            Ok(Some(try!(Unpack::unpack(obj))))
+        }
+    }
+}
+
 impl<'a> Unpack<'a> for String {
     fn unpack(obj: PyRef<'a>) -> PyResult<String> {
         py::unicode::as_string(obj)
+    }
+}
+
+impl<'a, T> Unpack<'a> for Vec<T>
+        where T: Unpack<'a> {
+    fn unpack(obj: PyRef<'a>) -> PyResult<Vec<T>> {
+        let len = try!(py::list::size(obj));
+        let mut v = Vec::with_capacity(len);
+        for i in 0 .. len {
+            let item = try!(py::list::get_item(obj, i));
+            v.push(try!(Unpack::unpack(item)));
+        }
+        Ok(v)
+    }
+}
+
+impl<'a, K, V> Unpack<'a> for HashMap<K, V>
+        where K: for<'b> Unpack<'b> + Eq + Hash,
+              V: for<'b> Unpack<'b> {
+    fn unpack(obj: PyRef<'a>) -> PyResult<HashMap<K, V>> {
+        let items = try!(py::dict::items(obj));
+        let items_ = items.borrow();
+
+        let len = try!(py::list::size(items_));
+        let mut h = HashMap::with_capacity(len);
+        for i in 0 .. len {
+            let item = try!(py::list::get_item(items_, i));
+            let (k, v) = try!(Unpack::unpack(item));
+            h.insert(k, v);
+        }
+        Ok(h)
     }
 }
 
@@ -93,14 +134,26 @@ impl Pack for String {
     }
 }
 
-impl<'a, K, V> Pack for &'a HashMap<K, V>
-        where K: Clone + Pack + Eq + Hash,
-              V: Clone + Pack {
+impl<T> Pack for Vec<T>
+        where T: Pack {
+    fn pack(self) -> PyResult<PyBox> {
+        let lst = try!(py::list::new());
+        for x in self {
+            let x = try!(Pack::pack(x));
+            try!(py::list::append(lst.borrow(), x.borrow()));
+        }
+        Ok(lst)
+    }
+}
+
+impl<K, V> Pack for HashMap<K, V>
+        where K: Pack + Eq + Hash,
+              V: Pack {
     fn pack(self) -> PyResult<PyBox> {
         let dct = try!(py::dict::new());
         for (k, v) in self {
-            let k = try!(Pack::pack(k.clone()));
-            let v = try!(Pack::pack(v.clone()));
+            let k = try!(Pack::pack(k));
+            let v = try!(Pack::pack(v));
             try!(py::dict::set_item(dct.borrow(), k.borrow(), v.borrow()));
         }
         Ok(dct)
@@ -155,6 +208,7 @@ tuple_impls!(0, pack0: ());
 tuple_impls!(1, pack1: (A 0));
 tuple_impls!(2, pack2: (A 0, B 1));
 tuple_impls!(3, pack3: (A 0, B 1, C 2));
+tuple_impls!(4, pack4: (A 0, B 1, C 2, D 3));
 
 
 macro_rules! int_impls {

@@ -44,11 +44,11 @@ define_python_class! {
         }
 
         fn recipe_inputs(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
-            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.inputs))
+            this.recipes.get_recipe(id).map(|r| Pack::pack(r.inputs.clone()))
         }
 
         fn recipe_outputs(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
-            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.outputs))
+            this.recipes.get_recipe(id).map(|r| Pack::pack(r.outputs.clone()))
         }
 
         fn recipe_station(&this, id: RecipeId) -> Option<Option<TemplateId>> {

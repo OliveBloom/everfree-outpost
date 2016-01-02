@@ -1,6 +1,7 @@
 use types::*;
 
 use engine::split;
+use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 
@@ -49,6 +50,9 @@ define_script_hooks!(
     eval,
 
     client_chat_command,
+    client_interact,
+    client_use_item,
+    client_use_ability,
 );
 
 impl ScriptHooks {
@@ -75,6 +79,29 @@ impl ScriptHooks {
                                     cid: ClientId,
                                     msg: &str) -> PyResult<()> {
         call_with_engine2(&self.client_chat_command, eng, cid, msg)
+    }
+
+    pub fn call_client_interact(&self,
+                                eng: split::EngineRef,
+                                cid: ClientId,
+                                args: Option<ExtraArg>) -> PyResult<()> {
+        call_with_engine2(&self.client_interact, eng, cid, args)
+    }
+
+    pub fn call_client_use_item(&self,
+                                eng: split::EngineRef,
+                                cid: ClientId,
+                                item: ItemId,
+                                args: Option<ExtraArg>) -> PyResult<()> {
+        call_with_engine3(&self.client_use_item, eng, cid, item, args)
+    }
+
+    pub fn call_client_use_ability(&self,
+                                   eng: split::EngineRef,
+                                   cid: ClientId,
+                                   ability: ItemId,
+                                   args: Option<ExtraArg>) -> PyResult<()> {
+        call_with_engine3(&self.client_use_ability, eng, cid, ability, args)
     }
 }
 
@@ -130,6 +157,21 @@ fn call_with_engine2<A, B>(opt_func: &Option<PyBox>,
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a, b))
+        })
+    } else {
+        Ok(())
+    }
+}
+
+fn call_with_engine3<A, B, C>(opt_func: &Option<PyBox>,
+                              eng: split::EngineRef,
+                              a: A,
+                              b: B,
+                              c: C) -> PyResult<()>
+        where A: Pack, B: Pack, C: Pack {
+    if let Some(ref func) = *opt_func {
+        with_engine_ref(eng, |eng| {
+            call_void(func.borrow(), (eng, a, b, c))
         })
     } else {
         Ok(())

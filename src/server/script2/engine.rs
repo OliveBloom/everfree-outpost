@@ -10,6 +10,7 @@ use engine::Engine;
 use engine::glue;
 use engine::split::{EngineRef, Part, PartFlags};
 use logic;
+use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 use script::ScriptEngine;
@@ -208,6 +209,26 @@ define_python_class! {
 
         fn script_cb_chat_command(eng: EngineRef, cid: ClientId, msg: String) {
             warn_on_err!(ScriptEngine::cb_chat_command(eng.unwrap(), cid, &msg));
+        }
+
+        fn script_cb_interact(eng: EngineRef,
+                              cid: ClientId,
+                              args: Option<ExtraArg>) {
+            warn_on_err!(ScriptEngine::cb_interact(eng.unwrap(), cid, args));
+        }
+
+        fn script_cb_use_item(eng: EngineRef,
+                              cid: ClientId,
+                              item_id: ItemId,
+                              args: Option<ExtraArg>) {
+            warn_on_err!(ScriptEngine::cb_use_item(eng.unwrap(), cid, item_id, args));
+        }
+
+        fn script_cb_use_ability(eng: EngineRef,
+                                 cid: ClientId,
+                                 item_id: ItemId,
+                                 args: Option<ExtraArg>) {
+            warn_on_err!(ScriptEngine::cb_use_ability(eng.unwrap(), cid, item_id, args));
         }
 
         fn messages_clients_len(eng: OnlyMessages,) -> usize {

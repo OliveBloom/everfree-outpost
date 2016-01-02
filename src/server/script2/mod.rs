@@ -13,6 +13,7 @@ pub use self::rust_ref::{with_ref, with_ref_mut};
 #[macro_use] mod class;
 #[macro_use] mod rust_ref;
 mod pack;
+mod util;
 
 mod v3;
 mod engine;
@@ -20,6 +21,7 @@ mod data;
 mod hooks;
 mod storage;
 mod types;
+mod extra_arg;
 
 
 
