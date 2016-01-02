@@ -13,6 +13,8 @@ def place(e, item, template=None):
     e.inv('main').bulk_remove(item, 1)
 
 def take(e, s, item):
+    item = DATA.item(item)
+
     if e.inv('main').count_space(item) == 0:
         raise RuntimeError('no space for item in inventory')
     s.destroy()

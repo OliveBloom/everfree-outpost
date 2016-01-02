@@ -68,6 +68,12 @@ class EntityProxy(ObjectProxy):
     def facing(self):
         return self._eng.world_entity_facing(self.id)
 
+    def controller(self):
+        cid = self._eng.world_entity_controller(self.id)
+        if cid is None:
+            return None
+        return ClientProxy(self._eng, cid)
+
     def teleport(self, pos):
         self._eng.world_entity_teleport(self.id, pos)
 
@@ -92,14 +98,10 @@ class InventoryProxy(ObjectProxy):
     ID_TYPE = InventoryId
 
     def count(self, item):
-        if isinstance(item, ItemProxy):
-            item = item.id
-        return self._eng.world_inventory_count(self.id, item)
+        return self._eng.world_inventory_count(self.id, item.id)
 
     def count_space(self, item):
-        if isinstance(item, ItemProxy):
-            item = item.id
-        return self._eng.world_inventory_count_space(self.id, item)
+        return self._eng.world_inventory_count_space(self.id, item.id)
 
     def bulk_add(self, item, count):
         return self._eng.world_inventory_bulk_add(self.id, item.id, count)
@@ -132,6 +134,9 @@ class PlaneProxy(ObjectProxy):
 
 class StructureProxy(ObjectProxy):
     ID_TYPE = StructureId
+
+    def destroy(self):
+        self._eng.world_structure_destroy(self.id)
 
     def pos(self):
         return self._eng.world_structure_pos(self.id)

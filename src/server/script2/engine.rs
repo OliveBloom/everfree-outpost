@@ -290,6 +290,18 @@ define_python_class! {
             Ok(e.plane_id())
         }
 
+        fn world_entity_controller(eng: OnlyWorld, eid: EntityId) -> PyResult<Option<ClientId>> {
+            let e = pyunwrap!(eng.world().get_entity(eid),
+                              runtime_error, "no entity with that ID");
+            if let world::EntityAttachment::Client(cid) = e.attachment() {
+                let c = eng.world().client(cid);
+                if c.pawn_id() == Some(eid) {
+                    return Ok(Some(cid));
+                }
+            }
+            Ok(None)
+        }
+
         fn world_entity_teleport(eng: glue::WorldFragment,
                                  eid: EntityId,
                                  pos: V3) -> PyResult<()> {
@@ -374,6 +386,13 @@ define_python_class! {
             let mut s = try!(eng.create_structure(pid, pos, template_id));
             try!(s.set_attachment(world::StructureAttachment::Chunk));
             Ok(s.id())
+        }
+
+        fn world_structure_destroy(eng: glue::WorldFragment,
+                                   sid: StructureId) -> PyResult<()> {
+            let mut eng = eng;
+            try!(eng.destroy_structure(sid));
+            Ok(())
         }
 
         fn world_structure_pos(eng: OnlyWorld, sid: StructureId) -> PyResult<V3> {
