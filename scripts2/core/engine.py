@@ -1,9 +1,11 @@
+from outpost_server.core.data import TemplateProxy
 from outpost_server.core.extra import ExtraHashProxy
 from outpost_server.core.types import *
 
 def check_type(obj, ty):
     if not isinstance(obj, ty):
         raise ValueError('expected %r, but got %r' % (ty, type(obj)))
+
 
 class EngineProxy(object):
     def __init__(self, eng):
@@ -72,6 +74,9 @@ class EntityProxy(object):
         pid = self._eng.world_entity_plane_id(self.id)
         return PlaneProxy(self._eng, pid)
 
+    def facing(self):
+        return self._eng.world_entity_facing(self.id)
+
     def teleport(self, pos):
         self._eng.world_entity_teleport(self.id, pos)
 
@@ -108,3 +113,42 @@ class PlaneProxy(object):
 
     def stable_id(self):
         return self._eng.world_plane_stable_id(self.id)
+
+    def find_structure_at_point(self, pos):
+        opt_sid = self._eng.world_structure_find_at_point(self.id, pos)
+        if opt_sid is not None:
+            return StructureProxy(self._eng, opt_sid)
+        else:
+            return None
+
+
+class StructureProxy(object):
+    def __init__(self, eng, id):
+        self._eng = eng
+        self._engine = None
+        assert isinstance(id, StructureId)
+        self.id = id
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __repr__(self):
+        return '<structure #%d>' % self.id.raw
+
+    @property
+    def engine(self):
+        if self._engine is None:
+            self._engine = EngineProxy(self._eng)
+        return self._engine
+
+    def pos(self):
+        return self._eng.world_structure_pos(self.id)
+
+    def plane(self):
+        pid = self._eng.world_structure_plane_id(self.id)
+        return PlaneProxy(self._eng, pid)
+
+    def template(self):
+        id = self._eng.world_structure_template_id(self.id)
+        return TemplateProxy.by_id(id)
+

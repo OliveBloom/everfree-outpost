@@ -16,6 +16,15 @@ class DataProxy(object):
         id = _DATA.template_by_name(name)
         return TemplateProxy.by_id(id)
 
+    def num_items(self):
+        return len(ItemProxy.INSTANCES)
+
+    def num_recipes(self):
+        return len(RecipeProxy.INSTANCES)
+
+    def num_templates(self):
+        return len(TemplateProxy.INSTANCES)
+
 DATA = DataProxy()
 
 
@@ -89,7 +98,7 @@ class TemplateProxy(object):
 
     @property
     def name(self):
-        return _DATA.recipe_name(self.id)
+        return _DATA.template_name(self.id)
 
 
 def init(data):

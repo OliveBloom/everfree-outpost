@@ -985,6 +985,10 @@ pub fn none() -> PyRef<'static> {
     unsafe { PyRef::new_non_null(Py_None()) }
 }
 
+pub fn not_implemented() -> PyRef<'static> {
+    unsafe { PyRef::new_non_null(Py_NotImplemented()) }
+}
+
 pub fn flush_stdout() -> PyResult<()> {
     let sys = try!(import("sys"));
     let stderr = try!(object::get_attr_str(sys.borrow(), "stderr"));

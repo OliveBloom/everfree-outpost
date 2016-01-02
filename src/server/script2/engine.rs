@@ -4,6 +4,8 @@ use std::num::wrapping::OverflowingOps;
 use std::ptr;
 use python3_sys::*;
 
+use libphysics::CHUNK_SIZE;
+
 use types::*;
 
 use engine::Engine;
@@ -267,6 +269,12 @@ define_python_class! {
             Ok(e.pos(eng.now()))
         }
 
+        fn world_entity_facing(eng: OnlyWorld, eid: EntityId) -> PyResult<V3> {
+            let e = pyunwrap!(eng.world().get_entity(eid),
+                              runtime_error, "no entity with that ID");
+            Ok(e.facing())
+        }
+
         fn world_entity_plane_id(eng: OnlyWorld, eid: EntityId) -> PyResult<PlaneId> {
             let e = pyunwrap!(eng.world().get_entity(eid),
                               runtime_error, "no entity with that ID");
@@ -309,6 +317,41 @@ define_python_class! {
             let p = pyunwrap!(eng.world().get_plane(pid),
                               runtime_error, "no plane with that ID");
             Ok(p.name().to_owned())
+        }
+
+        fn world_structure_pos(eng: OnlyWorld, sid: StructureId) -> PyResult<V3> {
+            let s = pyunwrap!(eng.world().get_structure(sid),
+                              runtime_error, "no structure with that ID");
+            Ok(s.pos())
+        }
+
+        fn world_structure_plane_id(eng: OnlyWorld, sid: StructureId) -> PyResult<PlaneId> {
+            let s = pyunwrap!(eng.world().get_structure(sid),
+                              runtime_error, "no structure with that ID");
+            Ok(s.plane_id())
+        }
+
+        fn world_structure_template_id(eng: OnlyWorld, sid: StructureId) -> PyResult<TemplateId> {
+            let s = pyunwrap!(eng.world().get_structure(sid),
+                              runtime_error, "no structure with that ID");
+            Ok(s.template_id())
+        }
+
+        fn world_structure_find_at_point(eng: OnlyWorld,
+                                         pid: PlaneId,
+                                         pos: V3) -> Option<StructureId> {
+            let chunk = pos.reduce().div_floor(scalar(CHUNK_SIZE));
+            let mut best_id = None;
+            let mut best_layer = 0;
+            for s in eng.world().chunk_structures(pid, chunk) {
+                if s.bounds().contains(pos) {
+                    if s.template().layer >= best_layer {
+                        best_layer = s.template().layer;
+                        best_id = Some(s.id());
+                    }
+                }
+            };
+            best_id
         }
     }
 }
