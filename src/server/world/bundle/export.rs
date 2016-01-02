@@ -276,7 +276,7 @@ impl<'d> Exporter<'d> {
             name: p.name.clone(),
 
             saved_chunks: p.saved_chunks.iter()
-                           .map(|(k,v)| (*k, *v))
+                           .map(|(&k, &v)| (k, v))
                            .collect::<Vec<_>>().into_boxed_slice(),
 
             stable_id: p.stable_id,

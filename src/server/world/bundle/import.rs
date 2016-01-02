@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::iter::FromIterator;
 
 use types::*;
 
@@ -94,6 +95,105 @@ impl<'d> Importer<'d> {
 
     pub fn import<I: Import>(&self, i: &I) -> I {
         i.import_from(self)
+    }
+
+    pub fn import_iter<'a, I, It, R>(&self, it: It) -> R
+            where I: Import,
+                  It: Iterator<Item=&'a I>,
+                  R: FromIterator<I> {
+        it.map(|i| self.import(i)).collect()
+    }
+
+    fn add_client_raw(&self, w: &mut w::World, idx: ClientId, b: &b::Client) {
+        let id = self.import(&idx);
+        w.clients.set_stable_id(id, b.stable_id).unwrap();
+        let c = &mut w.clients[id];
+
+        c.name = b.name.clone();
+        let pawn = self.import(&b.pawn);
+        c.pawn = if pawn != Some(BAD_ENTITY_ID) { pawn } else { None };
+
+        c.stable_id = b.stable_id;
+        c.child_entities = self.import_iter(b.child_entities.iter());
+        c.child_inventories = self.import_iter(b.child_inventories.iter());
+    }
+
+    fn add_entity_raw(&self, w: &mut w::World, idx: EntityId, b: &b::Entity) {
+        let id = self.import(&idx);
+        w.entities.set_stable_id(id, b.stable_id).unwrap();
+        let e = &mut w.entities[id];
+
+        e.stable_plane = b.stable_plane;
+
+        e.motion = b.motion.clone();
+        e.anim = self.import_anim_id(b.anim);
+        e.facing = b.facing;
+        e.target_velocity = b.target_velocity;
+        e.appearance = b.appearance;
+
+        e.extra = self.import(&b.extra);
+        e.stable_id = b.stable_id;
+        e.attachment = self.import(&b.attachment);
+        e.child_inventories = self.import_iter(b.child_inventories.iter());
+    }
+
+    fn add_inventory_raw(&self, w: &mut w::World, idx: InventoryId, b: &b::Inventory) {
+        let id = self.import(&idx);
+        w.inventories.set_stable_id(id, b.stable_id).unwrap();
+        let i = &mut w.inventories[id];
+
+        i.contents = self.import_iter::<_, _, Vec<_>>(b.contents.iter()).into_boxed_slice();
+
+        i.stable_id = b.stable_id;
+        i.attachment = self.import(&b.attachment);
+    }
+
+    fn add_plane_raw(&self, w: &mut w::World, idx: PlaneId, b: &b::Plane) {
+        let id = self.import(&idx);
+        w.planes.set_stable_id(id, b.stable_id).unwrap();
+        let p = &mut w.planes[id];
+
+        p.name = b.name.clone();
+
+        p.saved_chunks = b.saved_chunks.iter()
+                          .map(|&(k, v)| (k, v))
+                          .collect();
+
+        p.stable_id = b.stable_id;
+    }
+
+    fn add_terrain_chunk_raw(&self, w: &mut w::World, idx: TerrainChunkId, b: &b::TerrainChunk) {
+        let id = self.import(&idx);
+        w.terrain_chunks.set_stable_id(id, b.stable_id).unwrap();
+        let tc = &mut w.terrain_chunks[id];
+
+        let mut blocks = Box::new([0; CHUNK_TOTAL]);
+        for (i, &b) in b.blocks.iter().enumerate() {
+            blocks[i] = self.import_block_id(b);
+        }
+
+        tc.stable_plane = b.stable_plane;
+        tc.cpos = b.cpos;
+        tc.blocks = blocks;
+
+        tc.stable_id = b.stable_id;
+        tc.flags = b.flags;
+        tc.child_structures = self.import_iter(b.child_structures.iter());
+    }
+
+    fn add_structure_raw(&self, w: &mut w::World, idx: StructureId, b: &b::Structure) {
+        let id = self.import(&idx);
+        w.structures.set_stable_id(id, b.stable_id).unwrap();
+        let s = &mut w.structures[id];
+
+        s.stable_plane = b.stable_plane;
+        s.pos = b.pos;
+        s.template = self.import_template_id(b.template);
+
+        s.stable_id = b.stable_id;
+        s.flags = b.flags;
+        s.attachment = self.import(&b.attachment);
+        s.child_inventories = self.import_iter(b.child_inventories.iter());
     }
 }
 
