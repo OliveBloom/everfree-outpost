@@ -5,8 +5,17 @@ use types::*;
 
 use data::Data;
 use world::bundle::types as b;
+use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
+
+
+const BAD_CLIENT_ID: ClientId = ClientId(-1_i16 as u16);
+const BAD_ENTITY_ID: EntityId = EntityId(-1_i32 as u32);
+const BAD_INVENTORY_ID: InventoryId = InventoryId(-1_i32 as u32);
+const BAD_PLANE_ID: PlaneId = PlaneId(-1_i32 as u32);
+const BAD_TERRAIN_CHUNK_ID: TerrainChunkId = TerrainChunkId(-1_i32 as u32);
+const BAD_STRUCTURE_ID: StructureId = StructureId(-1_i32 as u32);
 
 
 struct Remapper<Val, Id> {
@@ -20,6 +29,10 @@ impl<Val, Id: Eq+Hash+Copy> Remapper<Val, Id> {
             vals: Vec::new(),
             id_map: HashMap::new(),
         }
+    }
+
+    fn get(&self, old_id: Id) -> Option<Id> {
+        self.id_map.get(&old_id).map(|&x| x)
     }
 
     fn get_or<F>(&mut self, old_id: Id, f: F) -> Id
@@ -119,7 +132,102 @@ impl<'d> Exporter<'d> {
         }
     }
 
-    pub fn add_client(&mut self, id: ClientId, c: &w::Client) {
+
+    // Tree traversal to register all relevant object IDs.
+
+    pub fn register_client(&mut self, c: &ObjectRef<w::Client>) {
+        self.clients.get_or(c.id(), |raw| (ClientId(raw as u16), None));
+
+        for e in c.child_entities() {
+            self.register_entity(&e);
+        }
+        for i in c.child_inventories() {
+            self.register_inventory(&i);
+        }
+    }
+
+    pub fn register_entity(&mut self, e: &ObjectRef<w::Entity>) {
+        self.entities.get_or(e.id(), |raw| (EntityId(raw as u32), None));
+
+        for i in e.child_inventories() {
+            self.register_inventory(&i);
+        }
+    }
+
+    pub fn register_inventory(&mut self, i: &ObjectRef<w::Inventory>) {
+        self.inventories.get_or(i.id(), |raw| (InventoryId(raw as u32), None));
+    }
+
+    pub fn register_plane(&mut self, p: &ObjectRef<w::Plane>) {
+        self.planes.get_or(p.id(), |raw| (PlaneId(raw as u32), None));
+    }
+
+    pub fn register_terrain_chunk(&mut self, tc: &ObjectRef<w::TerrainChunk>) {
+        self.terrain_chunks.get_or(tc.id(), |raw| (TerrainChunkId(raw as u32), None));
+
+        for s in tc.child_structures() {
+            self.register_structure(&s);
+        }
+    }
+
+    pub fn register_structure(&mut self, s: &ObjectRef<w::Structure>) {
+        self.structures.get_or(s.id(), |raw| (StructureId(raw as u32), None));
+
+        for i in s.child_inventories() {
+            self.register_inventory(&i);
+        }
+    }
+
+
+    // Tree traversal to add all relevant objects.
+
+    pub fn add_client(&mut self, c: &ObjectRef<w::Client>) {
+        self.add_client_raw(c.id(), c.obj());
+
+        for e in c.child_entities() {
+            self.add_entity(&e);
+        }
+        for i in c.child_inventories() {
+            self.add_inventory(&i);
+        }
+    }
+
+    pub fn add_entity(&mut self, e: &ObjectRef<w::Entity>) {
+        self.add_entity_raw(e.id(), e.obj());
+
+        for i in e.child_inventories() {
+            self.add_inventory(&i);
+        }
+    }
+
+    pub fn add_inventory(&mut self, i: &ObjectRef<w::Inventory>) {
+        self.add_inventory_raw(i.id(), i.obj());
+    }
+
+    pub fn add_plane(&mut self, p: &ObjectRef<w::Plane>) {
+        self.add_plane_raw(p.id(), p.obj());
+    }
+
+    pub fn add_terrain_chunk(&mut self, tc: &ObjectRef<w::TerrainChunk>) {
+        self.add_terrain_chunk_raw(tc.id(), tc.obj());
+
+        for s in tc.child_structures() {
+            self.add_structure(&s);
+        }
+    }
+
+    pub fn add_structure(&mut self, s: &ObjectRef<w::Structure>) {
+        self.add_structure_raw(s.id(), s.obj());
+
+        for i in s.child_inventories() {
+            self.add_inventory(&i);
+        }
+    }
+
+
+    // Functions to add only a single object
+
+    fn add_client_raw(&mut self, id: ClientId, c: &w::Client) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Client {
             name: c.name.clone(),
@@ -132,7 +240,7 @@ impl<'d> Exporter<'d> {
         self.clients.vals[idx] = Some(b);
     }
 
-    pub fn add_entity(&mut self, id: EntityId, e: &w::Entity) {
+    fn add_entity_raw(&mut self, id: EntityId, e: &w::Entity) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Entity {
             stable_plane: e.stable_plane,
@@ -151,7 +259,7 @@ impl<'d> Exporter<'d> {
         self.entities.vals[idx] = Some(b);
     }
 
-    pub fn add_inventory(&mut self, id: InventoryId, i: &w::Inventory) {
+    fn add_inventory_raw(&mut self, id: InventoryId, i: &w::Inventory) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Inventory {
             contents: self.export_iter(i.contents.iter()),
@@ -162,7 +270,7 @@ impl<'d> Exporter<'d> {
         self.inventories.vals[idx] = Some(b);
     }
 
-    pub fn add_plane(&mut self, id: PlaneId, p: &w::Plane) {
+    fn add_plane_raw(&mut self, id: PlaneId, p: &w::Plane) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Plane {
             name: p.name.clone(),
@@ -176,7 +284,7 @@ impl<'d> Exporter<'d> {
         self.planes.vals[idx] = Some(b);
     }
 
-    pub fn add_terrain_chunk(&mut self, id: TerrainChunkId, tc: &w::TerrainChunk) {
+    fn add_terrain_chunk_raw(&mut self, id: TerrainChunkId, tc: &w::TerrainChunk) {
         let idx = self.export(&id).unwrap() as usize;
 
         let mut blocks = Box::new([0; CHUNK_TOTAL]);
@@ -196,7 +304,7 @@ impl<'d> Exporter<'d> {
         self.terrain_chunks.vals[idx] = Some(b);
     }
 
-    pub fn add_structure(&mut self, id: StructureId, s: &w::Structure) {
+    fn add_structure_raw(&mut self, id: StructureId, s: &w::Structure) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Structure {
             stable_plane: s.stable_plane,
@@ -211,6 +319,7 @@ impl<'d> Exporter<'d> {
         self.structures.vals[idx] = Some(b);
     }
 }
+
 
 fn convert_str_vec(v: &Vec<&str>) -> Box<[Box<str>]> {
     v.iter().map(|s| (*s).to_owned().into_boxed_slice())
@@ -231,37 +340,37 @@ pub trait Export {
 
 impl Export for ClientId {
     fn export_to(&self, e: &mut Exporter) -> ClientId {
-        e.clients.get_or(*self, |raw| (ClientId(raw as u16), None))
+        e.clients.get(*self).unwrap_or(BAD_CLIENT_ID)
     }
 }
 
 impl Export for EntityId {
     fn export_to(&self, e: &mut Exporter) -> EntityId {
-        e.entities.get_or(*self, |raw| (EntityId(raw as u32), None))
+        e.entities.get(*self).unwrap_or(BAD_ENTITY_ID)
     }
 }
 
 impl Export for InventoryId {
     fn export_to(&self, e: &mut Exporter) -> InventoryId {
-        e.inventories.get_or(*self, |raw| (InventoryId(raw as u32), None))
+        e.inventories.get(*self).unwrap_or(BAD_INVENTORY_ID)
     }
 }
 
 impl Export for PlaneId {
     fn export_to(&self, e: &mut Exporter) -> PlaneId {
-        e.planes.get_or(*self, |raw| (PlaneId(raw as u32), None))
+        e.planes.get(*self).unwrap_or(BAD_PLANE_ID)
     }
 }
 
 impl Export for TerrainChunkId {
     fn export_to(&self, e: &mut Exporter) -> TerrainChunkId {
-        e.terrain_chunks.get_or(*self, |raw| (TerrainChunkId(raw as u32), None))
+        e.terrain_chunks.get(*self).unwrap_or(BAD_TERRAIN_CHUNK_ID)
     }
 }
 
 impl Export for StructureId {
     fn export_to(&self, e: &mut Exporter) -> StructureId {
-        e.structures.get_or(*self, |raw| (StructureId(raw as u32), None))
+        e.structures.get(*self).unwrap_or(BAD_STRUCTURE_ID)
     }
 }
 
