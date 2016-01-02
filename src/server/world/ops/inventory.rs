@@ -15,15 +15,23 @@ use world::ops::OpResult;
 // Inventory size (number of slots) is capped at 255
 pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
         where F: Fragment<'d> {
-    let iid = create_unchecked(f, size);
+    let i = Inventory {
+        contents: util::make_array(Item::Empty, size as usize),
+
+        extra: Extra::new(),
+        stable_id: NO_STABLE_ID,
+        attachment: InventoryAttachment::World,
+    };
+
+    let iid = unwrap!(f.world_mut().inventories.insert(i));
     f.with_hooks(|h| h.on_inventory_create(iid));
     Ok(iid)
 }
 
-pub fn create_unchecked<'d, F>(f: &mut F, size: u8) -> InventoryId
+pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
         where F: Fragment<'d> {
     let iid = f.world_mut().inventories.insert(Inventory {
-        contents: util::make_array(Item::Empty, size as usize),
+        contents: util::make_array(Item::Empty, 0),
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,

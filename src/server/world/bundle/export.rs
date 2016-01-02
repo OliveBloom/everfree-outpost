@@ -10,12 +10,12 @@ use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachm
 use world as w;
 
 
-const BAD_CLIENT_ID: ClientId = ClientId(-1_i16 as u16);
-const BAD_ENTITY_ID: EntityId = EntityId(-1_i32 as u32);
-const BAD_INVENTORY_ID: InventoryId = InventoryId(-1_i32 as u32);
-const BAD_PLANE_ID: PlaneId = PlaneId(-1_i32 as u32);
-const BAD_TERRAIN_CHUNK_ID: TerrainChunkId = TerrainChunkId(-1_i32 as u32);
-const BAD_STRUCTURE_ID: StructureId = StructureId(-1_i32 as u32);
+pub const BAD_CLIENT_ID: ClientId = ClientId(-1_i16 as u16);
+pub const BAD_ENTITY_ID: EntityId = EntityId(-1_i32 as u32);
+pub const BAD_INVENTORY_ID: InventoryId = InventoryId(-1_i32 as u32);
+pub const BAD_PLANE_ID: PlaneId = PlaneId(-1_i32 as u32);
+pub const BAD_TERRAIN_CHUNK_ID: TerrainChunkId = TerrainChunkId(-1_i32 as u32);
+pub const BAD_STRUCTURE_ID: StructureId = StructureId(-1_i32 as u32);
 
 
 struct Remapper<Val, Id> {
