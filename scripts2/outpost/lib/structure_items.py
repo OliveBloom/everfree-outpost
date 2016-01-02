@@ -1,5 +1,7 @@
-from outpost_server.core import util
+from outpost_server.core import use, util
 from outpost_server.core.data import DATA
+
+from outpost_server.outpost.lib import tool as tool_
 
 def place(e, item, template=None):
     item = DATA.item(item)
@@ -19,3 +21,13 @@ def take(e, s, item):
         raise RuntimeError('no space for item in inventory')
     s.destroy()
     e.inv('main').bulk_add(item, 1)
+
+def register(item, template=None, tool=None):
+    item = DATA.item(item)
+    template = DATA.template(template if template is not None else item.name)
+
+    use.item(item)(lambda e, args: place(e, item))
+    if tool is None:
+        use.structure(template)(lambda e, s, args: take(e, item, template))
+    else:
+        tool_.handler(tool, template)(lambda e, s, args: take(e, s, item))
