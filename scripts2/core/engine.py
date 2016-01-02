@@ -1,4 +1,4 @@
-from outpost_server.core.data import TemplateProxy
+from outpost_server.core.data import ItemProxy, TemplateProxy
 from outpost_server.core.extra import ExtraHashProxy
 from outpost_server.core.types import *
 
@@ -18,24 +18,28 @@ class EngineProxy(object):
         return self._eng.messages_clients_len()
 
 
-class ClientProxy(object):
+class ObjectProxy(object):
     def __init__(self, eng, id):
         self._eng = eng
         self._engine = None
-        assert isinstance(id, ClientId)
+        assert isinstance(id, type(self).ID_TYPE)
         self.id = id
 
     def __hash__(self):
         return hash(self.id)
 
     def __repr__(self):
-        return '<client #%d>' % self.id.raw
+        return '<%s #%d>' % (type(self).__name__, self.id.raw)
 
     @property
     def engine(self):
         if self._engine is None:
             self._engine = EngineProxy(self._eng)
         return self._engine
+
+
+class ClientProxy(ObjectProxy):
+    ID_TYPE = ClientId
 
     def send_message(self, msg):
         self._eng.messages_send_chat_update(self.id, '***\t' + msg)
@@ -48,24 +52,8 @@ class ClientProxy(object):
             return None
 
 
-class EntityProxy(object):
-    def __init__(self, eng, id):
-        self._eng = eng
-        self._engine = None
-        assert isinstance(id, EntityId)
-        self.id = id
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __repr__(self):
-        return '<entity #%d>' % self.id.raw
-
-    @property
-    def engine(self):
-        if self._engine is None:
-            self._engine = EngineProxy(self._eng)
-        return self._engine
+class EntityProxy(ObjectProxy):
+    ID_TYPE = EntityId
 
     def pos(self):
         return self._eng.world_entity_pos(self.id)
@@ -87,25 +75,27 @@ class EntityProxy(object):
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))
 
+    def inv(self, key):
+        inv = self.extra().get('inv')
+        if inv is None:
+            return None
+        iid = inv.get(key)
+        if iid is None:
+            return None
+        return InventoryProxy(self._eng, iid)
 
-class PlaneProxy(object):
-    def __init__(self, eng, id):
-        self._eng = eng
-        self._engine = None
-        assert isinstance(id, PlaneId)
-        self.id = id
 
-    def __hash__(self):
-        return hash(self.id)
+class InventoryProxy(ObjectProxy):
+    ID_TYPE = InventoryId
 
-    def __repr__(self):
-        return '<plane #%d>' % self.id.raw
+    def count(self, item):
+        if isinstance(item, ItemProxy):
+            item = item.id
+        return self._eng.world_inventory_count(self.id, item)
 
-    @property
-    def engine(self):
-        if self._engine is None:
-            self._engine = EngineProxy(self._eng)
-        return self._engine
+
+class PlaneProxy(ObjectProxy):
+    ID_TYPE = PlaneId
 
     @property
     def name(self):
@@ -122,24 +112,8 @@ class PlaneProxy(object):
             return None
 
 
-class StructureProxy(object):
-    def __init__(self, eng, id):
-        self._eng = eng
-        self._engine = None
-        assert isinstance(id, StructureId)
-        self.id = id
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __repr__(self):
-        return '<structure #%d>' % self.id.raw
-
-    @property
-    def engine(self):
-        if self._engine is None:
-            self._engine = EngineProxy(self._eng)
-        return self._engine
+class StructureProxy(ObjectProxy):
+    ID_TYPE = StructureId
 
     def pos(self):
         return self._eng.world_structure_pos(self.id)

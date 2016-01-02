@@ -305,6 +305,15 @@ define_python_class! {
         }
 
 
+        fn world_inventory_count(eng: OnlyWorld,
+                                 iid: InventoryId,
+                                 item: ItemId) -> PyResult<u16> {
+            let i = pyunwrap!(eng.world().get_inventory(iid),
+                              runtime_error, "no inventory with that ID");
+            Ok(i.count(item))
+        }
+
+
         fn world_plane_stable_id(eng: glue::WorldFragment,
                                  pid: PlaneId) -> PyResult<Stable<PlaneId>> {
             let mut eng = eng;

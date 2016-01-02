@@ -71,6 +71,12 @@ pub fn set_main_inventories(mut eng: EngineRef,
     eng.messages_mut().send_client(cid, ClientResponse::MainInventory(item_iid));
     eng.messages_mut().send_client(cid, ClientResponse::AbilityInventory(ability_iid));
 
+    // TODO: this is a hack
+    warn_on_err!(eng.script_hooks().call_hack_set_main_inventories(eng,
+                                                                   cid,
+                                                                   item_iid,
+                                                                   ability_iid));
+
     Ok(())
 }
 

@@ -26,16 +26,27 @@ def client_interact(eng, cid, args):
 def client_use_item(eng, cid, item, args):
     handler = _USE_ITEM[item]
     if handler is not None:
-        handler(ClientProxy(eng, cid), args)
+        c = ClientProxy(eng, cid)
+        if c.pawn().inv('ability').count(item) == 0:
+            print('not enough things')
+            return
+
+        handler(c, args)
     else:
         eng.script_cb_use_item(cid, item, args)
 
 def client_use_ability(eng, cid, ability, args):
     handler = _USE_ABILITY[ability]
     if handler is not None:
+        c = ClientProxy(eng, cid)
+        if c.pawn().inv('ability').count(item) == 0:
+            print('not enough things')
+            return
+
         handler(ClientProxy(eng, cid), args)
     else:
         eng.script_cb_use_ability(cid, ability, args)
+
 
 def structure(name):
     """Decorator for registering structure use handlers.

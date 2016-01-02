@@ -45,6 +45,9 @@ class ExtraHashProxy(object):
             return self[key]
 
     def setdefault(self, key, default=None):
+        # NB: Don't return `default` directly.  Otherwise `setdefault(key, {})`
+        # would return the original dict rather than the ExtraHashProxy for the
+        # newly-added Extra::Hash.
         if key not in self:
             self[key] = default
         return self[key]

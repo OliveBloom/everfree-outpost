@@ -53,6 +53,8 @@ define_script_hooks!(
     client_interact,
     client_use_item,
     client_use_ability,
+
+    hack_set_main_inventories,
 );
 
 impl ScriptHooks {
@@ -102,6 +104,15 @@ impl ScriptHooks {
                                    ability: ItemId,
                                    args: Option<ExtraArg>) -> PyResult<()> {
         call_with_engine3(&self.client_use_ability, eng, cid, ability, args)
+    }
+
+
+    pub fn call_hack_set_main_inventories(&self,
+                                          eng: split::EngineRef,
+                                          cid: ClientId,
+                                          item_iid: InventoryId,
+                                          ability_iid: InventoryId) -> PyResult<()> {
+        call_with_engine3(&self.hack_set_main_inventories, eng, cid, item_iid, ability_iid)
     }
 }
 
