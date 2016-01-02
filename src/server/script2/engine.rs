@@ -16,6 +16,7 @@ use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 use script::ScriptEngine;
+use world;
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
 use world::Fragment as World_Fragment;
 use world::object::*;
@@ -244,6 +245,14 @@ define_python_class! {
         }
 
 
+        fn logic_open_crafting(eng: EngineRef,
+                               cid: ClientId,
+                               sid: StructureId,
+                               iid: InventoryId) {
+            warn_on_err!(logic::items::open_crafting(eng, cid, sid, iid));
+        }
+
+
         fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> PyResult<Option<EntityId>> {
             let c = pyunwrap!(eng.world().get_client(cid),
                               runtime_error, "no client with that ID");
@@ -313,6 +322,34 @@ define_python_class! {
             Ok(i.count(item))
         }
 
+        fn world_inventory_count_space(eng: OnlyWorld,
+                                       iid: InventoryId,
+                                       item: ItemId) -> PyResult<u16> {
+            let i = pyunwrap!(eng.world().get_inventory(iid),
+                              runtime_error, "no inventory with that ID");
+            Ok(i.count_space(item))
+        }
+
+        fn world_inventory_bulk_add(eng: glue::WorldFragment,
+                                    iid: InventoryId,
+                                    item: ItemId,
+                                    count: u16) -> PyResult<u16> {
+            let mut eng = eng;
+            let mut i = pyunwrap!(eng.get_inventory_mut(iid),
+                                  runtime_error, "no inventory with that ID");
+            Ok(i.bulk_add(item, count))
+        }
+
+        fn world_inventory_bulk_remove(eng: glue::WorldFragment,
+                                       iid: InventoryId,
+                                       item: ItemId,
+                                       count: u16) -> PyResult<u16> {
+            let mut eng = eng;
+            let mut i = pyunwrap!(eng.get_inventory_mut(iid),
+                                  runtime_error, "no inventory with that ID");
+            Ok(i.bulk_remove(item, count))
+        }
+
 
         fn world_plane_stable_id(eng: glue::WorldFragment,
                                  pid: PlaneId) -> PyResult<Stable<PlaneId>> {
@@ -326,6 +363,17 @@ define_python_class! {
             let p = pyunwrap!(eng.world().get_plane(pid),
                               runtime_error, "no plane with that ID");
             Ok(p.name().to_owned())
+        }
+
+
+        fn world_structure_create(eng: glue::WorldFragment,
+                                  pid: PlaneId,
+                                  pos: V3,
+                                  template_id: TemplateId) -> PyResult<StructureId> {
+            let mut eng = eng;
+            let mut s = try!(eng.create_structure(pid, pos, template_id));
+            try!(s.set_attachment(world::StructureAttachment::Chunk));
+            Ok(s.id())
         }
 
         fn world_structure_pos(eng: OnlyWorld, sid: StructureId) -> PyResult<V3> {

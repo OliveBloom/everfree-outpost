@@ -4,15 +4,39 @@ class DataProxy(object):
     def __init__(self):
         pass
 
-    def item(self, name):
+    def item(self, x):
+        if isinstance(x, ItemProxy):
+            return x
+        elif isinstance(x, int):
+            return ItemProxy.by_id(x)
+        elif isinstance(x, str):
+            return self.item_by_name(x)
+
+    def recipe(self, x):
+        if isinstance(x, RecipeProxy):
+            return x
+        elif isinstance(x, int):
+            return RecipeProxy.by_id(x)
+        elif isinstance(x, str):
+            return self.recipe_by_name(x)
+
+    def template(self, x):
+        if isinstance(x, TemplateProxy):
+            return x
+        elif isinstance(x, int):
+            return TemplateProxy.by_id(x)
+        elif isinstance(x, str):
+            return self.template_by_name(x)
+
+    def item_by_name(self, name):
         id = _DATA.item_by_name(name)
         return ItemProxy.by_id(id)
 
-    def recipe(self, name):
+    def recipe_by_name(self, name):
         id = _DATA.recipe_by_name(name)
         return RecipeProxy.by_id(id)
 
-    def template(self, name):
+    def template_by_name(self, name):
         id = _DATA.template_by_name(name)
         return TemplateProxy.by_id(id)
 

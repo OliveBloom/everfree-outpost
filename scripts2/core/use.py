@@ -1,4 +1,6 @@
+from outpost_server.core import util
 from outpost_server.core.data import DATA
+from outpost_server.core.data import ItemProxy
 from outpost_server.core.engine import ClientProxy
 
 # On import, DATA is not available, so the number of templates/items is not yet
@@ -11,28 +13,28 @@ _USE_ABILITY = {}
 
 def client_interact(eng, cid, args):
     c = ClientProxy(eng, cid)
-    e = c.pawn()
-    hit_pos = e.pos() + 16 + e.facing() * 32
-    s = e.plane().find_structure_at_point(hit_pos.px_to_tile())
+    s = util.hit_structure(c.pawn())
     if s is None:
         return
 
     handler = _USE_STRUCTURE[s.template().id]
     if handler is not None:
-        handler(ClientProxy(eng, cid), s, args)
+        handler(c, s, args)
     else:
+        print('PASS THROUGH: structure', s.template())
         eng.script_cb_interact(cid, args)
 
 def client_use_item(eng, cid, item, args):
     handler = _USE_ITEM[item]
     if handler is not None:
         c = ClientProxy(eng, cid)
-        if c.pawn().inv('ability').count(item) == 0:
+        if c.pawn().inv('main').count(item) == 0:
             print('not enough things')
             return
 
         handler(c, args)
     else:
+        print('PASS THROUGH: item', ItemProxy.by_id(item))
         eng.script_cb_use_item(cid, item, args)
 
 def client_use_ability(eng, cid, ability, args):
@@ -40,11 +42,11 @@ def client_use_ability(eng, cid, ability, args):
     if handler is not None:
         c = ClientProxy(eng, cid)
         if c.pawn().inv('ability').count(item) == 0:
-            print('not enough things')
             return
 
-        handler(ClientProxy(eng, cid), args)
+        handler(c, args)
     else:
+        print('PASS THROUGH: ability', ItemProxy.by_id(ability))
         eng.script_cb_use_ability(cid, ability, args)
 
 
@@ -55,9 +57,9 @@ def structure(name):
         @structure('anvil')
         def anvil(client, structure, args): ...
     """
-    id = DATA.item(name).id
+    id = DATA.template(name).id
     def register(f):
-        _USE_ITEM[id] = f
+        _USE_STRUCTURE[id] = f
         return f
     return register
 

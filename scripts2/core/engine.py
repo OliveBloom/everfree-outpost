@@ -51,6 +51,9 @@ class ClientProxy(ObjectProxy):
         else:
             return None
 
+    def open_crafting(self, s, i):
+        self._eng.logic_open_crafting(self.id, s.id, i.id)
+
 
 class EntityProxy(ObjectProxy):
     ID_TYPE = EntityId
@@ -93,6 +96,17 @@ class InventoryProxy(ObjectProxy):
             item = item.id
         return self._eng.world_inventory_count(self.id, item)
 
+    def count_space(self, item):
+        if isinstance(item, ItemProxy):
+            item = item.id
+        return self._eng.world_inventory_count_space(self.id, item)
+
+    def bulk_add(self, item, count):
+        return self._eng.world_inventory_bulk_add(self.id, item.id, count)
+
+    def bulk_remove(self, item, count):
+        return self._eng.world_inventory_bulk_remove(self.id, item.id, count)
+
 
 class PlaneProxy(ObjectProxy):
     ID_TYPE = PlaneId
@@ -110,6 +124,10 @@ class PlaneProxy(ObjectProxy):
             return StructureProxy(self._eng, opt_sid)
         else:
             return None
+
+    def create_structure(self, pos, template):
+        sid = self._eng.world_structure_create(self.id, pos, template.id)
+        return StructureProxy(self._eng, sid)
 
 
 class StructureProxy(ObjectProxy):
