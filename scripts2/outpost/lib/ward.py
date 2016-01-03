@@ -1,10 +1,8 @@
 from outpost_server.core.types import V3
+from outpost_server.core.engine import EntityProxy, StructureProxy
 
 RADIUS = 16
 SPACING = 48
-
-def get_key(e):
-    return str(e.stable_id().raw)
 
 class Wards(object):
     def __init__(self, plane):
@@ -22,15 +20,13 @@ class Wards(object):
             info = self.plane.extra()['ward_info']
         return info
 
-    def has_ward(self, e):
-        key = get_key(e)
+    def has_ward(self, key):
         return (key in self.get_info())
 
-    def add_ward(self, e, pos):
-        key = get_key(e)
+    def add_ward(self, key, pos, name):
         dct = {
                 'pos': pos,
-                'name': e.controller().name(),
+                'name': name,
                 }
         self.get_info()[key] = dct
 
@@ -57,33 +53,43 @@ class Permissions(object):
     def get_perms(self):
         return self.eng.world_extra().setdefault('ward_perms', {})
 
-    def add_perm(self, e, name):
-        key = get_key(e)
+    def add_perm(self, key, name):
         perms = self.get_perms()
         if key not in perms:
             perms[key] = {}
         perms[key][name] = True
 
-    def remove_perm(self, e, name):
-        key = get_key(e)
+    def remove_perm(self, key, name):
         perms = self.get_perms()
         del perms[key][name]
         if len(perms[key]) == 0:
             del perms[key]
 
     def has_perm(self, key, name):
+        """Check if `key` has granted permission to `name`."""
         perms = self.get_perms()
         return (key in perms and name in perms[key])
 
 
+def get_key(x):
+    if isinstance(x, EntityProxy):
+        return str(x.stable_id().raw)
+    elif isinstance(x, StructureProxy):
+        return str(x.extra()['owner'].raw)
+    else:
+        assert False, 'expected entity or structure'
+
+
 def permit(e, name):
+    key = get_key(e)
     p = Permissions(e.engine)
-    p.add_perm(e, name)
+    p.add_perm(key, name)
 
 def revoke(e, name):
+    key = get_key(e)
     p = Permissions(e.engine)
-    if p.has_perm(get_key(e), name):
-        p.remove_perm(e, name)
+    if p.has_perm(key, name):
+        p.remove_perm(key, name)
         return True
     else:
         return False
@@ -92,8 +98,9 @@ def can_add(e, pos):
     """Check whether it's legal for `e` to place a ward at `pos`.  Returns
     (True, None) on success or (False, msg) on failure.
     """
+    key = get_key(e)
     w = Wards(e.plane())
-    if w.has_ward(e):
+    if w.has_ward(key):
         return False, 'You may only place one ward at a time'
     p = Permissions(e.engine)
     name = e.controller().name()
@@ -107,7 +114,7 @@ def can_add(e, pos):
 def can_remove(e, s):
     """Check whether it's legal for `e` to remove ward `s`."""
     if s.extra()['owner'] != e.stable_id():
-        key = str(s.extra()['owner'].raw)
+        key = get_key(s)
         w = Wards(e.plane())
         return False, 'This ward belongs to %s' % w.get_name(key)
     else:
@@ -126,13 +133,14 @@ def can_act(e, pos):
     return True, None
 
 def add(e, pos, s):
+    key = get_key(e)
     w = Wards(e.plane())
-    w.add_ward(e, pos)
+    w.add_ward(key, pos, e.controller().name())
     s.extra()['owner'] = e.stable_id()
 
 def remove(s):
+    key = get_key(s)
     w = Wards(s.plane())
-    key = str(s.extra()['owner'].raw)
     w.remove_ward(key)
 
 def check(e, pos):
