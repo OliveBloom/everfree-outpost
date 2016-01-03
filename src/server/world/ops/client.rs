@@ -9,6 +9,7 @@ use world::EntityAttachment;
 
 use world::Client;
 use world::{Fragment, Hooks};
+use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
@@ -20,6 +21,7 @@ pub fn create<'d, F>(f: &mut F,
         pawn: None,
         current_input: InputBits::empty(),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         child_entities: HashSet::new(),
         child_inventories: HashSet::new(),
@@ -37,6 +39,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> ClientId
         pawn: None,
         current_input: InputBits::empty(),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         child_entities: HashSet::new(),
         child_inventories: HashSet::new(),

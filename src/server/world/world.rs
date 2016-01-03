@@ -4,6 +4,7 @@ use types::*;
 
 use data::Data;
 use util::stable_id_map::{self, StableIdMap};
+use world::extra::Extra;
 use world::types::*;
 use world::object::{Object, ObjectRef};
 
@@ -12,6 +13,8 @@ impl<'d> super::World<'d> {
     pub fn new(data: &'d Data) -> World<'d> {
         World {
             data: data,
+
+            extra: Extra::new(),
 
             clients: StableIdMap::new(),
             entities: StableIdMap::new(),

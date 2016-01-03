@@ -6,6 +6,7 @@ use util::{multimap_insert, multimap_remove};
 
 use world::{Structure, StructureAttachment, StructureFlags};
 use world::{Fragment, Hooks};
+use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
@@ -30,6 +31,7 @@ pub fn create<'d, F>(f: &mut F,
         pos: pos,
         template: tid,
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         flags: StructureFlags::empty(),
         attachment: StructureAttachment::Plane,
@@ -49,6 +51,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
         pos: scalar(0),
         template: 0,
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         flags: StructureFlags::empty(),
         attachment: StructureAttachment::Plane,

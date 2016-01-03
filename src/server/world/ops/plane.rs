@@ -4,6 +4,7 @@ use types::*;
 
 use world::Plane;
 use world::{Fragment, Hooks};
+use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
@@ -15,6 +16,7 @@ pub fn create<'d, F>(f: &mut F, name: String) -> OpResult<PlaneId>
         loaded_chunks: HashMap::new(),
         saved_chunks: HashMap::new(),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
     };
 
@@ -32,6 +34,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> PlaneId
         loaded_chunks: HashMap::new(),
         saved_chunks: HashMap::new(),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     pid

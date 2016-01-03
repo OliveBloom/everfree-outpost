@@ -8,6 +8,7 @@ use util::SmallVec;
 
 use world::{Inventory, InventoryAttachment, Item};
 use world::{Fragment, Hooks, World};
+use world::extra::Extra;
 use world::ops::OpResult;
 
 
@@ -24,6 +25,7 @@ pub fn create_unchecked<'d, F>(f: &mut F, size: u8) -> InventoryId
     let iid = f.world_mut().inventories.insert(Inventory {
         contents: util::make_array(Item::Empty, size as usize),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         attachment: InventoryAttachment::World,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
