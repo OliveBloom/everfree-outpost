@@ -54,6 +54,9 @@ class ClientProxy(ObjectProxy):
     def open_crafting(self, s, i):
         self._eng.logic_open_crafting(self.id, s.id, i.id)
 
+    def get_use_item_args(self, item, dialog_id, args):
+        self._eng.messages_send_get_use_item_args(self.id, item.id, dialog_id, args)
+
 
 class EntityProxy(ObjectProxy):
     ID_TYPE = EntityId
@@ -154,4 +157,7 @@ class StructureProxy(ObjectProxy):
     def template(self):
         id = self._eng.world_structure_template_id(self.id)
         return TemplateProxy.by_id(id)
+
+    def extra(self):
+        return ExtraHashProxy(self._eng.world_structure_extra(self.id))
 

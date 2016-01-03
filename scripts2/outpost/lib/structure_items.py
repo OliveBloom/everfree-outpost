@@ -14,6 +14,8 @@ def place(e, item, template=None):
     s = e.plane().create_structure(util.hit_tile(e), template)
     e.inv('main').bulk_remove(item, 1)
 
+    return s
+
 def take(e, s, item):
     item = DATA.item(item)
 

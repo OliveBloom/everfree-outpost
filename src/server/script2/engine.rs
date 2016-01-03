@@ -244,6 +244,16 @@ define_python_class! {
             eng.messages().send_client(cid, resp);
         }
 
+        fn messages_send_get_use_item_args(eng: OnlyMessages,
+                                           cid: ClientId,
+                                           item: ItemId,
+                                           dialog_id: u32,
+                                           args: ExtraArg) {
+            use messages::ClientResponse;
+            let resp = ClientResponse::GetUseItemArgs(item, dialog_id, args);
+            eng.messages().send_client(cid, resp);
+        }
+
 
         fn logic_open_crafting(eng: EngineRef,
                                cid: ClientId,
@@ -267,9 +277,7 @@ define_python_class! {
             let mut e = pyunwrap!(eng.get_entity_mut(eid),
                                   runtime_error, "no entity with that ID");
             let extra = e.extra_mut();
-            unsafe {
-                derive_extra_ref(extra, eng_ref)
-            }
+            unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
         fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> PyResult<V3> {
@@ -409,6 +417,16 @@ define_python_class! {
             let mut eng = eng;
             try!(eng.destroy_structure(sid));
             Ok(())
+        }
+
+        fn(engine_ref_func_with_ref!) world_structure_extra(eng: glue::WorldFragment,
+                                                            eng_ref: PyRef,
+                                                            sid: StructureId) -> PyResult<PyBox> {
+            let mut eng = eng;
+            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+                                  runtime_error, "no structure with that ID");
+            let extra = s.extra_mut();
+            unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
         fn world_structure_pos(eng: OnlyWorld, sid: StructureId) -> PyResult<V3> {
