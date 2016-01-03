@@ -33,6 +33,14 @@ impl<'d> super::World<'d> {
         self.data
     }
 
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
+    }
+
 
     pub fn get_chunk<'a>(&'a self, pid: PlaneId, cpos: V2)
                          -> Option<ObjectRef<'a, 'd, TerrainChunk>> {

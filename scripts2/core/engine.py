@@ -17,6 +17,9 @@ class EngineProxy(object):
     def num_clients(self):
         return self._eng.messages_clients_len()
 
+    def world_extra(self):
+        return ExtraHashProxy(self._eng.world_extra())
+
 
 class ObjectProxy(object):
     def __init__(self, eng, id):
@@ -54,8 +57,14 @@ class ClientProxy(ObjectProxy):
     def open_crafting(self, s, i):
         self._eng.logic_open_crafting(self.id, s.id, i.id)
 
+    def get_interact_args(self, dialog_id, args):
+        self._eng.messages_send_get_interact_args(self.id, dialog_id, args)
+
     def get_use_item_args(self, item, dialog_id, args):
         self._eng.messages_send_get_use_item_args(self.id, item.id, dialog_id, args)
+
+    def get_use_ability_args(self, ability, dialog_id, args):
+        self._eng.messages_send_get_use_ability_args(self.id, ability.id, dialog_id, args)
 
 
 class EntityProxy(ObjectProxy):

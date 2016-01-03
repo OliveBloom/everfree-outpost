@@ -244,6 +244,15 @@ define_python_class! {
             eng.messages().send_client(cid, resp);
         }
 
+        fn messages_send_get_interact_args(eng: OnlyMessages,
+                                           cid: ClientId,
+                                           dialog_id: u32,
+                                           args: ExtraArg) {
+            use messages::ClientResponse;
+            let resp = ClientResponse::GetInteractArgs(dialog_id, args);
+            eng.messages().send_client(cid, resp);
+        }
+
         fn messages_send_get_use_item_args(eng: OnlyMessages,
                                            cid: ClientId,
                                            item: ItemId,
@@ -254,6 +263,16 @@ define_python_class! {
             eng.messages().send_client(cid, resp);
         }
 
+        fn messages_send_get_use_ability_args(eng: OnlyMessages,
+                                              cid: ClientId,
+                                              ability: ItemId,
+                                              dialog_id: u32,
+                                              args: ExtraArg) {
+            use messages::ClientResponse;
+            let resp = ClientResponse::GetUseAbilityArgs(ability, dialog_id, args);
+            eng.messages().send_client(cid, resp);
+        }
+
 
         fn logic_open_crafting(eng: EngineRef,
                                cid: ClientId,
@@ -261,6 +280,15 @@ define_python_class! {
                                iid: InventoryId) {
             warn_on_err!(logic::items::open_crafting(eng, cid, sid, iid));
         }
+
+
+        fn(engine_ref_func_with_ref!) world_extra(eng: glue::WorldFragment,
+                                                  eng_ref: PyRef) -> PyResult<PyBox> {
+            let mut eng = eng;
+            let extra = eng.world_mut().extra_mut();
+            unsafe { derive_extra_ref(extra, eng_ref) }
+        }
+
 
 
         fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> PyResult<Option<EntityId>> {
