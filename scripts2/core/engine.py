@@ -68,6 +68,12 @@ class EntityProxy(ObjectProxy):
     def facing(self):
         return self._eng.world_entity_facing(self.id)
 
+    def appearance(self):
+        return self._eng.world_entity_appearance(self.id)
+
+    def set_appearance(self, appearance):
+        self._eng.world_entity_set_appearance(self.id, appearance)
+
     def controller(self):
         cid = self._eng.world_entity_controller(self.id)
         if cid is None:

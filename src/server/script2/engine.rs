@@ -290,6 +290,22 @@ define_python_class! {
             Ok(e.plane_id())
         }
 
+        fn world_entity_appearance(eng: OnlyWorld, eid: EntityId) -> PyResult<u32> {
+            let e = pyunwrap!(eng.world().get_entity(eid),
+                              runtime_error, "no entity with that ID");
+            Ok(e.appearance())
+        }
+
+        fn world_entity_set_appearance(eng: glue::WorldFragment,
+                                       eid: EntityId,
+                                       appearance: u32) -> PyResult<()> {
+            let mut eng = eng;
+            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+                                  runtime_error, "no entity with that ID");
+            e.set_appearance(appearance);
+            Ok(())
+        }
+
         fn world_entity_controller(eng: OnlyWorld, eid: EntityId) -> PyResult<Option<ClientId>> {
             let e = pyunwrap!(eng.world().get_entity(eid),
                               runtime_error, "no entity with that ID");

@@ -30,7 +30,6 @@ def client_use_item(eng, cid, item, args):
     if handler is not None:
         e = ClientProxy(eng, cid).pawn()
         if e.inv('main').count(ItemProxy.by_id(item)) == 0:
-            print('not enough things')
             return
 
         handler(e, args)
