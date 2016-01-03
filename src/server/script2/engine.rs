@@ -291,6 +291,12 @@ define_python_class! {
 
 
 
+        fn world_client_name(eng: OnlyWorld, cid: ClientId) -> PyResult<String> {
+            let c = pyunwrap!(eng.world().get_client(cid),
+                              runtime_error, "no client with that ID");
+            Ok(c.name().to_owned())
+        }
+
         fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> PyResult<Option<EntityId>> {
             let c = pyunwrap!(eng.world().get_client(cid),
                               runtime_error, "no client with that ID");
@@ -306,6 +312,19 @@ define_python_class! {
                                   runtime_error, "no entity with that ID");
             let extra = e.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
+        }
+
+        fn world_entity_stable_id(eng: glue::WorldFragment,
+                                  eid: EntityId) -> PyResult<Stable<EntityId>> {
+            let mut eng = eng;
+            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+                                  runtime_error, "no entity with that ID");
+            Ok(e.stable_id())
+        }
+
+        fn world_entity_transient_id(eng: OnlyWorld,
+                                     stable_eid: Stable<EntityId>) -> Option<EntityId> {
+            eng.world().transient_entity_id(stable_eid)
         }
 
         fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> PyResult<V3> {
@@ -427,6 +446,16 @@ define_python_class! {
             let p = pyunwrap!(eng.world().get_plane(pid),
                               runtime_error, "no plane with that ID");
             Ok(p.name().to_owned())
+        }
+
+        fn(engine_ref_func_with_ref!) world_plane_extra(eng: glue::WorldFragment,
+                                                        eng_ref: PyRef,
+                                                        pid: PlaneId) -> PyResult<PyBox> {
+            let mut eng = eng;
+            let mut p = pyunwrap!(eng.get_plane_mut(pid),
+                                  runtime_error, "no plane with that ID");
+            let extra = p.extra_mut();
+            unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
 

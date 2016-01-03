@@ -18,7 +18,7 @@ def where(client, args):
     plane = pawn.plane()
     pos = pawn.pos()
     msg = 'Location: %s (%d), %d, %d, %d' % \
-            (plane.name, plane.stable_id().raw, pos.x, pos.y, pos.z)
+            (plane.name(), plane.stable_id().raw, pos.x, pos.y, pos.z)
     client.send_message(msg)
 
 @chat.command('/spawn: Teleport to the spawn point')
@@ -58,13 +58,3 @@ def ignore(client, args):
 @chat.command('/unignore <name>: Stop hiding chat messages from <name>')
 def unignore(client, args):
     raise RuntimeError('/unignore should be handled client-side')
-
-# Lua commands (included here for /help purposes)
-
-@chat.command('/permit <name>: Give <name> permission to bypass your ward')
-def permit(client, args):
-    client._eng.script_cb_chat_command(client.id.raw, '/permit ' + args)
-
-@chat.command("/revoke <name>: Revoke <name>'s permission to bypass your ward")
-def revoke(client, args):
-    client._eng.script_cb_chat_command(client.id.raw, '/revoke ' + args)

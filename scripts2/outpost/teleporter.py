@@ -11,53 +11,57 @@ SETUP_DIALOG_ID = 1
 DEST_DIALOG_ID = 2
 
 
-def get_networks(eng):
-    return eng.world_extra().setdefault('teleport_networks', {})
+class Networks(object):
+    def __init__(self, eng):
+        self.eng = eng
 
-def has_endpoint(eng, net, name):
-    n = get_networks(eng)
-    return (net in n and name in n[net])
+    def get_extra(self):
+        return self.eng.world_extra().setdefault('teleport_networks', {})
 
-def add_endpoint(eng, net, name, pos):
-    n = get_networks(eng)
-    if net not in n:
-        n[net] = {}
-    n[net][name] = pos
+    def has_endpoint(self, net, name):
+        n = self.get_extra()
+        return (net in n and name in n[net])
 
-def remove_endpoint(eng, net, name):
-    n = get_networks(eng)
-    del n[net][name]
-    if len(n[net]) == 0:
-        del n[net]
+    def add_endpoint(self, net, name, pos):
+        n = self.get_extra()
+        if net not in n:
+            n[net] = {}
+        n[net][name] = pos
 
-def get_endpoint(eng, net, name):
-    n = get_networks(eng)
-    return n[net][name]
+    def remove_endpoint(self, net, name):
+        n = self.get_extra()
+        del n[net][name]
+        if len(n[net]) == 0:
+            del n[net]
 
-def list_endpoints(eng, net):
-    n = get_networks(eng)
-    return sorted(n[net].keys())
+    def get_endpoint(self, net, name):
+        n = self.get_extra()
+        return n[net][name]
+
+    def list_endpoints(self, net):
+        n = self.get_extra()
+        return sorted(n[net].keys())
 
 
 @use.structure(TEMPLATE)
 @util.with_args
 def use_structure(e, s, args):
-    eng = e.engine
+    n = Networks(e.engine)
     net = s.extra()['network']
     name = args['dest']
 
-    if not has_endpoint(eng, net, name):
+    if not n.has_endpoint(net, name):
         e.controller().send_message('The teleporter at %r has been disconnected.' % name)
         return
 
-    pos = get_endpoint(eng, net, name)
+    pos = n.get_endpoint(net, name)
     e.teleport(pos)
 
 @use_structure.get_args
 def get_structure_args(e, s, args):
-    eng = e.engine
+    n = Networks(e.engine)
     net = s.extra()['network']
-    dests = list_endpoints(eng, net)
+    dests = n.list_endpoints(net)
 
     e.controller().get_interact_args(DEST_DIALOG_ID, {'dests': dests})
 
@@ -65,11 +69,11 @@ def get_structure_args(e, s, args):
 @use.item(ITEM)
 @util.with_args
 def use_item(e, args):
-    eng = e.engine
+    n = Networks(e.engine)
     net = args['network']
     name = args['name']
 
-    if has_endpoint(eng, net, name):
+    if n.has_endpoint(net, name):
         e.controller().send_message(
                 'A teleporter named %r already exists on network %r.' % (name, net))
         return
@@ -78,7 +82,7 @@ def use_item(e, args):
     s.extra()['network'] = net
     s.extra()['name'] = name
 
-    add_endpoint(eng, net, name, e.pos())
+    n.add_endpoint(net, name, e.pos())
 
 @use_item.get_args
 def get_item_args(e, args):
@@ -87,9 +91,9 @@ def get_item_args(e, args):
 
 @tool.pickaxe(TEMPLATE)
 def pickaxe_structure(e, s, args):
-    eng = e.engine
+    n = Networks(e.engine)
     net = s.extra()['network']
     name = s.extra()['name']
 
     structure_items.take(e, s, ITEM)
-    remove_endpoint(eng, net, name)
+    n.remove_endpoint(net, name)

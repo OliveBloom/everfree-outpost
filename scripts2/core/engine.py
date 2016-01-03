@@ -20,6 +20,10 @@ class EngineProxy(object):
     def world_extra(self):
         return ExtraHashProxy(self._eng.world_extra())
 
+    def stable_entity(self, stable_eid):
+        eid = self._eng.world_entity_transient_id(stable_eid)
+        return EntityProxy(self._eng, eid) if eid is not None else None
+
 
 class ObjectProxy(object):
     def __init__(self, eng, id):
@@ -43,6 +47,9 @@ class ObjectProxy(object):
 
 class ClientProxy(ObjectProxy):
     ID_TYPE = ClientId
+
+    def name(self):
+        return self._eng.world_client_name(self.id)
 
     def send_message(self, msg):
         self._eng.messages_send_chat_update(self.id, '***\t' + msg)
@@ -69,6 +76,9 @@ class ClientProxy(ObjectProxy):
 
 class EntityProxy(ObjectProxy):
     ID_TYPE = EntityId
+
+    def stable_id(self):
+        return self._eng.world_entity_stable_id(self.id)
 
     def pos(self):
         return self._eng.world_entity_pos(self.id)
@@ -97,7 +107,7 @@ class EntityProxy(ObjectProxy):
 
     def teleport_plane(self, stable_pid, pos):
         check_type(stable_pid, StablePlaneId)
-        self._eng.world_entity_teleport_stable_plane(self.id, stable_pid.raw, pos)
+        self._eng.world_entity_teleport_stable_plane(self.id, stable_pid, pos)
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))
@@ -131,12 +141,14 @@ class InventoryProxy(ObjectProxy):
 class PlaneProxy(ObjectProxy):
     ID_TYPE = PlaneId
 
-    @property
     def name(self):
         return self._eng.world_plane_name(self.id)
 
     def stable_id(self):
         return self._eng.world_plane_stable_id(self.id)
+
+    def extra(self):
+        return ExtraHashProxy(self._eng.world_plane_extra(self.id))
 
     def find_structure_at_point(self, pos):
         opt_sid = self._eng.world_structure_find_at_point(self.id, pos)

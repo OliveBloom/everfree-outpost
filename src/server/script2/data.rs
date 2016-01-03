@@ -22,8 +22,9 @@ define_python_class! {
             this.item_data.len()
         }
 
-        fn item_by_name(&this, name: String) -> Option<ItemId> {
-            this.item_data.find_id(&name)
+        fn item_by_name(&this, name: String) -> PyResult<ItemId> {
+            Ok(pyunwrap!(this.item_data.find_id(&name),
+                         key_error, "no such item: {:?}", name))
         }
 
         fn item_name(&this, id: ItemId) -> Option<PyResult<PyBox>> {
@@ -35,8 +36,9 @@ define_python_class! {
             this.recipes.len()
         }
 
-        fn recipe_by_name(&this, name: String) -> Option<RecipeId> {
-            this.recipes.find_id(&name)
+        fn recipe_by_name(&this, name: String) -> PyResult<RecipeId> {
+            Ok(pyunwrap!(this.recipes.find_id(&name),
+                         key_error, "no such recipe: {:?}", name))
         }
 
         fn recipe_name(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
@@ -60,8 +62,9 @@ define_python_class! {
             this.structure_templates.len()
         }
 
-        fn template_by_name(&this, name: String) -> Option<TemplateId> {
-            this.structure_templates.find_id(&name)
+        fn template_by_name(&this, name: String) -> PyResult<TemplateId> {
+            Ok(pyunwrap!(this.structure_templates.find_id(&name),
+                         key_error, "no such template: {:?}", name))
         }
 
         fn template_name(&this, id: TemplateId) -> Option<PyResult<PyBox>> {
