@@ -168,6 +168,9 @@ class StructureProxy(ObjectProxy):
     def destroy(self):
         self._eng.world_structure_destroy(self.id)
 
+    def replace(self, template):
+        self._eng.world_structure_replace(self.id, template.id)
+
     def pos(self):
         return self._eng.world_structure_pos(self.id)
 

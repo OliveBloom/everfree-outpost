@@ -476,6 +476,16 @@ define_python_class! {
             Ok(())
         }
 
+        fn world_structure_replace(eng: glue::WorldFragment,
+                                   sid: StructureId,
+                                   template_id: TemplateId) -> PyResult<()> {
+            let mut eng = eng;
+            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+                                  runtime_error, "no structure with that ID");
+            try!(s.set_template_id(template_id));
+            Ok(())
+        }
+
         fn(engine_ref_func_with_ref!) world_structure_extra(eng: glue::WorldFragment,
                                                             eng_ref: PyRef,
                                                             sid: StructureId) -> PyResult<PyBox> {

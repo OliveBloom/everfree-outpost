@@ -1,6 +1,7 @@
 from outpost_server.core import use
 from outpost_server.core.data import DATA
-from outpost_server.outpost.lib import tool
+
+from outpost_server.outpost.lib import mallet, tool
 
 def lua_fallback(item, e, args):
     print('PASS THROUGH: item(tool)', DATA.item(item))
@@ -21,3 +22,5 @@ def pickaxe(e, args):
     # TODO: hack for lua passthrough - remove
     if ok is False:
         lua_fallback('pick', e, args)
+
+use.item('mallet')(mallet.use)

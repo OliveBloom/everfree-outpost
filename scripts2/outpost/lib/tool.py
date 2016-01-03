@@ -1,12 +1,12 @@
-from outpost_server.core import util
+from outpost_server.core import alias, util
 from outpost_server.core.data import DATA
 
 _HANDLERS = {}
 
 def handler(tool_name, template):
-    id = DATA.template(template).id
+    template = alias.template(template)
     def register(f):
-        _HANDLERS.setdefault(tool_name, {})[id] = f
+        _HANDLERS.setdefault(tool_name, {})[template] = f
         return f
     return register
 
@@ -18,8 +18,8 @@ def use(e, tool_name, args=None):
     tool_handlers = _HANDLERS.get(tool_name)
     if tool_handlers is None:
         return
-    handler = tool_handlers.get(s.template().id)
 
+    handler = tool_handlers.get(alias.template(s.template()))
     if handler is not None:
         handler(e, s, args)
     else:
