@@ -8,17 +8,21 @@ precision mediump float;
 # define emit(idx, val)   if (idx == OUTPUT_IDX) gl_FragData[0] = (val)
 #endif
 
-varying highp vec2 normalizedTexCoord;
-
+uniform vec2 cameraPos;
 uniform vec2 cameraSize;
-uniform float sliceFrac;
+uniform vec2 sliceCenter;
+uniform float sliceZ;
+uniform sampler2D cavernTex;
+
 uniform sampler2D imageTex;
 
-void main(void) {
-    float radius = max(cameraSize.x, cameraSize.y) * sliceFrac * 0.5;
-    vec2 off = (gl_FragCoord.xy - 0.5 * cameraSize) / radius;
+varying highp vec2 normalizedTexCoord;
+varying float baseZ;
 
-    if (dot(off, off) <= 1.0) {
+#include "slicing.inc"
+
+void main(void) {
+    if (check_slice()) {
         discard;
     }
 

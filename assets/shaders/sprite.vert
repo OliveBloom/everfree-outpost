@@ -24,11 +24,13 @@ uniform vec2 size;
 uniform vec2 anchor;
 
 varying vec2 normalizedTexCoord;
-varying vec2 extra;
+varying float baseZ;
 
 void main(void) {
     vec2 texCoord = base + posOffset * size;
     normalizedTexCoord = texCoord / sheetSize;
+
+    baseZ = floor(pos.z / 32.0);
 
     vec4 worldPos4 = projection * vec4(
             pos.x - anchor.x + abs(size.x) * posOffset.x,
@@ -37,6 +39,5 @@ void main(void) {
             1.0);
 
     vec4 pos = (worldPos4 - vec4(cameraPos, 0.0, 0.0)) / vec4(cameraSize, 512.0, 1.0);
-
     gl_Position = scaling * pos;
 }

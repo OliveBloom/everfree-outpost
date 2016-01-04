@@ -24,12 +24,16 @@ function PonyAppearanceClass(gl, assets) {
 }
 exports.PonyAppearanceClass = PonyAppearanceClass;
 
-PonyAppearanceClass.prototype.setCamera = function(pos, size) {
+PonyAppearanceClass.prototype.setCamera = function(pos, size, slice_center, slice_z) {
     this._obj.setUniformValue('cameraPos', pos);
     this._obj.setUniformValue('cameraSize', size);
+    this._obj.setUniformValue('sliceCenter', slice_center);
+    this._obj.setUniformValue('sliceZ', slice_z);
 
     this._name_obj.setUniformValue('cameraPos', pos);
     this._name_obj.setUniformValue('cameraSize', size);
+    this._name_obj.setUniformValue('sliceCenter', slice_center);
+    this._name_obj.setUniformValue('sliceZ', slice_z);
 };
 
 PonyAppearanceClass.prototype.getNameOffset = function(name) {
@@ -58,7 +62,8 @@ function makePonyShaders(gl, assets, name_tex) {
         .vec2('cameraPos')
         .vec2('cameraSize')
         .vec2('sheetSize')
-        .float_('sliceFrac')
+        .vec2('sliceCenter')
+        .float_('sliceZ')
         .vec3('pos')
         .vec2('base')
         .vec2('size')
@@ -80,12 +85,14 @@ function makePonyShaders(gl, assets, name_tex) {
         .texture('sheetEquip[0]')
         .texture('sheetEquip[1]')
         .texture('sheetEquip[2]')
+        .texture('cavernTex')
         .finish();
 
     shaders.name = ctx.start('sprite.vert', 'sprite.frag', 2)
         .uniforms(sprite_uniforms)
         .attributes(sprite_attributes)
         .texture('sheetSampler', name_tex)
+        .texture('cavernTex')
         .finish();
     shaders.name.setUniformValue('sheetSize',
             [named.NAME_BUFFER_WIDTH, named.NAME_BUFFER_HEIGHT]);
@@ -93,8 +100,7 @@ function makePonyShaders(gl, assets, name_tex) {
     return shaders;
 }
 
-// TODO: move sliceFrac argument into Class.getCamera
-PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite, slice_frac) {
+PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite) {
     var app = sprite.appearance;
 
     var base_tex = r.cacheTexture(app.base_img);
@@ -103,6 +109,7 @@ PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite, slice_frac) {
         'sheetEyes': r.cacheTexture(app.eyes_img),
         'sheetMane': r.cacheTexture(app.mane_img),
         'sheetTail': r.cacheTexture(app.tail_img),
+        'cavernTex': r.cavern_map.getTexture(),
     };
 
     for (var i = 0; i < 3; ++i) {
@@ -116,7 +123,6 @@ PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite, slice_frac) {
 
     var uniforms = {
         'sheetSize': [base_tex.width, base_tex.height],
-        'sliceFrac': [slice_frac],
         'pos': [sprite.ref_x, sprite.ref_y, sprite.ref_z],
         'base': [offset_x + (sprite.flip ? sprite.width : 0),
                  offset_y],
@@ -136,7 +142,6 @@ PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite, slice_frac) {
         var off = this.getNameOffset(app.name);
 
         var uniforms = {
-            'sliceFrac': [slice_frac],
             // TODO: hardcoded name positioning, should be computed somehow to
             // center the name at a reasonable height.
             'pos': [sprite.ref_x, sprite.ref_y, sprite.ref_z + 90 - 22],
@@ -144,7 +149,9 @@ PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite, slice_frac) {
             'size': [named.NAME_WIDTH, named.NAME_HEIGHT],
             'anchor': [named.NAME_WIDTH / 2, named.NAME_HEIGHT],
         };
-        this._name_obj.draw(fb_idx, 0, 6, uniforms, {}, {});
+        this._name_obj.draw(fb_idx, 0, 6, uniforms, {}, {
+            'cavernTex': r.cavern_map.getTexture(),
+        });
     }
 };
 

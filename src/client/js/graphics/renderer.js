@@ -336,7 +336,6 @@ Renderer.prototype.render = function(s, draw_extra) {
 
     var pos = s.camera_pos;
     var size = s.camera_size;
-    var slice_radius = [s.slice_frac * Math.max(size[0], size[1]) / 2.0];
     var slice_z = [s.slice_z];
     var slice_center = s.slice_center;
 
@@ -368,7 +367,7 @@ Renderer.prototype.render = function(s, draw_extra) {
 
     for (var i = 0; i < this.class_list.length; ++i) {
         var cls = this.class_list[i];
-        cls.setCamera(pos, size);
+        cls.setCamera(pos, size, slice_center, slice_z);
     }
 
 
@@ -427,11 +426,7 @@ Renderer.prototype.render = function(s, draw_extra) {
         for (var i = 0; i < s.sprites.length; ++i) {
             var sprite = s.sprites[i];
             var cls = this_.classes.get(sprite.appearance.getClass());
-            if (sprite.ref_z < (s.slice_z + 2) * TILE_SIZE) {
-                cls.draw3D(fb_idx, this_, sprite, 0);
-            } else {
-                cls.draw3D(fb_idx, this_, sprite, s.slice_frac);
-            }
+            cls.draw3D(fb_idx, this_, sprite);
         }
     });
 
