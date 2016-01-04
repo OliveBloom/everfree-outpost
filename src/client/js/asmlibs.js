@@ -16,8 +16,8 @@ var STATIC_END = STATIC_START + STATIC_SIZE;
 
 // Align STACK_START to an 8-byte boundary.
 var STACK_START = (STATIC_END + 7) & ~7;
-// Give at least 8k for stack, and align to 4k boundary.
-var STACK_END = (STACK_START + 0x2000 + 0x0fff) & ~0x0fff;
+// Give at least 16k for stack, and align to 4k boundary.
+var STACK_END = (STACK_START + 0x4000 + 0x0fff) & ~0x0fff;
 var STACK_SIZE = STACK_END - STACK_START;
 console.assert(STACK_SIZE >= 0x1000, 'want at least 4kb for stack');
 
@@ -312,13 +312,13 @@ Asm.prototype.floodfill = function(pos, radius) {
     this._storeVec(pos_buf, 0, pos);
     var grid = this._stackAlloc(Uint8Array, len);
     grid.fill(0);
-    var queue = this._stackAlloc(Uint8Array, len);
+    var queue = this._stackAlloc(Uint8Array, 2 * len);
 
     this._raw['floodfill'](
             SHAPE_LAYERS_START,
             pos_buf.byteOffset, radius,
             grid.byteOffset, len,
-            queue.byteOffset, len);
+            queue.byteOffset, 2 * len);
 
     var result = grid.slice();
 

@@ -82,6 +82,13 @@ ShaderBuilder.prototype.uniforms = function(uniforms) {
     return this;
 };
 
+ShaderBuilder.prototype.uniformBool = function() {
+    var u = new Uniforms();
+    u.bool_.apply(u, arguments);
+    this.uniforms(u);
+    return this;
+};
+
 ShaderBuilder.prototype.uniformFloat = function() {
     var u = new Uniforms();
     u.float_.apply(u, arguments);
@@ -146,6 +153,16 @@ Uniforms.prototype.copy = function() {
     var other = new Uniforms();
     other.u = copy_dict(this.u);
     return other;
+};
+
+Uniforms.prototype.bool_ = function(name, value) {
+    if (value === undefined) {
+        value = null;
+    } else if (value != null && !Array.isArray(value)) {
+        value = [value];
+    }
+    this.u[name] = uniform('bool', value);
+    return this;
 };
 
 Uniforms.prototype.float_ = function(name, value) {

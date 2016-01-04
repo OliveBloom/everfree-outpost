@@ -529,7 +529,9 @@ function drawPony(ctx, app_info) {
     sprite.setRefPosition(sprite.anchor_x, sprite.anchor_y, 0);
 
     ctx.clearRect(0, 0, 96, 96);
-    app.draw2D(ctx, [0, 0], sprite);
+    // TODO: hack.  relies on the fact that PonyAppearanceClass.draw2D doesn't
+    // refer to `this`
+    app.getClass().prototype.draw2D(ctx, [0, 0], sprite);
 }
 
 function preloadTextures() {
