@@ -3,15 +3,15 @@ const float CAVERN_MAP_RADIUS = 32.0;
 const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
 const float CAVERN_CUTOFF = 1.5 / 255.0;
 
-float lookup(vec2 tilePos) {
+int lookup(vec2 tilePos) {
     tilePos += 0.5;
     vec2 cavernPos = tilePos - sliceCenter;
     vec2 cavernTexCoord = cavernPos / CAVERN_MAP_SIZE + 0.5;
-    return texture2D(cavernTex, cavernTexCoord).r;
+    return int(texture2D(cavernTex, cavernTexCoord).r * 255.0 + 0.5);
 }
 
 bool is_tile_inside(vec2 tilePos) {
-    return lookup(tilePos) == 1.0 / 255.0;
+    return lookup(tilePos) == 1;
 }
 
 float calc_val(bool inside, vec2 off, vec2 corner, float w_in, float w_out) {
