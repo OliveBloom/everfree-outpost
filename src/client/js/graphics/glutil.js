@@ -111,7 +111,7 @@ Program.prototype.setUniform = function(name, type, vs) {
 };
 
 
-function buildPrograms(gl, vert_src, frag_src, output_buffers, def_map) {
+function buildPrograms(gl, assets, vert_src, frag_src, output_buffers, def_map) {
     var defs = '';
 
     var debug_def_map = Config.debug_shader_defs.get();
@@ -124,6 +124,15 @@ function buildPrograms(gl, vert_src, frag_src, output_buffers, def_map) {
             defs += '#define ' + k + ' ' + def_map[k] + '\n'
         }
     }
+
+
+    vert_src = vert_src.replace(/^#include "(.*)"$/m, function(_, file) {
+        return assets[file];
+    });
+    frag_src = frag_src.replace(/^#include "(.*)"$/m, function(_, file) {
+        console.log('substituting', file);
+        return assets[file];
+    });
 
 
     if (hasExtension(gl, 'WEBGL_draw_buffers')) {

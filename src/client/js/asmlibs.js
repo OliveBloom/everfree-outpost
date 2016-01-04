@@ -304,7 +304,7 @@ Asm.prototype.findCeiling = function(pos) {
     return result;
 };
 
-Asm.prototype.floodfillCeiling = function(pos, radius) {
+Asm.prototype.floodfill = function(pos, radius) {
     var size = radius * 2;
     var len = size * size;
 
@@ -314,7 +314,7 @@ Asm.prototype.floodfillCeiling = function(pos, radius) {
     grid.fill(0);
     var queue = this._stackAlloc(Uint8Array, len);
 
-    this._raw['floodfill_ceiling'](
+    this._raw['floodfill'](
             SHAPE_LAYERS_START,
             pos_buf.byteOffset, radius,
             grid.byteOffset, len,
@@ -447,31 +447,6 @@ AsmGraphics.prototype.terrainGeomGenerate = function() {
                           vertex_count * SIZEOF.TerrainVertex),
         more: more,
     };
-};
-
-AsmGraphics.prototype.terrainFloodfill = function(cx, cy, cz, radius) {
-    var size = radius * 2 + 1;
-    var len = size * size;
-
-    var grid = this._stackAlloc(Uint8Array, len);
-    grid.fill(0);
-    var queue = this._stackAlloc(Uint8Array, len);
-
-    console.log(grid.toString());
-    this._raw['terrain_floodfill'](
-            cx, cy, cz, radius,
-            this.BLOCK_DATA,
-            this.block_data_bytes,
-            this.LOCAL_CHUNKS,
-            grid.byteOffset, len,
-            queue.byteOffset, len);
-
-    var result = grid.slice();
-
-    this._stackFree(queue);
-    this._stackFree(grid);
-
-    return result;
 };
 
 

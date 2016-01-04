@@ -45,7 +45,7 @@ CavernMap.prototype.update = function(asm, pos) {
     this.last_pos = pos.divScalar(TILE_SIZE);
     this.invalid = false;
 
-    var data = asm.floodfillCeiling(pos, this.radius);
+    var data = asm.floodfill(pos, this.radius);
 
     var size = this.radius * 2;
     var gl = this.gl;

@@ -4,11 +4,10 @@ collide
 set_region_shape
 refresh_shape_cache
 find_ceiling
-floodfill_ceiling
+floodfill
 terrain_geom_init
 terrain_geom_reset
 terrain_geom_generate
-terrain_floodfill
 structure_buffer_init
 structure_buffer_insert
 structure_buffer_remove

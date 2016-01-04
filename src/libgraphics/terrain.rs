@@ -95,13 +95,3 @@ impl<'a> GeomGen<'a> {
         true
     }
 }
-
-
-pub fn floodfill_terrain(center: V3,
-                         radius: u8,
-                         block_data: &[BlockData],
-                         local_chunks: &LocalChunks,
-                         grid: &mut [u8],
-                         queue: &mut [(u8, u8)]) {
-}
-

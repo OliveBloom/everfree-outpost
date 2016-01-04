@@ -227,7 +227,7 @@ PonyAppearanceClass.prototype.getNameOffset = function(name) {
 function make_pony_obj(gl, assets) {
     var vert = assets['sprite.vert'];
     var frag = assets['app_pony.frag'];
-    var programs = glutil.buildPrograms(gl, vert, frag, 2);
+    var programs = glutil.buildPrograms(gl, assets, vert, frag, 2);
 
     var buffer = new glutil.Buffer(gl);
     buffer.loadData(new Uint8Array([
@@ -276,7 +276,7 @@ function make_pony_obj(gl, assets) {
 function make_name_obj(gl, assets, name_tex) {
     var vert = assets['sprite.vert'];
     var frag = assets['sprite.frag'];
-    var programs = glutil.buildPrograms(gl, vert, frag, 2);
+    var programs = glutil.buildPrograms(gl, assets, vert, frag, 2);
 
     var buffer = new glutil.Buffer(gl);
     buffer.loadData(new Uint8Array([

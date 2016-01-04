@@ -1210,7 +1210,7 @@ function frame(ac, client_now) {
     var radius = slice_radius.get(predict_now);
     if (radius > 0 && pony != null) {
         s.slice_frac = radius;
-        s.slice_z = 2 + (pony.position(predict_now).z / TILE_SIZE)|0;
+        s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
     }
     renderer.render(s, draw_extra);
 

@@ -148,34 +148,15 @@ fn walk_path<S, CB>(chunk: &S, start_pos: V3, _size: V3, velocity: V3,
 }
 
 
-struct CeilingResult {
-    inside: bool,
-    blocked: bool,
+fn blocked<S: ShapeSource>(chunk: &S, pos: V3) -> bool {
+    chunk.get_shape(pos) == Shape::Solid
 }
 
-fn check_ceiling<S>(chunk: &S, pos: V3) -> CeilingResult
-        where S: ShapeSource {
-    let blocked = chunk.get_shape(pos) == Shape::Solid;
-
-    let mut inside = false;
-    for z in pos.z + 1 .. CHUNK_SIZE {
-        if chunk.get_shape(pos.with_z(z)) != Shape::Empty {
-            inside = true;
-            break;
-        }
-    }
-
-    CeilingResult {
-        inside: inside,
-        blocked: blocked,
-    }
-}
-
-pub fn floodfill_ceiling<S>(center: V3,
-                            radius: u8,
-                            chunk: &S,
-                            grid: &mut [u8],
-                            queue: &mut [(u8, u8)])
+pub fn floodfill<S>(center: V3,
+                    radius: u8,
+                    chunk: &S,
+                    grid: &mut [u8],
+                    queue: &mut [(u8, u8)])
         where S: ShapeSource {
     let size = radius * 2;
     assert!(grid.len() == size as usize * size as usize);
@@ -191,21 +172,23 @@ pub fn floodfill_ceiling<S>(center: V3,
         // Possible grid values:
         // - 0: not processed yet
         // - 1: currently in queue
-        // - 2: already processed, not sliced
-        // - 3: already processed, sliced
+        // - 2: already processed, not blocked
+        // - 3: already processed, blocked at level 1 only
+        // - 4: already processed, blocked at level 2
         if grid[idx] > 1 {
             continue;
         }
 
         let pos = base + V3::new(x as i32, y as i32, 0);
-        let r = check_ceiling(chunk, pos);
-        if r.inside {
+        if blocked(chunk, pos + V3::new(0, 0, 1)) {
+            grid[idx] = 4;
+        } else if blocked(chunk, pos) {
             grid[idx] = 3;
         } else {
             grid[idx] = 2;
         }
 
-        if r.inside && !r.blocked {
+        if grid[idx] != 4 {
             let mut maybe_enqueue = |x, y| {
                 let idx = y as usize * size as usize + x as usize;
                 if grid[idx] == 0 {
@@ -228,5 +211,20 @@ pub fn floodfill_ceiling<S>(center: V3,
                 maybe_enqueue(x, y + 1);
             }
         }
+    }
+
+    // Convert grid to final format.
+    // - 0: outside
+    // - 1: floor
+    // - 2: wall
+    let step = 2 * radius as usize;
+    for i in 0 .. grid.len() {
+        grid[i] = match grid[i] {
+            0 => 0,
+            2 => 1,
+            3 => 1,
+            4 => 2,
+            _ => 0,  // should never happen?
+        };
     }
 }

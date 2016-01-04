@@ -60,6 +60,7 @@ def main(src_dir, build_dir, out_file):
     add('text', 'structure2.vert',      src('assets/shaders/structure2.vert'))
     add('text', 'light2.frag',          src('assets/shaders/light2.frag'))
     add('text', 'light2.vert',          src('assets/shaders/light2.vert'))
+    add('text', 'slicing.inc',          src('assets/shaders/slicing.inc'))
 
     add('image', 'tiles', build('tiles.png'))
 

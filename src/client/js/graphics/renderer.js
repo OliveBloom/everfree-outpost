@@ -335,6 +335,7 @@ Renderer.prototype.render = function(s, draw_extra) {
     var size = s.camera_size;
     var slice_radius = [s.slice_frac * Math.max(size[0], size[1]) / 2.0];
     var slice_z = [s.slice_z];
+    var slice_z2 = [s.slice_z + 2];
     var slice_center = s.slice_center;
 
     var anim_now_val = s.now / 1000 % ANIM_MODULUS;
@@ -423,7 +424,7 @@ Renderer.prototype.render = function(s, draw_extra) {
 
         for (var i = 0; i < s.sprites.length; ++i) {
             var sprite = s.sprites[i];
-            if (sprite.ref_z < s.slice_z * TILE_SIZE) {
+            if (sprite.ref_z < (s.slice_z + 2) * TILE_SIZE) {
                 sprite.appearance.draw3D(fb_idx, this_, sprite, 0);
             } else {
                 sprite.appearance.draw3D(fb_idx, this_, sprite, s.slice_frac);
