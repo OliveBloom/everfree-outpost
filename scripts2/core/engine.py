@@ -77,7 +77,7 @@ class EntityProxy(object):
 
     def teleport_plane(self, stable_pid, pos):
         check_type(stable_pid, StablePlaneId)
-        self._eng.world_entity_teleport_stable_plane(self.id, stable_pid.raw, pos)
+        self._eng.world_entity_teleport_stable_plane(self.id, stable_pid, pos)
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))
