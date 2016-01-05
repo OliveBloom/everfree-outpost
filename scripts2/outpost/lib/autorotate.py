@@ -31,7 +31,7 @@ class Category:
                 continue
             self._sides[template] = v
 
-    def get_sides(self, plane, pos):
+    def inner_sides(self, plane, pos):
         s = plane.find_structure_at_point_layer(pos, self._layer)
         if s is None:
             return ZERO_SIDES
@@ -40,15 +40,15 @@ class Category:
             return ZERO_SIDES
         return sides
 
-    def calc_sides(self, plane, pos):
-        n = self.get_sides(plane, pos - V3(0, 1, 0)).s
-        s = self.get_sides(plane, pos + V3(0, 1, 0)).n
-        w = self.get_sides(plane, pos - V3(1, 0, 0)).e
-        e = self.get_sides(plane, pos + V3(1, 0, 0)).w
+    def outer_sides(self, plane, pos):
+        n = self.inner_sides(plane, pos - V3(0, 1, 0)).s
+        s = self.inner_sides(plane, pos + V3(0, 1, 0)).n
+        w = self.inner_sides(plane, pos - V3(1, 0, 0)).e
+        e = self.inner_sides(plane, pos + V3(1, 0, 0)).w
         return Sides(n, s, w, e)
 
     def choose_best(self, basename, evaluate):
-        best_template = None
+        best_template = self.get_default(basename)
         best_value = None
         for name in self._choices:
             template = DATA.get_template(basename + '/' + name)
@@ -66,6 +66,13 @@ class Category:
                 best_value = value
         return best_template
 
+    def get_default(self, basename):
+        for name in self._choices:
+            template = DATA.get_template(basename + '/' + name)
+            if template is not None:
+                return template
+        return None
+
 def side_sum(s, f):
     def g(t):
         return f(s.n, t.n) + f(s.s, t.s) + f(s.w, t.w) + f(s.e, t.e)
@@ -75,6 +82,23 @@ def count_equal(s):
     def g(t):
         return int(s.n == t.n) + int(s.s == t.s) + int(s.w == t.w) + int(s.e == t.e)
     return g
+
+def _register(item, basename, cat, choose):
+    if basename is None:
+        basename = item
+    item = DATA.item(item)
+
+    cat.add_group(basename)
+
+    @use.item(item)
+    def use_item(e, args):
+        pos = util.hit_tile(e)
+        template = choose(basename, e.plane(), pos)
+        structure_items.place(e, item, template)
+
+    @use.structure(cat.get_default(basename))
+    def use_structure(e, s, args):
+        structure_items.take(e, s, item)
 
 
 # Floor category
@@ -131,7 +155,7 @@ def compare_floor_sides(a, b):
         return 0
 
 def choose_floor_variant(basename, plane, pos):
-    sides = FLOOR_CAT.calc_sides(plane, pos)
+    sides = FLOOR_CAT.outer_sides(plane, pos)
     if not any(x in (1, 2) for x in sides):
         # When there are no interesting sides next to this position (all are
         # either solid or empty), just place the default (center) variant.
@@ -139,25 +163,62 @@ def choose_floor_variant(basename, plane, pos):
         # can fill the middle of their area with center tiles (no autorotate),
         # then place and mallet a single edge tile to make autorotate kick in
         # as they fill in the rest of the border from there.
-        return DATA.template(basename + '/center/v0')
+        return FLOOR_CAT.get_default(basename)
     else:
-        best = FLOOR_CAT.choose_best(basename,
+        return FLOOR_CAT.choose_best(basename,
                 side_sum(sides, compare_floor_sides))
-        return best or DATA.template(basename + '/center/v0')
 
 def register_floor(item, basename=None):
-    if basename is None:
-        basename = item
-    item = DATA.item(item)
+    _register(item, basename, FLOOR_CAT, choose_floor_variant)
 
-    FLOOR_CAT.add_group(basename)
 
-    @use.item(item)
-    def use_item(e, args):
-        pos = util.hit_tile(e)
-        template = choose_floor_variant(basename, e.plane(), pos)
-        structure_items.place(e, item, template)
+# Wall category
 
-    @use.structure(basename + '/center/v0')
-    def use_structure(e, s, args):
-        structure_items.take(e, s, item)
+# 0: nothing, 1: wall
+WALL_SIDES = {
+        'edge/horiz':       Sides(0, 0, 1, 1),
+        'edge/vert':        Sides(1, 1, 0, 0),
+        'corner/nw':        Sides(0, 1, 0, 1),
+        'corner/ne':        Sides(0, 1, 1, 0),
+        'corner/sw':        Sides(1, 0, 0, 1),
+        'corner/se':        Sides(1, 0, 1, 0),
+        'tee/n':            Sides(1, 0, 1, 1),
+        'tee/e':            Sides(1, 1, 0, 1),
+        'tee/s':            Sides(0, 1, 1, 1),
+        'tee/w':            Sides(1, 1, 1, 0),
+        'cross':            Sides(1, 1, 1, 1),
+        'door/closed':      Sides(0, 0, 1, 1),
+    }
+
+WALL_ORDER = (
+        'edge/horiz',
+        'edge/vert',
+        'corner/nw',
+        'corner/ne',
+        'corner/sw',
+        'corner/se',
+        'tee/n',
+        'tee/e',
+        'tee/s',
+        'tee/w',
+        'cross',
+        'door/closed',
+    )
+
+WALL_CAT = Category(1, WALL_SIDES, WALL_ORDER)
+
+def compare_wall_to_floor(f, w):
+    # If the floor has an edge here, then the wall should extend in this
+    # direction.
+    return (f in (1, 2)) == (w == 1)
+
+def choose_wall_variant(basename, plane, pos):
+    floor_sides = FLOOR_CAT.inner_sides(plane, pos)
+    best = WALL_CAT.choose_best(basename,
+            side_sum(floor_sides, compare_wall_to_floor))
+    return best or DATA.template(basename + '/edge/horiz')
+
+def register_wall(item, basename=None):
+    _register(item, basename, WALL_CAT, choose_wall_variant)
+
+
