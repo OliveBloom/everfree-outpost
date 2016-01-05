@@ -57,6 +57,9 @@ def structure(name):
     """
     template = DATA.template(name)
     def register(f):
+        assert template not in _USE_STRUCTURE, \
+                'duplicate registration for %s (original was %s)' % \
+                (template, _USE_STRUCTURE[template].__qualname__)
         _USE_STRUCTURE[template] = f
         return f
     return register
@@ -64,6 +67,9 @@ def structure(name):
 def item(name):
     item = DATA.item(name)
     def register(f):
+        assert item not in _USE_ITEM, \
+                'duplicate registration for %s (original was %s)' % \
+                (item, _USE_ITEM[item].__qualname__)
         _USE_ITEM[item] = f
         return f
     return register
@@ -71,6 +77,9 @@ def item(name):
 def ability(name):
     ability = DATA.item(name)
     def register(f):
+        assert ability not in _USE_ITEM, \
+                'duplicate registration for %s (original was %s)' % \
+                (ability, _USE_ITEM[ability].__qualname__)
         _USE_ABILITY[ability] = f
         return f
     return register

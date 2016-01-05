@@ -527,8 +527,21 @@ define_python_class! {
                         best_id = Some(s.id());
                     }
                 }
-            };
+            }
             best_id
+        }
+
+        fn world_structure_find_at_point_layer(eng: OnlyWorld,
+                                               pid: PlaneId,
+                                               pos: V3,
+                                               layer: u8) -> Option<StructureId> {
+            let chunk = pos.reduce().div_floor(scalar(CHUNK_SIZE));
+            for s in eng.world().chunk_structures(pid, chunk) {
+                if s.bounds().contains(pos) && s.template().layer == layer {
+                    return Some(s.id())
+                }
+            }
+            None
         }
     }
 }

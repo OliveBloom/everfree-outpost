@@ -157,6 +157,13 @@ class PlaneProxy(ObjectProxy):
         else:
             return None
 
+    def find_structure_at_point_layer(self, pos, layer):
+        opt_sid = self._eng.world_structure_find_at_point_layer(self.id, pos, layer)
+        if opt_sid is not None:
+            return StructureProxy(self._eng, opt_sid)
+        else:
+            return None
+
     def create_structure(self, pos, template):
         sid = self._eng.world_structure_create(self.id, pos, template.id)
         return StructureProxy(self._eng, sid)

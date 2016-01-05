@@ -4,6 +4,8 @@ class DataProxy(object):
     def __init__(self):
         pass
 
+    # Get the Proxy for a data item.  These functions accept a Proxy, an
+    # integer ID, or a string name.
     def item(self, x):
         if isinstance(x, ItemProxy):
             return x
@@ -11,6 +13,7 @@ class DataProxy(object):
             return ItemProxy.by_id(x)
         elif isinstance(x, str):
             return self.item_by_name(x)
+        raise TypeError('expected ItemProxy, int, or str')
 
     def recipe(self, x):
         if isinstance(x, RecipeProxy):
@@ -19,6 +22,7 @@ class DataProxy(object):
             return RecipeProxy.by_id(x)
         elif isinstance(x, str):
             return self.recipe_by_name(x)
+        raise TypeError('expected RecipeProxy, int, or str')
 
     def template(self, x):
         if isinstance(x, TemplateProxy):
@@ -27,6 +31,51 @@ class DataProxy(object):
             return TemplateProxy.by_id(x)
         elif isinstance(x, str):
             return self.template_by_name(x)
+        raise TypeError('expected TemplateProxy, int, or str')
+
+    # Get the Proxy for a data item if it exists.  These are similar to to the
+    # methods above, but return None instead of raising an exception.
+    def get_item(self, x):
+        if isinstance(x, ItemProxy):
+            return x
+        elif isinstance(x, int):
+            if x >= 0 and x < self.num_items():
+                return ItemProxy.by_id(x)
+            else:
+                return None
+        elif isinstance(x, str):
+            return ItemProxy.by_id(_DATA.get_item_by_name(x))
+        elif x is None:
+            return None
+        raise TypeError('expected ItemProxy, int, str, or None')
+
+    def get_recipe(self, x):
+        if isinstance(x, RecipeProxy):
+            return x
+        elif isinstance(x, int):
+            if x >= 0 and x < self.num_recipes():
+                return RecipeProxy.by_id(x)
+            else:
+                return None
+        elif isinstance(x, str):
+            return RecipeProxy.by_id(_DATA.get_recipe_by_name(x))
+        elif x is None:
+            return None
+        raise TypeError('expected RecipeProxy, int, str, or None')
+
+    def get_template(self, x):
+        if isinstance(x, TemplateProxy):
+            return x
+        elif isinstance(x, int):
+            if x >= 0 and x < self.num_templates():
+                return TemplateProxy.by_id(x)
+            else:
+                return None
+        elif isinstance(x, str):
+            return TemplateProxy.by_id(_DATA.get_template_by_name(x))
+        elif x is None:
+            return None
+        raise TypeError('expected TemplateProxy, int, str, or None')
 
     def item_by_name(self, name):
         id = _DATA.item_by_name(name)

@@ -27,6 +27,10 @@ define_python_class! {
                          key_error, "no such item: {:?}", name))
         }
 
+        fn get_item_by_name(&this, name: String) -> Option<ItemId> {
+            this.item_data.find_id(&name)
+        }
+
         fn item_name(&this, id: ItemId) -> Option<PyResult<PyBox>> {
             this.item_data.get_name(id).map(|s| Pack::pack(s))
         }
@@ -39,6 +43,10 @@ define_python_class! {
         fn recipe_by_name(&this, name: String) -> PyResult<RecipeId> {
             Ok(pyunwrap!(this.recipes.find_id(&name),
                          key_error, "no such recipe: {:?}", name))
+        }
+
+        fn get_recipe_by_name(&this, name: String) -> Option<RecipeId> {
+            this.recipes.find_id(&name)
         }
 
         fn recipe_name(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
@@ -65,6 +73,10 @@ define_python_class! {
         fn template_by_name(&this, name: String) -> PyResult<TemplateId> {
             Ok(pyunwrap!(this.structure_templates.find_id(&name),
                          key_error, "no such template: {:?}", name))
+        }
+
+        fn get_template_by_name(&this, name: String) -> Option<TemplateId> {
+            this.structure_templates.find_id(&name)
         }
 
         fn template_name(&this, id: TemplateId) -> Option<PyResult<PyBox>> {
