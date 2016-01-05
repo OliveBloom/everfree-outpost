@@ -14,6 +14,9 @@ class EngineProxy(object):
     def __repr__(self):
         return '<engine at 0x%x>' % id(self._eng)
 
+    def now(self):
+        return self._eng.now()
+
     def num_clients(self):
         return self._eng.messages_clients_len()
 
@@ -23,6 +26,12 @@ class EngineProxy(object):
     def stable_entity(self, stable_eid):
         eid = self._eng.world_entity_transient_id(stable_eid)
         return EntityProxy(self._eng, eid) if eid is not None else None
+
+    def schedule_timer(self, when, userdata):
+        return self._eng.timer_schedule(when, userdata)
+
+    def cancel_timer(self, cookie):
+        self._eng.timer_cancel(cookie)
 
 
 class ObjectProxy(object):

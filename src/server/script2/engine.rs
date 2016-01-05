@@ -16,6 +16,7 @@ use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 use script::ScriptEngine;
+use timer;
 use world;
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
 use world::Fragment as World_Fragment;
@@ -192,6 +193,7 @@ pub fn with_engine_ref<E, F, R>(e: E, f: F) -> R
 
 engine_part_typedef!(OnlyWorld(world));
 engine_part_typedef!(OnlyMessages(messages));
+engine_part_typedef!(OnlyTimer(timer));
 engine_part_typedef!(EmptyPart());
 
 
@@ -279,6 +281,24 @@ define_python_class! {
                                sid: StructureId,
                                iid: InventoryId) {
             warn_on_err!(logic::items::open_crafting(eng, cid, sid, iid));
+        }
+
+
+        fn timer_schedule(eng: OnlyTimer,
+                          when: Time,
+                          userdata: PyBox) -> u32 {
+            let mut eng = eng;
+            let cookie = eng.timer_mut().schedule(when, move |eng| {
+                let sh = eng.script_hooks();
+                warn_on_err!(sh.call_timer_fired(eng, userdata));
+            });
+            cookie.raw()
+        }
+
+        fn timer_cancel(eng: OnlyTimer,
+                        cookie: u32) {
+            let mut eng = eng;
+            eng.timer_mut().cancel(timer::Cookie::from_raw(cookie))
         }
 
 

@@ -49,6 +49,8 @@ define_script_hooks!(
     server_startup, server_shutdown,
     eval,
 
+    timer_fired,
+
     client_chat_command,
     client_interact,
     client_use_item,
@@ -74,6 +76,12 @@ impl ScriptHooks {
         } else {
             Ok(String::new())
         }
+    }
+
+    pub fn call_timer_fired(&self,
+                            eng: split::EngineRef,
+                            userdata: PyBox) -> PyResult<()> {
+        call_with_engine1(&self.client_chat_command, eng, userdata)
     }
 
     pub fn call_client_chat_command(&self,
