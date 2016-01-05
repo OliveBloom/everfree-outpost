@@ -1191,19 +1191,10 @@ function frame(ac, client_now) {
         }
     }
 
-    function draw_extra(fb_idx, r) {
-        if (player_sprite != null && Config.render_outline.get()) {
-            // TODO: make outlines work in new system
-            //r.renderSpecial(fb_idx, player_sprite, 'pony_outline');
-        }
-    }
-
-    if (renderer.cavern_map.needsUpdate(pos)) {
-        // TODO: hacky.  The issue here is that cavern_map is mostly a
-        // graphics-related thing, but updating it requires access to the
-        // PhysicsAsm object.
-        renderer.cavern_map.update(physics._asm, pos);
-    }
+    // TODO: hacky.  The issue here is that cavern_map is mostly a
+    // graphics-related thing, but updating it requires access to the
+    // PhysicsAsm object.
+    renderer.updateCavernMap(physics._asm, pos);
 
     s.camera_pos = [camera_pos.x, camera_pos.y];
     s.camera_size = [camera_size.x, camera_size.y];
@@ -1214,7 +1205,7 @@ function frame(ac, client_now) {
         s.slice_frac = radius;
         s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
     }
-    renderer.render(s, draw_extra);
+    renderer.render(s);
 
     if (show_cursor && pony != null) {
         var facing = FACINGS[pony.animId() % FACINGS.length];

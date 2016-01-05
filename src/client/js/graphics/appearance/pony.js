@@ -100,21 +100,21 @@ function makePonyShaders(gl, assets, name_tex) {
     return shaders;
 }
 
-PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite) {
+PonyAppearanceClass.prototype.draw3D = function(fb_idx, data, sprite) {
     var app = sprite.appearance;
 
-    var base_tex = r.cacheTexture(app.base_img);
+    var base_tex = data.cacheTexture(app.base_img);
     var textures = {
         'sheetBase': base_tex,
-        'sheetEyes': r.cacheTexture(app.eyes_img),
-        'sheetMane': r.cacheTexture(app.mane_img),
-        'sheetTail': r.cacheTexture(app.tail_img),
-        'cavernTex': r.cavern_map.getTexture(),
+        'sheetEyes': data.cacheTexture(app.eyes_img),
+        'sheetMane': data.cacheTexture(app.mane_img),
+        'sheetTail': data.cacheTexture(app.tail_img),
+        'cavernTex': data.cavern_map.getTexture(),
     };
 
     for (var i = 0; i < 3; ++i) {
         if (app.equip_img[i] != null) {
-            textures['sheetEquip[' + i + ']'] = r.cacheTexture(app.equip_img[i]);
+            textures['sheetEquip[' + i + ']'] = data.cacheTexture(app.equip_img[i]);
         }
     }
 
@@ -150,7 +150,7 @@ PonyAppearanceClass.prototype.draw3D = function(fb_idx, r, sprite) {
             'anchor': [named.NAME_WIDTH / 2, named.NAME_HEIGHT],
         };
         this._name_obj.draw(fb_idx, 0, 6, uniforms, {}, {
-            'cavernTex': r.cavern_map.getTexture(),
+            'cavernTex': data.cavern_map.getTexture(),
         });
     }
 };
