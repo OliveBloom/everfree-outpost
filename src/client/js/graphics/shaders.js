@@ -136,6 +136,20 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
         .texture('imageTex')
         .finish();
 
+    // TODO: hack
+    if (!defs || !defs['SLICE_ENABLE']) {
+        shaders.blend_layers = ctx.start('blit_fullscreen.vert', 'blend_layers.frag', 1)
+            .uniformVec2('cameraPos')
+            .uniformVec2('cameraSize')
+            .uniformVec2('sliceCenter')
+            .uniformFloat('sliceZ')
+            .attributes(blit_attributes)
+            .texture('baseTex')
+            .texture('slicedTex')
+            .texture('cavernTex')
+            .finish();
+    }
+
     shaders.post_filter = ctx.start('blit_fullscreen.vert', 'blit_post.frag', 1)
         .uniformVec2('screenSize')
         .attributes(blit_attributes)

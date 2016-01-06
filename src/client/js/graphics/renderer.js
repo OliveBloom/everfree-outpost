@@ -311,10 +311,16 @@ RenderData.prototype._invalidateStructure = function(x, y, z, template) {
 function RenderBuffers(gl) {
     this.gl = gl;
 
+    // Temporary buffers
     this.fb_world = null;
     this.fb_light = null;
-    this.fb_post = null;
     this.fb_shadow = null;
+
+    // Output buffers for specific layers
+    this.fb_layer0 = null;
+    this.fb_layer1 = null;
+
+    this.fb_final = null;
 
     this.last_sw = -1;
     this.last_sh = -1;
@@ -332,14 +338,19 @@ RenderBuffers.prototype.prepare = function(scene) {
     this.fb_world = new Framebuffer(this.gl, sw, sh, 2);
     // Framebuffer containing light intensity at every pixel.
     this.fb_light = new Framebuffer(this.gl, sw, sh, 1, false);
-    // Framebuffer containing postprocessed image data.  This is emitted
-    // directly to the screen.  (May require upscaling, which is why the
-    // postprocessing shader doesn't output to the screen immediately.)
-    this.fb_post = new Framebuffer(this.gl, sw, sh, 1, false);
-
     // Temporary framebuffer for storing shadows and other translucent parts
     // during structure rendering.
     this.fb_shadow = new Framebuffer(this.gl, sw, sh, 1);
+
+    // Output framebuffers for fully-rendered scenes.  We use more than one
+    // because each may have different slicing applied.
+    this.fb_layer0 = new Framebuffer(this.gl, sw, sh, 1, false);
+    this.fb_layer1 = new Framebuffer(this.gl, sw, sh, 1, false);
+
+    // Framebuffer containing the final image data.  This is emitted directly
+    // to the screen.  (May require upscaling, which is why the postprocessing
+    // shader doesn't output to the screen immediately.)
+    this.fb_final = new Framebuffer(this.gl, sw, sh, 1, false);
 
     this.last_sw = sw;
     this.last_sh = sh;
@@ -394,13 +405,20 @@ RenderShaders.prototype.prepare = function(scene) {
     this.light_dynamic.setUniformValue('cameraSize', size);
     // this.blit_full uses fixed camera
 
+    if (this.blend_layers) {
+        this.blend_layers.setUniformValue('cameraPos', pos);
+        this.blend_layers.setUniformValue('cameraSize', size);
+        this.blend_layers.setUniformValue('sliceCenter', slice_center);
+        this.blend_layers.setUniformValue('sliceZ', slice_z);
+    }
+
     for (var i = 0; i < this.class_list.length; ++i) {
         var cls = this.class_list[i];
         cls.setCamera(pos, size, slice_center, slice_z);
     }
 }
 
-RenderShaders.prototype.renderLayer = function(scene, data, buffers) {
+RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     var gl = this.gl;
 
     var size = scene.camera_size;
@@ -491,7 +509,7 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers) {
 
     // Apply post-processing pass
 
-    buffers.fb_post.use((idx) => {
+    out_buf.use((idx) => {
         this.post_filter.draw(idx, 0, 6, {
             'screenSize': size,
         }, {}, {
@@ -512,6 +530,8 @@ function Renderer(gl, assets) {
     this.data = new RenderData(gl);
     this.buffers = new RenderBuffers(gl);
     this.shaders = new RenderShaders(gl, assets, this.data);
+    this.shaders_slice = new RenderShaders(gl, assets, this.data,
+            {'SLICE_ENABLE': '1'});
 
     this.prep_time = new TimeSeries(5000);
     this.render_time = new TimeSeries(5000);
@@ -549,12 +569,13 @@ Renderer.prototype.updateCavernMap = function(phys_asm, pos) {
 };
 
 Renderer.prototype.render = function(scene) {
-    // Populate the geometry buffers.
+    // Prepare all components for rendering
     var start_prep = Date.now();
 
     this.data.prepare(scene);
     this.buffers.prepare(scene);
     this.shaders.prepare(scene);
+    this.shaders_slice.prepare(scene);
 
     var end_prep = Date.now();
 
@@ -562,16 +583,25 @@ Renderer.prototype.render = function(scene) {
     // Render
     var start_render = end_prep;
 
-    this.shaders.renderLayer(scene, this.data, this.buffers)
+    this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer0);
+    this.shaders_slice.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer1);
 
     // Copy output framebuffer to canvas.
 
     var gl = this.gl;
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
+    this.buffers.fb_final.use((fb_idx) => {
+        this.shaders.blend_layers.draw(fb_idx, 0, 6, {}, {}, {
+            'baseTex': this.buffers.fb_layer0.textures[0],
+            'slicedTex': this.buffers.fb_layer1.textures[0],
+            'cavernTex': this.data.cavern_map.getTexture(),
+        });
+    });
+
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     // TODO: move blit_full to a common location
     this.shaders.blit_full.draw(0, 0, 6, {}, {}, {
-        'imageTex': this.buffers.fb_post.textures[0],
+        'imageTex': this.buffers.fb_final.textures[0],
     });
 
     var end_render = Date.now();
