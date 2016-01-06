@@ -9,8 +9,8 @@ var Textures = sb.Textures;
 
 
 
-function makeShaders(shaders, gl, assets, make_texture) {
-    var ctx = new sb.ShaderBuilderContext(gl, assets, make_texture);
+function makeShaders(shaders, gl, assets, defs, make_texture) {
+    var ctx = new sb.ShaderBuilderContext(gl, assets, defs, make_texture);
 
 
     var square_buf = ctx.makeBuffer(new Uint8Array([

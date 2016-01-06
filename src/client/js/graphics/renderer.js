@@ -97,6 +97,23 @@ function RenderData(gl) {
     this.cavern_map = new CavernMap(gl, 32);
 }
 
+RenderData.prototype.prepare = function(scene) {
+    var pos = scene.camera_pos;
+    var size = scene.camera_size;
+
+    var cx0 = ((pos[0]|0) / CHUNK_PX)|0;
+    var cx1 = (((pos[0]|0) + (size[0]|0) + CHUNK_PX) / CHUNK_PX)|0;
+    var cy0 = ((pos[1]|0) / CHUNK_PX)|0;
+    var cy1 = (((pos[1]|0) + (size[1]|0) + CHUNK_PX) / CHUNK_PX)|0;
+
+    // Terrain from the chunk below can cover the current one.
+    this.terrain_buf.prepare(cx0, cy0, cx1, cy1 + 1);
+    // Structures from the chunk below can cover the current one, and also
+    // structures from chunks above and to the left can extend into it.
+    this.structure_buf.prepare(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
+    // Light from any adjacent chunk can extend into the current one.
+    this.light_buf.prepare(cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1);
+};
 
 // RenderData initialization
 
@@ -288,27 +305,28 @@ RenderData.prototype._invalidateStructure = function(x, y, z, template) {
 };
 
 
-// RenderLayer
+// RenderBuffers
 
-/** constructor */
-function RenderLayer(gl, assets, data) {
+/** @constructor */
+function RenderBuffers(gl) {
     this.gl = gl;
-    this.data = data;
 
-    makeShaders(this, gl, assets, (img) => data.cacheTexture(img));
-
-    this.class_list = [new PonyAppearanceClass(gl, assets)];
-    this.classes = new WeakMap();
-    for (var i = 0; i < this.class_list.length; ++i) {
-        var cls = this.class_list[i];
-        this.classes.set(cls.constructor, cls);
-    }
+    this.fb_world = null;
+    this.fb_light = null;
+    this.fb_post = null;
+    this.fb_shadow = null;
 
     this.last_sw = -1;
     this.last_sh = -1;
-};
+}
 
-RenderLayer.prototype._initFramebuffers = function(sw, sh) {
+RenderBuffers.prototype.prepare = function(scene) {
+    var sw = scene.camera_size[0];
+    var sh = scene.camera_size[1];
+    if (sw == this.last_sw && sh == this.last_sh) {
+        return;
+    }
+
     // Framebuffer containing image and metadata for the world (terrain +
     // structures).
     this.fb_world = new Framebuffer(this.gl, sw, sh, 2);
@@ -327,16 +345,30 @@ RenderLayer.prototype._initFramebuffers = function(sw, sh) {
     this.last_sh = sh;
 };
 
-RenderLayer.prototype.render = function(s) {
-    var gl = this.gl;
-    var data = this.data;
 
-    var pos = s.camera_pos;
-    var size = s.camera_size;
-    var slice_z = [s.slice_z];
-    var slice_center = s.slice_center;
 
-    var anim_now_val = s.now / 1000 % ANIM_MODULUS;
+// RenderShaders
+
+/** @constructor */
+function RenderShaders(gl, assets, data, shader_defs) {
+    this.gl = gl;
+    makeShaders(this, gl, assets, shader_defs, (img) => data.cacheTexture(img));
+
+    this.class_list = [new PonyAppearanceClass(gl, assets)];
+    this.classes = new WeakMap();
+    for (var i = 0; i < this.class_list.length; ++i) {
+        var cls = this.class_list[i];
+        this.classes.set(cls.constructor, cls);
+    }
+}
+
+RenderShaders.prototype.prepare = function(scene) {
+    var pos = scene.camera_pos;
+    var size = scene.camera_size;
+    var slice_z = [scene.slice_z];
+    var slice_center = scene.slice_center;
+
+    var anim_now_val = scene.now / 1000 % ANIM_MODULUS;
     if (anim_now_val < 0) {
         anim_now_val += ANIM_MODULUS;
     }
@@ -366,12 +398,12 @@ RenderLayer.prototype.render = function(s) {
         var cls = this.class_list[i];
         cls.setCamera(pos, size, slice_center, slice_z);
     }
+}
 
+RenderShaders.prototype.renderLayer = function(scene, data, buffers) {
+    var gl = this.gl;
 
-    if (this.last_sw != size[0] || this.last_sh != size[1]) {
-        this._initFramebuffers(size[0], size[1]);
-    }
-
+    var size = scene.camera_size;
 
     // Render everything into the world framebuffer.
 
@@ -381,7 +413,7 @@ RenderLayer.prototype.render = function(s) {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.GEQUAL);
 
-    this.fb_world.use((fb_idx) => {
+    buffers.fb_world.use((fb_idx) => {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         var buf = data.terrain_buf.getBuffer();
@@ -396,14 +428,14 @@ RenderLayer.prototype.render = function(s) {
             'cavernTex': data.cavern_map.getTexture(),
         });
 
-        for (var i = 0; i < s.sprites.length; ++i) {
-            var sprite = s.sprites[i];
+        for (var i = 0; i < scene.sprites.length; ++i) {
+            var sprite = scene.sprites[i];
             var cls = this.classes.get(sprite.appearance.getClass());
             cls.draw3D(fb_idx, data, sprite);
         }
     });
 
-    this.fb_shadow.use((fb_idx) => {
+    buffers.fb_shadow.use((fb_idx) => {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         var buf = data.structure_buf.getBuffer();
@@ -421,21 +453,21 @@ RenderLayer.prototype.render = function(s) {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE);
     // clearColor sets the ambient light color+intensity
-    var amb = s.ambient_color;
+    var amb = scene.ambient_color;
     var amb_intensity = 0.2126 * amb[0] + 0.7152 * amb[1] + 0.0722 * amb[2];
     gl.clearColor(amb[0] / 255, amb[1] / 255, amb[2] / 255, amb_intensity / 255);
 
-    this.fb_light.use((fb_idx) => {
+    buffers.fb_light.use((fb_idx) => {
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         var buf = data.light_buf.getBuffer();
         var len = data.light_buf.getSize();
         this.light_static.draw(fb_idx, 0, len / SIZEOF.LightVertex, {}, {'*': buf}, {
-            'depthTex': this.fb_world.depth_texture,
+            'depthTex': buffers.fb_world.depth_texture,
         });
 
-        for (var i = 0; i < s.lights.length; ++i) {
-            var light = s.lights[i];
+        for (var i = 0; i < scene.lights.length; ++i) {
+            var light = scene.lights[i];
             this.light_dynamic.draw(fb_idx, 0, 6, {
                 'center': [
                     light.pos.x,
@@ -449,7 +481,7 @@ RenderLayer.prototype.render = function(s) {
                 ],
                 'radiusIn': [light.radius],
             }, {}, {
-                'depthTex': this.fb_world.depth_texture,
+                'depthTex': buffers.fb_world.depth_texture,
             });
         }
     });
@@ -459,35 +491,32 @@ RenderLayer.prototype.render = function(s) {
 
     // Apply post-processing pass
 
-    this.fb_post.use((idx) => {
+    buffers.fb_post.use((idx) => {
         this.post_filter.draw(idx, 0, 6, {
             'screenSize': size,
         }, {}, {
-            'image0Tex': this.fb_world.textures[0],
-            'image1Tex': this.fb_world.textures[1],
-            'lightTex': this.fb_light.textures[0],
-            'depthTex': this.fb_world.depth_texture,
-            'shadowTex': this.fb_shadow.textures[0],
-            'shadowDepthTex': this.fb_shadow.depth_texture,
+            'image0Tex': buffers.fb_world.textures[0],
+            'image1Tex': buffers.fb_world.textures[1],
+            'lightTex': buffers.fb_light.textures[0],
+            'depthTex': buffers.fb_world.depth_texture,
+            'shadowTex': buffers.fb_shadow.textures[0],
+            'shadowDepthTex': buffers.fb_shadow.depth_texture,
         });
     });
 };
 
 
 /** @constructor */
-function Renderer(gl) {
+function Renderer(gl, assets) {
     this.gl = gl;
     this.data = new RenderData(gl);
-    this.layer = null;
+    this.buffers = new RenderBuffers(gl);
+    this.shaders = new RenderShaders(gl, assets, this.data);
 
     this.prep_time = new TimeSeries(5000);
     this.render_time = new TimeSeries(5000);
 }
 exports.Renderer = Renderer;
-
-Renderer.prototype.initGl = function(assets) {
-    this.layer = new RenderLayer(this.gl, assets, this.data);
-};
 
 Renderer.prototype.initData = function(blocks, templates, parts, verts) {
     this.data.initData(blocks, templates, parts, verts);
@@ -510,7 +539,7 @@ Renderer.prototype.addStructure = function(now, id, x, y, z, template) {
 };
 
 Renderer.prototype.removeStructure = function(structure) {
-    this.data.removeStructure(structure);
+    return this.data.removeStructure(structure);
 };
 
 Renderer.prototype.updateCavernMap = function(phys_asm, pos) {
@@ -523,21 +552,9 @@ Renderer.prototype.render = function(scene) {
     // Populate the geometry buffers.
     var start_prep = Date.now();
 
-    var pos = scene.camera_pos;
-    var size = scene.camera_size;
-
-    var cx0 = ((pos[0]|0) / CHUNK_PX)|0;
-    var cx1 = (((pos[0]|0) + (size[0]|0) + CHUNK_PX) / CHUNK_PX)|0;
-    var cy0 = ((pos[1]|0) / CHUNK_PX)|0;
-    var cy1 = (((pos[1]|0) + (size[1]|0) + CHUNK_PX) / CHUNK_PX)|0;
-
-    // Terrain from the chunk below can cover the current one.
-    this.data.terrain_buf.prepare(cx0, cy0, cx1, cy1 + 1);
-    // Structures from the chunk below can cover the current one, and also
-    // structures from chunks above and to the left can extend into it.
-    this.data.structure_buf.prepare(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
-    // Light from any adjacent chunk can extend into the current one.
-    this.data.light_buf.prepare(cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1);
+    this.data.prepare(scene);
+    this.buffers.prepare(scene);
+    this.shaders.prepare(scene);
 
     var end_prep = Date.now();
 
@@ -545,7 +562,7 @@ Renderer.prototype.render = function(scene) {
     // Render
     var start_render = end_prep;
 
-    this.layer.render(scene);
+    this.shaders.renderLayer(scene, this.data, this.buffers)
 
     // Copy output framebuffer to canvas.
 
@@ -553,8 +570,8 @@ Renderer.prototype.render = function(scene) {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     // TODO: move blit_full to a common location
-    this.layer.blit_full.draw(0, 0, 6, {}, {}, {
-        'imageTex': this.layer.fb_post.textures[0],
+    this.shaders.blit_full.draw(0, 0, 6, {}, {}, {
+        'imageTex': this.buffers.fb_post.textures[0],
     });
 
     var end_render = Date.now();

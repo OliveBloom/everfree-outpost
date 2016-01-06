@@ -21,10 +21,11 @@ function copy_dict(d) {
 
 
 /** @constructor */
-function ShaderBuilderContext(gl, assets, make_texture) {
+function ShaderBuilderContext(gl, assets, defs, make_texture) {
     this.gl = gl;
     this.assets = assets;
     this.make_texture = make_texture;
+    this.base_defs = defs || {};
 
     this.common_buffers = {};
     this.common_textures = {};
@@ -57,7 +58,7 @@ function ShaderBuilder(owner, vert_name, frag_name, fb_count) {
     this.vert_name = vert_name;
     this.frag_name = frag_name;
     this.fb_count = fb_count || 1;
-    this.shader_defs = {};
+    this.shader_defs = copy_dict(owner.base_defs);
     this._uniforms = {};
     this._attributes = {};
     this._textures = {};

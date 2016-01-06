@@ -205,7 +205,7 @@ function init() {
     physics = new Physics();
     prediction = Config.motion_prediction.get() ? new Prediction(physics) : new DummyPrediction();
 
-    renderer = new Renderer(canvas.ctx);
+    renderer = null;
     cursor = null;
     show_cursor = false;
     slice_radius = new TimeVarying(0, 0, 0, 0.9, 0);
@@ -222,7 +222,9 @@ function init() {
 
     checkBrowser(dialog, function() {
         loadAssets(function() {
-            renderer.initGl(assets);
+            renderer = new Renderer(canvas.ctx, assets);
+            renderer.initData(BlockDef.by_id, TemplateDef.by_id,
+                    TemplatePart.by_index, assets['template_vert_defs']);
             runner.job('preload-textures', preloadTextures);
 
             cursor = new Cursor(canvas.ctx, assets, TILE_SIZE / 2 + 1);
@@ -298,9 +300,6 @@ function loadAssets(next) {
             }
 
             ExtraDefs.init(assets['extra_defs']);
-
-            renderer.initData(BlockDef.by_id, TemplateDef.by_id,
-                    TemplatePart.by_index, assets['template_vert_defs']);
 
             var css = '.item-icon {' +
                 'background-image: url("' + assets['items'] + '");' +

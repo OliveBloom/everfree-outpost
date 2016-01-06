@@ -3,94 +3,132 @@ const float CAVERN_MAP_RADIUS = 32.0;
 const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
 const float CAVERN_CUTOFF = 1.5 / 255.0;
 
-int lookup(vec2 tilePos) {
+int sliceGetCavernTile(vec2 tilePos) {
     tilePos += 0.5;
     vec2 cavernPos = tilePos - sliceCenter;
     vec2 cavernTexCoord = cavernPos / CAVERN_MAP_SIZE + 0.5;
     return int(texture2D(cavernTex, cavernTexCoord).r * 255.0 + 0.5);
 }
 
-bool is_tile_inside(vec2 tilePos) {
-    return lookup(tilePos) == 1;
+bool _sliceIsTileInside(vec2 tilePos) {
+    return sliceGetCavernTile(tilePos) == 1;
 }
 
-float calc_val(bool inside, vec2 off, vec2 corner, float w_in, float w_out) {
-    vec2 delta = off - corner;
-    float d = dot(delta, delta);
-        return (inside ? w_in : -w_out) / d;
+vec4 _sliceCollectDists(vec2 off) {
+    float d_nw = distance(off, vec2(-1.0, -1.0));
+    float d_ne = distance(off, vec2( 1.0, -1.0));
+    float d_sw = distance(off, vec2(-1.0,  1.0));
+    float d_se = distance(off, vec2( 1.0,  1.0));
+    return vec4(d_nw, d_ne, d_sw, d_se);
 }
 
-bool calc_inside(vec2 pixelPos) {
-    vec2 tilePos = floor(pixelPos / TILE_SIZE);
-    if (is_tile_inside(tilePos)) {
-        return true;
+vec2 slicePixelToTile(vec2 pixelPos) {
+    return floor(pixelPos / TILE_SIZE);
+}
+
+float sliceCalcInside(vec2 pixelPos) {
+    vec2 tilePos = slicePixelToTile(pixelPos);
+    if (_sliceIsTileInside(tilePos)) {
+        return 1.0;
     } else {
-        bool n = is_tile_inside(tilePos + vec2( 0.0, -1.0));
-        bool s = is_tile_inside(tilePos + vec2( 0.0,  1.0));
-        bool w = is_tile_inside(tilePos + vec2(-1.0,  0.0));
-        bool e = is_tile_inside(tilePos + vec2( 1.0,  0.0));
+        bool n = _sliceIsTileInside(tilePos + vec2( 0.0, -1.0));
+        bool s = _sliceIsTileInside(tilePos + vec2( 0.0,  1.0));
+        bool w = _sliceIsTileInside(tilePos + vec2(-1.0,  0.0));
+        bool e = _sliceIsTileInside(tilePos + vec2( 1.0,  0.0));
 
-        bool nw = n || w || is_tile_inside(tilePos + vec2(-1.0, -1.0));
-        bool ne = n || e || is_tile_inside(tilePos + vec2( 1.0, -1.0));
-        bool sw = s || w || is_tile_inside(tilePos + vec2(-1.0,  1.0));
-        bool se = s || e || is_tile_inside(tilePos + vec2( 1.0,  1.0));
+        bool nw = n || w || _sliceIsTileInside(tilePos + vec2(-1.0, -1.0));
+        bool ne = n || e || _sliceIsTileInside(tilePos + vec2( 1.0, -1.0));
+        bool sw = s || w || _sliceIsTileInside(tilePos + vec2(-1.0,  1.0));
+        bool se = s || e || _sliceIsTileInside(tilePos + vec2( 1.0,  1.0));
 
         vec2 finePos = pixelPos / TILE_SIZE;
         vec2 fineOffset = finePos - tilePos;
         fineOffset = (fineOffset - 0.5) * 4.0;
         fineOffset = clamp(fineOffset, -1.0, 1.0);
 
-        // Compute magic weight factors, tuned to make the ends of curved
-        // sections line up with adjacent straight sections.
-        //
-        //    A---*---B
-        //    |   |   |
-        //    |   /   |
-        //    |  /    |
-        //    +-/     |
-        //    |       |
-        //    |       |
-        //    |       |
-        //    C-------D
-        //
-        // The point marked '*' must have value exactly 0.0.  But with the
-        // default formula, the balance will be 1.0 on the A side vs. 1.4 on
-        // the B side (1.4 = 1/1(B) + 1/5(C) + 1/5(D)).  So we apply a
-        // weighting factor, based on the number of points on the other side.
-        // The weights needs to be 1.0/1.4 for a 3/1 split, and equal for a
-        // 2/2 split, and otherwise we don't care.
-        float num_inside =
-            (nw ? 1.0 : 0.0) + (ne ? 1.0 : 0.0) +
-            (sw ? 1.0 : 0.0) + (se ? 1.0 : 0.0);
-        float w_in = (8.0 - num_inside) / 5.0;
-        float w_out = (4.0 + num_inside) / 5.0;
-
-        return
-            calc_val(nw, fineOffset, vec2(-1.0, -1.0), w_in, w_out) +
-            calc_val(ne, fineOffset, vec2( 1.0, -1.0), w_in, w_out) +
-            calc_val(sw, fineOffset, vec2(-1.0,  1.0), w_in, w_out) +
-            calc_val(se, fineOffset, vec2( 1.0,  1.0), w_in, w_out) > 0.0;
+        vec4 inside = vec4(float(nw), float(ne), float(sw), float(se));
+        float numInside = dot(inside, vec4(1.0));
+        // TODO: figure out whether this is faster or slower than a texture
+        // fetch.  I think it should be mostly okay since nearby fragments will
+        // all take the same path...
+        if (numInside == 0.0) {
+            return -1.0;
+        } else if (numInside == 1.0) {
+            vec4 dists = _sliceCollectDists(fineOffset);
+            // Find the distance to the one inside corner.
+            // This value is 0 at the near corner and 2 at the two far ones
+            float dist = dot(dists * inside, vec4(1.0));
+            return 1.0 - dist;
+        } else if (numInside == 2.0) {
+            float dist;
+            if (nw == se) {
+                // Take the lower of the two distances toward inside vertices.
+                if (nw) {
+                    dist = min(distance(fineOffset, vec2(-1.0, -1.0)),
+                               distance(fineOffset, vec2( 1.0,  1.0)));
+                } else {
+                    dist = min(distance(fineOffset, vec2(-1.0,  1.0)),
+                               distance(fineOffset, vec2( 1.0, -1.0)));
+                }
+            } else if (nw == ne) {
+                // Split along the horizontal axis
+                if (nw) {
+                    // Inside on top
+                    dist = abs(fineOffset.y - -1.0);
+                } else {
+                    // Inside on bottom
+                    dist = abs(fineOffset.y - 1.0);
+                }
+            } else if (nw == sw) {
+                // Split along the vertical axis
+                if (nw) {
+                    // Inside on left
+                    dist = abs(fineOffset.x - -1.0);
+                } else {
+                    // Inside on right
+                    dist = abs(fineOffset.x - 1.0);
+                }
+            }
+            return 1.0 - dist;
+        } else if (numInside == 3.0) {
+            vec4 dists = _sliceCollectDists(fineOffset);
+            // Find the distance to the one outside corner.
+            // This value is 0 at the near corner and 2 at the two far ones
+            float dist = dot(dists * (1.0 - inside), vec4(1.0));
+            return dist - 1.0;
+        } else if (numInside == 4.0) {
+            // 0.0 at the center, >1.0 at each corner
+            return distance(fineOffset, vec2(0.0, 0.0));
+        }
     }
 }
 
-bool check_slice() {
+bool sliceNearInside(vec2 pixelPos) {
+    vec2 tilePos = slicePixelToTile(pixelPos);
+    return
+        _sliceIsTileInside(tilePos) ||
+        _sliceIsTileInside(tilePos + vec2( 0.0, -1.0)) ||
+        _sliceIsTileInside(tilePos + vec2( 0.0,  1.0)) ||
+        _sliceIsTileInside(tilePos + vec2(-1.0,  0.0)) ||
+        _sliceIsTileInside(tilePos + vec2( 1.0,  0.0)) ||
+        _sliceIsTileInside(tilePos + vec2(-1.0, -1.0)) ||
+        _sliceIsTileInside(tilePos + vec2( 1.0, -1.0)) ||
+        _sliceIsTileInside(tilePos + vec2(-1.0,  1.0)) ||
+        _sliceIsTileInside(tilePos + vec2( 1.0,  1.0));
+}
+
+vec2 sliceGetPos() {
     float pixelX = cameraPos.x + gl_FragCoord.x;
     float pixelY = cameraPos.y + cameraSize.y -
         (gl_FragCoord.y - (sliceZ + 2.0) * TILE_SIZE);
-    vec2 pixelPos = vec2(pixelX, pixelY);
+    return vec2(pixelX, pixelY);
+}
 
-    /*
-    float dist = distance(pixelPos - vec2(0.0, sliceZ * TILE_SIZE),
-        cameraPos + 0.5 * cameraSize);
-    if (dist >= (CAVERN_MAP_RADIUS - 1.0) * TILE_SIZE) {
-        return false;
-    }
-    */
-
-    if (calc_inside(pixelPos)) {
-        if (baseZ >= sliceZ + 2.0) {
-            return true;
-        }
-    }
+bool sliceCheck() {
+#ifdef SLICE_ENABLE
+    vec2 pixelPos = sliceGetPos();
+    return baseZ >= sliceZ + 2.0 || !sliceNearInside(pixelPos);
+#else
     return false;
+#endif
 }

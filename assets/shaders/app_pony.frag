@@ -44,7 +44,7 @@ void layerTinted(inout vec4 cur, sampler2D tex, vec3 tint) {
 #include "slicing.inc"
 
 void main(void) {
-    if (check_slice()) {
+    if (sliceCheck()) {
         discard;
     }
 

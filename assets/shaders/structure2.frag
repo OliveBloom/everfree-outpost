@@ -21,7 +21,7 @@ varying float baseZ;
 #include "slicing.inc"
 
 void main(void) {
-    if (check_slice()) {
+    if (sliceCheck()) {
         discard;
     }
 
