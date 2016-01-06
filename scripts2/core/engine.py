@@ -33,6 +33,18 @@ class EngineProxy(object):
     def cancel_timer(self, cookie):
         self._eng.timer_cancel(cookie)
 
+    def get_object(self, id):
+        if type(id) is StructureId:
+            return self.get_structure(id)
+        else:
+            raise TypeError('unsupported ID type: %s' % type(id).__name__)
+
+    def get_structure(self, sid):
+        if self._eng.world_structure_check(sid):
+            return StructureProxy(self._eng, sid)
+        else:
+            return None
+
 
 class ObjectProxy(object):
     def __init__(self, eng, id):

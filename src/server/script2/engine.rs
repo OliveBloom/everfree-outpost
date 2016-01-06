@@ -516,6 +516,10 @@ define_python_class! {
             unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
+        fn world_structure_check(eng: OnlyWorld, sid: StructureId) -> bool {
+            eng.world().get_structure(sid).is_some()
+        }
+
         fn world_structure_pos(eng: OnlyWorld, sid: StructureId) -> PyResult<V3> {
             let s = pyunwrap!(eng.world().get_structure(sid),
                               runtime_error, "no structure with that ID");

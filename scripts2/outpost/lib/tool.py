@@ -10,6 +10,15 @@ def handler(tool_name, template):
         return f
     return register
 
+def call_handler(tool_name, template, e, s, args):
+    tool_handlers = _HANDLERS.get(tool_name)
+    if tool_handlers is None:
+        return
+
+    handler = tool_handlers.get(alias.template(template))
+    if handler is not None:
+        handler(e, s, args)
+
 def use(e, tool_name, args=None):
     s = util.hit_structure(e)
     if s is None:

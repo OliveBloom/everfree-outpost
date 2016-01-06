@@ -5,6 +5,7 @@ from outpost_server import core
 import outpost_server.core.data
 import outpost_server.core.chat
 import outpost_server.core.eval
+import outpost_server.core.timer
 import outpost_server.core.use
 
 
@@ -31,9 +32,12 @@ def hack_set_main_inventories(eng, cid, item_iid, ability_iid):
     print(c.pawn().extra()['inv'].copy())
 
 def init(storage, data, hooks):
+    # Must be first
     core.data.init(data)
+
     core.chat.init(hooks)
     core.eval.init(hooks)
+    core.timer.init(hooks)
     core.use.init(hooks)
 
     hooks.server_startup(startup)

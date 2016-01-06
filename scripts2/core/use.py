@@ -32,7 +32,7 @@ def client_use_item(eng, cid, item_id, args):
         handler(e, args)
     else:
         print('PASS THROUGH: item', item)
-        eng.script_cb_use_item(cid, item, args)
+        eng.script_cb_use_item(cid, item.id, args)
 
 def client_use_ability(eng, cid, ability_id, args):
     ability = ItemProxy.by_id(ability_id)
@@ -45,7 +45,25 @@ def client_use_ability(eng, cid, ability_id, args):
         handler(e, args)
     else:
         print('PASS THROUGH: ability', ability)
-        eng.script_cb_use_ability(cid, ability, args)
+        eng.script_cb_use_ability(cid, ability.id, args)
+
+
+# Provide a way to call handlers from outside this module, so that one handler
+# can easily dispatch to another.
+def call_structure_handler(template, e, s, args):
+    handler = _USE_STRUCTURE.get(alias.template(template))
+    if handler is not None:
+        handler(e, s, args)
+
+def call_item_handler(item, e, args):
+    handler = _USE_ITEM.get(alias.item(item))
+    if handler is not None:
+        handler(e, args)
+
+def call_ability_handler(ability, e, args):
+    handler = _USE_ABILITY.get(alias.item(ability))
+    if handler is not None:
+        handler(e, args)
 
 
 def structure(name):
