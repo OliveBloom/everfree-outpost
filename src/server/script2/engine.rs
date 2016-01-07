@@ -212,10 +212,6 @@ define_python_class! {
             eng.now()
         }
 
-        fn script_cb_chat_command(eng: EngineRef, cid: ClientId, msg: String) {
-            warn_on_err!(ScriptEngine::cb_chat_command(eng.unwrap(), cid, &msg));
-        }
-
         fn script_cb_interact(eng: EngineRef,
                               cid: ClientId,
                               args: Option<ExtraArg>) {

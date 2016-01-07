@@ -42,8 +42,7 @@ def client_chat_command(eng, cid, line):
     if handler is not None:
         handler.func(client, args)
     else:
-        eng.script_cb_chat_command(cid, line)
-        #client.send_message('Unknown command: /%s' % cmd)
+        client.send_message('Unknown command: /%s' % cmd)
 
 def register_command(handler):
     """Add a Handler to _HANDLERS, checking for duplicate entries."""
