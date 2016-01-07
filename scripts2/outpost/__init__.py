@@ -7,3 +7,6 @@ from . import structure_items
 from . import teleporter
 from . import tools
 from . import ward
+
+# Subpackages
+from . import dungeon
