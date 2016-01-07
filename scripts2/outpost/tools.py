@@ -1,6 +1,7 @@
-from outpost_server.core import use
+from outpost_server.core import use, util
 from outpost_server.core.data import DATA
 
+from outpost_server.outpost import cave
 from outpost_server.outpost.lib import mallet, tool
 
 def lua_fallback(item, e, args):
@@ -18,9 +19,12 @@ def axe(e, args):
 
 @use.item('pick')
 def pickaxe(e, args):
-    ok = tool.use(e, 'pickaxe')
-    # TODO: hack for lua passthrough - remove
-    if ok is False:
-        lua_fallback('pick', e, args)
+    if util.hit_structure(e) is None:
+        cave.mine_wall(e, args)
+    else:
+        ok = tool.use(e, 'pickaxe')
+        # TODO: hack for lua passthrough - remove
+        if ok is False:
+            lua_fallback('pick', e, args)
 
 use.item('mallet')(mallet.use)

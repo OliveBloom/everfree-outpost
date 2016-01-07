@@ -1,4 +1,5 @@
 from . import base
+from . import cave
 from . import chat
 from . import hat
 from . import sign

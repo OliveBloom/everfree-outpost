@@ -189,6 +189,9 @@ class PlaneProxy(ObjectProxy):
         sid = self._eng.world_structure_create(self.id, pos, template.id)
         return StructureProxy(self._eng, sid)
 
+    def set_cave(self, pos):
+        return self._eng.logic_set_cave(self.id, pos)
+
 
 class StructureProxy(ObjectProxy):
     ID_TYPE = StructureId

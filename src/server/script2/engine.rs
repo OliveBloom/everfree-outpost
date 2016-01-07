@@ -283,6 +283,13 @@ define_python_class! {
             warn_on_err!(logic::items::open_crafting(eng, cid, sid, iid));
         }
 
+        fn logic_set_cave(eng: glue::WorldFragment,
+                          pid: PlaneId,
+                          pos: V3) -> PyResult<bool> {
+            let mut eng = eng;
+            Ok(try!(logic::misc::set_cave(&mut eng, pid, pos)))
+        }
+
 
         fn timer_schedule(eng: OnlyTimer,
                           when: Time,
