@@ -30,7 +30,3 @@ structure_items.attachment_map['cabinets'] = horiz_walls
 structure_items.attachment_map['bookshelf/0'] = horiz_walls
 
 add_attachment_item('bookshelf', 'bookshelf/0')
-
-
-add_structure_item('wood_pillar', 'pillar/wood')
-add_structure_item('stone_pillar', 'pillar/stone')
