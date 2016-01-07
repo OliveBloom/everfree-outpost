@@ -1,9 +1,10 @@
 use types::*;
 
 use python as py;
-use python::PyRef;
-
+use python::{PyBox, PyRef, PyResult};
 use script2::{Pack, Unpack};
+use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
+
 
 macro_rules! define_namedtuple {
     (type $name:ident ($($arg:ident),*) : $T:ty {
@@ -57,6 +58,7 @@ macro_rules! define_namedtuple {
         }
     };
 }
+
 
 define_namedtuple! {
     type ClientId(raw): ClientId {
@@ -117,6 +119,7 @@ define_namedtuple! {
         unpack |(raw,)| StructureId(raw);
     }
 }
+
 
 define_namedtuple! {
     type StableClientId(raw): Stable<ClientId> {
@@ -179,6 +182,113 @@ define_namedtuple! {
 }
 
 
+pub struct WorldAttach;
+define_namedtuple! {
+    type WorldAttach(): WorldAttach {
+        type_obj WORLD_ATTACH_TYPE;
+        initializer init_world_attach;
+        accessor get_world_attach_type;
+        pack |_: WorldAttach| ();
+        unpack |()| WorldAttach;
+    }
+}
+
+pub struct PlaneAttach;
+define_namedtuple! {
+    type PlaneAttach(): PlaneAttach {
+        type_obj PLANE_ATTACH_TYPE;
+        initializer init_plane_attach;
+        accessor get_plane_attach_type;
+        pack |_: PlaneAttach| ();
+        unpack |()| PlaneAttach;
+    }
+}
+
+pub struct ChunkAttach;
+define_namedtuple! {
+    type ChunkAttach(): ChunkAttach {
+        type_obj CHUNK_ATTACH_TYPE;
+        initializer init_chunk_attach;
+        accessor get_chunk_attach_type;
+        pack |_: ChunkAttach| ();
+        unpack |()| ChunkAttach;
+    }
+}
+
+
+impl<'a> Unpack<'a> for EntityAttachment {
+    fn unpack(obj: PyRef<'a>) -> PyResult<EntityAttachment> {
+        if let Ok(_) = <WorldAttach as Unpack>::unpack(obj) {
+            Ok(EntityAttachment::World)
+        } else if let Ok(_) = <ChunkAttach as Unpack>::unpack(obj) {
+            Ok(EntityAttachment::Chunk)
+        } else if let Ok(cid) = <ClientId as Unpack>::unpack(obj) {
+            Ok(EntityAttachment::Client(cid))
+        } else {
+            pyraise!(type_error, "expected entity attachment");
+        }
+    }
+}
+
+impl<'a> Unpack<'a> for InventoryAttachment {
+    fn unpack(obj: PyRef<'a>) -> PyResult<InventoryAttachment> {
+        if let Ok(_) = <WorldAttach as Unpack>::unpack(obj) {
+            Ok(InventoryAttachment::World)
+        } else if let Ok(cid) = <ClientId as Unpack>::unpack(obj) {
+            Ok(InventoryAttachment::Client(cid))
+        } else if let Ok(cid) = <EntityId as Unpack>::unpack(obj) {
+            Ok(InventoryAttachment::Entity(cid))
+        } else if let Ok(cid) = <StructureId as Unpack>::unpack(obj) {
+            Ok(InventoryAttachment::Structure(cid))
+        } else {
+            pyraise!(type_error, "expected inventory attachment");
+        }
+    }
+}
+
+impl<'a> Unpack<'a> for StructureAttachment {
+    fn unpack(obj: PyRef<'a>) -> PyResult<StructureAttachment> {
+        if let Ok(_) = <PlaneAttach as Unpack>::unpack(obj) {
+            Ok(StructureAttachment::Plane)
+        } else if let Ok(_) = <ChunkAttach as Unpack>::unpack(obj) {
+            Ok(StructureAttachment::Chunk)
+        } else {
+            pyraise!(type_error, "expected structure attachment");
+        }
+    }
+}
+
+impl Pack for EntityAttachment {
+    fn pack(self) -> PyResult<PyBox> {
+        match self {
+            EntityAttachment::World => Pack::pack(WorldAttach),
+            EntityAttachment::Chunk => Pack::pack(ChunkAttach),
+            EntityAttachment::Client(cid) => Pack::pack(cid),
+        }
+    }
+}
+
+impl Pack for InventoryAttachment {
+    fn pack(self) -> PyResult<PyBox> {
+        match self {
+            InventoryAttachment::World => Pack::pack(WorldAttach),
+            InventoryAttachment::Client(cid) => Pack::pack(cid),
+            InventoryAttachment::Entity(eid) => Pack::pack(eid),
+            InventoryAttachment::Structure(sid) => Pack::pack(sid),
+        }
+    }
+}
+
+impl Pack for StructureAttachment {
+    fn pack(self) -> PyResult<PyBox> {
+        match self {
+            StructureAttachment::Plane => Pack::pack(PlaneAttach),
+            StructureAttachment::Chunk => Pack::pack(ChunkAttach),
+        }
+    }
+}
+
+
 pub fn init(module: PyRef) {
     init_client_id(module);
     init_entity_id(module);
@@ -186,10 +296,15 @@ pub fn init(module: PyRef) {
     init_plane_id(module);
     init_terrain_chunk_id(module);
     init_structure_id(module);
+
     init_stable_client_id(module);
     init_stable_entity_id(module);
     init_stable_inventory_id(module);
     init_stable_plane_id(module);
     init_stable_terrain_chunk_id(module);
     init_stable_structure_id(module);
+
+    init_world_attach(module);
+    init_plane_attach(module);
+    init_chunk_attach(module);
 }

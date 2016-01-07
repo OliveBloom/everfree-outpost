@@ -7,6 +7,26 @@ def check_type(obj, ty):
         raise ValueError('expected %r, but got %r' % (ty, type(obj)))
 
 
+def _inv(self, key='main'):
+    inv = self.extra().get('inv')
+    if inv is None:
+        return None
+    iid = inv.get(key)
+    if iid is None:
+        return None
+    return InventoryProxy(self._eng, iid)
+
+def _create_inv(self, key, size):
+    i = self.engine.create_inventory(size)
+    i.attach(self.id)
+
+    inv = self.extra().setdefault('inv', {})
+    assert key not in inv, 'inventory %r already exists' % key
+    inv[key] = i.id
+
+    return i
+
+
 class EngineProxy(object):
     def __init__(self, eng):
         self._eng = eng
@@ -22,6 +42,11 @@ class EngineProxy(object):
 
     def world_extra(self):
         return ExtraHashProxy(self._eng.world_extra())
+
+
+    def create_inventory(self, size):
+        iid = self._eng.world_inventory_create(size)
+        return InventoryProxy(self._eng, iid)
 
 
     def client_by_name(self, name):
@@ -89,6 +114,9 @@ class ClientProxy(ObjectProxy):
         else:
             return None
 
+    def open_container(self, i1, i2):
+        self._eng.logic_open_container(self.id, i1.id, i2.id)
+
     def open_crafting(self, s, i):
         self._eng.logic_open_crafting(self.id, s.id, i.id)
 
@@ -106,6 +134,9 @@ class ClientProxy(ObjectProxy):
 
     def is_superuser(self):
         return bool(self.extra().get('superuser'))
+
+    inv = _inv
+    create_inv = _create_inv
 
 
 class EntityProxy(ObjectProxy):
@@ -146,18 +177,15 @@ class EntityProxy(ObjectProxy):
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))
 
-    def inv(self, key):
-        inv = self.extra().get('inv')
-        if inv is None:
-            return None
-        iid = inv.get(key)
-        if iid is None:
-            return None
-        return InventoryProxy(self._eng, iid)
+    inv = _inv
+    create_inv = _create_inv
 
 
 class InventoryProxy(ObjectProxy):
     ID_TYPE = InventoryId
+
+    def attach(self, parent):
+        self._eng.world_inventory_attach(self.id, parent)
 
     def count(self, item):
         return self._eng.world_inventory_count(self.id, item.id)
@@ -228,4 +256,7 @@ class StructureProxy(ObjectProxy):
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_structure_extra(self.id))
+
+    inv = _inv
+    create_inv = _create_inv
 

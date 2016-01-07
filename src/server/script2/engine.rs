@@ -18,6 +18,7 @@ use python::{PyBox, PyRef, PyResult};
 use script::ScriptEngine;
 use timer;
 use world;
+use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
 use world::Fragment as World_Fragment;
 use world::object::*;
@@ -276,6 +277,13 @@ define_python_class! {
         }
 
 
+        fn logic_open_container(eng: EngineRef,
+                                cid: ClientId,
+                                iid1: InventoryId,
+                                iid2: InventoryId) {
+            warn_on_err!(logic::items::open_container(eng, cid, iid1, iid2));
+        }
+
         fn logic_open_crafting(eng: EngineRef,
                                cid: ClientId,
                                sid: StructureId,
@@ -401,7 +409,7 @@ define_python_class! {
         fn world_entity_controller(eng: OnlyWorld, eid: EntityId) -> PyResult<Option<ClientId>> {
             let e = pyunwrap!(eng.world().get_entity(eid),
                               runtime_error, "no entity with that ID");
-            if let world::EntityAttachment::Client(cid) = e.attachment() {
+            if let EntityAttachment::Client(cid) = e.attachment() {
                 let c = eng.world().client(cid);
                 if c.pawn_id() == Some(eid) {
                     return Ok(Some(cid));
@@ -433,6 +441,23 @@ define_python_class! {
             Ok(())
         }
 
+
+        fn world_inventory_create(eng: glue::WorldFragment,
+                                  size: u8) -> PyResult<InventoryId> {
+            let mut eng = eng;
+            let mut i = try!(eng.create_inventory(size));
+            Ok(i.id())
+        }
+
+        fn world_inventory_attach(eng: glue::WorldFragment,
+                                  iid: InventoryId,
+                                  attachment: InventoryAttachment) -> PyResult<()> {
+            let mut eng = eng;
+            let mut i = pyunwrap!(eng.get_inventory_mut(iid),
+                                  runtime_error, "no inventory with that ID");
+            try!(i.set_attachment(attachment));
+            Ok(())
+        }
 
         fn world_inventory_count(eng: OnlyWorld,
                                  iid: InventoryId,
@@ -502,7 +527,7 @@ define_python_class! {
                                   template_id: TemplateId) -> PyResult<StructureId> {
             let mut eng = eng;
             let mut s = try!(eng.create_structure(pid, pos, template_id));
-            try!(s.set_attachment(world::StructureAttachment::Chunk));
+            try!(s.set_attachment(StructureAttachment::Chunk));
             Ok(s.id())
         }
 
