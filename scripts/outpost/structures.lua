@@ -10,17 +10,6 @@ local mallet_cycle = mallet.mallet_cycle
 
 
 
-add_structure_item('fence', 'fence/edge/horiz')
-add_structure_item('fence_tee', 'fence/tee/e')
-add_structure_item('fence_post', 'fence/end/fancy/e')
-
-mallet_cycle('fence/', {
-    'edge/horiz', 'edge/vert',
-    'corner/nw', 'corner/ne', 'corner/se', 'corner/sw',
-})
-mallet_cycle('fence/', { 'tee/e', 'tee/s', 'tee/w', 'tee/n', 'cross' })
-mallet_cycle('fence/end/fancy/', { 'e', 'w' })
-
 add_structure_item('statue', 'statue/e')
 mallet_cycle('statue/', { 'e', 's', 'w', 'n' })
 

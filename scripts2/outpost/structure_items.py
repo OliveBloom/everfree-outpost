@@ -6,6 +6,11 @@ mallet.register('road/', mallet.TERRAIN_VARIANTS)
 autorotate.register_floor('house_floor', 'wood_floor')
 mallet.register('wood_floor/', mallet.TERRAIN_VARIANTS)
 
+
+autorotate.register_fence('fence', 'fence_post')
+mallet.register('fence/', mallet.WALL_VARIANTS)
+
+
 def wall_and_door(name, tool, extra_variants=()):
     autorotate.register_wall('%s_wall' % name)
     mallet.register('%s_wall/' % name,

@@ -141,7 +141,7 @@ FLOOR_ORDER = (
 
 FLOOR_CAT = Category(0, FLOOR_SIDES, FLOOR_ORDER)
 
-def compare_floor_sides(a, b):
+def compare_equal_nonzero(a, b):
     # Value matching up non-empty sides slightly more than matching up empty
     # sides.  This makes placing a floor on an inner corner prefer the actual
     # inner corner tile over an edge tile.  (Corner matches 3, 3, 1/2, and
@@ -166,7 +166,7 @@ def choose_floor_variant(basename, plane, pos):
         return FLOOR_CAT.get_default(basename)
     else:
         return FLOOR_CAT.choose_best(basename,
-                side_sum(sides, compare_floor_sides))
+                side_sum(sides, compare_equal_nonzero))
 
 def register_floor(item, basename=None):
     _register(item, basename, FLOOR_CAT, choose_floor_variant)
@@ -177,6 +177,14 @@ def register_floor(item, basename=None):
 # 0: nothing, 1: wall
 WALL_SIDES = {
         'edge/horiz':       Sides(0, 0, 1, 1),
+        'variant/v0':       Sides(0, 0, 1, 1),
+        'variant/v1':       Sides(0, 0, 1, 1),
+        'variant/v2':       Sides(0, 0, 1, 1),
+        'variant/v3':       Sides(0, 0, 1, 1),
+        'window/v0':        Sides(0, 0, 1, 1),
+        'window/v1':        Sides(0, 0, 1, 1),
+        'window/v2':        Sides(0, 0, 1, 1),
+        'window/v3':        Sides(0, 0, 1, 1),
         'edge/vert':        Sides(1, 1, 0, 0),
         'corner/nw':        Sides(0, 1, 0, 1),
         'corner/ne':        Sides(0, 1, 1, 0),
@@ -202,7 +210,6 @@ WALL_ORDER = (
         'tee/s',
         'tee/w',
         'cross',
-        'door/closed',
     )
 
 WALL_CAT = Category(1, WALL_SIDES, WALL_ORDER)
@@ -222,3 +229,59 @@ def register_wall(item, basename=None):
     _register(item, basename, WALL_CAT, choose_wall_variant)
 
 
+# Fence category
+
+# 0: nothing, 1: fence
+FENCE_SIDES = {
+        'edge/horiz':       Sides(0, 0, 1, 1),
+        'edge/vert':        Sides(1, 1, 0, 0),
+        'corner/nw':        Sides(0, 1, 0, 1),
+        'corner/ne':        Sides(0, 1, 1, 0),
+        'corner/sw':        Sides(1, 0, 0, 1),
+        'corner/se':        Sides(1, 0, 1, 0),
+        'tee/n':            Sides(1, 0, 1, 1),
+        'tee/e':            Sides(1, 1, 0, 1),
+        'tee/s':            Sides(0, 1, 1, 1),
+        'tee/w':            Sides(1, 1, 1, 0),
+        'cross':            Sides(1, 1, 1, 1),
+        'end/fancy/e':      Sides(0, 0, 1, 0),
+        'end/fancy/w':      Sides(0, 0, 0, 1),
+    }
+
+FENCE_ORDER = (
+        'edge/horiz',
+        'edge/vert',
+        'corner/nw',
+        'corner/ne',
+        'corner/sw',
+        'corner/se',
+        'tee/n',
+        'tee/e',
+        'tee/s',
+        'tee/w',
+        'cross',
+    )
+
+FENCE_POST_ORDER = (
+        'end/fancy/e',
+        'end/fancy/w',
+    )
+
+FENCE_CAT = Category(1, FENCE_SIDES, FENCE_ORDER)
+FENCE_POST_CAT = Category(1, FENCE_SIDES, FENCE_POST_ORDER)
+
+def choose_fence_variant(basename, plane, pos):
+    sides = FENCE_CAT.outer_sides(plane, pos)
+    return FENCE_CAT.choose_best(basename,
+            side_sum(sides, compare_equal_nonzero))
+
+def choose_fence_post_variant(basename, plane, pos):
+    sides = FENCE_POST_CAT.outer_sides(plane, pos)
+    return FENCE_POST_CAT.choose_best(basename,
+            side_sum(sides, compare_equal_nonzero))
+
+def register_fence(item, post_item, basename=None):
+    if basename is None:
+        basename = item
+    _register(item, basename, FENCE_CAT, choose_fence_variant)
+    _register(post_item, basename, FENCE_POST_CAT, choose_fence_post_variant)

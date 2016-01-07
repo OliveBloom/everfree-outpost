@@ -44,7 +44,8 @@ class DataProxy(object):
             else:
                 return None
         elif isinstance(x, str):
-            return ItemProxy.by_id(_DATA.get_item_by_name(x))
+            id = _DATA.get_item_by_name(x)
+            return ItemProxy.by_id(id) if id is not None else None
         elif x is None:
             return None
         raise TypeError('expected ItemProxy, int, str, or None')
@@ -58,7 +59,8 @@ class DataProxy(object):
             else:
                 return None
         elif isinstance(x, str):
-            return RecipeProxy.by_id(_DATA.get_recipe_by_name(x))
+            id = _DATA.get_recipe_by_name(x)
+            return RecipeProxy.by_id(id) if id is not None else None
         elif x is None:
             return None
         raise TypeError('expected RecipeProxy, int, str, or None')
@@ -72,7 +74,8 @@ class DataProxy(object):
             else:
                 return None
         elif isinstance(x, str):
-            return TemplateProxy.by_id(_DATA.get_template_by_name(x))
+            id = _DATA.get_template_by_name(x)
+            return TemplateProxy.by_id(id) if id is not None else None
         elif x is None:
             return None
         raise TypeError('expected TemplateProxy, int, str, or None')
