@@ -49,7 +49,6 @@ require('core.extra')
 require('core.eval')
 require('core.timer')
 local action = require('core.action')
-local command = require('core.command')
 local util = require('core.util')
 
 require('loader')
@@ -171,21 +170,6 @@ end
 
 no_op = function(...) end
 
-function command.handler.permit(c, arg)
-    ward.permit(c, arg)
-    c:send_message('Granted permission to ' .. arg)
-end
-command.help.permit = '/permit <name>: Give <name> permission to bypass your ward'
-
-function command.handler.revoke(c, arg)
-    if ward.revoke(c, arg) then
-        c:send_message('Revoked permission from ' .. arg)
-    else
-        c:send_message('No permissions to revoke from ' .. arg)
-    end
-end
-command.help.revoke = "/revoke <name>: Revoke <name>'s permission to bypass your ward"
-
 
 function client_by_name(s)
     local w = World.get()
@@ -196,70 +180,6 @@ function client_by_name(s)
         end
     end
 end
-
-function command.su_handler.tp(client, args)
-    x, y, z = args:match('([%d-]+) ([%d-]+) ([%d-]+)')
-    if x ~= nil then
-        client:pawn():teleport(V3.new(x + 0, y + 0, z + 0))
-    else
-        local other = client_by_name(args)
-        if other == nil then
-            client:send_message('No such player: ' .. args)
-        else
-            client:pawn():teleport_plane(other:pawn():plane(), other:pawn():pos())
-        end
-    end
-end
-command.help.tp = {
-    "/tp <player>: Teleport to another player's location",
-    '/tp <x> <y> <z>: Teleport to specific coordinates'
-}
-
-function command.su_handler.give(client, args)
-    name, count = args:match('([^ ]+) ([%d-]+)')
-    if name == nil then
-        name = args
-        count = 1
-    end
-
-    client:pawn():inventory('main'):update(name, count + 0)
-end
-command.help.give = '/give <item> [count]: Add items to your inventory'
-
-function command.su_handler.place(client, args)
-    local pawn = client:pawn()
-    s, err = client:world():create_structure(pawn:plane(), util.hit_tile(pawn), args)
-    if s == nil then
-        client:send_message(err)
-    end
-end
-command.help.place = '/place <structure>: Place a structure at your current location'
-
-function command.su_handler.destroy(client, args)
-    local s = util.hit_structure(client:pawn())
-    if s == nil then
-        client:send_message('no structure at that location')
-        return
-    end
-
-    local err s:destroy()
-    if err ~= nil then
-        client:send_message(err)
-    end
-end
-command.help.destroy = '/destroy: Destroy a structure at your current location'
-
-function command.su_handler.tribe(client, args)
-    local value = {
-        E = 0x00,
-        P = 0x40,
-        U = 0x80,
-        A = 0xc0,
-    }
-
-    client:pawn():update_appearance(0xc0, value[args])
-end
-command.help.tribe = '/tribe [E|P|U|A]: Change the tribe of your character'
 
 
 function outpost_ffi.callbacks.login(c)

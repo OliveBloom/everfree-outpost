@@ -23,15 +23,22 @@ class EngineProxy(object):
     def world_extra(self):
         return ExtraHashProxy(self._eng.world_extra())
 
+
+    def client_by_name(self, name):
+        cid = self._eng.messages_client_by_name(name)
+        return ClientProxy(self._eng, cid) if cid is not None else None
+
     def stable_entity(self, stable_eid):
         eid = self._eng.world_entity_transient_id(stable_eid)
         return EntityProxy(self._eng, eid) if eid is not None else None
+
 
     def schedule_timer(self, when, userdata):
         return self._eng.timer_schedule(when, userdata)
 
     def cancel_timer(self, cookie):
         self._eng.timer_cancel(cookie)
+
 
     def get_object(self, id):
         if type(id) is StructureId:
@@ -93,6 +100,12 @@ class ClientProxy(ObjectProxy):
 
     def get_use_ability_args(self, ability, dialog_id, args):
         self._eng.messages_send_get_use_ability_args(self.id, ability.id, dialog_id, args)
+
+    def extra(self):
+        return ExtraHashProxy(self._eng.world_client_extra(self.id))
+
+    def is_superuser(self):
+        return bool(self.extra().get('superuser'))
 
 
 class EntityProxy(ObjectProxy):

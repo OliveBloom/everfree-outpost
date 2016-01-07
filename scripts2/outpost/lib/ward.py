@@ -149,4 +149,5 @@ def check(e, pos):
     ok, msg = can_act(e, pos)
     if not ok:
         e.controller().send_message(msg)
-        raise RuntimeError('ward check failed: %r' % msg)
+        if not e.controller().is_superuser():
+            raise RuntimeError('ward check failed: %r' % msg)

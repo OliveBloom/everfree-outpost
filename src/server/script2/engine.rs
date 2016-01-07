@@ -240,6 +240,10 @@ define_python_class! {
             eng.messages().clients_len()
         }
 
+        fn messages_client_by_name(eng: OnlyMessages, name: String) -> Option<ClientId> {
+            eng.messages().name_to_client(&name)
+        }
+
         fn messages_send_chat_update(eng: OnlyMessages, cid: ClientId, msg: String) {
             use messages::ClientResponse;
             let resp = ClientResponse::ChatUpdate(msg);
@@ -317,6 +321,16 @@ define_python_class! {
         }
 
 
+
+        fn(engine_ref_func_with_ref!) world_client_extra(eng: glue::WorldFragment,
+                                                         eng_ref: PyRef,
+                                                         cid: ClientId) -> PyResult<PyBox> {
+            let mut eng = eng;
+            let mut c = pyunwrap!(eng.get_client_mut(cid),
+                                  runtime_error, "no client with that ID");
+            let extra = c.extra_mut();
+            unsafe { derive_extra_ref(extra, eng_ref) }
+        }
 
         fn world_client_name(eng: OnlyWorld, cid: ClientId) -> PyResult<String> {
             let c = pyunwrap!(eng.world().get_client(cid),
