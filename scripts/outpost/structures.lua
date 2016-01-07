@@ -9,19 +9,6 @@ local mallet_cycle = mallet.mallet_cycle
 
 
 
-
-add_structure_item('statue', 'statue/e')
-mallet_cycle('statue/', { 'e', 's', 'w', 'n' })
-
-add_structure_item('bed')
-add_structure_item('table')
-add_structure_item('trophy')
-add_structure_item('fountain')
-add_structure_item('torch')
-add_structure_item('stair', 'stair/n')
-
-
-
 local horiz_walls = {
     ['house_wall/edge/horiz/in'] = true,
     ['house_wall/edge/horiz/out'] = true,

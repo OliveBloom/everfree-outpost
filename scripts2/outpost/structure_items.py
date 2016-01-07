@@ -11,6 +11,16 @@ autorotate.register_fence('fence', 'fence_post')
 mallet.register('fence/', mallet.WALL_VARIANTS)
 
 
+structure_items.register('bed')
+structure_items.register('table')
+structure_items.register('trophy')
+structure_items.register('fountain')
+structure_items.register('torch')
+structure_items.register('stair', 'stair/n')
+structure_items.register('statue', 'statue/e')
+mallet.register('statue/', ('e', 's', 'w', 'n'))
+
+
 def wall_and_door(name, tool, extra_variants=()):
     autorotate.register_wall('%s_wall' % name)
     mallet.register('%s_wall/' % name,
