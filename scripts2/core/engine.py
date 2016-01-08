@@ -57,6 +57,10 @@ class EngineProxy(object):
         eid = self._eng.world_entity_transient_id(stable_eid)
         return EntityProxy(self._eng, eid) if eid is not None else None
 
+    def stable_structure(self, stable_sid):
+        sid = self._eng.world_structure_transient_id(stable_sid)
+        return StructureProxy(self._eng, sid) if sid is not None else None
+
 
     def schedule_timer(self, when, userdata):
         return self._eng.timer_schedule(when, userdata)
@@ -261,6 +265,9 @@ class StructureProxy(ObjectProxy):
     def replace(self, template):
         template = DATA.template_id(template)
         self._eng.world_structure_replace(self.id, template)
+
+    def stable_id(self):
+        return self._eng.world_structure_stable_id(self.id)
 
     def pos(self):
         return self._eng.world_structure_pos(self.id)

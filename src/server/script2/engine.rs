@@ -581,6 +581,19 @@ define_python_class! {
             Ok(())
         }
 
+        fn world_structure_stable_id(eng: glue::WorldFragment,
+                                     sid: StructureId) -> PyResult<Stable<StructureId>> {
+            let mut eng = eng;
+            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+                                  runtime_error, "no structure with that ID");
+            Ok(s.stable_id())
+        }
+
+        fn world_structure_transient_id(eng: OnlyWorld,
+                                        stable_sid: Stable<StructureId>) -> Option<StructureId> {
+            eng.world().transient_structure_id(stable_sid)
+        }
+
         fn(engine_ref_func_with_ref!) world_structure_extra(eng: glue::WorldFragment,
                                                             eng_ref: PyRef,
                                                             sid: StructureId) -> PyResult<PyBox> {

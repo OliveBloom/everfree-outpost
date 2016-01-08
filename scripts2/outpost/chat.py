@@ -1,7 +1,7 @@
 import ast
 import shlex
 
-from outpost_server.core import chat, util
+from outpost_server.core import chat, engine, types, util
 from outpost_server.core.data import DATA
 from outpost_server.core.types import V3
 from outpost_server.core.engine import StablePlaneId
@@ -236,6 +236,16 @@ class FunctionObject:
     def __call__(self, *args, **kwargs):
         return self.f(*args, **kwargs)
 
+def _build_eval_globals():
+    ctx = {
+            'DATA': DATA,
+            'util': util,
+            }
+    ctx.update(engine.__dict__)
+    ctx.update(types.__dict__)
+    return ctx
+EVAL_GLOBALS = _build_eval_globals()
+
 @chat.su_command('/eval <code>: Evaluate a Python expression or statement', name='eval')
 def eval_(client, args):
     eng = client.engine
@@ -244,8 +254,6 @@ def eval_(client, args):
             'c': FunctionObject(client, lambda n: eng.client_by_name(n)),
             'e': FunctionObject(client.pawn(), lambda n: eng.client_by_name(n).pawn()),
             's': util.hit_structure(client.pawn()),
-            'DATA': DATA,
-            'util': util,
             }
 
     try:
@@ -253,10 +261,10 @@ def eval_(client, args):
         if len(code.body) == 1 and isinstance(code.body[0], ast.Expr):
             code = ast.Expression(code.body[0].value)
             code = compile(code, '<unknown>', 'eval')
-            result = eval(code, {}, dct)
+            result = eval(code, EVAL_GLOBALS, dct)
         else:
             code = compile(code, '<unknown>', 'exec')
-            exec(code, {}, dct)
+            exec(code, EVAL_GLOBALS, dct)
             result = None
         client.send_message('Result: %r' % result)
 

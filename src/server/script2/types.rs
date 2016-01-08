@@ -28,6 +28,11 @@ macro_rules! define_namedtuple {
             let args = Pack::pack((stringify!($name), ($(stringify!($arg),)*))).unwrap();
             let type_obj = py::object::call(namedtuple.borrow(), args.borrow(), None).unwrap();
 
+            // `namedtuple` tries to guess the module name, likely based on the Python stack.  It
+            // guesses wrong in this case, so fix it manually.
+            let mod_name = py::unicode::from_str("_outpost_server").unwrap();
+            py::object::set_attr_str(type_obj.borrow(), "__module__", mod_name.borrow()).unwrap();
+
             py::object::set_attr_str(module, stringify!($name), type_obj.borrow()).unwrap();
             unsafe {
                 $TYPE_OBJ = type_obj.unwrap();

@@ -1,5 +1,8 @@
 from outpost_server.core import use, util
 from outpost_server.core.data import DATA
+from outpost_server.core.engine import StructureProxy
+
+from outpost_server.outpost.lib import door
 
 NORMAL_EMPTY = DATA.template('dungeon/gem_slot/normal/empty')
 COLORS = ('red', 'orange', 'yellow', 'green', 'blue', 'purple')
@@ -40,15 +43,21 @@ def register_color(color):
 def update_puzzle(s, color):
     puzzle_id = s.extra()['puzzle_id']
     slot = s.extra()['puzzle_slot']
-    puzzle = s.plane().extra().setdefault('puzzles', {})[puzzle_id]
+    puzzle = s.plane().extra()['puzzles'][puzzle_id]
 
     slots = puzzle['slots']
     slots[slot] = color
+
     if all(c is not None for c in slots):
-        ok = check_slots(slots)
-        print('ok = ', ok)
+        open_door = check_slots(slots)
     else:
-        print('unfinished')
+        open_door = False
+
+    s_door = s.engine.stable_structure(puzzle['door'])
+    if open_door:
+        door.open(s_door)
+    else:
+        door.close(s_door)
 
 def check_slots(slots):
     for i, c in enumerate(slots):

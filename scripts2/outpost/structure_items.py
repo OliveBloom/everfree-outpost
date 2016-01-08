@@ -28,7 +28,7 @@ def wall_and_door(name, tool, extra_variants=()):
     mallet.register('%s_wall/' % name,
             ('edge/horiz',) + extra_variants + mallet.COMMON_WALL_VARIANTS)
     structure_items.register('%s_door' % name, '%s_wall/door/closed' % name, tool)
-    door.register('%s_wall/door' % name, tool_name=tool)
+    door.register_use('%s_wall/door' % name, tool_name=tool)
 
 wall_and_door('interior', 'axe')
 wall_and_door('brick', 'pickaxe')
