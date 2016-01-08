@@ -1,145 +1,117 @@
 _DATA = None
 
-class DataProxy(object):
-    def __init__(self):
-        pass
 
-    # Get the Proxy for a data item.  These functions accept a Proxy, an
-    # integer ID, or a string name.
-    def item(self, x):
-        if isinstance(x, ItemProxy):
+def _thing(proxy, by_name):
+    def f(self, x):
+        if isinstance(x, proxy):
             return x
-        elif isinstance(x, int):
-            return ItemProxy.by_id(x)
         elif isinstance(x, str):
-            return self.item_by_name(x)
-        raise TypeError('expected ItemProxy, int, or str')
-
-    def recipe(self, x):
-        if isinstance(x, RecipeProxy):
-            return x
+            id = by_name(x)
+            return proxy.by_id(id)
         elif isinstance(x, int):
-            return RecipeProxy.by_id(x)
+            return proxy.by_id(id)
+        else:
+            raise TypeError('expected %s, int, or str' % proxy.__name__)
+    return f
+
+def _get_thing(proxy, get_by_name):
+    def f(self, x):
+        if isinstance(x, proxy):
+            return x
         elif isinstance(x, str):
-            return self.recipe_by_name(x)
-        raise TypeError('expected RecipeProxy, int, or str')
-
-    def template(self, x):
-        if isinstance(x, TemplateProxy):
-            return x
+            id = get_by_name(x)
+            return proxy.by_id(id) if id is not None else None
         elif isinstance(x, int):
-            return TemplateProxy.by_id(x)
-        elif isinstance(x, str):
-            return self.template_by_name(x)
-        raise TypeError('expected TemplateProxy, int, or str')
-
-    # Get the Proxy for a data item if it exists.  These are similar to to the
-    # methods above, but return None instead of raising an exception.
-    def get_item(self, x):
-        if isinstance(x, ItemProxy):
-            return x
-        elif isinstance(x, int):
-            if x >= 0 and x < self.num_items():
-                return ItemProxy.by_id(x)
+            if 0 <= id < len(proxy.INSTANCES):
+                return proxy.by_id(id)
             else:
                 return None
-        elif isinstance(x, str):
-            id = _DATA.get_item_by_name(x)
-            return ItemProxy.by_id(id) if id is not None else None
         elif x is None:
             return None
-        raise TypeError('expected ItemProxy, int, str, or None')
+        else:
+            raise TypeError('expected %s, int, or str' % proxy.__name__)
+    return f
 
-    def get_recipe(self, x):
-        if isinstance(x, RecipeProxy):
-            return x
+def _thing_id(proxy, by_name):
+    def f(self, x):
+        if isinstance(x, proxy):
+            return x.id
+        elif isinstance(x, str):
+            return by_name(x)
         elif isinstance(x, int):
-            if x >= 0 and x < self.num_recipes():
-                return RecipeProxy.by_id(x)
-            else:
-                return None
-        elif isinstance(x, str):
-            id = _DATA.get_recipe_by_name(x)
-            return RecipeProxy.by_id(id) if id is not None else None
-        elif x is None:
-            return None
-        raise TypeError('expected RecipeProxy, int, str, or None')
-
-    def get_template(self, x):
-        if isinstance(x, TemplateProxy):
+            if x < 0 or x >= len(proxy.INSTANCES):
+                raise IndexError(x)
             return x
-        elif isinstance(x, int):
-            if x >= 0 and x < self.num_templates():
-                return TemplateProxy.by_id(x)
-            else:
-                return None
-        elif isinstance(x, str):
-            id = _DATA.get_template_by_name(x)
-            return TemplateProxy.by_id(id) if id is not None else None
-        elif x is None:
-            return None
-        raise TypeError('expected TemplateProxy, int, str, or None')
+        else:
+            raise TypeError('expected %s, int, or str' % proxy.__name__)
+    return f
 
-    def item_by_name(self, name):
-        id = _DATA.item_by_name(name)
-        return ItemProxy.by_id(id)
+def _num_things(proxy):
+    def f(self):
+        return len(proxy.INSTANCES)
+    return f
 
-    def recipe_by_name(self, name):
-        id = _DATA.recipe_by_name(name)
-        return RecipeProxy.by_id(id)
+def _define_methods(cls, proxy, thing, things=None):
+    things = things or thing + 's'
+    by_name = getattr(_DATA, '%s_by_name' % thing)
+    get_by_name = getattr(_DATA, 'get_%s_by_name' % thing)
 
-    def template_by_name(self, name):
-        id = _DATA.template_by_name(name)
-        return TemplateProxy.by_id(id)
+    setattr(cls, '%s' % thing, _thing(proxy, by_name))
+    setattr(cls, 'get_%s' % thing, _get_thing(proxy, get_by_name))
+    setattr(cls, 'num_%s' % things, _num_things(proxy))
+    setattr(cls, '%s_id' % thing, _thing_id(proxy, by_name))
 
-    def num_items(self):
-        return len(ItemProxy.INSTANCES)
+# The DataProxy class and object need to be available "early", that is, at
+# import time (since other outpost_server.core modules import its value then).
+# But _def_funcs can't be called until _DATA and the DefProxy classes have been
+# created.  So we define an empty DataProxy class, and only populate it with
+# methods during init().
 
-    def num_recipes(self):
-        return len(RecipeProxy.INSTANCES)
-
-    def num_templates(self):
-        return len(TemplateProxy.INSTANCES)
+class DataProxy:
+    @classmethod
+    def _init(cls):
+        _define_methods(cls, BlockProxy, 'block')
+        _define_methods(cls, ItemProxy, 'item')
+        _define_methods(cls, RecipeProxy, 'recipe')
+        _define_methods(cls, TemplateProxy, 'template')
 
 DATA = DataProxy()
 
 
-@classmethod
-def _by_id(cls, id):
-    if cls.INSTANCES[id] is None:
-        cls.INSTANCES[id] = cls(id)
-    return cls.INSTANCES[id]
-
-class ItemProxy(object):
+class DefProxy:
     def __init__(self, id):
         self.id = id
 
     INSTANCES = []
-    by_id = _by_id
+
+    @classmethod
+    def by_id(cls, id):
+        if cls.INSTANCES[id] is None:
+            cls.INSTANCES[id] = cls(id)
+        return cls.INSTANCES[id]
 
     def __hash__(self):
         return hash(self.id)
 
     def __repr__(self):
-        return '<item #%d %r>' % (self.id, self.name)
+        try:
+            # `self.name` isn't guaranteed to be present, but we'd like to use
+            # it if it is.
+            return '<%s #%d %r>' % (type(self).__name__, self.id, self.name)
+        except Exception:
+            return '<%s #%d>' % (type(self).__name__, self.id)
 
+class BlockProxy(DefProxy):
+    @property
+    def name(self):
+        return _DATA.block_name(self.id)
+
+class ItemProxy(DefProxy):
     @property
     def name(self):
         return _DATA.item_name(self.id)
 
-class RecipeProxy(object):
-    def __init__(self, id):
-        self.id = id
-
-    INSTANCES = []
-    by_id = _by_id
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __repr__(self):
-        return '<recipe #%d %r>' % (self.id, self.name)
-
+class RecipeProxy(DefProxy):
     @property
     def name(self):
         return _DATA.recipe_name(self.id)
@@ -159,19 +131,7 @@ class RecipeProxy(object):
         dct = _DATA.recipe_outputs(self.id)
         return {ItemProxy.by_id(k): v for k, v in dct.items()}
 
-class TemplateProxy(object):
-    def __init__(self, id):
-        self.id = id
-
-    INSTANCES = []
-    by_id = _by_id
-
-    def __hash__(self):
-        return hash(self.id)
-
-    def __repr__(self):
-        return '<template #%d %r>' % (self.id, self.name)
-
+class TemplateProxy(DefProxy):
     @property
     def name(self):
         return _DATA.template_name(self.id)
@@ -181,6 +141,9 @@ def init(data):
     global _DATA
     _DATA = data
 
+    BlockProxy.INSTANCES = [None] * data.block_count()
     ItemProxy.INSTANCES = [None] * data.item_count()
     RecipeProxy.INSTANCES = [None] * data.recipe_count()
     TemplateProxy.INSTANCES = [None] * data.template_count()
+
+    DataProxy._init()

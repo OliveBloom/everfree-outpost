@@ -15,6 +15,8 @@ def register(base, names):
         alias.register_template(base + n, first)
 
 def use(e, args=None):
+    ward.check(util.hit_tile(e))
+
     s = util.hit_structure(e)
     if s is None:
         return

@@ -151,12 +151,20 @@ impl BlockData {
         })
     }
 
+    pub fn len(&self) -> usize {
+        return self.names.len()
+    }
+
     pub fn shape(&self, id: BlockId) -> Shape {
         self.shapes.get(id as usize).map(|&x| x).unwrap_or(Shape::Empty)
     }
 
     pub fn name(&self, id: BlockId) -> &str {
         &*self.names[id as usize]
+    }
+
+    pub fn get_name(&self, id: BlockId) -> Option<&str> {
+        self.names.get(id as usize).map(|s| &**s)
     }
 
     pub fn get_id(&self, name: &str) -> BlockId {

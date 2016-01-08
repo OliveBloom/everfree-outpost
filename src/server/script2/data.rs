@@ -18,6 +18,24 @@ define_python_class! {
         method_macro data_ref_func!;
 
 
+        fn block_count(&this) -> usize {
+            this.block_data.len()
+        }
+
+        fn block_by_name(&this, name: String) -> PyResult<BlockId> {
+            Ok(pyunwrap!(this.block_data.find_id(&name),
+                         key_error, "no such block: {:?}", name))
+        }
+
+        fn get_block_by_name(&this, name: String) -> Option<BlockId> {
+            this.block_data.find_id(&name)
+        }
+
+        fn block_name(&this, id: BlockId) -> Option<PyResult<PyBox>> {
+            this.block_data.get_name(id).map(|s| Pack::pack(s))
+        }
+
+
         fn item_count(&this) -> usize {
             this.item_data.len()
         }

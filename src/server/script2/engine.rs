@@ -298,6 +298,29 @@ define_python_class! {
             Ok(try!(logic::misc::set_cave(&mut eng, pid, pos)))
         }
 
+        fn logic_set_interior(eng: glue::WorldFragment,
+                              pid: PlaneId,
+                              pos: V3,
+                              base: String) {
+            let mut eng = eng;
+            warn_on_err!(logic::misc::set_block_interior(&mut eng, pid, pos, &base));
+        }
+
+        fn logic_clear_interior(eng: glue::WorldFragment,
+                                pid: PlaneId,
+                                pos: V3,
+                                base: String,
+                                new_center: String) -> PyResult<()> {
+            let mut eng = eng;
+            let new_center_id = pyunwrap!(eng.data().block_data.find_id(&new_center));
+            warn_on_err!(logic::misc::clear_block_interior(&mut eng,
+                                                           pid,
+                                                           pos,
+                                                           &base,
+                                                           new_center_id));
+            Ok(())
+        }
+
 
         fn timer_schedule(eng: OnlyTimer,
                           when: Time,
@@ -445,7 +468,7 @@ define_python_class! {
         fn world_inventory_create(eng: glue::WorldFragment,
                                   size: u8) -> PyResult<InventoryId> {
             let mut eng = eng;
-            let mut i = try!(eng.create_inventory(size));
+            let i = try!(eng.create_inventory(size));
             Ok(i.id())
         }
 
@@ -504,12 +527,6 @@ define_python_class! {
             Ok(p.stable_id())
         }
 
-        fn world_plane_name(eng: OnlyWorld, pid: PlaneId) -> PyResult<String> {
-            let p = pyunwrap!(eng.world().get_plane(pid),
-                              runtime_error, "no plane with that ID");
-            Ok(p.name().to_owned())
-        }
-
         fn(engine_ref_func_with_ref!) world_plane_extra(eng: glue::WorldFragment,
                                                         eng_ref: PyRef,
                                                         pid: PlaneId) -> PyResult<PyBox> {
@@ -518,6 +535,22 @@ define_python_class! {
                                   runtime_error, "no plane with that ID");
             let extra = p.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
+        }
+
+        fn world_plane_name(eng: OnlyWorld, pid: PlaneId) -> PyResult<String> {
+            let p = pyunwrap!(eng.world().get_plane(pid),
+                              runtime_error, "no plane with that ID");
+            Ok(p.name().to_owned())
+        }
+
+        fn world_plane_get_block(eng: OnlyWorld, pid: PlaneId, pos: V3) -> PyResult<BlockId> {
+            let p = pyunwrap!(eng.world().get_plane(pid),
+                              runtime_error, "no plane with that ID");
+            let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
+            let tc = pyunwrap!(p.get_terrain_chunk(cpos),
+                               runtime_error, "no terrain chunk at that position");
+            let idx = tc.bounds().index(pos);
+            Ok(tc.blocks()[idx])
         }
 
 

@@ -245,11 +245,11 @@ def eval_(client, args):
             'e': FunctionObject(client.pawn(), lambda n: eng.client_by_name(n).pawn()),
             's': util.hit_structure(client.pawn()),
             'DATA': DATA,
+            'util': util,
             }
 
     try:
         code = ast.parse(args)
-        print(code)
         if len(code.body) == 1 and isinstance(code.body[0], ast.Expr):
             code = ast.Expression(code.body[0].value)
             code = compile(code, '<unknown>', 'eval')

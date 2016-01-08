@@ -1,4 +1,4 @@
-from outpost_server.core.data import ItemProxy, TemplateProxy
+from outpost_server.core.data import DATA, BlockProxy, TemplateProxy
 from outpost_server.core.extra import ExtraHashProxy
 from outpost_server.core.types import *
 
@@ -124,10 +124,12 @@ class ClientProxy(ObjectProxy):
         self._eng.messages_send_get_interact_args(self.id, dialog_id, args)
 
     def get_use_item_args(self, item, dialog_id, args):
-        self._eng.messages_send_get_use_item_args(self.id, item.id, dialog_id, args)
+        item = DATA.item_id(ability)
+        self._eng.messages_send_get_use_item_args(self.id, item, dialog_id, args)
 
     def get_use_ability_args(self, ability, dialog_id, args):
-        self._eng.messages_send_get_use_ability_args(self.id, ability.id, dialog_id, args)
+        ability = DATA.item_id(ability)
+        self._eng.messages_send_get_use_ability_args(self.id, ability, dialog_id, args)
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_client_extra(self.id))
@@ -188,16 +190,20 @@ class InventoryProxy(ObjectProxy):
         self._eng.world_inventory_attach(self.id, parent)
 
     def count(self, item):
-        return self._eng.world_inventory_count(self.id, item.id)
+        item = DATA.item_id(item)
+        return self._eng.world_inventory_count(self.id, item)
 
     def count_space(self, item):
-        return self._eng.world_inventory_count_space(self.id, item.id)
+        item = DATA.item_id(item)
+        return self._eng.world_inventory_count_space(self.id, item)
 
     def bulk_add(self, item, count):
-        return self._eng.world_inventory_bulk_add(self.id, item.id, count)
+        item = DATA.item_id(item)
+        return self._eng.world_inventory_bulk_add(self.id, item, count)
 
     def bulk_remove(self, item, count):
-        return self._eng.world_inventory_bulk_remove(self.id, item.id, count)
+        item = DATA.item_id(item)
+        return self._eng.world_inventory_bulk_remove(self.id, item, count)
 
 
 class PlaneProxy(ObjectProxy):
@@ -211,6 +217,10 @@ class PlaneProxy(ObjectProxy):
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_plane_extra(self.id))
+
+    def get_block(self, pos):
+        block_id = self._eng.world_plane_get_block(self.id, pos)
+        return BlockProxy.by_id(block_id)
 
     def find_structure_at_point(self, pos):
         opt_sid = self._eng.world_structure_find_at_point(self.id, pos)
@@ -227,11 +237,19 @@ class PlaneProxy(ObjectProxy):
             return None
 
     def create_structure(self, pos, template):
-        sid = self._eng.world_structure_create(self.id, pos, template.id)
+        template = DATA.template_id(template)
+        sid = self._eng.world_structure_create(self.id, pos, template)
         return StructureProxy(self._eng, sid)
 
     def set_cave(self, pos):
         return self._eng.logic_set_cave(self.id, pos)
+
+    def set_farmland(self, pos):
+        self._eng.logic_set_interior(self.id, pos, 'farmland')
+
+    def clear_farmland(self, pos):
+        # TODO: strange design relative to other APIs, kind of a hack
+        self._eng.logic_clear_interior(self.id, pos, 'farmland', 'grass/center/v0')
 
 
 class StructureProxy(ObjectProxy):
@@ -241,7 +259,8 @@ class StructureProxy(ObjectProxy):
         self._eng.world_structure_destroy(self.id)
 
     def replace(self, template):
-        self._eng.world_structure_replace(self.id, template.id)
+        template = DATA.template_id(template)
+        self._eng.world_structure_replace(self.id, template)
 
     def pos(self):
         return self._eng.world_structure_pos(self.id)
