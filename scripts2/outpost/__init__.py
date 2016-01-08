@@ -2,6 +2,7 @@ from . import base
 from . import cave
 from . import chat
 from . import chest
+from . import crops
 from . import hat
 from . import sign
 from . import structure_items

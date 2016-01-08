@@ -50,19 +50,21 @@ class StateMachine:
         if f_enter is not None:
             f_enter()
 
-    def schedule(self, delay, msg):
+    def schedule_at(self, when, msg):
         self.cancel()
 
-        eng = self.obj.engine
-        when = eng.now() + delay
         id = self.obj.id
         key = self._key
-        cookie = timer.schedule(eng, when, lambda eng: callback(eng, id, key, when))
+        cookie = timer.schedule(self.obj.engine, when,
+                lambda eng: callback(eng, id, key, when))
         self.timer = {
                 'when': when,
                 'cookie': cookie,
                 'msg': msg,
                 }
+
+    def schedule(self, delay, msg):
+        self.schedule_at(self.obj.engine.now() + delay, msg)
 
     def cancel(self):
         if hasattr(self, 'timer'):
