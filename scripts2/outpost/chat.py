@@ -203,7 +203,7 @@ def tribe(client, args):
 
         e = client.pawn()
         appearance.set_tribe(e, args)
-        client.send_message('Set tribe to %s (%d)' % (args, value))
+        client.send_message('Set tribe to %s' % args)
 
     except Exception as e:
         client.send_message('Error: %r' % e)
