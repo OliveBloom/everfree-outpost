@@ -366,7 +366,7 @@ function RenderShaders(gl, assets, data, shader_defs) {
     makeShaders(this, gl, assets, shader_defs,
             function(img) { return data.cacheTexture(img) });
 
-    this.class_list = [new PonyAppearanceClass(gl, assets)];
+    this.class_list = [new PonyAppearanceClass(gl, assets, shader_defs)];
     this.classes = new WeakMap();
     for (var i = 0; i < this.class_list.length; ++i) {
         var cls = this.class_list[i];

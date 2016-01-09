@@ -14,11 +14,11 @@ var COLOR_RAMP = [0x44, 0x88, 0xcc, 0xff];
 
 
 /** @constructor */
-function PonyAppearanceClass(gl, assets) {
+function PonyAppearanceClass(gl, assets, shader_defs) {
     this._name_tex = new glutil.Texture(gl);
     this._name_buf = new named.NameBuffer(assets);
 
-    var shaders = makePonyShaders(gl, assets, this._name_tex);
+    var shaders = makePonyShaders(gl, assets, this._name_tex, shader_defs);
     this._obj = shaders.pony;
     this._name_obj = shaders.name;
 }
@@ -44,8 +44,8 @@ PonyAppearanceClass.prototype.getNameOffset = function(name) {
     return off;
 };
 
-function makePonyShaders(gl, assets, name_tex) {
-    var ctx = new sb.ShaderBuilderContext(gl, assets, null);
+function makePonyShaders(gl, assets, name_tex, shader_defs) {
+    var ctx = new sb.ShaderBuilderContext(gl, assets, shader_defs);
     var shaders = {};
 
     var square_buf = ctx.makeBuffer(new Uint8Array([

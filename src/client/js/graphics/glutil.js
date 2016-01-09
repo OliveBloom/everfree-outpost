@@ -15,11 +15,16 @@ function compile_shader(gl, type, src) {
 
     gl.shaderSource(shader, src);
     gl.compileShader(shader);
+    //var hlsl = gl.getExtension('WEBGL_debug_shaders').getTranslatedShaderSource(shader);
+    //console.log(hlsl);
 
+    var info = gl.getShaderInfoLog(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.log('shader error', gl.getShaderInfoLog(shader));
-        console.log(src);
+        console.log('SHADER ERRORS:\n' + info)
+        console.log('SOURCE:\n' + src);
         return null;
+    } else if (info != '') {
+        console.log('Shader warnings:\n' + info);
     }
 
     return shader;

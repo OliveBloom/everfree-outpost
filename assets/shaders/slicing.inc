@@ -99,6 +99,8 @@ float sliceCalcInside(vec2 pixelPos) {
         } else if (numInside == 4.0) {
             // 0.0 at the center, >1.0 at each corner
             return distance(fineOffset, vec2(0.0, 0.0));
+        } else {
+            return 0.0;
         }
     }
 }
