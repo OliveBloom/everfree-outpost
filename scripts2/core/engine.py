@@ -136,7 +136,7 @@ class ClientProxy(ObjectProxy):
         self._eng.messages_send_get_interact_args(self.id, dialog_id, args)
 
     def get_use_item_args(self, item, dialog_id, args):
-        item = DATA.item_id(ability)
+        item = DATA.item_id(item)
         self._eng.messages_send_get_use_item_args(self.id, item, dialog_id, args)
 
     def get_use_ability_args(self, ability, dialog_id, args):
