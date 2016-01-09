@@ -68,50 +68,6 @@ function action.open_inventory(c)
 end
 
 
--- 'tree' behavior
-action.use['tree/v0'] = function(c, s)
-    c:pawn():inventory('main'):update('wood', 2)
-end
-action.use['tree/v1'] = action.use['tree/v0']
-
-tools.handler.axe['tree/v0'] = function(c, s, inv)
-    if not ward.check(c, s:pos()) then
-        return
-    end
-
-    s:replace('stump')
-    inv:update('wood', 15)
-end
-tools.handler.axe['tree/v1'] = tools.handler.axe['tree/v0']
-
-function tools.handler.axe.stump(c, s, inv)
-    if not ward.check(c, s:pos()) then
-        return
-    end
-
-    s:destroy()
-    inv:update('wood', 5)
-end
-
-
--- 'rock' behavior
-function action.use.rock(c, s)
-    c:pawn():inventory('main'):update('stone', 2)
-end
-
-function tools.handler.pick.rock(c, s, inv)
-    if not ward.check(c, s:pos()) then
-        return
-    end
-
-    s:destroy()
-    inv:update('stone', 20)
-    if math.random() < 0.2 then
-        inv:update('crystal', 1)
-    end
-end
-
-
 
 -- Commands
 local spawn_point = V3.new(32, 32, 0)
