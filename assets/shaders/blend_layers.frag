@@ -20,10 +20,9 @@ float rescale(float x, float min_, float max_) {
 
 void main(void) {
     vec2 pixelPos = sliceGetPos();
-    //float inside = sliceCalcInside(pixelPos);
-    //float alpha = inside >= 0.0 ? 0.8 : 0.0;
+    float inside = sliceCalcInside(pixelPos);
+    float alpha = inside >= 0.0 ? 0.8 : 0.0;
     //float alpha = rescale(inside, 0.0, 0.8);
-    float alpha = sliceNearInside(pixelPos) ? 0.8 : 0.0;
 
     vec4 baseColor = texture2D(baseTex, texCoord);
     vec4 slicedColor = texture2D(slicedTex, texCoord);
