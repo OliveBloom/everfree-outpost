@@ -58,6 +58,7 @@ define_script_hooks!(
 
     hack_set_main_inventories,
     hack_apply_structure_extras,
+    hack_run_load_hook,
 );
 
 impl ScriptHooks {
@@ -130,6 +131,12 @@ impl ScriptHooks {
                                             k: &str,
                                             v: &str) -> PyResult<()> {
         call_with_engine3(&self.hack_apply_structure_extras, eng, sid, k, v)
+    }
+
+    pub fn call_hack_run_load_hook(&self,
+                                   eng: split::EngineRef,
+                                   sid: StructureId) -> PyResult<()> {
+        call_with_engine1(&self.hack_run_load_hook, eng, sid)
     }
 }
 

@@ -17,6 +17,10 @@ builtins.print = err_print
 def startup(eng):
     pass
 
+
+# TODO: get rid of all these hacks
+
+# Fix this by moving registration/login handler to the Python side
 def hack_set_main_inventories(eng, cid, item_iid, ability_iid):
     from outpost_server.core.engine import ClientProxy
     c = ClientProxy(eng, cid)
@@ -24,6 +28,7 @@ def hack_set_main_inventories(eng, cid, item_iid, ability_iid):
     inv['main'] = item_iid
     inv['ability'] = ability_iid
 
+# Fix this by letting terrain_gen set up `extra` directly (part of Bundle)
 def hack_apply_structure_extras(eng, sid, k, v):
     from outpost_server.core.engine import StructureProxy
     s = StructureProxy(eng, sid)
@@ -45,10 +50,21 @@ def hack_apply_structure_extras(eng, sid, k, v):
 
     p = s.plane()
 
+# Fix this once Bundle save/load code is working
+def hack_run_load_hook(eng, sid):
+    from outpost_server.core import state_machine, timer
+    from outpost_server.core.engine import StructureProxy
+    s = StructureProxy(eng, sid)
+    t = s.extra().get('sm', {}).get('timer')
+    if t is not None:
+        when = t['when']
+        cookie = timer.schedule(s.engine, when, 
+                lambda eng: state_machine.callback(eng, sid, when))
+        s.extra()['sm']['timer']['cookie'] = cookie
+
 
 def init(storage, data, hooks):
-    # Must be first
-    core.data.init(data)
+    core.data.init(data)    # Must be first
 
     core.chat.init(hooks)
     core.eval.init(hooks)
@@ -58,5 +74,6 @@ def init(storage, data, hooks):
     hooks.server_startup(startup)
     hooks.hack_set_main_inventories(hack_set_main_inventories)
     hooks.hack_apply_structure_extras(hack_apply_structure_extras)
+    hooks.hack_run_load_hook(hack_run_load_hook)
 
     import outpost_server.outpost

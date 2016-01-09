@@ -16,6 +16,7 @@ use world::Item;
 use world::{EntityAttachment, StructureAttachment, InventoryAttachment};
 use world::{TerrainChunkFlags, StructureFlags};
 use world::extra;
+use world::flags;
 use world::object::*;
 use world::ops;
 
@@ -424,6 +425,20 @@ impl<R: io::Read> ObjectReader<R> {
         }));
 
         try!(f.with_hooks(|h| h.post_read_structure(&mut self.r, sid, flags)));
+
+        if flags.contains(flags::S_HAS_SAVE_HOOKS) {
+            info!("applying load hook for {:?}", sid);
+            unsafe {
+                use std::ptr;
+                use engine::split::EngineRef;
+
+                // TODO: SUPER UNSAFE!!!
+                let ptr = f as *mut F as *mut EngineRef;
+                let mut eng = ptr::read(ptr);
+                let sh = eng.script_hooks();
+                warn_on_err!(sh.call_hack_run_load_hook(eng.borrow(), sid));
+            }
+        }
 
         let child_inventory_count = try!(self.r.read_count());
         for _ in 0..child_inventory_count {

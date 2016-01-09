@@ -638,6 +638,24 @@ define_python_class! {
             Ok(s.template_id())
         }
 
+        fn world_structure_set_has_save_hooks(eng: glue::WorldFragment,
+                                              sid: StructureId,
+                                              set: bool) -> PyResult<()> {
+            use world::flags;
+            let mut eng = eng;
+            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+                                  runtime_error, "no structure with that ID");
+            let flags =
+                if set {
+                    s.flags() | flags::S_HAS_SAVE_HOOKS
+                } else {
+                    s.flags() & !flags::S_HAS_SAVE_HOOKS
+                };
+            s.set_flags(flags);
+            info!("set flags for {:?} to {:?}", sid, flags);
+            Ok(())
+        }
+
         fn world_structure_find_at_point(eng: OnlyWorld,
                                          pid: PlaneId,
                                          pos: V3) -> Option<StructureId> {

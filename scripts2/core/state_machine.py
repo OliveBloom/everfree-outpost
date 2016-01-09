@@ -2,17 +2,18 @@ from outpost_server.core import timer
 from outpost_server.core.data import DATA
 from outpost_server.core.engine import StructureProxy
 
+KEY = 'sm'
+
 class StateMachine:
-    def __init__(self, obj, key='sm'):
+    def __init__(self, obj):
         object.__setattr__(self, 'obj', obj)
-        object.__setattr__(self, '_key', key)
-        if key not in obj.extra():
-            obj.extra()[key] = {}
+        if KEY not in obj.extra():
+            obj.extra()[KEY] = {}
             self.init()
 
     def __getattr__(self, k):
         try:
-            return self.obj.extra()[self._key][k]
+            return self.obj.extra()[KEY][k]
         except KeyError as e:
             raise AttributeError(str(e))
 
@@ -20,10 +21,10 @@ class StateMachine:
         if k in self.__dict__:
             object.__setattr__(self, k, v)
         else:
-            self.obj.extra()[self._key][k] = v
+            self.obj.extra()[KEY][k] = v
 
     def __delattr__(self, k):
-        del self.obj.extra()[self._key][k]
+        del self.obj.extra()[KEY][k]
 
     def _raw_get(self, k, default=None):
         try:
@@ -54,14 +55,17 @@ class StateMachine:
         self.cancel()
 
         id = self.obj.id
-        key = self._key
         cookie = timer.schedule(self.obj.engine, when,
-                lambda eng: callback(eng, id, key, when))
+                lambda eng: callback(eng, id, when))
         self.timer = {
                 'when': when,
                 'cookie': cookie,
                 'msg': msg,
                 }
+
+        # TODO: hack
+        if isinstance(self.obj, StructureProxy):
+            self.obj._eng.world_structure_set_has_save_hooks(self.obj.id, True)
 
     def schedule(self, delay, msg):
         self.schedule_at(self.obj.engine.now() + delay, msg)
@@ -70,6 +74,10 @@ class StateMachine:
         if hasattr(self, 'timer'):
             timer.cancel(self.obj.engine, self.timer['cookie'])
             del self.timer
+
+        # TODO: hack
+        if isinstance(self.obj, StructureProxy):
+            self.obj._eng.world_structure_set_has_save_hooks(self.obj.id, False)
 
 _TEMPLATE_SM = {}
 
@@ -82,9 +90,9 @@ def structure(template):
         return cls
     return f
 
-def get(obj, key='sm'):
+def get(obj):
     cls = state_machine_class(obj)
-    return cls(obj, key)
+    return cls(obj)
 
 def state_machine_class(obj):
     if isinstance(obj, StructureProxy):
@@ -94,18 +102,22 @@ def get_state_machine_class(obj):
     if isinstance(obj, StructureProxy):
         return _TEMPLATE_SM.get(obj.template())
 
-def callback(eng, id, key, when):
+def callback(eng, id, when):
     obj = eng.get_object(id)
     cls = get_state_machine_class(obj)
     if cls is None:
         return
 
-    timer = obj.extra().get(key, {}).get('timer')
+    timer = obj.extra().get(KEY, {}).get('timer')
     if timer is None:
         return
     if when != timer['when']:
         raise ValueError('mismatched when (old timer fired after being cancelled)')
     msg = timer['msg']
-    del obj.extra()[key]['timer']
+    del obj.extra()[KEY]['timer']
 
-    cls(obj, key).process(msg)
+    # TODO: hack
+    if isinstance(obj, StructureProxy):
+        obj._eng.world_structure_set_has_save_hooks(obj.id, False)
+
+    cls(obj).process(msg)
