@@ -2,7 +2,7 @@ use types::*;
 
 use python as py;
 use python::{PyBox, PyRef, PyResult};
-use script2::{Pack, Unpack};
+use script::{Pack, Unpack};
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 
 
@@ -45,17 +45,17 @@ macro_rules! define_namedtuple {
             }
         }
 
-        impl $crate::script2::Pack for $T {
+        impl $crate::script::Pack for $T {
             fn pack(self) -> $crate::python::PyResult<$crate::python::PyBox> {
                 let vals = $pack(self);
-                let args = try!($crate::script2::Pack::pack(vals));
+                let args = try!($crate::script::Pack::pack(vals));
                 $crate::python::object::call($get_type(), args.borrow(), None)
             }
         }
 
-        impl<'a> $crate::script2::Unpack<'a> for $T {
+        impl<'a> $crate::script::Unpack<'a> for $T {
             fn unpack(obj: $crate::python::PyRef<'a>) -> $crate::python::PyResult<$T> {
-                let vals = try!($crate::script2::Unpack::unpack(obj));
+                let vals = try!($crate::script::Unpack::unpack(obj));
                 pyassert!($crate::python::object::is_instance(obj, $get_type()),
                           type_error, concat!("expected ", stringify!($name)));
                 Ok($unpack(vals))

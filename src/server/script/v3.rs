@@ -7,7 +7,7 @@ use types::*;
 
 use python as py;
 use python::{PyBox, PyRef, PyResult};
-use script2::{Pack, Unpack};
+use script::{Pack, Unpack};
 
 pub struct RustVal<T: RustValType> {
     base: PyObject,
@@ -49,7 +49,7 @@ macro_rules! rust_val_repr_slot {
 
             fn wrap(slf: $crate::python::PyRef)
                     -> $crate::python::PyResult<$crate::python::PyBox> {
-                use $crate::script2::{Pack, Unpack};
+                use $crate::script::{Pack, Unpack};
                 let result = imp(try!(Unpack::unpack(slf)), ());
                 Pack::pack(result)
             }
@@ -75,7 +75,7 @@ macro_rules! rust_val_init_slot {
 
             {
                 use $crate::python::PyRef;
-                use $crate::script2::Unpack;
+                use $crate::script::Unpack;
 
                 let args = PyRef::new_non_null(args);
                 let rust_args = match Unpack::unpack(args) {
@@ -136,7 +136,7 @@ macro_rules! v3_binop_slot {
             fn wrap(obj1: $crate::python::PyRef,
                     obj2: $crate::python::PyRef)
                     -> $crate::python::PyResult<$crate::python::PyBox> {
-                use $crate::script2::Pack;
+                use $crate::script::Pack;
 
                 let a = unwrap_or!(try!(unpack_v3_or_scalar(obj1)),
                                    return Ok(py::not_implemented().to_box()));

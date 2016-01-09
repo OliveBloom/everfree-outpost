@@ -41,9 +41,9 @@ macro_rules! define_python_class_impl {
                 use python3_sys::{METH_VARARGS, Py_TPFLAGS_DEFAULT};
                 use python3_sys::structmember::{PyMemberDef, READONLY};
 
-                use $crate::script2::{BLANK_TYPE_SPEC, BLANK_TYPE_SLOT};
-                use $crate::script2::{BLANK_METHOD_DEF, BLANK_MEMBER_DEF};
-                use $crate::script2::class::{decay, get_ptr_type_code};
+                use $crate::script::{BLANK_TYPE_SPEC, BLANK_TYPE_SLOT};
+                use $crate::script::{BLANK_METHOD_DEF, BLANK_MEMBER_DEF};
+                use $crate::script::class::{decay, get_ptr_type_code};
                 use $crate::python as py;
 
                 assert!(py::is_initialized());
@@ -248,7 +248,7 @@ macro_rules! wrapper0 {
     ( $wrap:ident, $imp:ident ) => {
         fn $wrap(args: $crate::python::PyRef)
                  -> $crate::python::PyResult<$crate::python::PyBox> {
-            use $crate::script2::{Pack, Unpack};
+            use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(args)));
             Pack::pack(result)
         }
@@ -260,7 +260,7 @@ macro_rules! wrapper1 {
         fn $wrap(arg1: $crate::python::PyRef,
                  args: $crate::python::PyRef)
                  -> $crate::python::PyResult<$crate::python::PyBox> {
-            use $crate::script2::{Pack, Unpack};
+            use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(arg1)),
                               try!(Unpack::unpack(args)));
             Pack::pack(result)
@@ -274,7 +274,7 @@ macro_rules! wrapper2 {
                  arg2: $crate::python::PyRef,
                  args: $crate::python::PyRef)
                  -> $crate::python::PyResult<$crate::python::PyBox> {
-            use $crate::script2::{Pack, Unpack};
+            use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(arg1)),
                               try!(Unpack::unpack(arg2)),
                               try!(Unpack::unpack(args)));
@@ -288,7 +288,7 @@ macro_rules! default_wrapper {
         fn $wrap(slf: $crate::python::PyRef,
                  args: $crate::python::PyRef)
                  -> $crate::python::PyResult<$crate::python::PyBox> {
-            use $crate::script2::{Pack, Unpack};
+            use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(slf)),
                               try!(Unpack::unpack(args)));
             Pack::pack(result)

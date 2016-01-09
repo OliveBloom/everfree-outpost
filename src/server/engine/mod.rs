@@ -16,7 +16,7 @@ use messages::SyncKind;
 use messages::{ControlResponse, WireResponse, ClientResponse};
 use msg::{Request, Response};
 use physics::Physics;
-use script2::ScriptHooks;
+use script::ScriptHooks;
 use storage::Storage;
 use terrain_gen::{TerrainGen, TerrainGenEvent};
 use terrain_gen::Fragment as TerrainGen_Fragment;

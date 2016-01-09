@@ -5,7 +5,7 @@ use types::*;
 
 use data::Data;
 use engine::Engine;
-use script2::ScriptHooks;
+use script::ScriptHooks;
 use storage::Storage;
 
 

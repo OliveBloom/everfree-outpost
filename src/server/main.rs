@@ -69,7 +69,7 @@ mod vision;
 mod logic;
 mod cache;
 
-mod script2;
+mod script;
 
 mod data {
     pub use libserver_config::data::*;
@@ -110,12 +110,12 @@ fn main() {
                                      animation_json,
                                      loot_table_json).unwrap();
 
-    script2::ffi_module_preinit();
+    script::ffi_module_preinit();
     python::initialize();
-    script2::ffi_module_postinit();
+    script::ffi_module_postinit();
     // Python init failures turn into panics, since they are likely to leave the Python context in
     // an invalid state.
-    python::run_file(&storage.script2_dir().join("boot.py")).unwrap();
+    python::run_file(&storage.script_dir().join("boot.py")).unwrap();
 
 
     // Start background threads.
@@ -135,11 +135,11 @@ fn main() {
 
     // Run the engine.  The engine runs inside the two `with_ref`s so that the data and storage
     // refs will be valid for the lifetime of the server.
-    script2::with_ref(&storage, |storage_ref| {
-        script2::with_ref(&data, |data_ref| {
-            let mut script_hooks = script2::ScriptHooks::new();
-            script2::with_ref_mut(&mut script_hooks, |hooks_ref| {
-                script2::call_init(storage_ref, data_ref, hooks_ref).unwrap();
+    script::with_ref(&storage, |storage_ref| {
+        script::with_ref(&data, |data_ref| {
+            let mut script_hooks = script::ScriptHooks::new();
+            script::with_ref_mut(&mut script_hooks, |hooks_ref| {
+                script::call_init(storage_ref, data_ref, hooks_ref).unwrap();
             });
             let script_hooks = script_hooks;
 

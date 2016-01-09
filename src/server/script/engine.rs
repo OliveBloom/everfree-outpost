@@ -99,7 +99,7 @@ macro_rules! engine_ref_func_wrapper {
                  -> $crate::python::PyResult<$crate::python::PyBox> {
             use $crate::engine::split::{Part, PartFlags};
             use $crate::python as py;
-            use $crate::script2::{Pack, Unpack};
+            use $crate::script::{Pack, Unpack};
 
             pyassert!(py::object::is_instance(slf, get_engine_type()),
                       type_error, "expected EngineRef");
@@ -836,7 +836,7 @@ macro_rules! nested_ref_wrapper {
         fn $wrap($slf_ref: $crate::python::PyRef,
                  args: $crate::python::PyRef)
                  -> $crate::python::PyResult<$crate::python::PyBox> {
-            use $crate::script2::{Pack, Unpack};
+            use $crate::script::{Pack, Unpack};
 
             pyassert!(py::object::is_instance($slf_ref, <$T as NestedRefType>::get_type()),
                       type_error,

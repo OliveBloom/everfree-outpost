@@ -166,8 +166,8 @@ macro_rules! rust_ref_func {
             fn wrap(slf: $crate::python::PyRef,
                     args: $crate::python::PyRef)
                     -> $crate::python::PyResult<$crate::python::PyBox> {
-                use $crate::script2::rust_ref;
-                use $crate::script2::{Pack, Unpack};
+                use $crate::script::rust_ref;
+                use $crate::script::{Pack, Unpack};
                 let guard = unsafe { rust_ref::unpack_rust_ref::<$ty>(slf) };
                 let result = imp(&*guard, try!(Unpack::unpack(args)));
                 Pack::pack(result)
@@ -194,8 +194,8 @@ macro_rules! rust_ref_func {
             fn wrap(slf: $crate::python::PyRef,
                     args: $crate::python::PyRef)
                     -> $crate::python::PyResult<$crate::python::PyBox> {
-                use $crate::script2::rust_ref;
-                use $crate::script2::{Pack, Unpack};
+                use $crate::script::rust_ref;
+                use $crate::script::{Pack, Unpack};
                 let mut guard = unsafe { rust_ref::unpack_rust_ref_mut::<$ty>(slf) };
                 let result = imp(&mut *guard, try!(Unpack::unpack(args)));
                 Pack::pack(result)
