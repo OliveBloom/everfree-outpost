@@ -138,6 +138,7 @@ ShaderBuilder.prototype.texture = function() {
 ShaderBuilder.prototype.finish = function() {
     var vert = this.p.assets[this.vert_name];
     var frag = this.p.assets[this.frag_name];
+    console.log('compiling', this.vert_name, this.frag_name);
     var programs = buildPrograms(this.p.gl, this.p.assets,
             vert, frag, this.fb_count, this.shader_defs);
     return new GlObject(this.p.gl, programs, this._uniforms, this._attributes, this._textures);
