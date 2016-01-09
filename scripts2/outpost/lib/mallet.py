@@ -1,5 +1,6 @@
 from outpost_server.core import alias, util
 from outpost_server.core.data import DATA
+from outpost_server.outpost.lib import ward
 
 _NEXT_VARIANT = {}
 
