@@ -48,6 +48,10 @@ class EngineProxy(object):
         iid = self._eng.world_inventory_create(size)
         return InventoryProxy(self._eng, iid)
 
+    def create_plane(self, name):
+        pid = self._eng.world_plane_create(name)
+        return PlaneProxy(self._eng, pid)
+
 
     def client_by_name(self, name):
         cid = self._eng.messages_client_by_name(name)
@@ -56,6 +60,10 @@ class EngineProxy(object):
     def stable_entity(self, stable_eid):
         eid = self._eng.world_entity_transient_id(stable_eid)
         return EntityProxy(self._eng, eid) if eid is not None else None
+
+    def stable_plane(self, stable_pid):
+        pid = self._eng.world_plane_transient_id(stable_pid)
+        return PlaneProxy(self._eng, pid) if eid is not None else None
 
     def stable_structure(self, stable_sid):
         sid = self._eng.world_structure_transient_id(stable_sid)

@@ -5,10 +5,7 @@ from outpost_server.core import chat, engine, types, util
 from outpost_server.core.data import DATA
 from outpost_server.core.types import V3
 from outpost_server.core.engine import StablePlaneId
-
-# TODO: move somewhere more appropriate
-STABLE_PLANE_FOREST = StablePlaneId(2)
-SPAWN_POINT = V3(32, 32, 0)
+from outpost_server.outpost.lib.consts import *
 
 @chat.command('/count: Show the number of players currently online')
 def count(client, args):

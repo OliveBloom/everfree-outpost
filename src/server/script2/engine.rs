@@ -519,12 +519,24 @@ define_python_class! {
         }
 
 
+        fn world_plane_create(eng: glue::WorldFragment,
+                              name: String) -> PyResult<PlaneId> {
+            let mut eng = eng;
+            let mut p = try!(eng.create_plane(name));
+            Ok(p.id())
+        }
+
         fn world_plane_stable_id(eng: glue::WorldFragment,
                                  pid: PlaneId) -> PyResult<Stable<PlaneId>> {
             let mut eng = eng;
             let mut p = pyunwrap!(eng.get_plane_mut(pid),
                                   runtime_error, "no plane with that ID");
             Ok(p.stable_id())
+        }
+
+        fn world_plane_transient_id(eng: OnlyWorld,
+                                    stable_pid: Stable<PlaneId>) -> Option<PlaneId> {
+            eng.world().transient_plane_id(stable_pid)
         }
 
         fn(engine_ref_func_with_ref!) world_plane_extra(eng: glue::WorldFragment,
