@@ -31,9 +31,6 @@ def use(e, tool_name, args=None):
     handler = tool_handlers.get(alias.template(s.template()))
     if handler is not None:
         handler(e, s, args)
-    else:
-        # TODO: hack to allow pass through to lua for missing handlers - remove
-        return False
 
 pickaxe = lambda t: handler('pickaxe', t)
 axe = lambda t: handler('axe', t)

@@ -17,9 +17,6 @@ def client_interact(eng, cid, args):
     handler = _USE_STRUCTURE.get(alias.template(s.template()))
     if handler is not None:
         handler(e, s, args)
-    else:
-        print('PASS THROUGH: structure', s.template())
-        eng.script_cb_interact(cid, args)
 
 def client_use_item(eng, cid, item_id, args):
     item = ItemProxy.by_id(item_id)
@@ -30,9 +27,6 @@ def client_use_item(eng, cid, item_id, args):
             return
 
         handler(e, args)
-    else:
-        print('PASS THROUGH: item', item)
-        eng.script_cb_use_item(cid, item.id, args)
 
 def client_use_ability(eng, cid, ability_id, args):
     ability = ItemProxy.by_id(ability_id)
@@ -43,9 +37,6 @@ def client_use_ability(eng, cid, ability_id, args):
             return
 
         handler(e, args)
-    else:
-        print('PASS THROUGH: ability', ability)
-        eng.script_cb_use_ability(cid, ability.id, args)
 
 
 # Provide a way to call handlers from outside this module, so that one handler

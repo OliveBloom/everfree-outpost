@@ -213,25 +213,6 @@ define_python_class! {
             eng.now()
         }
 
-        fn script_cb_interact(eng: EngineRef,
-                              cid: ClientId,
-                              args: Option<ExtraArg>) {
-            warn_on_err!(ScriptEngine::cb_interact(eng.unwrap(), cid, args));
-        }
-
-        fn script_cb_use_item(eng: EngineRef,
-                              cid: ClientId,
-                              item_id: ItemId,
-                              args: Option<ExtraArg>) {
-            warn_on_err!(ScriptEngine::cb_use_item(eng.unwrap(), cid, item_id, args));
-        }
-
-        fn script_cb_use_ability(eng: EngineRef,
-                                 cid: ClientId,
-                                 item_id: ItemId,
-                                 args: Option<ExtraArg>) {
-            warn_on_err!(ScriptEngine::cb_use_ability(eng.unwrap(), cid, item_id, args));
-        }
 
         fn messages_clients_len(eng: OnlyMessages,) -> usize {
             eng.messages().clients_len()
