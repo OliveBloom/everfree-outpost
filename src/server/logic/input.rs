@@ -33,7 +33,8 @@ pub fn use_ability(eng: EngineRef, cid: ClientId, item_id: ItemId, args: Option<
 }
 
 pub fn open_inventory(eng: EngineRef, cid: ClientId) {
-    warn_on_err!(script::ScriptEngine::cb_open_inventory(eng.unwrap(), cid));
+    error!("UNIMPLEMENTED: open_inventory - called by {:?}", cid);
+    //warn_on_err!(script::ScriptEngine::cb_open_inventory(eng.unwrap(), cid));
 }
 
 pub fn unsubscribe_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId) {
