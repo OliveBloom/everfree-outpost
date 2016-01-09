@@ -1,7 +1,7 @@
 from outpost_server.core import use, util
 from outpost_server.core.data import DATA
 
-from outpost_server.outpost.lib import structure_items, tool
+from outpost_server.outpost.lib import structure_items, tool, util as util2
 
 
 ITEM = DATA.item('teleporter')
@@ -69,6 +69,8 @@ def get_structure_args(e, s, args):
 @use.item(ITEM)
 @util.with_args
 def use_item(e, args):
+    util2.forest_check(e)
+
     n = Networks(e.engine)
     net = args['network']
     name = args['name']
@@ -86,6 +88,8 @@ def use_item(e, args):
 
 @use_item.get_args
 def get_item_args(e, args):
+    util2.forest_check(e)
+
     e.controller().get_use_item_args(ITEM, SETUP_DIALOG_ID, {})
 
 

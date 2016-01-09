@@ -1,7 +1,7 @@
 from outpost_server.core import chat, use, util
 from outpost_server.core.data import DATA
 
-from outpost_server.outpost.lib import structure_items, tool, ward
+from outpost_server.outpost.lib import structure_items, tool, util as util2, ward
 
 
 ITEM = DATA.item('ward')
@@ -10,6 +10,7 @@ TEMPLATE = DATA.template('ward')
 
 @use.item(ITEM)
 def use_item(e, args):
+    util2.forest_check(e)
     pos = util.hit_tile(e)
 
     ok, msg = ward.can_add(e, pos)

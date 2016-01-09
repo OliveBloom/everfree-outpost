@@ -5,6 +5,7 @@ from outpost_server.core import chat, engine, types, util
 from outpost_server.core.data import DATA
 from outpost_server.core.types import V3
 from outpost_server.core.engine import StablePlaneId
+from outpost_server.outpost.lib import util as util2
 from outpost_server.outpost.lib.consts import *
 
 @chat.command('/count: Show the number of players currently online')
@@ -32,9 +33,7 @@ def spawn(client, args):
 ''')
 def sethome(client, args):
     pawn = client.pawn()
-    if pawn.plane().stable_id() != STABLE_PLANE_FOREST:
-        client.send_message("That command doesn't work here.")
-        return
+    util2.forest_check(pawn)
 
     pos = pawn.pos()
     pawn.extra()['home_pos'] = pos
@@ -42,9 +41,7 @@ def sethome(client, args):
 @chat.command(sethome.doc)
 def home(client, args):
     pawn = client.pawn()
-    if pawn.plane().stable_id() != STABLE_PLANE_FOREST:
-        client.send_message("That command doesn't work here.")
-        return
+    util2.forest_check(pawn)
 
     extra = pawn.extra()
     pos = extra.get('home_pos', SPAWN_POINT)
