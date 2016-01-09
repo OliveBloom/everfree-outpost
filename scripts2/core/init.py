@@ -1,4 +1,6 @@
 import builtins
+import importlib
+import os
 import sys
 
 from outpost_server import core
@@ -89,4 +91,11 @@ def init(storage, data, hooks):
     hooks.hack_apply_structure_extras(hack_apply_structure_extras)
     hooks.hack_run_load_hook(hack_run_load_hook)
 
-    import outpost_server.outpost
+    for d in outpost_server.__path__:
+        for m in os.listdir(d):
+            if m.endswith('.py'):
+                m = m[:-len('.py')]
+            if m in ('boot', 'core'):
+                continue
+            print('Loading %s...' % m)
+            importlib.import_module('outpost_server.%s' % m)
