@@ -130,7 +130,6 @@ function buildPrograms(gl, assets, vert_src, frag_src, output_buffers, def_map) 
         return assets[file];
     });
     frag_src = frag_src.replace(/^#include "(.*)"$/m, function(_, file) {
-        console.log('substituting', file);
         return assets[file];
     });
 

@@ -69,7 +69,7 @@ function makePonyShaders(gl, assets, name_tex) {
         .vec2('size')
         .vec2('anchor');
 
-    var sprite_attributes = new Attributes(2, square_buf)
+    var sprite_attributes = new sb.Attributes(2, square_buf)
         .field( 0, gl.UNSIGNED_BYTE, 2, 'posOffset');
 
     shaders.pony = ctx.start('sprite.vert', 'app_pony.frag', 2)

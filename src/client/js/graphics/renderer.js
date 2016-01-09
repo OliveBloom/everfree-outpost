@@ -363,7 +363,8 @@ RenderBuffers.prototype.prepare = function(scene) {
 /** @constructor */
 function RenderShaders(gl, assets, data, shader_defs) {
     this.gl = gl;
-    makeShaders(this, gl, assets, shader_defs, (img) => data.cacheTexture(img));
+    makeShaders(this, gl, assets, shader_defs,
+            function(img) { return data.cacheTexture(img) });
 
     this.class_list = [new PonyAppearanceClass(gl, assets)];
     this.classes = new WeakMap();
@@ -431,34 +432,36 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.GEQUAL);
 
-    buffers.fb_world.use((fb_idx) => {
+    var this_ = this;
+
+    buffers.fb_world.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         var buf = data.terrain_buf.getBuffer();
         var len = data.terrain_buf.getSize();
-        this.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {
+        this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
 
         var buf = data.structure_buf.getBuffer();
         var len = data.structure_buf.getSize();
-        this.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+        this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
 
         for (var i = 0; i < scene.sprites.length; ++i) {
             var sprite = scene.sprites[i];
-            var cls = this.classes.get(sprite.appearance.getClass());
+            var cls = this_.classes.get(sprite.appearance.getClass());
             cls.draw3D(fb_idx, data, sprite);
         }
     });
 
-    buffers.fb_shadow.use((fb_idx) => {
+    buffers.fb_shadow.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         var buf = data.structure_buf.getBuffer();
         var len = data.structure_buf.getSize();
-        this.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+        this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
     });
@@ -475,18 +478,18 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     var amb_intensity = 0.2126 * amb[0] + 0.7152 * amb[1] + 0.0722 * amb[2];
     gl.clearColor(amb[0] / 255, amb[1] / 255, amb[2] / 255, amb_intensity / 255);
 
-    buffers.fb_light.use((fb_idx) => {
+    buffers.fb_light.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT);
 
         var buf = data.light_buf.getBuffer();
         var len = data.light_buf.getSize();
-        this.light_static.draw(fb_idx, 0, len / SIZEOF.LightVertex, {}, {'*': buf}, {
+        this_.light_static.draw(fb_idx, 0, len / SIZEOF.LightVertex, {}, {'*': buf}, {
             'depthTex': buffers.fb_world.depth_texture,
         });
 
         for (var i = 0; i < scene.lights.length; ++i) {
             var light = scene.lights[i];
-            this.light_dynamic.draw(fb_idx, 0, 6, {
+            this_.light_dynamic.draw(fb_idx, 0, 6, {
                 'center': [
                     light.pos.x,
                     light.pos.y,
@@ -509,8 +512,8 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
 
     // Apply post-processing pass
 
-    out_buf.use((idx) => {
-        this.post_filter.draw(idx, 0, 6, {
+    out_buf.use(function(idx) {
+        this_.post_filter.draw(idx, 0, 6, {
             'screenSize': size,
         }, {}, {
             'image0Tex': buffers.fb_world.textures[0],
@@ -589,12 +592,13 @@ Renderer.prototype.render = function(scene) {
     // Copy output framebuffer to canvas.
 
     var gl = this.gl;
+    var this_ = this;
 
-    this.buffers.fb_final.use((fb_idx) => {
-        this.shaders.blend_layers.draw(fb_idx, 0, 6, {}, {}, {
-            'baseTex': this.buffers.fb_layer0.textures[0],
-            'slicedTex': this.buffers.fb_layer1.textures[0],
-            'cavernTex': this.data.cavern_map.getTexture(),
+    this.buffers.fb_final.use(function(fb_idx) {
+        this_.shaders.blend_layers.draw(fb_idx, 0, 6, {}, {}, {
+            'baseTex': this_.buffers.fb_layer0.textures[0],
+            'slicedTex': this_.buffers.fb_layer1.textures[0],
+            'cavernTex': this_.data.cavern_map.getTexture(),
         });
     });
 
