@@ -15,11 +15,7 @@ def err_print(*args, file=None, flush=True, **kwargs):
 builtins.print = err_print
 
 def startup(eng):
-    from outpost_server.core.data import DATA
-    sys.stderr.write('hello %s\n' % eng)
-    sys.stderr.write('hello %s\n' % DATA.recipe('anvil'))
-    sys.stderr.write('hello %s\n' % eng.now())
-    sys.stderr.flush()
+    pass
 
 def hack_set_main_inventories(eng, cid, item_iid, ability_iid):
     from outpost_server.core.engine import ClientProxy
@@ -27,9 +23,28 @@ def hack_set_main_inventories(eng, cid, item_iid, ability_iid):
     inv = c.pawn().extra().setdefault('inv', {})
     inv['main'] = item_iid
     inv['ability'] = ability_iid
-    print('set main invs to', inv.copy())
-    print(c.pawn().extra().copy())
-    print(c.pawn().extra()['inv'].copy())
+
+def hack_apply_structure_extras(eng, sid, k, v):
+    from outpost_server.core.engine import StructureProxy
+    s = StructureProxy(eng, sid)
+    if k == 'loot':
+        s.create_inv('main', 30)
+        for part in v.split(','):
+            if part == '':
+                continue
+            item, _, count_str = part.partition(':')
+            s.inv().bulk_add(item, int(count_str))
+    elif k == 'gem_puzzle_slot':
+        from outpost_server.outpost.dungeon.gem_puzzle import init_slot
+        puzzle_id, slot, init = v.split(',')
+        init_slot(s, puzzle_id, int(slot), init)
+    elif k == 'gem_puzzle_door':
+        from outpost_server.outpost.dungeon.gem_puzzle import init_door
+        puzzle_id = v
+        init_door(s, puzzle_id)
+
+    p = s.plane()
+
 
 def init(storage, data, hooks):
     # Must be first
@@ -42,5 +57,6 @@ def init(storage, data, hooks):
 
     hooks.server_startup(startup)
     hooks.hack_set_main_inventories(hack_set_main_inventories)
+    hooks.hack_apply_structure_extras(hack_apply_structure_extras)
 
     import outpost_server.outpost

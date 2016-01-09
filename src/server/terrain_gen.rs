@@ -20,6 +20,7 @@ use types::*;
 use util::StrResult;
 
 use data::Data;
+use engine::split::EngineRef;
 use script::ScriptEngine;
 use storage::Storage;
 use world::Fragment as World_Fragment;
@@ -113,8 +114,16 @@ pub trait Fragment<'d> {
                         continue;
                     },
                 };
-                for (k, v) in &gs.extra {
-                    warn_on_err!(ScriptEngine::cb_apply_structure_extra(wf, sid, k, v));
+                unsafe {
+                    use std::ptr;
+                    // TODO: SUPER UNSAFE!!!
+                    let ptr = wf as *mut Self::WF as *mut EngineRef;
+                    let mut eng = ptr::read(ptr);
+
+                    let sh = eng.script_hooks();
+                    for (k, v) in &gs.extra {
+                        warn_on_err!(sh.call_hack_apply_structure_extras(eng.borrow(), sid, k, v));
+                    }
                 }
             }
         });

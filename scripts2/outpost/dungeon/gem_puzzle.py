@@ -7,6 +7,7 @@ from outpost_server.outpost.lib import door
 NORMAL_EMPTY = DATA.template('dungeon/gem_slot/normal/empty')
 COLORS = ('red', 'orange', 'yellow', 'green', 'blue', 'purple')
 COLOR_IDX = {c: i for i,c in enumerate(COLORS)}
+COLOR_IDX['empty'] = None
 
 def register_color(color):
     gem = DATA.item('gem/' + color)
@@ -79,6 +80,21 @@ def check_slots(slots):
             if not ((l == a and r == b) or (l == b and r == a)):
                 return False
     return True
+
+def init_slot(s, puzzle_id, slot, color):
+    s.extra()['puzzle_id'] = puzzle_id
+    s.extra()['puzzle_slot'] = slot
+
+    puzzle = s.plane().extra().setdefault('puzzles', {}).setdefault(puzzle_id, {})
+    slots = puzzle.setdefault('slots', [])
+    while len(slots) <= slot:
+        slots.append(None)
+    slots[slot] = COLOR_IDX[color]
+
+def init_door(s, puzzle_id):
+    door_id = s.stable_id()
+    puzzle = s.plane().extra().setdefault('puzzles', {}).setdefault(puzzle_id, {})
+    puzzle['door'] = door_id
 
 for c in COLORS:
     register_color(c)
