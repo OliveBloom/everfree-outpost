@@ -97,20 +97,4 @@ function client_by_name(s)
 end
 
 
-function outpost_ffi.callbacks.login(c)
-    c:set_main_inventories(c:pawn():inventory('main'),
-                           c:pawn():inventory('ability'))
-
-    -- TODO: would be better to just have an "on register" callback, for
-    -- one-time initialization
-    if not c:pawn():extra().inited_abilities then
-        c:pawn():extra().inited_abilities = true
-        if math.floor(c:pawn():get_appearance() / 128) % 2 == 1 then
-            c:pawn():inventory('ability'):update('ability/light', 1)
-        end
-    end
-end
-
-
-
 print('\n\nup and running')

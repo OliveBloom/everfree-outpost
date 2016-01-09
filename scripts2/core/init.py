@@ -18,15 +18,28 @@ def startup(eng):
     pass
 
 
-# TODO: get rid of all these hacks
-
-# Fix this by moving registration/login handler to the Python side
-def hack_set_main_inventories(eng, cid, item_iid, ability_iid):
+def client_login(eng, cid):
     from outpost_server.core.engine import ClientProxy
     c = ClientProxy(eng, cid)
-    inv = c.pawn().extra().setdefault('inv', {})
-    inv['main'] = item_iid
-    inv['ability'] = ability_iid
+    e = c.pawn()
+
+    print('logged in: %s' % cid)
+    if 'inited' not in e.extra():
+        print('initing client')
+        i_main = e.create_inv('main', 30)
+        i_abil = e.create_inv('ability', 30)
+
+        # TODO: kind of a hack.  need a proper core.lifecycle module that
+        # outpost.* can hook into.
+        if e.appearance() & (1 << 7):
+            # unicorn
+            i_abil.bulk_add('ability/light', 1)
+
+        e.extra()['inited'] = True
+
+    c.set_main_inventories(e.inv('main'), e.inv('ability'))
+
+# TODO: get rid of all these hacks
 
 # Fix this by letting terrain_gen set up `extra` directly (part of Bundle)
 def hack_apply_structure_extras(eng, sid, k, v):
@@ -72,7 +85,7 @@ def init(storage, data, hooks):
     core.use.init(hooks)
 
     hooks.server_startup(startup)
-    hooks.hack_set_main_inventories(hack_set_main_inventories)
+    hooks.client_login(client_login)
     hooks.hack_apply_structure_extras(hack_apply_structure_extras)
     hooks.hack_run_load_hook(hack_run_load_hook)
 

@@ -51,12 +51,12 @@ define_script_hooks!(
 
     timer_fired,
 
+    client_login,
     client_chat_command,
     client_interact,
     client_use_item,
     client_use_ability,
 
-    hack_set_main_inventories,
     hack_apply_structure_extras,
     hack_run_load_hook,
 );
@@ -84,6 +84,12 @@ impl ScriptHooks {
                             eng: split::EngineRef,
                             userdata: PyBox) -> PyResult<()> {
         call_with_engine1(&self.timer_fired, eng, userdata)
+    }
+
+    pub fn call_client_login(&self,
+                             eng: split::EngineRef,
+                             cid: ClientId) -> PyResult<()> {
+        call_with_engine1(&self.client_login, eng, cid)
     }
 
     pub fn call_client_chat_command(&self,
@@ -116,14 +122,6 @@ impl ScriptHooks {
         call_with_engine3(&self.client_use_ability, eng, cid, ability, args)
     }
 
-
-    pub fn call_hack_set_main_inventories(&self,
-                                          eng: split::EngineRef,
-                                          cid: ClientId,
-                                          item_iid: InventoryId,
-                                          ability_iid: InventoryId) -> PyResult<()> {
-        call_with_engine3(&self.hack_set_main_inventories, eng, cid, item_iid, ability_iid)
-    }
 
     pub fn call_hack_apply_structure_extras(&self,
                                             eng: split::EngineRef,

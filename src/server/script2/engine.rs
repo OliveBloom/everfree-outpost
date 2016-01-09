@@ -258,6 +258,13 @@ define_python_class! {
         }
 
 
+        fn logic_set_main_inventories(eng: EngineRef,
+                                      cid: ClientId,
+                                      item_iid: InventoryId,
+                                      ability_iid: InventoryId) {
+            warn_on_err!(logic::items::set_main_inventories(eng, cid, item_iid, ability_iid));
+        }
+
         fn logic_open_container(eng: EngineRef,
                                 cid: ClientId,
                                 iid1: InventoryId,

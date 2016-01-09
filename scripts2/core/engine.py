@@ -149,6 +149,9 @@ class ClientProxy(ObjectProxy):
     def is_superuser(self):
         return bool(self.extra().get('superuser'))
 
+    def set_main_inventories(self, i_item, i_ability):
+        self._eng.logic_set_main_inventories(self.id, i_item.id, i_ability.id)
+
     inv = _inv
     create_inv = _create_inv
 
