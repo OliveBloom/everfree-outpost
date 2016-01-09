@@ -5,7 +5,7 @@ from outpost_server.core import chat, engine, types, util
 from outpost_server.core.data import DATA
 from outpost_server.core.types import V3
 from outpost_server.core.engine import StablePlaneId
-from outpost_server.outpost.lib import util as util2
+from outpost_server.outpost.lib import appearance, util as util2
 from outpost_server.outpost.lib.consts import *
 
 @chat.command('/count: Show the number of players currently online')
@@ -201,13 +201,8 @@ def tribe(client, args):
         if args not in 'EPUA':
             raise ValueError('Expected one of E, P, U, A; got %r' % args)
 
-        value = dict(E=0, P=1, U=2, A=3)[args]
-
         e = client.pawn()
-        old_a = e.appearance()
-        new_a = (old_a & ~(3 << 6)) | (value << 6)
-        e.set_appearance(new_a)
-
+        appearance.set_tribe(e, args)
         client.send_message('Set tribe to %s (%d)' % (args, value))
 
     except Exception as e:

@@ -1,15 +1,7 @@
 from outpost_server.core import use
 from outpost_server.core.data import DATA
+from outpost_server.outpost.lib import appearance
 
-
-HAT_BASE = 18
-HAT_BITS = 4
-HAT_MASK = ((1 << HAT_BITS) - 1) << HAT_BASE
-
-def set_hat(e, hat_idx):
-    old_a = e.appearance()
-    new_a = (old_a & ~HAT_MASK) | (hat_idx << HAT_BASE)
-    e.set_appearance(new_a)
 
 def wear_hat(e, item, idx):
     item = DATA.item(item)
@@ -21,7 +13,7 @@ def wear_hat(e, item, idx):
     e.inv('main').bulk_remove(item, 1)
     e.inv('ability').bulk_add(remove_hat, 1)
     e.extra()['hat_type'] = item.name
-    set_hat(e, idx)
+    appearance.set_hat(e, idx)
 
 def register_hat(item, idx):
     @use.item(item)
@@ -43,4 +35,4 @@ def remove_hat(e, args):
     e.inv('main').bulk_add(item, 1)
     e.inv('ability').bulk_remove(DATA.item('ability/remove_hat'), 1)
     del e.extra()['hat_type']
-    set_hat(e, 0)
+    appearance.set_hat(e, 0)

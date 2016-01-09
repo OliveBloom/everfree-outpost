@@ -1,3 +1,4 @@
+from . import ability
 from . import base
 from . import cave
 from . import chat

@@ -112,17 +112,5 @@ function outpost_ffi.callbacks.login(c)
 end
 
 
-function action.use_ability.light(c, inv)
-    local val
-    if c:pawn():extra().light_active then
-        c:pawn():extra().light_active = false
-        val = 0
-    else
-        c:pawn():extra().light_active = true
-        val = 0x200
-    end
-    c:pawn():update_appearance(0x200, val)
-end
-
 
 print('\n\nup and running')

@@ -3,10 +3,7 @@ import random
 from outpost_server.core import state_machine, use, util
 from outpost_server.core.data import DATA
 
-from outpost_server.outpost.lib import structure_items, ward
-
-# TODO: move somewhere better, make outpost.lib.appearance or something
-TRIBE_TABLE = ['E', 'P', 'U', 'A']
+from outpost_server.outpost.lib import appearance, structure_items, ward
 
 def register(basename):
     t = [DATA.template('%s/%d' % (basename, i)) for i in range(4)]
@@ -41,8 +38,7 @@ def register(basename):
 
         s = structure_items.place(e, item, t[0])
 
-        tribe = TRIBE_TABLE[(e.appearance() >> 6) & 3]
-        step_base = 6 if tribe in 'EA' else 8
+        step_base = 6 if appearance.is_tribe(e, 'E') else 8
         step_s = step_base * 60 + random.randrange(-30, 30)
 
         state_machine.get(s).start(step_s * 1000)
