@@ -15,7 +15,6 @@ use logic;
 use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
-use script::ScriptEngine;
 use timer;
 use world;
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};

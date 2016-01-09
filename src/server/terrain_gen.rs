@@ -21,7 +21,6 @@ use util::StrResult;
 
 use data::Data;
 use engine::split::EngineRef;
-use script::ScriptEngine;
 use storage::Storage;
 use world::Fragment as World_Fragment;
 use world::Hooks;

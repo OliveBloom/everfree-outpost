@@ -59,7 +59,6 @@ mod timer;
 mod types;
 mod input;
 mod lua;
-mod script;
 mod world;
 
 mod auth;

@@ -8,7 +8,6 @@ use engine::glue::*;
 use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
-use script;
 use world;
 use world::object::*;
 use world::save::{self, ObjectReader, ObjectWriter};

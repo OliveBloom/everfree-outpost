@@ -35,20 +35,19 @@ mod parts {
     parts! {
         EngineParts:
             (0) WORLD =         ::world::World<'d>;
-            (1) SCRIPT =        ::script::ScriptEngine;
-            (2) EXTRA =         ::logic::extra::Extra;
-            (3) MESSAGES =      ::messages::Messages;
-            (4) TIMER =         ::timer::Timer;
-            (5) PHYSICS =       ::physics::Physics<'d>;
-            (6) VISION =        ::vision::Vision;
-            (7) AUTH =          ::auth::Auth;
-            (8) CHUNKS =        ::chunks::Chunks<'d>;
-            (9) CACHE =         ::cache::TerrainCache;
-            (10) TERRAIN_GEN =  ::terrain_gen::TerrainGen<'d>;
+            (1) EXTRA =         ::logic::extra::Extra;
+            (2) MESSAGES =      ::messages::Messages;
+            (3) TIMER =         ::timer::Timer;
+            (4) PHYSICS =       ::physics::Physics<'d>;
+            (5) VISION =        ::vision::Vision;
+            (6) AUTH =          ::auth::Auth;
+            (7) CHUNKS =        ::chunks::Chunks<'d>;
+            (8) CACHE =         ::cache::TerrainCache;
+            (9) TERRAIN_GEN =   ::terrain_gen::TerrainGen<'d>;
     }
 }
 
-const NUM_PARTS: usize = 11;
+const NUM_PARTS: usize = 10;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]
@@ -68,7 +67,6 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
 
     flags!(
         world = WORLD;
-        script = SCRIPT;
         extra = EXTRA;
         messages = MESSAGES;
         timer = TIMER;
@@ -81,20 +79,20 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
 
         VisionHooks = world | messages;
         VisionFragment = vision | VisionHooks;
-        WorldHooks = world | script | timer | extra | vision | cache | VisionFragment;
+        WorldHooks = world | timer | extra | vision | cache | VisionFragment;
         WorldFragment = world | WorldHooks;
 
         HiddenVisionFragment = vision;
-        HiddenWorldHooks = world | script | timer | extra | cache | HiddenVisionFragment;
+        HiddenWorldHooks = world | timer | extra | cache | HiddenVisionFragment;
         HiddenWorldFragment = world | HiddenWorldHooks;
 
         PhysicsFragment = physics | world | cache | WorldFragment;
 
-        TerrainGenFragment = terrain_gen | script | WorldFragment;
+        TerrainGenFragment = terrain_gen | WorldFragment;
 
-        SaveReadHooks = script | timer | messages | HiddenWorldFragment;
+        SaveReadHooks = timer | messages | HiddenWorldFragment;
         SaveReadFragment = HiddenWorldFragment | SaveReadHooks;
-        SaveWriteHooks = script | timer | messages;
+        SaveWriteHooks = timer | messages;
 
         ChunkProvider = HiddenWorldFragment | SaveReadFragment | TerrainGenFragment;
         ChunksFragment = chunks | world | ChunkProvider;

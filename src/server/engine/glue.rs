@@ -187,3 +187,8 @@ impl_slice! {
     EngineRef::as_save_read_fragment -> SaveReadFragment;
     SaveReadHooks::as_hidden_world_fragment -> HiddenWorldFragment;
 }
+
+
+// TODO: remove
+impl<'a, 'd> world::save::ReadHooks for SaveReadHooks<'a, 'd> {}
+impl<'a, 'd> world::save::WriteHooks for SaveWriteHooks<'a, 'd> {}

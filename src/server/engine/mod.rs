@@ -16,7 +16,6 @@ use messages::SyncKind;
 use messages::{ControlResponse, WireResponse, ClientResponse};
 use msg::{Request, Response};
 use physics::Physics;
-use script::ScriptEngine;
 use script2::ScriptHooks;
 use storage::Storage;
 use terrain_gen::{TerrainGen, TerrainGenEvent};
@@ -39,7 +38,6 @@ pub struct Engine<'d> {
     pub now: Time,
 
     pub world: World<'d>,
-    pub script: ScriptEngine,
 
     pub extra: Extra,
     pub messages: Messages,
@@ -73,7 +71,6 @@ impl<'d> Engine<'d> {
             now: TIME_MIN,
 
             world: World::new(data),
-            script: ScriptEngine::new(&storage.script_dir()),
 
             extra: Extra::new(),
             messages: Messages::new(receiver, sender),
@@ -167,27 +164,22 @@ impl<'d> Engine<'d> {
             },
 
             ReplCommand(cookie, msg) => {
+                // TODO: remove
+                let mut msg = &msg as &str;
                 if msg.starts_with("@") {
-                    let result = self.script_hooks.call_eval(self.as_ref(), &msg[1..]);
-                    let result_str = match result {
-                        Ok(s) => {
-                            let mut s = s;
-                            s.push_str("\n");
-                            s
-                        },
-                        Err(e) => format!("[exception: {}]\n", e),
-                    };
-                    self.messages.send_control(ReplResult(cookie, result_str));
-                } else {
-                    match ScriptEngine::cb_eval(self, &*msg) {
-                        Ok(result) => self.messages.send_control(ReplResult(cookie, result)),
-                        Err(e) => {
-                            warn!("eval error: {}", e);
-                            let resp = ReplResult(cookie, String::from("eval error"));
-                            self.messages.send_control(resp);
-                        },
-                    }
+                    msg = &msg[1..];
                 }
+
+                let result = self.script_hooks.call_eval(self.as_ref(), msg);
+                let result_str = match result {
+                    Ok(s) => {
+                        let mut s = s;
+                        s.push_str("\n");
+                        s
+                    },
+                    Err(e) => format!("[exception: {}]\n", e),
+                };
+                self.messages.send_control(ReplResult(cookie, result_str));
             },
 
             Shutdown => {
