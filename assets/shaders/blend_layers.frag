@@ -21,8 +21,10 @@ float rescale(float x, float min_, float max_) {
 void main(void) {
     vec2 pixelPos = sliceGetPos();
     float inside = sliceCalcInside(pixelPos);
+    float alpha = inside >= 0.0 ? 0.8 : 0.0;
+    //float alpha = rescale(inside, 0.0, 0.8);
 
     vec4 baseColor = texture2D(baseTex, texCoord);
     vec4 slicedColor = texture2D(slicedTex, texCoord);
-    gl_FragColor = mix(baseColor, slicedColor, rescale(inside, 0.0, 0.8));
+    gl_FragColor = mix(baseColor, slicedColor, alpha);
 }
