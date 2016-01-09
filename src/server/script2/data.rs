@@ -84,6 +84,10 @@ define_python_class! {
         }
 
 
+        // TODO: clean up Option<PyResult<_>> methods above to work more like template_name &
+        // template_layer below
+
+
         fn template_count(&this) -> usize {
             this.structure_templates.len()
         }
@@ -97,8 +101,16 @@ define_python_class! {
             this.structure_templates.find_id(&name)
         }
 
-        fn template_name(&this, id: TemplateId) -> Option<PyResult<PyBox>> {
-            this.structure_templates.get_template(id).map(|t| Pack::pack(&t.name as &str))
+        fn template_name(&this, id: TemplateId) -> PyResult<PyBox> {
+            let t = pyunwrap!(this.structure_templates.get_template(id),
+                              runtime_error, "no template with that ID");
+            Pack::pack(&t.name as &str)
+        }
+
+        fn template_layer(&this, id: TemplateId) -> PyResult<u8> {
+            let t = pyunwrap!(this.structure_templates.get_template(id),
+                              runtime_error, "no template with that ID");
+            Ok(t.layer)
         }
     }
 }

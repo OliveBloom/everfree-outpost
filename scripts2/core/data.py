@@ -136,6 +136,10 @@ class TemplateProxy(DefProxy):
     def name(self):
         return _DATA.template_name(self.id)
 
+    @property
+    def layer(self):
+        return _DATA.template_layer(self.id)
+
 
 def init(data):
     global _DATA

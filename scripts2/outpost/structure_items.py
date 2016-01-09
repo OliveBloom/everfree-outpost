@@ -24,11 +24,17 @@ mallet.register('statue/', ('e', 's', 'w', 'n'))
 
 
 def wall_and_door(name, tool, extra_variants=()):
+    horiz_variants = ('edge/horiz',) + extra_variants
+
     autorotate.register_wall('%s_wall' % name)
     mallet.register('%s_wall/' % name,
-            ('edge/horiz',) + extra_variants + mallet.COMMON_WALL_VARIANTS)
+            horiz_variants + mallet.COMMON_WALL_VARIANTS)
     structure_items.register('%s_door' % name, '%s_wall/door/closed' % name, tool)
     door.register_use('%s_wall/door' % name, tool_name=tool)
+
+    for v in horiz_variants:
+        structure_items.register_base('%s_wall/%s' % (name, v), 'wall/horiz')
+    structure_items.register_base('%s_wall/tee/n' % name, 'wall/horiz')
 
 wall_and_door('interior', 'axe')
 wall_and_door('brick', 'pickaxe')
