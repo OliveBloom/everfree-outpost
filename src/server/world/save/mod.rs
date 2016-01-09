@@ -62,7 +62,7 @@ impl ToAnyId for StructureId {
 }
 
 
-const CURRENT_VERSION: u32 = 7;
+const CURRENT_VERSION: u32 = 8;
 
 
 fn padding(len: usize) -> usize {

@@ -5,6 +5,7 @@ use types::*;
 use world::{TerrainChunk, TerrainChunkFlags};
 use world::{Fragment, Hooks};
 use world::flags;
+use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
@@ -17,6 +18,7 @@ pub fn create<'d, F>(f: &mut F,
         cpos: cpos,
         blocks: Box::new(PLACEHOLDER_CHUNK),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         flags: flags::TC_GENERATION_PENDING,
         child_structures: HashSet::new(),
@@ -36,6 +38,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> TerrainChunkId
         cpos: scalar(0),
         blocks: Box::new(EMPTY_CHUNK),
 
+        extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         flags: TerrainChunkFlags::empty(),
         child_structures: HashSet::new(),

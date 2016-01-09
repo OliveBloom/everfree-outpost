@@ -16,7 +16,6 @@ FENCE_PARTS = {v: (x, y) for y, vs in enumerate(FENCE_PART_TABLE) for x, v in en
 
 FENCE_ITEMS = (
         ('fence', 'Fence', 'edge/horiz'),
-        ('fence_tee', 'Fence Tee', 'tee/e'),
         ('fence_post', 'Fence Post', 'end/fancy/e'),
         )
 

@@ -48,6 +48,14 @@ impl super::Client {
     pub fn set_current_input(&mut self, new: InputBits) {
         self.current_input = new;
     }
+
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
+    }
 }
 
 impl super::Entity {
@@ -172,6 +180,14 @@ impl super::Inventory {
     pub fn attachment(&self) -> InventoryAttachment {
         self.attachment
     }
+
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
+    }
 }
 
 impl super::Plane {
@@ -194,6 +210,14 @@ impl super::Plane {
     pub fn saved_terrain_chunk_id(&self, cpos: V2) -> Stable<TerrainChunkId> {
         self.get_saved_terrain_chunk_id(cpos).expect("no TerrainChunk at given pos")
     }
+
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
+    }
 }
 
 impl super::TerrainChunk {
@@ -212,6 +236,14 @@ impl super::TerrainChunk {
     pub fn blocks(&self) -> &BlockChunk {
         &*self.blocks
     }
+
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
+    }
 }
 
 impl super::Structure {
@@ -229,6 +261,14 @@ impl super::Structure {
 
     pub fn attachment(&self) -> StructureAttachment {
         self.attachment
+    }
+
+    pub fn extra(&self) -> &Extra {
+        &self.extra
+    }
+
+    pub fn extra_mut(&mut self) -> &mut Extra {
+        &mut self.extra
     }
 }
 

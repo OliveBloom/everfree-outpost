@@ -100,6 +100,8 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
         try!(self.w.write_opt_id(c.pawn));
         // Don't write `name`.  It will be reconstructed from metadata.
 
+        try!(extra::write(&mut self.w, &c.extra));
+
         try!(self.hooks.post_write_client(&mut self.w, c));
 
         // Children
@@ -177,6 +179,8 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
             try!(self.w.write(val));
         }
 
+        try!(extra::write(&mut self.w, &i.extra));
+
         try!(self.hooks.post_write_inventory(&mut self.w, i));
 
         Ok(())
@@ -192,6 +196,8 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
         for (&cpos, &stable_tcid) in p.saved_chunks.iter() {
             try!(self.w.write((cpos, stable_tcid.unwrap())));
         }
+
+        try!(extra::write(&mut self.w, &p.extra));
 
         try!(self.hooks.post_write_plane(&mut self.w, p));
         Ok(())
@@ -225,6 +231,8 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
             try!(self.w.write_str_bytes(name));
         }
 
+        try!(extra::write(&mut self.w, &t.extra));
+
         try!(self.hooks.post_write_terrain_chunk(&mut self.w, t));
 
         // Children
@@ -248,6 +256,8 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
 
         try!(self.w.write(s.flags.bits()));
 
+        try!(extra::write(&mut self.w, &s.extra));
+
         try!(self.hooks.post_write_structure(&mut self.w, s));
 
         // Children
@@ -268,6 +278,8 @@ impl<W: io::Write, H: WriteHooks> ObjectWriter<W, H> {
         try!(self.w.write(w.planes.next_id()));
         try!(self.w.write(w.terrain_chunks.next_id()));
         try!(self.w.write(w.structures.next_id()));
+
+        try!(extra::write(&mut self.w, &w.extra));
 
         try!(self.hooks.post_write_world(&mut self.w, w));
 

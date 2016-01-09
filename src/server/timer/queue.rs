@@ -251,8 +251,19 @@ fn timer_worker(recv: Receiver<Command>, send: Sender<Cookie>) {
 /// Wrapper struct for timer cookies.  This is non-Copy to prevent obviously wrong behavior, but
 /// it's still possible to get two copies of the same Cookie (one from `schedule` and one from the
 /// `receiver()`).
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Cookie(u32);
+
+// Some useful methods, so that you *can* shoot yourself in the foot, if you really need to.
+impl Cookie {
+    pub fn from_raw(raw: u32) -> Cookie {
+        Cookie(raw)
+    }
+
+    pub fn raw(&self) -> u32 {
+        self.0
+    }
+}
 
 
 #[derive(Debug)]

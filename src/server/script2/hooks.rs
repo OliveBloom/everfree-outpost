@@ -1,6 +1,7 @@
 use types::*;
 
 use engine::split;
+use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 
@@ -48,7 +49,16 @@ define_script_hooks!(
     server_startup, server_shutdown,
     eval,
 
+    timer_fired,
+
+    client_login,
     client_chat_command,
+    client_interact,
+    client_use_item,
+    client_use_ability,
+
+    hack_apply_structure_extras,
+    hack_run_load_hook,
 );
 
 impl ScriptHooks {
@@ -70,11 +80,61 @@ impl ScriptHooks {
         }
     }
 
+    pub fn call_timer_fired(&self,
+                            eng: split::EngineRef,
+                            userdata: PyBox) -> PyResult<()> {
+        call_with_engine1(&self.timer_fired, eng, userdata)
+    }
+
+    pub fn call_client_login(&self,
+                             eng: split::EngineRef,
+                             cid: ClientId) -> PyResult<()> {
+        call_with_engine1(&self.client_login, eng, cid)
+    }
+
     pub fn call_client_chat_command(&self,
                                     eng: split::EngineRef,
                                     cid: ClientId,
                                     msg: &str) -> PyResult<()> {
         call_with_engine2(&self.client_chat_command, eng, cid, msg)
+    }
+
+    pub fn call_client_interact(&self,
+                                eng: split::EngineRef,
+                                cid: ClientId,
+                                args: Option<ExtraArg>) -> PyResult<()> {
+        call_with_engine2(&self.client_interact, eng, cid, args)
+    }
+
+    pub fn call_client_use_item(&self,
+                                eng: split::EngineRef,
+                                cid: ClientId,
+                                item: ItemId,
+                                args: Option<ExtraArg>) -> PyResult<()> {
+        call_with_engine3(&self.client_use_item, eng, cid, item, args)
+    }
+
+    pub fn call_client_use_ability(&self,
+                                   eng: split::EngineRef,
+                                   cid: ClientId,
+                                   ability: ItemId,
+                                   args: Option<ExtraArg>) -> PyResult<()> {
+        call_with_engine3(&self.client_use_ability, eng, cid, ability, args)
+    }
+
+
+    pub fn call_hack_apply_structure_extras(&self,
+                                            eng: split::EngineRef,
+                                            sid: StructureId,
+                                            k: &str,
+                                            v: &str) -> PyResult<()> {
+        call_with_engine3(&self.hack_apply_structure_extras, eng, sid, k, v)
+    }
+
+    pub fn call_hack_run_load_hook(&self,
+                                   eng: split::EngineRef,
+                                   sid: StructureId) -> PyResult<()> {
+        call_with_engine1(&self.hack_run_load_hook, eng, sid)
     }
 }
 
@@ -130,6 +190,21 @@ fn call_with_engine2<A, B>(opt_func: &Option<PyBox>,
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a, b))
+        })
+    } else {
+        Ok(())
+    }
+}
+
+fn call_with_engine3<A, B, C>(opt_func: &Option<PyBox>,
+                              eng: split::EngineRef,
+                              a: A,
+                              b: B,
+                              c: C) -> PyResult<()>
+        where A: Pack, B: Pack, C: Pack {
+    if let Some(ref func) = *opt_func {
+        with_engine_ref(eng, |eng| {
+            call_void(func.borrow(), (eng, a, b, c))
         })
     } else {
         Ok(())

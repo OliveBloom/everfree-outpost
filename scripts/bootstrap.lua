@@ -49,7 +49,6 @@ require('core.extra')
 require('core.eval')
 require('core.timer')
 local action = require('core.action')
-local command = require('core.command')
 local util = require('core.util')
 
 require('loader')
@@ -69,91 +68,6 @@ function action.open_inventory(c)
 end
 
 
--- 'tree' behavior
-action.use['tree/v0'] = function(c, s)
-    c:pawn():inventory('main'):update('wood', 2)
-end
-action.use['tree/v1'] = action.use['tree/v0']
-
-tools.handler.axe['tree/v0'] = function(c, s, inv)
-    if not ward.check(c, s:pos()) then
-        return
-    end
-
-    s:replace('stump')
-    inv:update('wood', 15)
-end
-tools.handler.axe['tree/v1'] = tools.handler.axe['tree/v0']
-
-function tools.handler.axe.stump(c, s, inv)
-    if not ward.check(c, s:pos()) then
-        return
-    end
-
-    s:destroy()
-    inv:update('wood', 5)
-end
-
-
--- 'rock' behavior
-function action.use.rock(c, s)
-    c:pawn():inventory('main'):update('stone', 2)
-end
-
-function tools.handler.pick.rock(c, s, inv)
-    if not ward.check(c, s:pos()) then
-        return
-    end
-
-    s:destroy()
-    inv:update('stone', 20)
-    if math.random() < 0.2 then
-        inv:update('crystal', 1)
-    end
-end
-
-
--- 'bookshelf' behavior
-action.use['bookshelf/1'] = function(c, s)
-    if not ward.check(c, s:pos()) then return end
-
-    local inv = c:pawn():inventory('main')
-    if inv:count('book') == 255 then
-        return
-    end
-
-    s:replace('bookshelf/0')
-    inv:update('book', 1)
-end
-
-action.use['bookshelf/2'] = function(c, s)
-    if not ward.check(c, s:pos()) then return end
-
-    local inv = c:pawn():inventory('main')
-    if inv:count('book') == 255 then
-        return
-    end
-
-    s:replace('bookshelf/1')
-    inv:update('book', 1)
-end
-
-function action.use_item.book(c, inv)
-    local s = util.hit_structure(c:pawn())
-    if s == nil then return end
-
-    local plane = s:plane()
-    local pos = s:pos()
-    local template = s:template()
-    if template == 'bookshelf/0' then
-        inv:update('book', -1)
-        s:replace('bookshelf/1')
-    else if template == 'bookshelf/1' then
-        inv:update('book', -1)
-        s:replace('bookshelf/2')
-    end end
-end
-
 
 -- Commands
 local spawn_point = V3.new(32, 32, 0)
@@ -171,21 +85,6 @@ end
 
 no_op = function(...) end
 
-function command.handler.permit(c, arg)
-    ward.permit(c, arg)
-    c:send_message('Granted permission to ' .. arg)
-end
-command.help.permit = '/permit <name>: Give <name> permission to bypass your ward'
-
-function command.handler.revoke(c, arg)
-    if ward.revoke(c, arg) then
-        c:send_message('Revoked permission from ' .. arg)
-    else
-        c:send_message('No permissions to revoke from ' .. arg)
-    end
-end
-command.help.revoke = "/revoke <name>: Revoke <name>'s permission to bypass your ward"
-
 
 function client_by_name(s)
     local w = World.get()
@@ -195,98 +94,6 @@ function client_by_name(s)
             return c
         end
     end
-end
-
-function command.su_handler.tp(client, args)
-    x, y, z = args:match('([%d-]+) ([%d-]+) ([%d-]+)')
-    if x ~= nil then
-        client:pawn():teleport(V3.new(x + 0, y + 0, z + 0))
-    else
-        local other = client_by_name(args)
-        if other == nil then
-            client:send_message('No such player: ' .. args)
-        else
-            client:pawn():teleport_plane(other:pawn():plane(), other:pawn():pos())
-        end
-    end
-end
-command.help.tp = {
-    "/tp <player>: Teleport to another player's location",
-    '/tp <x> <y> <z>: Teleport to specific coordinates'
-}
-
-function command.su_handler.give(client, args)
-    name, count = args:match('([^ ]+) ([%d-]+)')
-    if name == nil then
-        name = args
-        count = 1
-    end
-
-    client:pawn():inventory('main'):update(name, count + 0)
-end
-command.help.give = '/give <item> [count]: Add items to your inventory'
-
-function command.su_handler.place(client, args)
-    local pawn = client:pawn()
-    s, err = client:world():create_structure(pawn:plane(), util.hit_tile(pawn), args)
-    if s == nil then
-        client:send_message(err)
-    end
-end
-command.help.place = '/place <structure>: Place a structure at your current location'
-
-function command.su_handler.destroy(client, args)
-    local s = util.hit_structure(client:pawn())
-    if s == nil then
-        client:send_message('no structure at that location')
-        return
-    end
-
-    local err s:destroy()
-    if err ~= nil then
-        client:send_message(err)
-    end
-end
-command.help.destroy = '/destroy: Destroy a structure at your current location'
-
-function command.su_handler.tribe(client, args)
-    local value = {
-        E = 0x00,
-        P = 0x40,
-        U = 0x80,
-        A = 0xc0,
-    }
-
-    client:pawn():update_appearance(0xc0, value[args])
-end
-command.help.tribe = '/tribe [E|P|U|A]: Change the tribe of your character'
-
-
-function outpost_ffi.callbacks.login(c)
-    c:set_main_inventories(c:pawn():inventory('main'),
-                           c:pawn():inventory('ability'))
-
-    -- TODO: would be better to just have an "on register" callback, for
-    -- one-time initialization
-    if not c:pawn():extra().inited_abilities then
-        c:pawn():extra().inited_abilities = true
-        if math.floor(c:pawn():get_appearance() / 128) % 2 == 1 then
-            c:pawn():inventory('ability'):update('ability/light', 1)
-        end
-    end
-end
-
-
-function action.use_ability.light(c, inv)
-    local val
-    if c:pawn():extra().light_active then
-        c:pawn():extra().light_active = false
-        val = 0
-    else
-        c:pawn():extra().light_active = true
-        val = 0x200
-    end
-    c:pawn():update_appearance(0x200, val)
 end
 
 

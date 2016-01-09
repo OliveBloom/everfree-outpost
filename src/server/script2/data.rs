@@ -18,11 +18,34 @@ define_python_class! {
         method_macro data_ref_func!;
 
 
+        fn block_count(&this) -> usize {
+            this.block_data.len()
+        }
+
+        fn block_by_name(&this, name: String) -> PyResult<BlockId> {
+            Ok(pyunwrap!(this.block_data.find_id(&name),
+                         key_error, "no such block: {:?}", name))
+        }
+
+        fn get_block_by_name(&this, name: String) -> Option<BlockId> {
+            this.block_data.find_id(&name)
+        }
+
+        fn block_name(&this, id: BlockId) -> Option<PyResult<PyBox>> {
+            this.block_data.get_name(id).map(|s| Pack::pack(s))
+        }
+
+
         fn item_count(&this) -> usize {
             this.item_data.len()
         }
 
-        fn item_by_name(&this, name: String) -> Option<ItemId> {
+        fn item_by_name(&this, name: String) -> PyResult<ItemId> {
+            Ok(pyunwrap!(this.item_data.find_id(&name),
+                         key_error, "no such item: {:?}", name))
+        }
+
+        fn get_item_by_name(&this, name: String) -> Option<ItemId> {
             this.item_data.find_id(&name)
         }
 
@@ -35,7 +58,12 @@ define_python_class! {
             this.recipes.len()
         }
 
-        fn recipe_by_name(&this, name: String) -> Option<RecipeId> {
+        fn recipe_by_name(&this, name: String) -> PyResult<RecipeId> {
+            Ok(pyunwrap!(this.recipes.find_id(&name),
+                         key_error, "no such recipe: {:?}", name))
+        }
+
+        fn get_recipe_by_name(&this, name: String) -> Option<RecipeId> {
             this.recipes.find_id(&name)
         }
 
@@ -44,11 +72,11 @@ define_python_class! {
         }
 
         fn recipe_inputs(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
-            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.inputs))
+            this.recipes.get_recipe(id).map(|r| Pack::pack(r.inputs.clone()))
         }
 
         fn recipe_outputs(&this, id: RecipeId) -> Option<PyResult<PyBox>> {
-            this.recipes.get_recipe(id).map(|r| Pack::pack(&r.outputs))
+            this.recipes.get_recipe(id).map(|r| Pack::pack(r.outputs.clone()))
         }
 
         fn recipe_station(&this, id: RecipeId) -> Option<Option<TemplateId>> {
@@ -56,16 +84,33 @@ define_python_class! {
         }
 
 
+        // TODO: clean up Option<PyResult<_>> methods above to work more like template_name &
+        // template_layer below
+
+
         fn template_count(&this) -> usize {
             this.structure_templates.len()
         }
 
-        fn template_by_name(&this, name: String) -> Option<TemplateId> {
+        fn template_by_name(&this, name: String) -> PyResult<TemplateId> {
+            Ok(pyunwrap!(this.structure_templates.find_id(&name),
+                         key_error, "no such template: {:?}", name))
+        }
+
+        fn get_template_by_name(&this, name: String) -> Option<TemplateId> {
             this.structure_templates.find_id(&name)
         }
 
-        fn template_name(&this, id: TemplateId) -> Option<PyResult<PyBox>> {
-            this.structure_templates.get_template(id).map(|t| Pack::pack(&t.name as &str))
+        fn template_name(&this, id: TemplateId) -> PyResult<PyBox> {
+            let t = pyunwrap!(this.structure_templates.get_template(id),
+                              runtime_error, "no template with that ID");
+            Pack::pack(&t.name as &str)
+        }
+
+        fn template_layer(&this, id: TemplateId) -> PyResult<u8> {
+            let t = pyunwrap!(this.structure_templates.get_template(id),
+                              runtime_error, "no template with that ID");
+            Ok(t.layer)
         }
     }
 }

@@ -136,7 +136,7 @@ def do_eval(eng, code):
     RPC_CONTEXT.set_engine_ref(eng)
     locals_ = {
             'RPC_CONTEXT': RPC_CONTEXT,
-            'eng': eng,
+            'eng': EngineProxy(eng),
             }
     try:
         if '\n' in code[:-1]:

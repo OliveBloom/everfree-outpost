@@ -584,6 +584,10 @@ pub mod dict {
         }
     }
 
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyDict_Check(obj.as_ptr()) != 0 }
+    }
+
     pub fn get_item_cstr<'a>(dct: PyRef<'a>, key: &CStr) -> PyResult<Option<PyRef<'a>>> {
         let val = unsafe {
             PyRef::new_opt(PyDict_GetItemString(dct.as_ptr(), key.as_ptr()))
@@ -615,6 +619,11 @@ pub mod dict {
             Ok(())
         }
     }
+
+    /// Return a `list` object containing all the items from the dictionary.
+    pub fn items(dct: PyRef) -> PyResult<PyBox> {
+        unsafe { PyBox::new(PyDict_Items(dct.as_ptr())) }
+    }
 }
 
 pub mod list {
@@ -623,6 +632,20 @@ pub mod list {
 
     pub fn new() -> PyResult<PyBox> {
         unsafe { PyBox::new(PyList_New(0)) }
+    }
+
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyList_Check(obj.as_ptr()) != 0 }
+    }
+
+    pub fn size(t: PyRef) -> PyResult<usize> {
+        let val = unsafe { PyList_Size(t.as_ptr()) as usize };
+        pycheck!();
+        Ok(val)
+    }
+
+    pub fn get_item<'a>(t: PyRef<'a>, pos: usize) -> PyResult<PyRef<'a>> {
+        unsafe { PyRef::new(PyList_GetItem(t.as_ptr(), pos as Py_ssize_t)) }
     }
 
     pub fn append(l: PyRef, item: PyRef) -> PyResult<()> {
@@ -693,6 +716,33 @@ pub mod tuple {
             try!(set_item(t.borrow(), 2, val2));
             Ok(t)
         }
+    }
+
+    pub fn pack4(val0: PyBox, val1: PyBox, val2: PyBox, val3: PyBox) -> PyResult<PyBox> {
+        unsafe {
+            let t = try!(new(4));
+            try!(set_item(t.borrow(), 0, val0));
+            try!(set_item(t.borrow(), 1, val1));
+            try!(set_item(t.borrow(), 2, val2));
+            try!(set_item(t.borrow(), 3, val3));
+            Ok(t)
+        }
+    }
+}
+
+pub mod iter {
+    use std::ffi::{CString, CStr};
+    use python3_sys::*;
+    use super::{PyBox, PyRef, PyResult};
+
+    pub fn next(obj: PyRef) -> PyResult<Option<PyBox>> {
+        let result = unsafe { PyBox::new_opt(PyIter_Next(obj.as_ptr())) };
+        // PyIter_Next returns NULL both for "end of iteration" and "error during iteration".  The
+        // two can be distinguished by checking for a pending exception.
+        if result.is_none() {
+            pycheck!();
+        }
+        Ok(result)
     }
 }
 
@@ -933,6 +983,10 @@ pub unsafe fn finalize() {
 
 pub fn none() -> PyRef<'static> {
     unsafe { PyRef::new_non_null(Py_None()) }
+}
+
+pub fn not_implemented() -> PyRef<'static> {
+    unsafe { PyRef::new_non_null(Py_NotImplemented()) }
 }
 
 pub fn flush_stdout() -> PyResult<()> {

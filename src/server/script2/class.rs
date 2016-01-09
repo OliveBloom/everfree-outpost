@@ -244,6 +244,45 @@ macro_rules! call_wrapper {
     };
 }
 
+macro_rules! wrapper0 {
+    ( $wrap:ident, $imp:ident ) => {
+        fn $wrap(args: $crate::python::PyRef)
+                 -> $crate::python::PyResult<$crate::python::PyBox> {
+            use $crate::script2::{Pack, Unpack};
+            let result = $imp(try!(Unpack::unpack(args)));
+            Pack::pack(result)
+        }
+    };
+}
+
+macro_rules! wrapper1 {
+    ( $wrap:ident, $imp:ident ) => {
+        fn $wrap(arg1: $crate::python::PyRef,
+                 args: $crate::python::PyRef)
+                 -> $crate::python::PyResult<$crate::python::PyBox> {
+            use $crate::script2::{Pack, Unpack};
+            let result = $imp(try!(Unpack::unpack(arg1)),
+                              try!(Unpack::unpack(args)));
+            Pack::pack(result)
+        }
+    };
+}
+
+macro_rules! wrapper2 {
+    ( $wrap:ident, $imp:ident ) => {
+        fn $wrap(arg1: $crate::python::PyRef,
+                 arg2: $crate::python::PyRef,
+                 args: $crate::python::PyRef)
+                 -> $crate::python::PyResult<$crate::python::PyBox> {
+            use $crate::script2::{Pack, Unpack};
+            let result = $imp(try!(Unpack::unpack(arg1)),
+                              try!(Unpack::unpack(arg2)),
+                              try!(Unpack::unpack(args)));
+            Pack::pack(result)
+        }
+    };
+}
+
 macro_rules! default_wrapper {
     ( $wrap:ident, $imp:ident ) => {
         fn $wrap(slf: $crate::python::PyRef,
@@ -258,6 +297,18 @@ macro_rules! default_wrapper {
 }
 
 macro_rules! raw_func {
+    ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
+        unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
+                                    args: *mut ::python3_sys::PyObject)
+                                    -> *mut ::python3_sys::PyObject {
+            method_imp1!(imp, $args, $ret_ty, $body);
+            default_wrapper!(wrap, imp);
+            call_wrapper!(wrap, slf, args)
+        }
+    };
+}
+
+macro_rules! default_method {
     ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)

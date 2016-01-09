@@ -51,6 +51,8 @@ pub mod extra;
 pub struct World<'d> {
     data: &'d Data,
 
+    extra: Extra,
+
     clients: StableIdMap<ClientId, Client>,
     entities: StableIdMap<EntityId, Entity>,
     inventories: StableIdMap<InventoryId, Inventory>,
@@ -76,6 +78,7 @@ pub struct Client {
     pawn: Option<EntityId>,
     current_input: InputBits,
 
+    extra: Extra,
     stable_id: StableId,
     child_entities: HashSet<EntityId>,
     child_inventories: HashSet<InventoryId>,
@@ -123,6 +126,7 @@ pub struct Inventory {
     // Inventory size (number of slots) is capped at 255
     contents: Box<[Item]>,
 
+    extra: Extra,
     stable_id: StableId,
     attachment: InventoryAttachment,
 }
@@ -136,6 +140,7 @@ pub struct Plane {
     loaded_chunks: HashMap<V2, TerrainChunkId>,
     saved_chunks: HashMap<V2, Stable<TerrainChunkId>>,
 
+    extra: Extra,
     stable_id: StableId,
 }
 impl_IntrusiveStableId!(Plane, stable_id);
@@ -146,6 +151,7 @@ pub struct TerrainChunk {
     cpos: V2,
     blocks: Box<BlockChunk>,
 
+    extra: Extra,
     stable_id: StableId,
     flags: TerrainChunkFlags,
     child_structures: HashSet<StructureId>,
@@ -158,6 +164,7 @@ pub struct Structure {
     pos: V3,
     template: TemplateId,
 
+    extra: Extra,
     stable_id: StableId,
     flags: StructureFlags,
     attachment: StructureAttachment,

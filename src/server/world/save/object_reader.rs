@@ -16,6 +16,7 @@ use world::Item;
 use world::{EntityAttachment, StructureAttachment, InventoryAttachment};
 use world::{TerrainChunkFlags, StructureFlags};
 use world::extra;
+use world::flags;
 use world::object::*;
 use world::ops;
 
@@ -139,6 +140,7 @@ impl<R: io::Read> ObjectReader<R> {
         // TODO: check if this return type annotation is actually needed.  also check the others.
         try!(f.with_world(|wf| -> Result<_> {
             let pawn_id = try!(self.r.read_opt_id(wf));
+            let extra = try!(extra::read(&mut self.r, wf));
 
             let w = world::Fragment::world_mut(wf);
             try!(w.clients.set_stable_id(cid, stable_id));
@@ -149,6 +151,8 @@ impl<R: io::Read> ObjectReader<R> {
             c.pawn = pawn_id;
             // At this point all Client invariants hold, except that c.pawn is not yet attached to
             // the client.
+
+            c.extra = extra;
 
             Ok(())
         }));
@@ -233,10 +237,7 @@ impl<R: io::Read> ObjectReader<R> {
         let (iid, stable_id) = try!(self.read_object_header(f));
 
         try!(f.with_world(|wf| -> Result<_> {
-            let w = world::Fragment::world_mut(wf);
-            try!(w.inventories.set_stable_id(iid, stable_id));
-
-            let i = &mut w.inventories[iid];
+            let data = world::Fragment::world(wf).data();
 
             let contents_count = try!(self.r.read_count());
             let mut contents = util::make_array(Item::Empty, contents_count);
@@ -261,13 +262,20 @@ impl<R: io::Read> ObjectReader<R> {
                     255 => {
                         // Name map entry
                         let name = try!(self.r.read_str_bytes(unwrap!(x.to_usize())));
-                        let new_item_id = unwrap!(w.data.item_data.find_id(&*name));
+                        let new_item_id = unwrap!(data.item_data.find_id(&*name));
                         self.item_map.insert(old_item_id, new_item_id);
                     },
                     _ => fail!("unrecognized entry tag in inventory"),
                 }
             }
+            let extra = try!(extra::read(&mut self.r, wf));
+
+            let w = world::Fragment::world_mut(wf);
+            try!(w.inventories.set_stable_id(iid, stable_id));
+
+            let i = &mut w.inventories[iid];
             i.contents = contents;
+            i.extra = extra;
 
             Ok(())
         }));
@@ -282,19 +290,25 @@ impl<R: io::Read> ObjectReader<R> {
 
         try!(f.with_world(|wf| -> Result<_> {
             {
+                let name = try!(self.r.read_str());
+                let mut saved_chunks = HashMap::new();
+                let chunks_count = try!(self.r.read_count());
+                for _ in 0..chunks_count {
+                    let (cpos, stable_tcid) = try!(self.r.read());
+                    let stable_tcid = Stable::new(stable_tcid);
+                    saved_chunks.insert(cpos, stable_tcid);
+                }
+                let extra = try!(extra::read(&mut self.r, wf));
+
                 let w = world::Fragment::world_mut(wf);
                 try!(w.planes.set_stable_id(pid, stable_id));
 
                 let p = &mut w.planes[pid];
 
-                p.name = try!(self.r.read_str());
+                p.name = name;
 
-                let chunks_count = try!(self.r.read_count());
-                for _ in 0..chunks_count {
-                    let (cpos, stable_tcid) = try!(self.r.read());
-                    let stable_tcid = Stable::new(stable_tcid);
-                    p.saved_chunks.insert(cpos, stable_tcid);
-                }
+                p.saved_chunks = saved_chunks;
+                p.extra = extra;
             }
             ops::plane::post_init(wf, pid);
             Ok(())
@@ -313,24 +327,14 @@ impl<R: io::Read> ObjectReader<R> {
 
         try!(f.with_world(|wf| -> Result<()> {
             {
-                let w = world::Fragment::world_mut(wf);
-                try!(w.terrain_chunks.set_stable_id(tcid, stable_id));
-                let data = w.data();
-
-                let tc = &mut w.terrain_chunks[tcid];
-
-                tc.plane = plane;
-                tc.cpos = cpos;
-
-                if self.file_version > 4 {
-                    tc.flags = TerrainChunkFlags::from_bits_truncate(try!(self.r.read()));
-                }
+                let flags = TerrainChunkFlags::from_bits_truncate(try!(self.r.read()));
 
                 // Read saved BlockIds into tc.blocks.
-                let byte_len = tc.blocks.len() * mem::size_of::<BlockId>();
+                let mut blocks = Box::new([0; CHUNK_TOTAL]);
+                let byte_len = blocks.len() * mem::size_of::<BlockId>();
                 let byte_array = unsafe {
                     mem::transmute(raw::Slice {
-                        data: tc.blocks.as_ptr() as *const u8,
+                        data: blocks.as_ptr() as *const u8,
                         len: byte_len,
                     })
                 };
@@ -339,7 +343,7 @@ impl<R: io::Read> ObjectReader<R> {
                 // Compute block_map, mapping old BlockIds to new ones.
                 let mut block_map = HashMap::new();
                 let block_id_count = try!(self.r.read_count());
-                let block_data = &data.block_data;
+                let block_data = &world::Fragment::world(wf).data().block_data;
                 for _ in 0..block_id_count {
                     let (old_id, shape, name_len): (u16, u8, u8) = try!(self.r.read());
                     let name = try!(self.r.read_str_bytes(unwrap!(name_len.to_usize())));
@@ -353,10 +357,23 @@ impl<R: io::Read> ObjectReader<R> {
                 }
 
                 // Replace old BlockIds with new ones in tc.blocks.
-                for ptr in tc.blocks.iter_mut() {
+                for ptr in blocks.iter_mut() {
                     let id = unwrap!(block_map.get(ptr));
                     *ptr = *id;
                 }
+
+                let extra = try!(extra::read(&mut self.r, wf));
+
+                let w = world::Fragment::world_mut(wf);
+                try!(w.terrain_chunks.set_stable_id(tcid, stable_id));
+
+                let tc = &mut w.terrain_chunks[tcid];
+
+                tc.plane = plane;
+                tc.cpos = cpos;
+                tc.flags = flags;
+                tc.blocks = blocks;
+                tc.extra = extra;
             }
 
             ops::terrain_chunk::post_init(wf, tcid);
@@ -383,19 +400,23 @@ impl<R: io::Read> ObjectReader<R> {
         let (sid, stable_id) = try!(self.read_object_header(f));
 
         let flags = try!(f.with_world(|wf| -> Result<_> {
+            let data = world::Fragment::world(wf).data();
             let flags = {
+                let offset = try!(self.r.read());
+                let template = try!(self.read_template_id(data));
+                let flags = StructureFlags::from_bits_truncate(try!(self.r.read()));
+                let extra = try!(extra::read(&mut self.r, wf));
+
                 let w = world::Fragment::world_mut(wf);
                 try!(w.structures.set_stable_id(sid, stable_id));
 
                 let s = &mut w.structures[sid];
 
                 s.plane = plane;
-                s.pos = base + try!(self.r.read());
-                s.template = try!(self.read_template_id(w.data));
-
-                if self.file_version > 3 {
-                    s.flags = StructureFlags::from_bits_truncate(try!(self.r.read()));
-                }
+                s.pos = base + offset;
+                s.template = template;
+                s.flags = flags;
+                s.extra = extra;
 
                 s.flags
             };
@@ -404,6 +425,20 @@ impl<R: io::Read> ObjectReader<R> {
         }));
 
         try!(f.with_hooks(|h| h.post_read_structure(&mut self.r, sid, flags)));
+
+        if flags.contains(flags::S_HAS_SAVE_HOOKS) {
+            info!("applying load hook for {:?}", sid);
+            unsafe {
+                use std::ptr;
+                use engine::split::EngineRef;
+
+                // TODO: SUPER UNSAFE!!!
+                let ptr = f as *mut F as *mut EngineRef;
+                let mut eng = ptr::read(ptr);
+                let sh = eng.script_hooks();
+                warn_on_err!(sh.call_hack_run_load_hook(eng.borrow(), sid));
+            }
+        }
 
         let child_inventory_count = try!(self.r.read_count());
         for _ in 0..child_inventory_count {
@@ -424,6 +459,13 @@ impl<R: io::Read> ObjectReader<R> {
             w.planes.set_next_id(try!(self.r.read()));
             w.terrain_chunks.set_next_id(try!(self.r.read()));
             w.structures.set_next_id(try!(self.r.read()));
+            Ok(())
+        }));
+
+        try!(f.with_world(|wf| -> Result<_> {
+            let extra = try!(extra::read(&mut self.r, wf));
+            let w = world::Fragment::world_mut(wf);
+            w.extra = extra;
             Ok(())
         }));
 
