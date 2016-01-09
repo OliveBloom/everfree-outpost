@@ -16,11 +16,10 @@ def register(base, names):
         alias.register_template(base + n, first)
 
 def use(e, args=None):
-    ward.check(util.hit_tile(e))
-
     s = util.hit_structure(e)
     if s is None:
         return
+    ward.check(e, s.pos())
 
     old_template = s.template()
     new_template = _NEXT_VARIANT.get(old_template)
