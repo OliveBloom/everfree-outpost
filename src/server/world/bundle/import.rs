@@ -10,6 +10,7 @@ use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
 use world::fragment::Fragment;
+use world::ops;
 
 use super::export::{BAD_CLIENT_ID, BAD_ENTITY_ID, BAD_INVENTORY_ID};
 use super::export::{BAD_PLANE_ID, BAD_TERRAIN_CHUNK_ID, BAD_STRUCTURE_ID};
@@ -50,32 +51,6 @@ impl<'d> Importer<'d> {
         }
     }
 
-    fn init_id_maps<F: Fragment<'d>>(&mut self, b: &b::Bundle, f: &mut F) {
-        let d = self.data;
-
-        // TODO: error handling?
-        self.anim_id_map = b.anims.iter()
-            .map(|s| d.animations.get_id(&s)).collect();
-        self.item_id_map = b.items.iter()
-            .map(|s| d.item_data.get_id(&s)).collect();
-        self.block_id_map = b.blocks.iter()
-            .map(|s| d.block_data.get_id(&s)).collect();
-        self.template_id_map = b.templates.iter()
-            .map(|s| d.structure_templates.get_id(&s)).collect();
-
-        self.client_id_map = (0 .. b.clients.len())
-            .map(|_| w::ops::client::create_unchecked(f)).collect();
-        self.entity_id_map = (0 .. b.entities.len())
-            .map(|_| w::ops::entity::create_unchecked(f)).collect();
-        self.inventory_id_map = (0 .. b.inventories.len())
-            .map(|_| w::ops::inventory::create_unchecked(f)).collect();
-        self.plane_id_map = (0 .. b.planes.len())
-            .map(|_| w::ops::plane::create_unchecked(f)).collect();
-        self.terrain_chunk_id_map = (0 .. b.terrain_chunks.len())
-            .map(|_| w::ops::terrain_chunk::create_unchecked(f)).collect();
-        self.structure_id_map = (0 .. b.structures.len())
-            .map(|_| w::ops::structure::create_unchecked(f)).collect();
-    }
 
     pub fn import_anim_id(&self, id: AnimId) -> AnimId {
         self.anim_id_map[id as usize]
@@ -104,8 +79,39 @@ impl<'d> Importer<'d> {
         it.map(|i| self.import(i)).collect()
     }
 
-    fn add_client_raw(&self, w: &mut w::World, idx: ClientId, b: &b::Client) {
-        let id = self.import(&idx);
+
+    /// Populate the ID maps.  For objects, this means creating empty instances with
+    /// `create_unchecked`.
+    fn init_id_maps<F: Fragment<'d>>(&mut self, b: &b::Bundle, f: &mut F) {
+        let d = self.data;
+
+        self.anim_id_map = b.anims.iter()
+            .map(|s| d.animations.get_id(&s)).collect();
+        self.item_id_map = b.items.iter()
+            .map(|s| d.item_data.get_id(&s)).collect();
+        self.block_id_map = b.blocks.iter()
+            .map(|s| d.block_data.get_id(&s)).collect();
+        self.template_id_map = b.templates.iter()
+            .map(|s| d.structure_templates.get_id(&s)).collect();
+
+        self.client_id_map = (0 .. b.clients.len())
+            .map(|_| ops::client::create_unchecked(f)).collect();
+        self.entity_id_map = (0 .. b.entities.len())
+            .map(|_| ops::entity::create_unchecked(f)).collect();
+        self.inventory_id_map = (0 .. b.inventories.len())
+            .map(|_| ops::inventory::create_unchecked(f)).collect();
+        self.plane_id_map = (0 .. b.planes.len())
+            .map(|_| ops::plane::create_unchecked(f)).collect();
+        self.terrain_chunk_id_map = (0 .. b.terrain_chunks.len())
+            .map(|_| ops::terrain_chunk::create_unchecked(f)).collect();
+        self.structure_id_map = (0 .. b.structures.len())
+            .map(|_| ops::structure::create_unchecked(f)).collect();
+    }
+
+
+    // Functions to populate an object from the bundled version.
+
+    fn init_client(&self, w: &mut w::World, id: ClientId, b: &b::Client) {
         w.clients.set_stable_id(id, b.stable_id).unwrap();
         let c = &mut w.clients[id];
 
@@ -118,8 +124,7 @@ impl<'d> Importer<'d> {
         c.child_inventories = self.import_iter(b.child_inventories.iter());
     }
 
-    fn add_entity_raw(&self, w: &mut w::World, idx: EntityId, b: &b::Entity) {
-        let id = self.import(&idx);
+    fn init_entity(&self, w: &mut w::World, id: EntityId, b: &b::Entity) {
         w.entities.set_stable_id(id, b.stable_id).unwrap();
         let e = &mut w.entities[id];
 
@@ -137,8 +142,7 @@ impl<'d> Importer<'d> {
         e.child_inventories = self.import_iter(b.child_inventories.iter());
     }
 
-    fn add_inventory_raw(&self, w: &mut w::World, idx: InventoryId, b: &b::Inventory) {
-        let id = self.import(&idx);
+    fn init_inventory(&self, w: &mut w::World, id: InventoryId, b: &b::Inventory) {
         w.inventories.set_stable_id(id, b.stable_id).unwrap();
         let i = &mut w.inventories[id];
 
@@ -148,8 +152,7 @@ impl<'d> Importer<'d> {
         i.attachment = self.import(&b.attachment);
     }
 
-    fn add_plane_raw(&self, w: &mut w::World, idx: PlaneId, b: &b::Plane) {
-        let id = self.import(&idx);
+    fn init_plane(&self, w: &mut w::World, id: PlaneId, b: &b::Plane) {
         w.planes.set_stable_id(id, b.stable_id).unwrap();
         let p = &mut w.planes[id];
 
@@ -162,8 +165,7 @@ impl<'d> Importer<'d> {
         p.stable_id = b.stable_id;
     }
 
-    fn add_terrain_chunk_raw(&self, w: &mut w::World, idx: TerrainChunkId, b: &b::TerrainChunk) {
-        let id = self.import(&idx);
+    fn init_terrain_chunk(&self, w: &mut w::World, id: TerrainChunkId, b: &b::TerrainChunk) {
         w.terrain_chunks.set_stable_id(id, b.stable_id).unwrap();
         let tc = &mut w.terrain_chunks[id];
 
@@ -181,8 +183,7 @@ impl<'d> Importer<'d> {
         tc.child_structures = self.import_iter(b.child_structures.iter());
     }
 
-    fn add_structure_raw(&self, w: &mut w::World, idx: StructureId, b: &b::Structure) {
-        let id = self.import(&idx);
+    fn init_structure(&self, w: &mut w::World, id: StructureId, b: &b::Structure) {
         w.structures.set_stable_id(id, b.stable_id).unwrap();
         let s = &mut w.structures[id];
 
@@ -194,6 +195,71 @@ impl<'d> Importer<'d> {
         s.flags = b.flags;
         s.attachment = self.import(&b.attachment);
         s.child_inventories = self.import_iter(b.child_inventories.iter());
+    }
+
+
+    fn add_client<F>(&self, f: &mut F, idx: ClientId, b: &b::Client)
+            where F: Fragment<'d> {
+        let id = self.import(&idx);
+        self.init_client(f.world_mut(), id, b);
+        //ops::client::post_init(f, id);
+    }
+
+    fn add_entity<F>(&self, f: &mut F, idx: EntityId, b: &b::Entity)
+            where F: Fragment<'d> {
+        let id = self.import(&idx);
+        self.init_entity(f.world_mut(), id, b);
+        ops::entity::post_init(f, id);
+    }
+
+    fn add_inventory<F>(&self, f: &mut F, idx: InventoryId, b: &b::Inventory)
+            where F: Fragment<'d> {
+        let id = self.import(&idx);
+        self.init_inventory(f.world_mut(), id, b);
+        //ops::inventory::post_init(f, id);
+    }
+
+    fn add_plane<F>(&self, f: &mut F, idx: PlaneId, b: &b::Plane)
+            where F: Fragment<'d> {
+        let id = self.import(&idx);
+        self.init_plane(f.world_mut(), id, b);
+        ops::plane::post_init(f, id);
+    }
+
+    fn add_terrain_chunk<F>(&self, f: &mut F, idx: TerrainChunkId, b: &b::TerrainChunk)
+            where F: Fragment<'d> {
+        let id = self.import(&idx);
+        self.init_terrain_chunk(f.world_mut(), id, b);
+        ops::terrain_chunk::post_init(f, id);
+    }
+
+    fn add_structure<F>(&self, f: &mut F, idx: StructureId, b: &b::Structure)
+            where F: Fragment<'d> {
+        let id = self.import(&idx);
+        self.init_structure(f.world_mut(), id, b);
+        ops::structure::post_init(f, id);
+    }
+
+    fn add_bundle<F>(&self, f: &mut F, b: &b::Bundle)
+            where F: Fragment<'d> {
+        for (i, c) in b.clients.iter().enumerate() {
+            self.add_client(f, ClientId(i as u16), c);
+        }
+        for (i, e) in b.entities.iter().enumerate() {
+            self.add_entity(f, EntityId(i as u32), e);
+        }
+        for (i, inv) in b.inventories.iter().enumerate() {
+            self.add_inventory(f, InventoryId(i as u32), inv);
+        }
+        for (i, p) in b.planes.iter().enumerate() {
+            self.add_plane(f, PlaneId(i as u32), p);
+        }
+        for (i, tc) in b.terrain_chunks.iter().enumerate() {
+            self.add_terrain_chunk(f, TerrainChunkId(i as u32), tc);
+        }
+        for (i, s) in b.structures.iter().enumerate() {
+            self.add_structure(f, StructureId(i as u32), s);
+        }
     }
 }
 
