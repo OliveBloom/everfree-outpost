@@ -17,7 +17,7 @@ const TEMPLATE_DATA_FILE: &'static str = "structures.json";
 const ANIMATION_DATA_FILE: &'static str = "animations.json";
 const LOOT_TABLE_DATA_FILE: &'static str = "loot_tables.json";
 
-const SCRIPT_DIR: &'static str = "scripts2";
+const SCRIPT_DIR: &'static str = "scripts";
 
 const SAVE_DIR: &'static str = "save";
 const CLIENT_DIR: &'static str = "clients";

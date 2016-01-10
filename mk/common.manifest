@@ -9,7 +9,7 @@ data/structures.json: $b_data/structures_server.json
 data/animations.json: $b_data/animations_server.json
 data/loot_tables.json: $b_data/loot_tables_server.json
 
-scripts2/: $b_scripts2/gen/
+scripts/: $b_scripts/gen/
 
 www/client.html: $root/src/client/client.html
 www/instructions.html: $root/src/client/instructions.html
