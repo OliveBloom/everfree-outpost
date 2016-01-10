@@ -1,6 +1,6 @@
 from outpost_server.core import use
 from outpost_server.core.data import DATA
-from outpost_server.outpost.lib import structure_items, tool
+from outpost_server.outpost.lib import structure_items, tool, ward
 
 def register_container(item, template, size):
     item = DATA.item(item)
@@ -13,6 +13,7 @@ def register_container(item, template, size):
 
     @use.structure(template)
     def use_structure(e, s, args):
+        ward.check(e, s.pos())
         e.controller().open_container(e.inv(), s.inv())
 
     @tool.axe(template)
