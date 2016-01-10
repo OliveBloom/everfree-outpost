@@ -1,8 +1,8 @@
-import ast
 import shlex
 
 from outpost_server.core import chat, engine, types, util
 from outpost_server.core.data import DATA
+from outpost_server.core.eval import eval_or_exec
 from outpost_server.core.types import V3
 from outpost_server.core.engine import StablePlaneId
 from outpost_server.outpost.lib import appearance, util as util2
@@ -246,16 +246,7 @@ def eval_(client, args):
             }
 
     try:
-        code = ast.parse(args)
-        if len(code.body) == 1 and isinstance(code.body[0], ast.Expr):
-            code = ast.Expression(code.body[0].value)
-            code = compile(code, '<unknown>', 'eval')
-            result = eval(code, EVAL_GLOBALS, dct)
-        else:
-            code = compile(code, '<unknown>', 'exec')
-            exec(code, EVAL_GLOBALS, dct)
-            result = None
+        result = eval_or_exec(args, EVAL_GLOBALS, dct)
         client.send_message('Result: %r' % result)
-
     except Exception as e:
         client.send_message('Error: %r' % e)
