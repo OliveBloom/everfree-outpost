@@ -25,7 +25,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     // No client_create callback because clients are added to vision in the logic::client code.
 
     fn on_client_destroy(&mut self, cid: ClientId) {
-        self.script_mut().cb_client_destroyed(cid);
         // TODO: should this be here or in logic::clients?
         vision::Fragment::remove_client(&mut self.$as_vision_fragment(), cid);
     }
@@ -87,7 +86,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
     fn on_entity_destroy(&mut self, eid: EntityId) {
-        self.script_mut().cb_entity_destroyed(eid);
         vision::Fragment::remove_entity(&mut self.$as_vision_fragment(), eid);
     }
 
@@ -136,8 +134,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
             let Open { world, cache, .. } = (**self).open();
             cache.update_region(world, old_pid, old_bounds);
         }
-
-        self.script_mut().cb_structure_destroyed(sid);
     }
 
     fn on_structure_replace(&mut self,
@@ -195,10 +191,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
 
     // No lifecycle callbacks for inventories, because Vision doesn't care what inventories exist,
     // only what inventories are actually subscribed to.
-
-    fn on_inventory_destroy(&mut self, iid: InventoryId) {
-        self.script_mut().cb_inventory_destroyed(iid);
-    }
 
     fn on_inventory_update(&mut self,
                            iid: InventoryId,

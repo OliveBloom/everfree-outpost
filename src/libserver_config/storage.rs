@@ -18,7 +18,6 @@ const ANIMATION_DATA_FILE: &'static str = "animations.json";
 const LOOT_TABLE_DATA_FILE: &'static str = "loot_tables.json";
 
 const SCRIPT_DIR: &'static str = "scripts";
-const SCRIPT2_DIR: &'static str = "scripts2";
 
 const SAVE_DIR: &'static str = "save";
 const CLIENT_DIR: &'static str = "clients";
@@ -82,10 +81,6 @@ impl Storage {
 
     pub fn script_dir(&self) -> PathBuf {
         self.base.join(SCRIPT_DIR)
-    }
-
-    pub fn script2_dir(&self) -> PathBuf {
-        self.base.join(SCRIPT2_DIR)
     }
 
     pub fn world_path(&self) -> PathBuf {
