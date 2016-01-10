@@ -127,8 +127,12 @@ def can_act(e, pos):
     w = Wards(e.plane())
     p = Permissions(e.engine)
     name = e.controller().name()
+    e_key = get_key(e)
 
     for k in w.find_wards(pos, RADIUS):
+        if k == e_key:
+            # It's the player's own ward
+            continue
         if not p.has_perm(k, name):
             return False, 'This area belongs to %s' % w.get_name(k)
 
