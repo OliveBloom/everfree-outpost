@@ -1,5 +1,6 @@
 from outpost_server.core.types import V3
 from outpost_server.core.engine import EntityProxy, StructureProxy
+from outpost_server.outpost.lib.consts import *
 
 RADIUS = 16
 SPACING = 48
@@ -11,12 +12,13 @@ class Wards(object):
     def get_info(self):
         info = self.plane.extra().get('ward_info')
         if info is None:
-            info = self.plane.extra().setdefault('ward_info', {
-                'server': {
+            stable_pid = self.plane.stable_id()
+            info = self.plane.extra().setdefault('ward_info', {})
+            if stable_pid == STABLE_PLANE_FOREST:
+                info['server'] = {
                     'pos': V3(0, 0, 0),
                     'name': 'the server',
-                },
-            })
+                }
             info = self.plane.extra()['ward_info']
         return info
 
