@@ -4,6 +4,7 @@ use std::slice;
 
 use types::*;
 use util::Bytes;
+use util::Convert;
 
 use world::extra;
 use world::Item;
@@ -17,12 +18,7 @@ pub use super::error::Error as Error;
 pub trait WriteExt: io::Write {
     fn write_bytes(&mut self, buf: &[u8]) -> Result<()> {
         try!(self.write_all(buf));
-        try!(self.write_padding(buf.len()));
-        Ok(())
-    }
-
-    fn write_padding(&mut self, len: usize) -> Result<()> {
-        let pad = padding(len);
+        let pad = padding(buf.len());
         if pad > 0 {
             try!(self.write_all(&[0; 3][..pad]));
         }
@@ -48,12 +44,13 @@ pub trait WriteExt: io::Write {
     }
 
     fn write_count(&mut self, count: usize) -> Result<()> {
-        self.write_val(count as u32)
+        try!(self.write_val::<u32>(unwrap!(count.to_u32())));
+        Ok(())
     }
 
     fn write_slice<T, B, F>(&mut self, xs: &[T], mut f: F) -> Result<()>
             where B: Bytes, F: FnMut(&T) -> B {
-        self.write_count(xs.len());
+        try!(self.write_count(xs.len()));
         for x in xs {
             try!(self.write_val(f(x)));
         }

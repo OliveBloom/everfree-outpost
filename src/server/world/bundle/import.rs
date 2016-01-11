@@ -115,7 +115,7 @@ impl<'d> Importer<'d> {
         w.clients.set_stable_id(id, b.stable_id).unwrap();
         let c = &mut w.clients[id];
 
-        c.name = b.name.clone();
+        c.name = b.name.to_owned();
         let pawn = self.import(&b.pawn);
         c.pawn = if pawn != Some(BAD_ENTITY_ID) { pawn } else { None };
 
@@ -156,7 +156,7 @@ impl<'d> Importer<'d> {
         w.planes.set_stable_id(id, b.stable_id).unwrap();
         let p = &mut w.planes[id];
 
-        p.name = b.name.clone();
+        p.name = b.name.to_owned();
 
         p.saved_chunks = b.saved_chunks.iter()
                           .map(|&(k, v)| (k, v))

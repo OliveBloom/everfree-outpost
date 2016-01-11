@@ -20,7 +20,7 @@ pub struct Bundle {
 }
 
 pub struct Client {
-    pub name: String,
+    pub name: Box<str>,
     pub pawn: Option<EntityId>,
     // current_input: transient
 
@@ -53,7 +53,7 @@ pub struct Inventory {
 }
 
 pub struct Plane {
-    pub name: String,
+    pub name: Box<str>,
 
     // loaded_chunks: transient
     pub saved_chunks: Box<[(V2, Stable<TerrainChunkId>)]>,
@@ -90,7 +90,7 @@ fn clone_slice<T: Clone>(x: &Box<[T]>) -> Box<[T]> {
 impl Clone for Client {
     fn clone(&self) -> Client {
         Client {
-            name: self.name.clone(),
+            name: self.name.to_owned().into_boxed_slice(),
             pawn: self.pawn,
 
             stable_id: self.stable_id,
@@ -133,7 +133,7 @@ impl Clone for Inventory {
 impl Clone for Plane {
     fn clone(&self) -> Plane {
         Plane {
-            name: self.name.clone(),
+            name: self.name.to_owned().into_boxed_slice(),
 
             saved_chunks: clone_slice(&self.saved_chunks),
 

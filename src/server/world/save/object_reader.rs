@@ -140,7 +140,7 @@ impl<R: io::Read> ObjectReader<R> {
         // TODO: check if this return type annotation is actually needed.  also check the others.
         try!(f.with_world(|wf| -> Result<_> {
             let pawn_id = try!(self.r.read_opt_id(wf));
-            let extra = try!(extra::read(&mut self.r, wf));
+            let extra = extra::Extra::new(); // try!(extra::read(&mut self.r, wf));
 
             let w = world::Fragment::world_mut(wf);
             try!(w.clients.set_stable_id(cid, stable_id));
@@ -188,7 +188,7 @@ impl<R: io::Read> ObjectReader<R> {
                      facing,
                      target_velocity,
                      appearance) = try!(self.r.read());
-                let extra = try!(extra::read(&mut self.r, wf));
+                let extra = extra::Extra::new(); //try!(extra::read(&mut self.r, wf));
 
                 let w = world::Fragment::world_mut(wf);
                 try!(w.entities.set_stable_id(eid, stable_id));
@@ -268,7 +268,7 @@ impl<R: io::Read> ObjectReader<R> {
                     _ => fail!("unrecognized entry tag in inventory"),
                 }
             }
-            let extra = try!(extra::read(&mut self.r, wf));
+            let extra = extra::Extra::new(); //try!(extra::read(&mut self.r, wf));
 
             let w = world::Fragment::world_mut(wf);
             try!(w.inventories.set_stable_id(iid, stable_id));
@@ -298,7 +298,7 @@ impl<R: io::Read> ObjectReader<R> {
                     let stable_tcid = Stable::new(stable_tcid);
                     saved_chunks.insert(cpos, stable_tcid);
                 }
-                let extra = try!(extra::read(&mut self.r, wf));
+                let extra = extra::Extra::new(); //try!(extra::read(&mut self.r, wf));
 
                 let w = world::Fragment::world_mut(wf);
                 try!(w.planes.set_stable_id(pid, stable_id));
@@ -362,7 +362,7 @@ impl<R: io::Read> ObjectReader<R> {
                     *ptr = *id;
                 }
 
-                let extra = try!(extra::read(&mut self.r, wf));
+                let extra = extra::Extra::new(); //try!(extra::read(&mut self.r, wf));
 
                 let w = world::Fragment::world_mut(wf);
                 try!(w.terrain_chunks.set_stable_id(tcid, stable_id));
@@ -405,7 +405,7 @@ impl<R: io::Read> ObjectReader<R> {
                 let offset = try!(self.r.read());
                 let template = try!(self.read_template_id(data));
                 let flags = StructureFlags::from_bits_truncate(try!(self.r.read()));
-                let extra = try!(extra::read(&mut self.r, wf));
+                let extra = extra::Extra::new(); //try!(extra::read(&mut self.r, wf));
 
                 let w = world::Fragment::world_mut(wf);
                 try!(w.structures.set_stable_id(sid, stable_id));
@@ -463,7 +463,7 @@ impl<R: io::Read> ObjectReader<R> {
         }));
 
         try!(f.with_world(|wf| -> Result<_> {
-            let extra = try!(extra::read(&mut self.r, wf));
+            let extra = extra::Extra::new(); //try!(extra::read(&mut self.r, wf));
             let w = world::Fragment::world_mut(wf);
             w.extra = extra;
             Ok(())

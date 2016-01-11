@@ -230,7 +230,7 @@ impl<'d> Exporter<'d> {
     fn add_client_raw(&mut self, id: ClientId, c: &w::Client) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Client {
-            name: c.name.clone(),
+            name: c.name.clone().into_boxed_slice(),
             pawn: self.export(&c.pawn),
 
             stable_id: c.stable_id,
@@ -273,7 +273,7 @@ impl<'d> Exporter<'d> {
     fn add_plane_raw(&mut self, id: PlaneId, p: &w::Plane) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Plane {
-            name: p.name.clone(),
+            name: p.name.clone().into_boxed_slice(),
 
             saved_chunks: p.saved_chunks.iter()
                            .map(|(&k, &v)| (k, v))

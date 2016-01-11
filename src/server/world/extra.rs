@@ -8,10 +8,10 @@ use types::*;
 use util::Convert;
 
 use world::fragment::Fragment;
-use world::save::{self, Reader};
 use world::bundle::export::{Export, Exporter};
 use world::bundle::import::{Import, Importer};
 use world::bundle::write::{self, WriteExt};
+use world::bundle::read::{self, ReadExt};
 
 
 macro_rules! with_value_variants {
@@ -697,10 +697,8 @@ fn write_tag_and_len<W: io::Write>(w: &mut W,
 }
 
 
-pub fn read<'d, R: ?Sized, F>(r: &mut R, f: &mut F) -> save::Result<Extra>
-        where R: Reader,
-              F: Fragment<'d> {
-    let r = try!(read_repr(r, f));
+pub fn read<R: io::Read>(r: &mut R) -> read::Result<Extra> {
+    let r = try!(read_repr(r));
     match r {
         Repr::Null => Ok(Extra { h: None }),
         Repr::Hash(h) => Ok(Extra { h: Some(Box::new(h)) }),
@@ -708,10 +706,8 @@ pub fn read<'d, R: ?Sized, F>(r: &mut R, f: &mut F) -> save::Result<Extra>
     }
 }
 
-fn read_repr<'d, R: ?Sized, F>(r: &mut R, f: &mut F) -> save::Result<Repr>
-        where R: Reader,
-              F: Fragment<'d> {
-    let (raw_tag, a, b): (u8, u8, u16) = try!(r.read());
+fn read_repr<R: io::Read>(r: &mut R) -> read::Result<Repr> {
+    let (raw_tag, a, b): (u8, u8, u16) = try!(r.read_val());
     let tag = unwrap!(Tag::from_primitive(raw_tag));
     match tag {
         Tag::Null =>
@@ -721,11 +717,11 @@ fn read_repr<'d, R: ?Sized, F>(r: &mut R, f: &mut F) -> save::Result<Repr>
         Tag::SmallInt =>
             Ok(Repr::Int(b as i16 as i64)),
         Tag::LargeInt => {
-            let i = try!(r.read());
+            let i = try!(r.read_val());
             Ok(Repr::Int(i))
         },
         Tag::Float => {
-            let i = try!(r.read());
+            let i = try!(r.read_val());
             Ok(Repr::Int(i))
         },
         Tag::SmallStr =>
@@ -734,126 +730,119 @@ fn read_repr<'d, R: ?Sized, F>(r: &mut R, f: &mut F) -> save::Result<Repr>
             read_str(r, None).map(Repr::Str),
 
         Tag::SmallArray =>
-            read_array(r, f, Some(b as usize)).map(Repr::Array),
+            read_array(r, Some(b as usize)).map(Repr::Array),
         Tag::LargeArray =>
-            read_array(r, f, None).map(Repr::Array),
+            read_array(r, None).map(Repr::Array),
         Tag::SmallHash =>
-            read_hash(r, f, Some(b as usize)).map(Repr::Hash),
+            read_hash(r, Some(b as usize)).map(Repr::Hash),
         Tag::LargeHash =>
-            read_hash(r, f, None).map(Repr::Hash),
+            read_hash(r, None).map(Repr::Hash),
 
         Tag::ClientId => {
-            let id = try!(r.read_id(f));
-            Ok(Repr::ClientId(id))
+            let id = try!(r.read_val());
+            Ok(Repr::ClientId(ClientId(id)))
         },
         Tag::EntityId => {
-            let id = try!(r.read_id(f));
-            Ok(Repr::EntityId(id))
+            let id = try!(r.read_val());
+            Ok(Repr::EntityId(EntityId(id)))
         },
         Tag::InventoryId => {
-            let id = try!(r.read_id(f));
-            Ok(Repr::InventoryId(id))
+            let id = try!(r.read_val());
+            Ok(Repr::InventoryId(InventoryId(id)))
         },
         Tag::PlaneId => {
-            let id = try!(r.read_id(f));
-            Ok(Repr::PlaneId(id))
+            let id = try!(r.read_val());
+            Ok(Repr::PlaneId(PlaneId(id)))
         },
         Tag::TerrainChunkId => {
-            let id = try!(r.read_id(f));
-            Ok(Repr::TerrainChunkId(id))
+            let id = try!(r.read_val());
+            Ok(Repr::TerrainChunkId(TerrainChunkId(id)))
         },
         Tag::StructureId => {
-            let id = try!(r.read_id(f));
-            Ok(Repr::StructureId(id))
+            let id = try!(r.read_val());
+            Ok(Repr::StructureId(StructureId(id)))
         },
 
         Tag::StableClientId => {
-            let id = try!(r.read());
+            let id = try!(r.read_val());
             Ok(Repr::StableClientId(Stable::new(id)))
         },
         Tag::StableEntityId => {
-            let id = try!(r.read());
+            let id = try!(r.read_val());
             Ok(Repr::StableEntityId(Stable::new(id)))
         },
         Tag::StableInventoryId => {
-            let id = try!(r.read());
+            let id = try!(r.read_val());
             Ok(Repr::StableInventoryId(Stable::new(id)))
         },
         Tag::StablePlaneId => {
-            let id = try!(r.read());
+            let id = try!(r.read_val());
             Ok(Repr::StablePlaneId(Stable::new(id)))
         },
         Tag::StableTerrainChunkId => {
-            let id = try!(r.read());
+            let id = try!(r.read_val());
             Ok(Repr::StableTerrainChunkId(Stable::new(id)))
         },
         Tag::StableStructureId => {
-            let id = try!(r.read());
+            let id = try!(r.read_val());
             Ok(Repr::StableStructureId(Stable::new(id)))
         },
 
         Tag::V2 => {
-            let v2 = try!(r.read());
+            let v2 = try!(r.read_val());
             Ok(Repr::V2(v2))
         },
         Tag::V3 => {
-            let v3 = try!(r.read());
+            let v3 = try!(r.read_val());
             Ok(Repr::V3(v3))
         },
         Tag::Region2 => {
-            let min = try!(r.read());
-            let max = try!(r.read());
+            let min = try!(r.read_val());
+            let max = try!(r.read_val());
             Ok(Repr::Region2(Region::new(min, max)))
         },
         Tag::Region3 => {
-            let min = try!(r.read());
-            let max = try!(r.read());
+            let min = try!(r.read_val());
+            let max = try!(r.read_val());
             Ok(Repr::Region3(Region::new(min, max)))
         },
     }
 }
 
-fn read_str<R: ?Sized>(r: &mut R,
-                       opt_len: Option<usize>) -> save::Result<String>
-        where R: Reader {
+fn read_str<R: io::Read>(r: &mut R,
+                         opt_len: Option<usize>) -> read::Result<String> {
     let len = match opt_len {
         Some(x) => x,
         None => try!(r.read_count()),
     };
-    let s = try!(r.read_str_bytes(len));
+    let s = try!(r.read_str_bytes(len)).into_string();
     Ok(s)
 }
 
-fn read_array<'d, R: ?Sized, F>(r: &mut R,
-                                f: &mut F,
-                                opt_len: Option<usize>) -> save::Result<Vec<Repr>>
-        where R: Reader,
-              F: Fragment<'d> {
+fn read_array<R: io::Read>(r: &mut R,
+                           opt_len: Option<usize>) -> read::Result<Vec<Repr>> {
     let len = match opt_len {
         Some(x) => x,
         None => try!(r.read_count()),
     };
     let mut v = Vec::with_capacity(len);
     for _ in 0 .. len {
-        let x = try!(read_repr(r, f));
+        let x = try!(read_repr(r));
         v.push(x);
     }
     Ok(v)
 }
 
-fn read_hash<'d, R: ?Sized, F>(r: &mut R,
-                               f: &mut F,
-                               opt_len: Option<usize>) -> save::Result<HashMap<String, Repr>>
-        where R: Reader,
-              F: Fragment<'d> {
+fn read_hash<R: io::Read>(r: &mut R,
+                          opt_len: Option<usize>) -> read::Result<HashMap<String, Repr>> {
     let len = match opt_len {
         Some(x) => x,
         None => try!(r.read_count()),
     };
     let mut h = HashMap::with_capacity(len);
     for _ in 0 .. len {
-        let k = try!(r.read_str());
-        let v = try!(read_repr(r, f));
+        let k = try!(r.read_str()).into_string();
+        let v = try!(read_repr(r));
         h.insert(k, v);
     }
     Ok(h)
