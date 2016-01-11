@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hash_map;
+use std::io;
 use std::ptr;
 use std::slice;
 
@@ -7,9 +8,10 @@ use types::*;
 use util::Convert;
 
 use world::fragment::Fragment;
-use world::save::{self, Reader, Writer};
+use world::save::{self, Reader};
 use world::bundle::export::{Export, Exporter};
 use world::bundle::import::{Import, Importer};
+use world::bundle::write::{self, WriteExt};
 
 
 macro_rules! with_value_variants {
@@ -554,33 +556,31 @@ primitive_enum! {
 }
 
 
-pub fn write<W: Writer + ?Sized>(w: &mut W,
-                                 e: &Extra) -> save::Result<()> {
+pub fn write<W: io::Write>(w: &mut W, e: &Extra) -> write::Result<()> {
     match e.h {
         Some(ref h) => write_hash(w, h),
-        None => w.write(Tag::Null as u8),
+        None => w.write_val(Tag::Null as u8),
     }
 }
 
-fn write_repr<W: Writer + ?Sized>(w: &mut W,
-                                  r: &Repr) -> save::Result<()> {
+fn write_repr<W: io::Write>(w: &mut W, r: &Repr) -> write::Result<()> {
     match *r {
         Repr::Null =>
-            w.write(Tag::Null as u8),
+            w.write_val(Tag::Null as u8),
         Repr::Bool(b) =>
-            w.write((Tag::Bool as u8, b as u8)),
+            w.write_val((Tag::Bool as u8, b as u8)),
         Repr::Int(i) =>
             match i.to_i16() {
                 Some(small_i) =>
-                    w.write((Tag::SmallInt as u8, 0u8, small_i)),
+                    w.write_val((Tag::SmallInt as u8, 0u8, small_i)),
                 None => {
-                    try!(w.write(Tag::LargeInt as u8));
-                    w.write(i)
+                    try!(w.write_val(Tag::LargeInt as u8));
+                    w.write_val(i)
                 },
             },
         Repr::Float(f) => {
-            try!(w.write(Tag::Float as u8));
-            w.write(f)
+            try!(w.write_val(Tag::Float as u8));
+            w.write_val(f)
         },
         Repr::Str(ref s) => {
             try!(write_tag_and_len(w, s.len(), Tag::SmallStr, Tag::LargeStr));
@@ -591,80 +591,79 @@ fn write_repr<W: Writer + ?Sized>(w: &mut W,
         Repr::Hash(ref h) => write_hash(w, h),
 
         Repr::ClientId(id) => {
-            try!(w.write(Tag::ClientId as u8));
-            w.write_id(id)
+            try!(w.write_val(Tag::ClientId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::EntityId(id) => {
-            try!(w.write(Tag::EntityId as u8));
-            w.write_id(id)
+            try!(w.write_val(Tag::EntityId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::InventoryId(id) => {
-            try!(w.write(Tag::InventoryId as u8));
-            w.write_id(id)
+            try!(w.write_val(Tag::InventoryId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::PlaneId(id) => {
-            try!(w.write(Tag::PlaneId as u8));
-            w.write_id(id)
+            try!(w.write_val(Tag::PlaneId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::TerrainChunkId(id) => {
-            try!(w.write(Tag::TerrainChunkId as u8));
-            w.write_id(id)
+            try!(w.write_val(Tag::TerrainChunkId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::StructureId(id) => {
-            try!(w.write(Tag::StructureId as u8));
-            w.write_id(id)
+            try!(w.write_val(Tag::StructureId as u8));
+            w.write_val(id.unwrap())
         },
 
         Repr::StableClientId(id) => {
-            try!(w.write(Tag::StableClientId as u8));
-            w.write(id.unwrap())
+            try!(w.write_val(Tag::StableClientId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::StableEntityId(id) => {
-            try!(w.write(Tag::StableEntityId as u8));
-            w.write(id.unwrap())
+            try!(w.write_val(Tag::StableEntityId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::StableInventoryId(id) => {
-            try!(w.write(Tag::StableInventoryId as u8));
-            w.write(id.unwrap())
+            try!(w.write_val(Tag::StableInventoryId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::StablePlaneId(id) => {
-            try!(w.write(Tag::StablePlaneId as u8));
-            w.write(id.unwrap())
+            try!(w.write_val(Tag::StablePlaneId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::StableTerrainChunkId(id) => {
-            try!(w.write(Tag::StableTerrainChunkId as u8));
-            w.write(id.unwrap())
+            try!(w.write_val(Tag::StableTerrainChunkId as u8));
+            w.write_val(id.unwrap())
         },
         Repr::StableStructureId(id) => {
-            try!(w.write(Tag::StableStructureId as u8));
-            w.write(id.unwrap())
+            try!(w.write_val(Tag::StableStructureId as u8));
+            w.write_val(id.unwrap())
         },
 
         Repr::V2(v2) => {
-            try!(w.write(Tag::V2 as u8));
-            w.write(v2)
+            try!(w.write_val(Tag::V2 as u8));
+            w.write_val(v2)
         },
         Repr::V3(v3) => {
-            try!(w.write(Tag::V3 as u8));
-            w.write(v3)
+            try!(w.write_val(Tag::V3 as u8));
+            w.write_val(v3)
         },
         Repr::Region2(region2) => {
-            try!(w.write(Tag::Region2 as u8));
-            try!(w.write(region2.min));
-            try!(w.write(region2.max));
+            try!(w.write_val(Tag::Region2 as u8));
+            try!(w.write_val(region2.min));
+            try!(w.write_val(region2.max));
             Ok(())
         },
         Repr::Region3(region3) => {
-            try!(w.write(Tag::Region3 as u8));
-            try!(w.write(region3.min));
-            try!(w.write(region3.max));
+            try!(w.write_val(Tag::Region3 as u8));
+            try!(w.write_val(region3.min));
+            try!(w.write_val(region3.max));
             Ok(())
         },
     }
 }
 
-fn write_array<W: Writer + ?Sized>(w: &mut W,
-                                   v: &Vec<Repr>) -> save::Result<()> {
+fn write_array<W: io::Write>(w: &mut W, v: &Vec<Repr>) -> write::Result<()> {
     try!(write_tag_and_len(w, v.len(), Tag::SmallArray, Tag::LargeArray));
     for x in v {
         try!(write_repr(w, x));
@@ -672,8 +671,7 @@ fn write_array<W: Writer + ?Sized>(w: &mut W,
     Ok(())
 }
 
-fn write_hash<W: Writer + ?Sized>(w: &mut W,
-                                  h: &HashMap<String, Repr>) -> save::Result<()> {
+fn write_hash<W: io::Write>(w: &mut W, h: &HashMap<String, Repr>) -> write::Result<()> {
     try!(write_tag_and_len(w, h.len(), Tag::SmallHash, Tag::LargeHash));
     for (k, v) in h {
         try!(w.write_str(k));
@@ -682,16 +680,16 @@ fn write_hash<W: Writer + ?Sized>(w: &mut W,
     Ok(())
 }
 
-fn write_tag_and_len<W: Writer + ?Sized>(w: &mut W,
-                                         len: usize,
-                                         small_tag: Tag,
-                                         large_tag: Tag) -> save::Result<()> {
+fn write_tag_and_len<W: io::Write>(w: &mut W,
+                                   len: usize,
+                                   small_tag: Tag,
+                                   large_tag: Tag) -> write::Result<()> {
     match len.to_u16() {
         Some(small_len) => {
-            try!(w.write((small_tag as u8, 0u8, small_len)));
+            try!(w.write_val((small_tag as u8, 0u8, small_len)));
         },
         None => {
-            try!(w.write(large_tag as u8));
+            try!(w.write_val(large_tag as u8));
             try!(w.write_count(len));
         },
     }

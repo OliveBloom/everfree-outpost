@@ -82,7 +82,7 @@ impl<'d> Importer<'d> {
 
     /// Populate the ID maps.  For objects, this means creating empty instances with
     /// `create_unchecked`.
-    fn init_id_maps<F: Fragment<'d>>(&mut self, b: &b::Bundle, f: &mut F) {
+    fn init_id_maps<F: Fragment<'d>>(&mut self, f: &mut F, b: &b::Bundle) {
         let d = self.data;
 
         self.anim_id_map = b.anims.iter()
@@ -260,6 +260,14 @@ impl<'d> Importer<'d> {
         for (i, s) in b.structures.iter().enumerate() {
             self.add_structure(f, StructureId(i as u32), s);
         }
+    }
+
+
+    pub fn import_bundle<F>(&mut self, f: &mut F, b: &b::Bundle)
+            where F: Fragment<'d> {
+        // TODO: validate bundle
+        self.init_id_maps(f, b);
+        self.add_bundle(f, b);
     }
 }
 
