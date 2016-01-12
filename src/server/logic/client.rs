@@ -109,7 +109,7 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
     Ok(())
 }
 
-pub fn logout(mut eng: EngineRef, cid: ClientId) -> save::Result<()> {
+pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
     eng.messages_mut().remove_client(cid);
 
     let old_region = eng.vision().client_view_area(cid);
@@ -121,13 +121,16 @@ pub fn logout(mut eng: EngineRef, cid: ClientId) -> save::Result<()> {
         }
     }
 
+    // Actually save and destroy the client
     {
-        let (h, eng) = eng.borrow().0.split_off();
-        let h = SaveWriteHooks(h);
         let c = eng.world().client(cid);
-        let file = eng.storage().create_client_file(c.name());
-        let mut sw = ObjectWriter::new(file, h);
-        try!(sw.save_client(&c));
+
+        let mut exporter = bundle::Exporter::new(eng.data());
+        exporter.add_client(&c);
+        let b = exporter.finish();
+
+        let mut file = eng.storage().create_client_file(c.name());
+        try!(bundle::write_bundle(&mut file, &b));
     }
     try!(world::Fragment::destroy_client(&mut eng.as_world_fragment(), cid));
     Ok(())

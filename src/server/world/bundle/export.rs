@@ -152,6 +152,7 @@ impl<'d> Exporter<'d> {
     // Tree traversal to add all relevant objects.
 
     pub fn add_client(&mut self, c: &ObjectRef<w::Client>) {
+        self.register_client(c);
         self.add_client_raw(c.id(), c.obj());
 
         for e in c.child_entities() {
@@ -163,6 +164,7 @@ impl<'d> Exporter<'d> {
     }
 
     pub fn add_entity(&mut self, e: &ObjectRef<w::Entity>) {
+        self.register_entity(e);
         self.add_entity_raw(e.id(), e.obj());
 
         for i in e.child_inventories() {
@@ -171,14 +173,17 @@ impl<'d> Exporter<'d> {
     }
 
     pub fn add_inventory(&mut self, i: &ObjectRef<w::Inventory>) {
+        self.register_inventory(i);
         self.add_inventory_raw(i.id(), i.obj());
     }
 
     pub fn add_plane(&mut self, p: &ObjectRef<w::Plane>) {
+        self.register_plane(p);
         self.add_plane_raw(p.id(), p.obj());
     }
 
     pub fn add_terrain_chunk(&mut self, tc: &ObjectRef<w::TerrainChunk>) {
+        self.register_terrain_chunk(tc);
         self.add_terrain_chunk_raw(tc.id(), tc.obj());
 
         for s in tc.child_structures() {
@@ -187,6 +192,7 @@ impl<'d> Exporter<'d> {
     }
 
     pub fn add_structure(&mut self, s: &ObjectRef<w::Structure>) {
+        self.register_structure(s);
         self.add_structure_raw(s.id(), s.obj());
 
         for i in s.child_inventories() {

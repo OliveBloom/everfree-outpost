@@ -6,7 +6,8 @@ pub use self::write::write_bundle;
 pub use self::builder::Builder;
 pub use self::error::{Error, Result};
 
-pub use self::import::import_bundle;
+pub use self::import::{Importer, import_bundle};
+pub use self::export::Exporter;
 
 pub mod types;
 pub mod builder;
