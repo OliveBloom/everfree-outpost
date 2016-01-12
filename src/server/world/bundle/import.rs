@@ -9,6 +9,7 @@ use world::bundle::types as b;
 use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
+use world::Hooks;
 use world::fragment::Fragment;
 use world::ops;
 
@@ -242,6 +243,7 @@ impl<'d> Importer<'d> {
 
     fn add_bundle<F>(&self, f: &mut F, b: &b::Bundle)
             where F: Fragment<'d> {
+        // Do all the imports
         for (i, c) in b.clients.iter().enumerate() {
             self.add_client(f, ClientId(i as u16), c);
         }
@@ -260,6 +262,26 @@ impl<'d> Importer<'d> {
         for (i, s) in b.structures.iter().enumerate() {
             self.add_structure(f, StructureId(i as u32), s);
         }
+
+        // Only notify listeners once all imports are done, so they don't get an inconsistent view.
+        for i in 0 .. b.clients.len() {
+            f.with_hooks(|h| h.on_client_create(ClientId(i as u16)));
+        }
+        for i in 0 .. b.entities.len() {
+            f.with_hooks(|h| h.on_entity_create(EntityId(i as u32)));
+        }
+        for i in 0 .. b.inventories.len() {
+            f.with_hooks(|h| h.on_inventory_create(InventoryId(i as u32)));
+        }
+        for i in 0 .. b.planes.len() {
+            f.with_hooks(|h| h.on_plane_create(PlaneId(i as u32)));
+        }
+        for i in 0 .. b.terrain_chunks.len() {
+            f.with_hooks(|h| h.on_terrain_chunk_create(TerrainChunkId(i as u32)));
+        }
+        for i in 0 .. b.structures.len() {
+            f.with_hooks(|h| h.on_structure_create(StructureId(i as u32)));
+        }
     }
 
 
@@ -269,6 +291,13 @@ impl<'d> Importer<'d> {
         self.init_id_maps(f, b);
         self.add_bundle(f, b);
     }
+}
+
+pub fn import_bundle<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>
+        where F: Fragment<'d> {
+    let mut importer = Importer::new(f.world().data());
+    importer.import_bundle(f, b);
+    importer
 }
 
 

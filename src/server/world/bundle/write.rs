@@ -170,7 +170,7 @@ pub fn write_structure<W: io::Write>(w: &mut W, s: &Structure) -> Result<()> {
     Ok(())
 }
 
-pub fn write<W: io::Write>(w: &mut W, b: &Bundle) -> Result<()> {
+pub fn write_bundle<W: io::Write>(w: &mut W, b: &Bundle) -> Result<()> {
     try!(w.write_count(b.anims.len()));
     try!(w.write_count(b.items.len()));
     try!(w.write_count(b.blocks.len()));

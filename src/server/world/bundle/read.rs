@@ -272,10 +272,17 @@ fn read_multi<R, T, F>(r: &mut R, len: usize, mut f: F) -> Result<Box<[T]>>
     Ok(v.into_boxed_slice())
 }
 
-pub fn read<R: io::Read>(r: &mut R) -> Result<Bundle> {
-    let (anims_len, items_len, blocks_len, templates_len,
-         clients_len, entities_len, inventories_len,
-         planes_len, terrain_chunks_len, structures_len) = try!(r.read_val());
+pub fn read_bundle<R: io::Read>(r: &mut R) -> Result<Bundle> {
+    let anims_len = try!(r.read_count());
+    let items_len = try!(r.read_count());
+    let blocks_len = try!(r.read_count());
+    let templates_len = try!(r.read_count());
+    let clients_len = try!(r.read_count());
+    let entities_len = try!(r.read_count());
+    let inventories_len = try!(r.read_count());
+    let planes_len = try!(r.read_count());
+    let terrain_chunks_len = try!(r.read_count());
+    let structures_len = try!(r.read_count());
 
     let anims = try!(read_multi(r, anims_len, |r| r.read_str()));
     let items = try!(read_multi(r, items_len, |r| r.read_str()));

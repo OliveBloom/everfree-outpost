@@ -1,7 +1,16 @@
 
 pub use self::types::*;
 
+pub use self::read::read_bundle;
+pub use self::write::write_bundle;
+pub use self::builder::Builder;
+pub use self::error::{Error, Result};
+
+pub use self::import::import_bundle;
+
 pub mod types;
+pub mod builder;
+
 pub mod export;
 pub mod import;
 

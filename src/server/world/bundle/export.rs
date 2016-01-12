@@ -4,6 +4,7 @@ use std::hash::Hash;
 use types::*;
 
 use data::Data;
+use world::bundle::builder::Remapper;
 use world::bundle::types as b;
 use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
@@ -16,37 +17,6 @@ pub const BAD_INVENTORY_ID: InventoryId = InventoryId(-1_i32 as u32);
 pub const BAD_PLANE_ID: PlaneId = PlaneId(-1_i32 as u32);
 pub const BAD_TERRAIN_CHUNK_ID: TerrainChunkId = TerrainChunkId(-1_i32 as u32);
 pub const BAD_STRUCTURE_ID: StructureId = StructureId(-1_i32 as u32);
-
-
-struct Remapper<Val, Id> {
-    pub vals: Vec<Val>,
-    pub id_map: HashMap<Id, Id>,
-}
-
-impl<Val, Id: Eq+Hash+Copy> Remapper<Val, Id> {
-    fn new() -> Remapper<Val, Id> {
-        Remapper {
-            vals: Vec::new(),
-            id_map: HashMap::new(),
-        }
-    }
-
-    fn get(&self, old_id: Id) -> Option<Id> {
-        self.id_map.get(&old_id).map(|&x| x)
-    }
-
-    fn get_or<F>(&mut self, old_id: Id, f: F) -> Id
-            where F: FnOnce(usize) -> (Id, Val) {
-        if self.id_map.contains_key(&old_id) {
-            *self.id_map.get(&old_id).unwrap()
-        } else {
-            let (new_id, val) = f(self.vals.len());
-            self.vals.push(val);
-            self.id_map.insert(old_id, new_id);
-            new_id
-        }
-    }
-}
 
 
 pub struct Exporter<'d> {
