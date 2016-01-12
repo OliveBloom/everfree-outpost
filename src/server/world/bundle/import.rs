@@ -265,22 +265,22 @@ impl<'d> Importer<'d> {
 
         // Only notify listeners once all imports are done, so they don't get an inconsistent view.
         for i in 0 .. b.clients.len() {
-            f.with_hooks(|h| h.on_client_create(ClientId(i as u16)));
+            f.with_hooks(|h| h.on_client_create(self.client_id_map[i]));
         }
         for i in 0 .. b.entities.len() {
-            f.with_hooks(|h| h.on_entity_create(EntityId(i as u32)));
+            f.with_hooks(|h| h.on_entity_create(self.entity_id_map[i]));
         }
         for i in 0 .. b.inventories.len() {
-            f.with_hooks(|h| h.on_inventory_create(InventoryId(i as u32)));
+            f.with_hooks(|h| h.on_inventory_create(self.inventory_id_map[i]));
         }
         for i in 0 .. b.planes.len() {
-            f.with_hooks(|h| h.on_plane_create(PlaneId(i as u32)));
+            f.with_hooks(|h| h.on_plane_create(self.plane_id_map[i]));
         }
         for i in 0 .. b.terrain_chunks.len() {
-            f.with_hooks(|h| h.on_terrain_chunk_create(TerrainChunkId(i as u32)));
+            f.with_hooks(|h| h.on_terrain_chunk_create(self.terrain_chunk_id_map[i]));
         }
         for i in 0 .. b.structures.len() {
-            f.with_hooks(|h| h.on_structure_create(StructureId(i as u32)));
+            f.with_hooks(|h| h.on_structure_create(self.structure_id_map[i]));
         }
     }
 
