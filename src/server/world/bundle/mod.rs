@@ -1,8 +1,6 @@
 
 pub use self::types::*;
 
-pub use self::read::read_bundle;
-pub use self::write::write_bundle;
 pub use self::builder::Builder;
 pub use self::error::{Error, Result};
 
@@ -16,9 +14,20 @@ pub mod export;
 pub mod import;
 
 pub mod error;
-pub mod write;
-pub mod read;
 
-fn padding(len: usize) -> usize {
-    (4 - (len % 4)) % 4
+pub mod flat;
+
+
+pub fn read_bundle<R: ::std::io::Read>(r: &mut R) -> Result<Bundle> {
+    let mut v = Vec::new();
+    try!(r.read_to_end(&mut v));
+    let f = try!(flat::FlatView::from_bytes(&v));
+    Ok(f.unflatten_bundle())
+}
+
+pub fn write_bundle<W: ::std::io::Write>(w: &mut W, b: &Bundle) -> Result<()> {
+    let mut f = flat::Flat::new();
+    f.flatten_bundle(b);
+    try!(f.write(w));
+    Ok(())
 }
