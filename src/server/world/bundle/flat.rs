@@ -488,7 +488,7 @@ pub struct FlatBlockChunk {
 
 #[repr(C)] #[derive(Clone)]
 pub struct FlatWorld {
-    pub now: u64,
+    pub now: i64,
 
     pub next_client: u64,
     pub next_entity: u64,
@@ -497,6 +497,7 @@ pub struct FlatWorld {
     pub next_terrain_chunk: u64,
     pub next_structure: u64,
 
+    pub extra: FlatExtra,
     pub child_entities: FlatVec,
     pub child_inventories: FlatVec,
 }
@@ -1471,6 +1472,46 @@ impl<'a> UnflattenPart<'a> for Box<BlockChunk> {
 // Bundle Objects
 //
 
+impl Flatten for World {
+    fn flatten_idx(&self, f: &mut Flat) -> usize {
+        let fw = FlatWorld {
+            now: self.now,
+
+            next_client: self.next_client,
+            next_entity: self.next_entity,
+            next_inventory: self.next_inventory,
+            next_plane: self.next_plane,
+            next_terrain_chunk: self.next_terrain_chunk,
+            next_structure: self.next_structure,
+
+            extra: f.flatten_part(&self.extra),
+            child_entities: f.flatten_part(&self.child_entities),
+            child_inventories: f.flatten_part(&self.child_inventories),
+        };
+        f.world = Some(Box::new(fw));
+        0
+    }
+
+    fn unflatten_idx(off: usize, f: &FlatView) -> World {
+        assert!(off == 0);
+        let fw = f.world.as_ref().unwrap() as &FlatWorld;
+        World {
+            now: fw.now,
+
+            next_client: fw.next_client,
+            next_entity: fw.next_entity,
+            next_inventory: fw.next_inventory,
+            next_plane: fw.next_plane,
+            next_terrain_chunk: fw.next_terrain_chunk,
+            next_structure: fw.next_structure,
+
+            extra: f.unflatten_part(&fw.extra),
+            child_entities: f.unflatten_part(&fw.child_entities),
+            child_inventories: f.unflatten_part(&fw.child_inventories),
+        }
+    }
+}
+
 impl Flatten for Client {
     fn flatten_idx(&self, f: &mut Flat) -> usize {
         let off = f.clients.len();
@@ -1478,7 +1519,7 @@ impl Flatten for Client {
             name: f.flatten_part(&self.name as &str),
             pawn: conv(self.pawn),
 
-            extra: f.flatten_part(&Extra::new()),    // TODO
+            extra: f.flatten_part(&self.extra),
             stable_id: self.stable_id,
             child_entities: f.flatten_part(&self.child_entities),
             child_inventories: f.flatten_part(&self.child_inventories),
@@ -1493,7 +1534,7 @@ impl Flatten for Client {
             name: f.unflatten_part(&fc.name),
             pawn: unconv(fc.pawn),
 
-            //extra: f.unflatten_part(&fc.extra),
+            extra: f.unflatten_part(&fc.extra),
             stable_id: fc.stable_id,
             child_entities: f.unflatten_part(&fc.child_entities),
             child_inventories: f.unflatten_part(&fc.child_inventories),
@@ -1557,7 +1598,7 @@ impl Flatten for Inventory {
         let fi = FlatInventory {
             contents: f.flatten_part(&self.contents),
 
-            extra: f.flatten_part(&Extra::new()),     // TODO
+            extra: f.flatten_part(&self.extra),
             stable_id: self.stable_id,
             attachment: conv(self.attachment),
         };
@@ -1570,7 +1611,7 @@ impl Flatten for Inventory {
         Inventory {
             contents: f.unflatten_part(&fi.contents),
 
-            //extra: f.unflatten_part(&fi.extra),
+            extra: f.unflatten_part(&fi.extra),
             stable_id: fi.stable_id,
             attachment: unconv(fi.attachment),
         }
@@ -1585,7 +1626,7 @@ impl Flatten for Plane {
 
             saved_chunks: f.flatten_part(&self.saved_chunks),
 
-            extra: f.flatten_part(&Extra::new()),     // TODO
+            extra: f.flatten_part(&self.extra),
             stable_id: self.stable_id,
             child_structures: f.flatten_part(&[] as &[StructureId]),    // TODO
         };
@@ -1600,7 +1641,7 @@ impl Flatten for Plane {
 
             saved_chunks: f.unflatten_part(&fp.saved_chunks),
 
-            //extra: f.unflatten_part(&fp.extra),
+            extra: f.unflatten_part(&fp.extra),
             stable_id: fp.stable_id,
             //child_structures: f.unflatten_part(&fp.child_structures),
         }
@@ -1615,7 +1656,7 @@ impl Flatten for TerrainChunk {
             cpos: conv(self.cpos),
             blocks: f.flatten_part(&self.blocks),
 
-            extra: f.flatten_part(&Extra::new()),     // TODO
+            extra: f.flatten_part(&self.extra),
             stable_id: self.stable_id,
             flags: conv(self.flags),
             child_structures: f.flatten_part(&self.child_structures),
@@ -1631,7 +1672,7 @@ impl Flatten for TerrainChunk {
             cpos: unconv(ftc.cpos),
             blocks: f.unflatten_part(&ftc.blocks),
 
-            //extra: f.unflatten_part(&ftc.extra),  // TODO
+            extra: f.unflatten_part(&ftc.extra),
             stable_id: ftc.stable_id,
             flags: unconv(ftc.flags),
             child_structures: f.unflatten_part(&ftc.child_structures),
@@ -1647,7 +1688,7 @@ impl Flatten for Structure {
             pos: conv(self.pos),
             template: self.template,
 
-            extra: f.flatten_part(&Extra::new()),     // TODO
+            extra: f.flatten_part(&self.extra),
             stable_id: self.stable_id,
             flags: conv(self.flags),
             attachment: conv(self.attachment),
@@ -1664,7 +1705,7 @@ impl Flatten for Structure {
             pos: unconv(fs.pos),
             template: fs.template,
 
-            //extra: f.unflatten_part(&fs.extra),  // TODO
+            extra: f.unflatten_part(&fs.extra),
             stable_id: fs.stable_id,
             flags: unconv(fs.flags),
             attachment: unconv(fs.attachment),
@@ -1675,8 +1716,6 @@ impl Flatten for Structure {
 
 impl Flatten for Bundle {
     fn flatten_idx(&self, f: &mut Flat) -> usize {
-        // TODO: world
-
         for s in &*self.anims {
             let fs = f.flatten_part(s);
             f.anims.push(fs);
@@ -1694,6 +1733,9 @@ impl Flatten for Bundle {
             f.templates.push(fs);
         }
 
+        if let Some(ref w) = self.world {
+            f.flatten(w as &World);
+        }
         for c in &*self.clients {
             f.flatten(c);
         }
@@ -1725,6 +1767,7 @@ impl Flatten for Bundle {
             blocks: unflatten_strs(f, &f.blocks),
             templates: unflatten_strs(f, &f.templates),
 
+            world: if f.world.is_some() { Some(Box::new(f.unflatten(0))) } else { None },
             clients: unflatten_idxs(f, f.clients.len()),
             entities: unflatten_idxs(f, f.entities.len()),
             inventories: unflatten_idxs(f, f.inventories.len()),

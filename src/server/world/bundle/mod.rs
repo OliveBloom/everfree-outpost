@@ -4,7 +4,7 @@ pub use self::types::*;
 pub use self::builder::Builder;
 pub use self::error::{Error, Result};
 
-pub use self::import::{Importer, import_bundle};
+pub use self::import::{Importer, import_bundle, import_world};
 pub use self::export::Exporter;
 
 pub mod types;

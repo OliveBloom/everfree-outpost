@@ -27,6 +27,7 @@ pub struct Exporter<'d> {
     blocks: Remapper<&'d str, BlockId>,
     templates: Remapper<&'d str, TemplateId>,
 
+    world: Option<Box<b::World>>,
     clients: Remapper<Option<b::Client>, ClientId>,
     entities: Remapper<Option<b::Entity>, EntityId>,
     inventories: Remapper<Option<b::Inventory>, InventoryId>,
@@ -45,6 +46,7 @@ impl<'d> Exporter<'d> {
             blocks: Remapper::new(),
             templates: Remapper::new(),
 
+            world: None,
             clients: Remapper::new(),
             entities: Remapper::new(),
             inventories: Remapper::new(),
@@ -93,6 +95,7 @@ impl<'d> Exporter<'d> {
             blocks: convert_str_vec(&self.blocks.vals),
             templates: convert_str_vec(&self.templates.vals),
 
+            world: self.world.clone(),
             clients: convert_opt_vec(&self.clients.vals),
             entities: convert_opt_vec(&self.entities.vals),
             inventories: convert_opt_vec(&self.inventories.vals),
@@ -104,6 +107,15 @@ impl<'d> Exporter<'d> {
 
 
     // Tree traversal to register all relevant object IDs.
+
+    pub fn register_world(&mut self, w: &w::World) {
+        for e in w.entities().filter(|e| e.attachment() == EntityAttachment::World) {
+            self.register_entity(&e);
+        }
+        for i in w.inventories().filter(|i| i.attachment() == InventoryAttachment::World) {
+            self.register_inventory(&i);
+        }
+    }
 
     pub fn register_client(&mut self, c: &ObjectRef<w::Client>) {
         self.clients.get_or(c.id(), |raw| (ClientId(raw as u16), None));
@@ -150,6 +162,18 @@ impl<'d> Exporter<'d> {
 
 
     // Tree traversal to add all relevant objects.
+
+    pub fn add_world(&mut self, w: &w::World) {
+        self.register_world(w);
+        self.add_world_raw(w);
+
+        for e in w.entities().filter(|e| e.attachment() == EntityAttachment::World) {
+            self.add_entity(&e);
+        }
+        for i in w.inventories().filter(|i| i.attachment() == InventoryAttachment::World) {
+            self.add_inventory(&i);
+        }
+    }
 
     pub fn add_client(&mut self, c: &ObjectRef<w::Client>) {
         self.register_client(c);
@@ -203,12 +227,35 @@ impl<'d> Exporter<'d> {
 
     // Functions to add only a single object
 
+    pub fn add_world_raw(&mut self, w: &w::World) {
+        let b = b::World {
+            now: 0,
+
+            next_client: w.clients.next_id(),
+            next_entity: w.entities.next_id(),
+            next_inventory: w.inventories.next_id(),
+            next_plane: w.planes.next_id(),
+            next_terrain_chunk: w.terrain_chunks.next_id(),
+            next_structure: w.structures.next_id(),
+
+            extra: self.export(&w.extra),
+            child_entities:
+                w.entities().filter(|e| e.attachment() == EntityAttachment::World)
+                 .map(|e| self.export(&e.id())).collect::<Vec<_>>().into_boxed_slice(),
+            child_inventories:
+                w.inventories().filter(|i| i.attachment() == InventoryAttachment::World)
+                 .map(|i| self.export(&i.id())).collect::<Vec<_>>().into_boxed_slice(),
+        };
+        self.world = Some(Box::new(b));
+    }
+
     fn add_client_raw(&mut self, id: ClientId, c: &w::Client) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Client {
             name: c.name.clone().into_boxed_slice(),
             pawn: self.export(&c.pawn),
 
+            extra: self.export(&c.extra),
             stable_id: c.stable_id,
             child_entities: self.export_iter(c.child_entities.iter()),
             child_inventories: self.export_iter(c.child_inventories.iter()),
@@ -240,6 +287,7 @@ impl<'d> Exporter<'d> {
         let b = b::Inventory {
             contents: self.export_iter(i.contents.iter()),
 
+            extra: self.export(&i.extra),
             stable_id: i.stable_id,
             attachment: self.export(&i.attachment),
         };
@@ -255,6 +303,7 @@ impl<'d> Exporter<'d> {
                            .map(|(&k, &v)| (k, v))
                            .collect::<Vec<_>>().into_boxed_slice(),
 
+            extra: self.export(&p.extra),
             stable_id: p.stable_id,
         };
         self.planes.vals[idx] = Some(b);
@@ -273,6 +322,7 @@ impl<'d> Exporter<'d> {
             cpos: tc.cpos,
             blocks: blocks,
 
+            extra: self.export(&tc.extra),
             stable_id: tc.stable_id,
             flags: tc.flags,
             child_structures: self.export_iter(tc.child_structures.iter()),
@@ -287,6 +337,7 @@ impl<'d> Exporter<'d> {
             pos: s.pos,
             template: self.export_template_id(s.template),
 
+            extra: self.export(&s.extra),
             stable_id: s.stable_id,
             flags: s.flags,
             attachment: self.export(&s.attachment),

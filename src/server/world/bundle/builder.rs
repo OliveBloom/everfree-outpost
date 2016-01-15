@@ -152,6 +152,7 @@ impl<'d> Builder<'d> {
             blocks: convert_vec(self.blocks.vals, |s| s.to_owned().into_boxed_slice()),
             templates: convert_vec(self.templates.vals, |s| s.to_owned().into_boxed_slice()),
 
+            world: None,
             clients: convert_vec(self.clients, |c| c.finish()),
             entities: convert_vec(self.entities, |c| c.finish()),
             inventories: convert_vec(self.inventories, |c| c.finish()),
@@ -171,6 +172,7 @@ struct ClientBits {
     name: String,
     pawn: Option<EntityId>,
 
+    extra: Extra,
     stable_id: StableId,
     child_entities: Vec<EntityId>,
     child_inventories: Vec<InventoryId>,
@@ -182,6 +184,7 @@ impl ClientBits {
             name: String::new(),
             pawn: None,
 
+            extra: Extra::new(),
             stable_id: NO_STABLE_ID,
             child_entities: Vec::new(),
             child_inventories: Vec::new(),
@@ -193,6 +196,7 @@ impl ClientBits {
             name: self.name.into_boxed_slice(),
             pawn: self.pawn,
 
+            extra: self.extra,
             stable_id: self.stable_id,
             child_entities: self.child_entities.into_boxed_slice(),
             child_inventories: self.child_inventories.into_boxed_slice(),
@@ -229,6 +233,11 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         };
         self.get().pawn = Some(eid);
         self.get().child_entities.push(eid);
+        self
+    }
+
+    pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
+        f(&mut self.get().extra);
         self
     }
 
@@ -377,6 +386,7 @@ impl<'a, 'd> EntityBuilder<'a, 'd> {
 struct InventoryBits {
     contents: Vec<Item>,
 
+    extra: Extra,
     stable_id: StableId,
     attachment: InventoryAttachment,
 }
@@ -386,6 +396,7 @@ impl InventoryBits {
         InventoryBits {
             contents: Vec::new(),
 
+            extra: Extra::new(),
             stable_id: NO_STABLE_ID,
             attachment: InventoryAttachment::World,
         }
@@ -395,6 +406,7 @@ impl InventoryBits {
         Inventory {
             contents: self.contents.into_boxed_slice(),
 
+            extra: self.extra,
             stable_id: self.stable_id,
             attachment: self.attachment,
         }
@@ -429,6 +441,11 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
     pub fn item_id(&mut self, slot: u8, item_id: ItemId, count: u8) -> &mut Self {
         let id = self.owner.item_id(item_id);
         self.get().contents[slot as usize] = Item::Bulk(count, id);
+        self
+    }
+
+    pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
+        f(&mut self.get().extra);
         self
     }
 }

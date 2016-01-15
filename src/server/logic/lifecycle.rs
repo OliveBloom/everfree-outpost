@@ -10,27 +10,26 @@ use logic;
 use messages::{ClientResponse, SyncKind};
 use wire::{WireWriter, WireReader};
 use world::Fragment;
+use world::bundle;
 use world::object::*;
 use world::save::{ObjectReader, ObjectWriter};
 
 
 pub fn start_up(mut eng: EngineRef) {
     let world_time =
-        if let Some(mut file) = eng.storage().open_misc_file() {
-            file.read_bytes().unwrap()
+        if let Some(mut file) = eng.storage().open_world_file() {
+            let b = bundle::read_bundle(&mut file).unwrap();
+            bundle::import_bundle(&mut eng.as_world_fragment(), &b);
+            b.world.as_ref().unwrap().now
         } else {
             0
         };
+    trace!("initial world time: {}", world_time);
 
     let unix_time = now();
     eng.messages_mut().set_world_time(unix_time, world_time);
     eng.timer_mut().set_world_time(unix_time, world_time);
     eng.borrow().unwrap().now = world_time;
-
-    if let Some(file) = eng.storage().open_world_file() {
-        let mut sr = ObjectReader::new(file);
-        sr.load_world(&mut eng.as_save_read_fragment()).unwrap();
-    }
 
     if let Some(file) = eng.storage().open_plane_file(STABLE_PLANE_LIMBO) {
         let mut sr = ObjectReader::new(file);
@@ -71,16 +70,14 @@ pub fn shut_down(mut eng: EngineRef) {
     warn_on_err!(eng.script_hooks().call_server_shutdown(eng.borrow()));
 
     {
-        let (h, eng) = eng.borrow().0.split_off();
-        let h = SaveWriteHooks(h);
-        let file = eng.storage().create_world_file();
-        let mut sw = ObjectWriter::new(file, h);
-        warn_on_err!(sw.save_world(eng.world()));
-    }
+        let mut exporter = bundle::Exporter::new(eng.data());
+        exporter.add_world(eng.world());
+        let mut b = exporter.finish();
+        b.world.as_mut().unwrap().now = eng.now();
+        let b = b;
 
-    {
-        let mut file = eng.storage().create_misc_file();
-        warn_on_err!(file.write_bytes(eng.now()));
+        let mut file = eng.storage().create_world_file();
+        warn_on_err!(bundle::write_bundle(&mut file, &b));
     }
 }
 

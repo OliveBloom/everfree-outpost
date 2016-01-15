@@ -112,6 +112,19 @@ impl<'d> Importer<'d> {
 
     // Functions to populate an object from the bundled version.
 
+    fn init_world(&self, w: &mut w::World, b: &b::World) {
+        w.clients.set_next_id(b.next_client);
+        w.entities.set_next_id(b.next_entity);
+        w.inventories.set_next_id(b.next_inventory);
+        w.planes.set_next_id(b.next_plane);
+        w.terrain_chunks.set_next_id(b.next_terrain_chunk);
+        w.structures.set_next_id(b.next_structure);
+
+        w.extra = self.import(&b.extra);
+
+        // child_entities and child_inventories aren't stored directly
+    }
+
     fn init_client(&self, w: &mut w::World, id: ClientId, b: &b::Client) {
         w.clients.set_stable_id(id, b.stable_id).unwrap();
         let c = &mut w.clients[id];
@@ -120,6 +133,7 @@ impl<'d> Importer<'d> {
         let pawn = self.import(&b.pawn);
         c.pawn = if pawn != Some(BAD_ENTITY_ID) { pawn } else { None };
 
+        c.extra = self.import(&b.extra);
         c.stable_id = b.stable_id;
         c.child_entities = self.import_iter(b.child_entities.iter());
         c.child_inventories = self.import_iter(b.child_inventories.iter());
@@ -149,6 +163,7 @@ impl<'d> Importer<'d> {
 
         i.contents = self.import_iter::<_, _, Vec<_>>(b.contents.iter()).into_boxed_slice();
 
+        i.extra = self.import(&b.extra);
         i.stable_id = b.stable_id;
         i.attachment = self.import(&b.attachment);
     }
@@ -163,6 +178,7 @@ impl<'d> Importer<'d> {
                           .map(|&(k, v)| (k, v))
                           .collect();
 
+        p.extra = self.import(&b.extra);
         p.stable_id = b.stable_id;
     }
 
@@ -179,6 +195,7 @@ impl<'d> Importer<'d> {
         tc.cpos = b.cpos;
         tc.blocks = blocks;
 
+        tc.extra = self.import(&b.extra);
         tc.stable_id = b.stable_id;
         tc.flags = b.flags;
         tc.child_structures = self.import_iter(b.child_structures.iter());
@@ -192,6 +209,7 @@ impl<'d> Importer<'d> {
         s.pos = b.pos;
         s.template = self.import_template_id(b.template);
 
+        s.extra = self.import(&b.extra);
         s.stable_id = b.stable_id;
         s.flags = b.flags;
         s.attachment = self.import(&b.attachment);
@@ -244,6 +262,7 @@ impl<'d> Importer<'d> {
     fn add_bundle<F>(&self, f: &mut F, b: &b::Bundle)
             where F: Fragment<'d> {
         // Do all the imports
+        // NB: b.world is handled separately, because ordinary save bundles shouldn't have it set
         for (i, c) in b.clients.iter().enumerate() {
             self.add_client(f, ClientId(i as u16), c);
         }
@@ -291,12 +310,29 @@ impl<'d> Importer<'d> {
         self.init_id_maps(f, b);
         self.add_bundle(f, b);
     }
+
+    pub fn import_world<F>(&mut self, f: &mut F, b: &b::Bundle)
+            where F: Fragment<'d> {
+        // TODO: validate bundle
+        let w = b.world.as_ref().unwrap() as &b::World;
+        self.init_id_maps(f, b);
+        self.init_world(f.world_mut(), w);
+        self.add_bundle(f, b);
+    }
+
 }
 
 pub fn import_bundle<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>
         where F: Fragment<'d> {
     let mut importer = Importer::new(f.world().data());
     importer.import_bundle(f, b);
+    importer
+}
+
+pub fn import_world<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>
+        where F: Fragment<'d> {
+    let mut importer = Importer::new(f.world().data());
+    importer.import_world(f, b);
     importer
 }
 

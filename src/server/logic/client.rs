@@ -13,7 +13,6 @@ use world::Motion;
 use world::bundle::{self, Builder};
 use world::extra;
 use world::object::*;
-use world::save::{self, ObjectReader, ObjectWriter};
 use vision::{self, vision_region};
 
 
