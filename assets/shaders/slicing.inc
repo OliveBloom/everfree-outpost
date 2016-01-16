@@ -3,6 +3,12 @@ const float CAVERN_MAP_RADIUS = 32.0;
 const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
 const float CAVERN_CUTOFF = 1.5 / 255.0;
 
+const int BIT_INSIDE =      0x02;
+const int BIT_INSIDE_NW =   0x04;
+const int BIT_INSIDE_NE =   0x08;
+const int BIT_INSIDE_SW =   0x10;
+const int BIT_INSIDE_SE =   0x20;
+
 int sliceGetCavernTile(vec2 tilePos) {
     tilePos += 0.5;
     vec2 cavernPos = tilePos - sliceCenter;
@@ -10,8 +16,13 @@ int sliceGetCavernTile(vec2 tilePos) {
     return int(texture2D(cavernTex, cavernTexCoord).r * 255.0 + 0.5);
 }
 
+bool _getBit(int x, int value) {
+    int y = x / value;
+    return y - (y / 2 * 2) == 1;
+}
+
 bool _sliceIsTileInside(vec2 tilePos) {
-    return sliceGetCavernTile(tilePos) == 1;
+    return _getBit(sliceGetCavernTile(tilePos), 2);
 }
 
 vec4 _sliceCollectDists(vec2 off) {
@@ -28,18 +39,14 @@ vec2 slicePixelToTile(vec2 pixelPos) {
 
 float sliceCalcInside(vec2 pixelPos) {
     vec2 tilePos = slicePixelToTile(pixelPos);
-    if (_sliceIsTileInside(tilePos)) {
+    int bits = sliceGetCavernTile(tilePos);
+    if (_getBit(bits, BIT_INSIDE)) {
         return 1.0;
     } else {
-        bool n = _sliceIsTileInside(tilePos + vec2( 0.0, -1.0));
-        bool s = _sliceIsTileInside(tilePos + vec2( 0.0,  1.0));
-        bool w = _sliceIsTileInside(tilePos + vec2(-1.0,  0.0));
-        bool e = _sliceIsTileInside(tilePos + vec2( 1.0,  0.0));
-
-        bool nw = n || w || _sliceIsTileInside(tilePos + vec2(-1.0, -1.0));
-        bool ne = n || e || _sliceIsTileInside(tilePos + vec2( 1.0, -1.0));
-        bool sw = s || w || _sliceIsTileInside(tilePos + vec2(-1.0,  1.0));
-        bool se = s || e || _sliceIsTileInside(tilePos + vec2( 1.0,  1.0));
+        bool nw = _getBit(bits, BIT_INSIDE_NW);
+        bool ne = _getBit(bits, BIT_INSIDE_NE);
+        bool sw = _getBit(bits, BIT_INSIDE_SW);
+        bool se = _getBit(bits, BIT_INSIDE_SE);
 
         vec2 finePos = pixelPos / TILE_SIZE;
         vec2 fineOffset = finePos - tilePos;
