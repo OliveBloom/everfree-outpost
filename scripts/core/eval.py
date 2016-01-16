@@ -1,3 +1,4 @@
+import ast
 import builtins
 import importlib
 import io
@@ -132,6 +133,17 @@ class RPCServerUnpickler(pickle.Unpickler):
     def persistent_load(self, pid):
         return self._ctx.get_obj(int(pid))
 
+def eval_or_exec(code_str, globals, locals):
+    code = ast.parse(code_str)
+    if len(code.body) == 1 and isinstance(code.body[0], ast.Expr):
+        code = ast.Expression(code.body[0].value)
+        code = compile(code, '<unknown>', 'eval')
+        return eval(code, globals, locals)
+    else:
+        code = compile(code, '<unknown>', 'exec')
+        exec(code, globals, locals)
+        return None
+
 def do_eval(eng, code):
     RPC_CONTEXT.set_engine_ref(eng)
     locals_ = {
@@ -139,11 +151,7 @@ def do_eval(eng, code):
             'eng': EngineProxy(eng),
             }
     try:
-        if '\n' in code[:-1]:
-            exec(code, {}, locals_)
-            return ''
-        else:
-            return str(eval(code, {}, locals_))
+        return str(eval_or_exec(code, {}, locals_))
     except Exception as e:
         return repr(e)
 

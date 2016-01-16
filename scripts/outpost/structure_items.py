@@ -9,6 +9,7 @@ mallet.register('wood_floor/', mallet.TERRAIN_VARIANTS)
 
 autorotate.register_fence('fence', 'fence_post')
 mallet.register('fence/', mallet.WALL_VARIANTS)
+mallet.register('fence/', ('end/fancy/e', 'end/fancy/w'))
 
 
 structure_items.register('bed')

@@ -2,8 +2,7 @@ from outpost_server.core import use
 from outpost_server.core.types import V3
 from outpost_server.outpost.lib.consts import *
 
-# TODO: magic number (TILE_SIZE)
-ENTRANCE_POS = V3(128, 128, 12) * 32
+ENTRANCE_POS = V3(128, 128, 12) * TILE_SIZE
 
 @use.structure('dungeon_entrance')
 def use_entrance(e, s, args):

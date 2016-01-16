@@ -1,5 +1,6 @@
 from outpost_server.core.types import V3
 from outpost_server.core.engine import EntityProxy, StructureProxy
+from outpost_server.outpost.lib.consts import *
 
 RADIUS = 16
 SPACING = 48
@@ -11,12 +12,13 @@ class Wards(object):
     def get_info(self):
         info = self.plane.extra().get('ward_info')
         if info is None:
-            info = self.plane.extra().setdefault('ward_info', {
-                'server': {
+            stable_pid = self.plane.stable_id()
+            info = self.plane.extra().setdefault('ward_info', {})
+            if stable_pid == STABLE_PLANE_FOREST:
+                info['server'] = {
                     'pos': V3(0, 0, 0),
                     'name': 'the server',
-                },
-            })
+                }
             info = self.plane.extra()['ward_info']
         return info
 
@@ -125,8 +127,12 @@ def can_act(e, pos):
     w = Wards(e.plane())
     p = Permissions(e.engine)
     name = e.controller().name()
+    e_key = get_key(e)
 
     for k in w.find_wards(pos, RADIUS):
+        if k == e_key:
+            # It's the player's own ward
+            continue
         if not p.has_perm(k, name):
             return False, 'This area belongs to %s' % w.get_name(k)
 
