@@ -86,7 +86,9 @@ impl<'a> GeomGen<'a> {
 
             if *idx + t.vert_count as usize >= buf.len() {
                 // Not enough space for all this structure's vertices.  Bailing out in this case
-                // means we don't have to deal with tracking partially-emitted structures.
+                // means we don't have to deal with tracking partially-emitted structures.  Though
+                // we do have to adjust self.cur to avoid skipping `s` completely.
+                self.cur -= 1;
                 break;
             }
 

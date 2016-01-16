@@ -107,7 +107,14 @@ BufferCache.prototype._updateData = function(n) {
             console.assert(arr.constructor === arrs[0].constructor,
                     'callback provided multiple arrays of different types');
         }
-        arrs.push(arr);
+        // Chrome doesn't support slice() directly on TypedArrays, but it works
+        // on the underlying ArrayBuffer.  So we have to go through this little
+        // song and dance...
+        var start = arr.byteOffset;
+        var end = start + arr.byteLength;
+        var buf = arr.buffer.slice(start, end);
+        var arr_copy = new (arr.constructor)(buf);
+        arrs.push(arr_copy);
         total_size += arr.length;
     });
 
