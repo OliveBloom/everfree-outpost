@@ -56,7 +56,9 @@ ChatWindow.prototype.addMessage = function(msg) {
         var old_h = this._content.scrollHeight;
         this._content.removeChild(this._content.firstChild);
         var new_h = this._content.scrollHeight;
-        this._content.scrollTop -= new_h - old_h;
+        // new_h < old_h because the current viewport is closer to the top of
+        // the entire content area.
+        this._content.scrollTop -= old_h - new_h;
     }
 
     // If the chat box was scrolled to the bottom, automatically scroll with
