@@ -90,11 +90,7 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
 
         TerrainGenFragment = terrain_gen | WorldFragment;
 
-        SaveReadHooks = timer | messages | HiddenWorldFragment;
-        SaveReadFragment = HiddenWorldFragment | SaveReadHooks;
-        SaveWriteHooks = timer | messages;
-
-        ChunkProvider = HiddenWorldFragment | SaveReadFragment | TerrainGenFragment;
+        ChunkProvider = HiddenWorldFragment | TerrainGenFragment;
         ChunksFragment = chunks | world | ChunkProvider;
 
         EngineRef = EngineParts::all();

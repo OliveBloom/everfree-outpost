@@ -38,7 +38,6 @@ macro_rules! check {
 pub mod object;
 mod ops;
 mod debug;
-pub mod save;
 pub mod hooks;
 mod types;
 pub mod fragment;
