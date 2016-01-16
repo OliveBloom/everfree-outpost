@@ -135,8 +135,15 @@ vec2 sliceGetPos() {
 
 bool sliceCheck() {
 #ifdef SLICE_ENABLE
+
+# ifndef SLICE_SIMPLIFIED
     vec2 pixelPos = sliceGetPos();
     return baseZ >= sliceZ + 2.0 || !sliceNearInside(pixelPos);
+# else
+    vec2 pixelPos = sliceGetPos();
+    return baseZ >= sliceZ + 2.0 && sliceCalcInside(pixelPos) >= 0.0;
+# endif
+
 #else
     return false;
 #endif

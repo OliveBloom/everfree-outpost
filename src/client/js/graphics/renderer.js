@@ -1,3 +1,4 @@
+var Config = require('config').Config;
 var AsmGraphics = require('asmlibs').AsmGraphics;
 var SIZEOF = require('asmlibs').SIZEOF;
 var getRendererHeapSize = require('asmlibs').getRendererHeapSize;
@@ -532,9 +533,15 @@ function Renderer(gl, assets) {
     this.gl = gl;
     this.data = new RenderData(gl);
     this.buffers = new RenderBuffers(gl);
-    this.shaders = new RenderShaders(gl, assets, this.data);
-    this.shaders_slice = new RenderShaders(gl, assets, this.data,
-            {'SLICE_ENABLE': '1'});
+    this.simple_slice = Config.render_simplified_slicing.get();
+    if (!this.simple_slice) {
+        this.shaders = new RenderShaders(gl, assets, this.data);
+        this.shaders_slice = new RenderShaders(gl, assets, this.data,
+                {'SLICE_ENABLE': '1'});
+    } else {
+        this.shaders = new RenderShaders(gl, assets, this.data,
+                {'SLICE_ENABLE': '1', 'SLICE_SIMPLIFIED': '1'});
+    }
 
     this.prep_time = new TimeSeries(5000);
     this.render_time = new TimeSeries(5000);
@@ -578,7 +585,9 @@ Renderer.prototype.render = function(scene) {
     this.data.prepare(scene);
     this.buffers.prepare(scene);
     this.shaders.prepare(scene);
-    this.shaders_slice.prepare(scene);
+    if (!this.simple_slice) {
+        this.shaders_slice.prepare(scene);
+    }
 
     var end_prep = Date.now();
 
@@ -586,21 +595,25 @@ Renderer.prototype.render = function(scene) {
     // Render
     var start_render = end_prep;
 
-    this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer0);
-    this.shaders_slice.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer1);
-
-    // Copy output framebuffer to canvas.
-
     var gl = this.gl;
     var this_ = this;
 
-    this.buffers.fb_final.use(function(fb_idx) {
-        this_.shaders.blend_layers.draw(fb_idx, 0, 6, {}, {}, {
-            'baseTex': this_.buffers.fb_layer0.textures[0],
-            'slicedTex': this_.buffers.fb_layer1.textures[0],
-            'cavernTex': this_.data.cavern_map.getTexture(),
+    if (!this.simple_slice) {
+        this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer0);
+        this.shaders_slice.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer1);
+
+        // Copy output framebuffer to canvas.
+
+        this.buffers.fb_final.use(function(fb_idx) {
+            this_.shaders.blend_layers.draw(fb_idx, 0, 6, {}, {}, {
+                'baseTex': this_.buffers.fb_layer0.textures[0],
+                'slicedTex': this_.buffers.fb_layer1.textures[0],
+                'cavernTex': this_.data.cavern_map.getTexture(),
+            });
         });
-    });
+    } else {
+        this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_final);
+    }
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     // TODO: move blit_full to a common location

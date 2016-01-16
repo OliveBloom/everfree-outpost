@@ -10,6 +10,7 @@ var DEFAULT_CONFIG = {
 
     'render_outline': true,
     'render_names': true,
+    'render_simplified_slicing': false,
 
     'motion_prediction': true,
     'input_delay': 10,
@@ -113,6 +114,7 @@ exports.Config = {
 
     render_outline: new ConfigItem('render_outline'),
     render_names: new ConfigItem('render_names'),
+    render_simplified_slicing: new ConfigItem('render_simplified_slicing'),
 
     motion_prediction: new ConfigItem('motion_prediction'),
     input_delay: new ConfigItem('input_delay'),

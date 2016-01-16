@@ -14,6 +14,12 @@ function init() {
         Config.login_secret.reset();
     });
 
+    $('enable-simplified-slicing').addEventListener('change', function() {
+        var value = $('enable-simplified-slicing').checked;
+        Config.render_simplified_slicing.set(value);
+    });
+    $('enable-simplified-slicing').checked = Config.render_simplified_slicing.get();
+
     $('enable-motion-prediction').addEventListener('change', function() {
         var value = $('enable-motion-prediction').checked;
         Config.motion_prediction.set(value);
