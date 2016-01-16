@@ -46,13 +46,9 @@ def main(src_dir, build_dir, out_file):
     add('text', 'cursor.frag',          src('assets/shaders/cursor.frag'))
     add('text', 'cursor.vert',          src('assets/shaders/cursor.vert'))
 
-    add('text', 'blit.frag',            src('assets/shaders/blit.frag'))
-    add('text', 'blit_sliced.frag',     src('assets/shaders/blit_sliced.frag'))
     add('text', 'blit_post.frag',       src('assets/shaders/blit_post.frag'))
     add('text', 'blit_output.frag',     src('assets/shaders/blit_output.frag'))
-    add('text', 'blit_depth.frag',      src('assets/shaders/blit_depth.frag'))
     add('text', 'blend_layers.frag',    src('assets/shaders/blend_layers.frag'))
-    add('text', 'blit.vert',            src('assets/shaders/blit.vert'))
     add('text', 'blit_fullscreen.vert', src('assets/shaders/blit_fullscreen.vert'))
 
     add('text', 'terrain2.frag',        src('assets/shaders/terrain2.frag'))
