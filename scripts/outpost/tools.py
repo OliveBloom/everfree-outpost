@@ -28,5 +28,5 @@ def shovel(e, args):
     block = e.plane().get_block(pos)
     if block.name.startswith('farmland/'):
         e.plane().clear_farmland(pos)
-    else:
+    elif block.name.startswith('grass/'):
         e.plane().set_farmland(pos)
