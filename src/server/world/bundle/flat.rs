@@ -849,7 +849,7 @@ impl Flatten for V3 {
         V3 {
             x: f.small_ints[off + 0] as i32,
             y: f.small_ints[off + 1] as i32,
-            z: f.small_ints[off + 1] as i32,
+            z: f.small_ints[off + 2] as i32,
         }
     }
 }
