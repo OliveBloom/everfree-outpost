@@ -12,7 +12,6 @@ use wire::{WireWriter, WireReader};
 use world::Fragment;
 use world::bundle;
 use world::object::*;
-use world::save::{ObjectReader, ObjectWriter};
 
 
 pub fn start_up(mut eng: EngineRef) {
@@ -31,18 +30,18 @@ pub fn start_up(mut eng: EngineRef) {
     eng.timer_mut().set_world_time(unix_time, world_time);
     eng.borrow().unwrap().now = world_time;
 
-    if let Some(file) = eng.storage().open_plane_file(STABLE_PLANE_LIMBO) {
-        let mut sr = ObjectReader::new(file);
-        sr.load_plane(&mut eng.as_save_read_fragment()).unwrap();
+    if let Some(mut file) = eng.storage().open_plane_file(STABLE_PLANE_LIMBO) {
+        let b = bundle::read_bundle(&mut file).unwrap();
+        bundle::import_bundle(&mut eng.as_hidden_world_fragment(), &b);
     } else {
         let name = "Limbo".to_owned();
         let stable_pid = eng.as_hidden_world_fragment().create_plane(name).unwrap().stable_id();
         assert!(stable_pid == STABLE_PLANE_LIMBO);
     }
 
-    if let Some(file) = eng.storage().open_plane_file(STABLE_PLANE_FOREST) {
-        let mut sr = ObjectReader::new(file);
-        sr.load_plane(&mut eng.as_save_read_fragment()).unwrap();
+    if let Some(mut file) = eng.storage().open_plane_file(STABLE_PLANE_FOREST) {
+        let b = bundle::read_bundle(&mut file).unwrap();
+        bundle::import_bundle(&mut eng.as_hidden_world_fragment(), &b);
     } else {
         let name = "Everfree Forest".to_owned();
         let stable_pid = eng.as_hidden_world_fragment().create_plane(name).unwrap().stable_id();

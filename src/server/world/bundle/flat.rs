@@ -346,7 +346,6 @@ macro_rules! flat {
                 v.section_headers = section_headers;
 
                 for s in section_headers {
-                    info!("reading section {:?}, {}, {}", s.tag, s.offset, s.count);
                     if s.offset as usize % ALIGNMENT != 0 {
                         fail!("FlatView::from_bytes: misaligned section offset");
                     }

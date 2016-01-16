@@ -192,6 +192,7 @@ impl<'d> Importer<'d> {
         }
 
         tc.stable_plane = b.stable_plane;
+        tc.plane = w.planes.get_id(b.stable_plane).unwrap();
         tc.cpos = b.cpos;
         tc.blocks = blocks;
 
@@ -206,6 +207,7 @@ impl<'d> Importer<'d> {
         let s = &mut w.structures[id];
 
         s.stable_plane = b.stable_plane;
+        s.plane = w.planes.get_id(b.stable_plane).unwrap();
         s.pos = b.pos;
         s.template = self.import_template_id(b.template);
 
