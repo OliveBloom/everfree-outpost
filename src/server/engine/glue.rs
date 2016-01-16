@@ -139,7 +139,6 @@ impl_slice! {
     EngineRef::as_chunks_fragment -> ChunksFragment;
     ChunkProvider::as_hidden_world_fragment -> HiddenWorldFragment;
     ChunkProvider::as_terrain_gen_fragment -> TerrainGenFragment;
-    ChunkProvider::as_save_read_fragment -> SaveReadFragment;
 }
 
 
@@ -163,32 +162,3 @@ impl<'a, 'd> physics::Fragment<'d> for PhysicsFragment<'a, 'd> {
 impl_slice! {
     EngineRef::as_physics_fragment -> PhysicsFragment;
 }
-
-
-parts!(SaveReadFragment, SaveReadHooks, SaveWriteHooks);
-
-impl<'a, 'd> world::save::ReadFragment<'d> for SaveReadFragment<'a, 'd> {
-    type WF = HiddenWorldFragment<'a, 'd>;
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut HiddenWorldFragment<'a, 'd>) -> R {
-        let e = unsafe { self.borrow().fiddle().to_part().slice() };
-        f(&mut Part::from_part(e))
-    }
-
-    type H = SaveReadHooks<'a, 'd>;
-    fn with_hooks<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut SaveReadHooks<'a, 'd>) -> R {
-        let e = unsafe { self.borrow().fiddle().to_part().slice() };
-        f(&mut Part::from_part(e))
-    }
-}
-
-impl_slice! {
-    EngineRef::as_save_read_fragment -> SaveReadFragment;
-    SaveReadHooks::as_hidden_world_fragment -> HiddenWorldFragment;
-}
-
-
-// TODO: remove
-impl<'a, 'd> world::save::ReadHooks for SaveReadHooks<'a, 'd> {}
-impl<'a, 'd> world::save::WriteHooks for SaveWriteHooks<'a, 'd> {}

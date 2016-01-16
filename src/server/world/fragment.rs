@@ -68,11 +68,14 @@ pub trait Fragment<'d>: Sized {
                                       -> OpResult<ObjectRefMut<'a, 'd, Structure, Self>> {
         // Check validity of `pid`.
         unwrap!(self.world().get_plane(pid));
+        let stable_pid = self.world_mut().planes.pin(pid);
 
         let sid = ops::structure::create_unchecked(self);
         {
             let s = &mut self.world_mut().structures[sid];
+
             s.plane = pid;
+            s.stable_plane = stable_pid;
             s.pos = pos;
             s.template = tid;
         }

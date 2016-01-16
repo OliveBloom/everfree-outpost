@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 
 #![feature(
+    box_str,
     convert,    // OsStr::to_cstring
     core,
     filling_drop,

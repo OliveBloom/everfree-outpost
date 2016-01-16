@@ -25,7 +25,6 @@ const PLANE_DIR: &'static str = "planes";
 const SUMMARY_DIR: &'static str = "summary";
 const TERRAIN_CHUNK_DIR: &'static str = "terrain_chunks";
 const WORLD_FILE_NAME: &'static str = "world.dat";
-const MISC_FILE_NAME: &'static str = "misc.dat";
 const AUTH_DB_FILE_NAME: &'static str = "auth.sqlite";
 const RESTART_FILE_NAME: &'static str = "restart.dat";
 
@@ -87,10 +86,6 @@ impl Storage {
         self.base.join(SAVE_DIR).join(WORLD_FILE_NAME)
     }
 
-    pub fn misc_path(&self) -> PathBuf {
-        self.base.join(SAVE_DIR).join(MISC_FILE_NAME)
-    }
-
     pub fn auth_db_path(&self) -> PathBuf {
         self.base.join(SAVE_DIR).join(AUTH_DB_FILE_NAME)
     }
@@ -132,10 +127,6 @@ impl Storage {
         try_open_file(self.world_path())
     }
 
-    pub fn open_misc_file(&self) -> Option<File> {
-        try_open_file(self.misc_path())
-    }
-
     pub fn open_client_file(&self, name: &str) -> Option<File> {
         try_open_file(self.client_path(name))
     }
@@ -162,10 +153,6 @@ impl Storage {
 
     pub fn create_world_file(&self) -> File {
         File::create(self.world_path()).unwrap()
-    }
-
-    pub fn create_misc_file(&self) -> File {
-        File::create(self.misc_path()).unwrap()
     }
 
     pub fn create_client_file(&self, name: &str) -> File {

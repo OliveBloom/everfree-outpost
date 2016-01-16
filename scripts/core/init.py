@@ -25,20 +25,6 @@ def client_login(eng, cid):
     c = ClientProxy(eng, cid)
     e = c.pawn()
 
-    print('logged in: %s' % cid)
-    if 'inited' not in e.extra():
-        print('initing client')
-        i_main = e.create_inv('main', 30)
-        i_abil = e.create_inv('ability', 30)
-
-        # TODO: kind of a hack.  need a proper core.lifecycle module that
-        # outpost.* can hook into.
-        if e.appearance() & (1 << 7):
-            # unicorn
-            i_abil.bulk_add('ability/light', 1)
-
-        e.extra()['inited'] = True
-
     c.set_main_inventories(e.inv('main'), e.inv('ability'))
 
 # TODO: get rid of all these hacks

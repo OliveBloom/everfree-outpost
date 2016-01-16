@@ -22,12 +22,7 @@ macro_rules! impl_world_Hooks {
 impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     // We should never get client callbacks in the HiddenWorldHooks variant.
 
-    // No client_create callback because clients are added to vision in the logic::client code.
-
-    fn on_client_destroy(&mut self, cid: ClientId) {
-        // TODO: should this be here or in logic::clients?
-        vision::Fragment::remove_client(&mut self.$as_vision_fragment(), cid);
-    }
+    // No client lifecycle callbacks because they're handled in the logic::client code.
 
     fn on_client_change_pawn(&mut self,
                              _cid: ClientId,

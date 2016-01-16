@@ -38,12 +38,12 @@ macro_rules! check {
 pub mod object;
 mod ops;
 mod debug;
-pub mod save;
 pub mod hooks;
 mod types;
 pub mod fragment;
 pub mod flags;
 pub mod extra;
+pub mod bundle;
 
 
 // Structs must be declared at top level so that the submodules can access their private fields.
@@ -146,6 +146,7 @@ pub struct Plane {
 impl_IntrusiveStableId!(Plane, stable_id);
 
 pub struct TerrainChunk {
+    stable_plane: Stable<PlaneId>,
     /// *Invariant*: `plane` always refers to a loaded plane.
     plane: PlaneId,
     cpos: V2,
@@ -159,6 +160,7 @@ pub struct TerrainChunk {
 impl_IntrusiveStableId!(TerrainChunk, stable_id);
 
 pub struct Structure {
+    stable_plane: Stable<PlaneId>,
     /// *Invariant*: `plane` always refers to a loaded plane.
     plane: PlaneId,
     pos: V3,
