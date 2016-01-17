@@ -54,8 +54,8 @@ If you want to work only on mods, add these additional flags:
 
         --prebuilt-dir=../outpost-linux-2016-01-16a --data-only --force
 
-If you want to build a specific part other than mods, see `./configure` for
-other flags, particularly `--use-prebuilt`.
+If you want to build a specific part other than mods, see `./configure --help`
+for other flags, particularly `--use-prebuilt`.
 
 Some errors will appear during configuration if any dependency is missing (for
 example, if you skipped installing something because you won't work on the part
