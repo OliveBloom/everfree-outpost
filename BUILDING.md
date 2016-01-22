@@ -27,6 +27,11 @@ If you want to work on client-side (Javascript) code, get these:
 
 If you want to work on server-side (Rust) code, get these:
  * `build-essential`
+ * `libpython3.4-dev`
+ * `libsqlite3-dev`
+ * `libwebsocketpp-dev`
+ * `libboost-dev`
+ * `libboost-system-dev`
  * [outpost-build-tools](http://play.everfree-outpost.com/outpost-build-tools-2015-12-07.tar.xz)
    OR build from source the Rust compiler and packages listed in README.md.
 
