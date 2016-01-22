@@ -32,6 +32,10 @@ class Image(object):
 
         self.px_size = self._img.size
 
+    @staticmethod
+    def from_raw(img):
+        return Image(img=CachedImage.from_raw(img))
+
     def raw(self):
         return self._img
 

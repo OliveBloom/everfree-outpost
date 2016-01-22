@@ -24,7 +24,7 @@ def copy_builder2_to_builder(b):
             lst.append(proto.instantiate())
     dump('block', b.blocks)
     dump('structure', b.structures)
-    dump('item', b.items)
+    b.items = builder2.ITEM.all()
     dump('recipe', b.recipes)
     dump('loot_table', b.loot_tables)
 

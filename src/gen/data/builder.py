@@ -1,4 +1,5 @@
 from . import structure, block, item, recipe, animation, attachment, loot_table, extra
+from outpost_data.core import builder2, image2
 
 
 class Objects(object):
@@ -31,6 +32,11 @@ class Objects(object):
         return next(iter(self.x.values()))
 
 
+class Objects2:
+    def __init__(self, builder):
+        self._builder = builder
+
+
 class Blocks(Objects):
     def create(self, name, shape, tiles):
         b = block.BlockDef(name, shape, tiles)
@@ -53,17 +59,19 @@ class Structures(Objects):
         self._foreach(lambda s: s.set_light(pos, color, radius))
         return self
 
-class Items(Objects):
+class Items(Objects2):
     def create(self, name, ui_name, image):
-        i = item.ItemDef(name, ui_name, image)
-        self._add(i)
-        self.owner.items.append(i)
+        self._builder.new(name) \
+                .display_name(ui_name) \
+                .icon(image2.Image.from_raw(image))
         return self
 
     def recipe(self, station, inputs, count=1):
-        def go(i):
-            self.owner.mk_recipe(i.name, i.ui_name, station, inputs, {i.name: count})
-        self._foreach(go)
+        for n in self._builder.keys():
+            r = builder2.RECIPE.from_item(self._builder[n]) \
+                    .station(station)
+            for k,v in inputs.items():
+                r.input(k, v)
         return self
 
 class Recipes(Objects):
@@ -134,7 +142,6 @@ class Builder(object):
     def __init__(self):
         self.structures = []
         self.blocks = []
-        self.items = []
         self.recipes = []
         self.anim_groups = []
         self.animations = []
@@ -159,7 +166,7 @@ class Builder(object):
 
 
     def item_builder(self):
-        return Items(self)
+        return Items(builder2.ITEM.child())
 
     def mk_item(self, *args, **kwargs):
         return self.item_builder().create(*args, **kwargs)

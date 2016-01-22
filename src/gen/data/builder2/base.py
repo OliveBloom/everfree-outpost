@@ -155,6 +155,15 @@ class BuilderBase(object):
     def __getitem__(self, k):
         return self._dct[k]
 
+    def keys(self):
+        return self._dct.keys()
+
+    def values(self):
+        return self._dct.values()
+
+    def all(self):
+        return list(x.instantiate() for x in self._dct.values())
+
     def _create(self, name):
         obj = self._proto.clone()
         obj.name = self._full_prefix + name

@@ -80,6 +80,10 @@ class CachedImage(object):
     def open(filename):
         return FileImage(filename)
 
+    @staticmethod
+    def from_raw(img):
+        return ConstImage(img)
+
     def modify(self, f, size=None, desc=None):
         if desc is None:
             desc = '%s.%s' % (f.__module__, f.__qualname__)
