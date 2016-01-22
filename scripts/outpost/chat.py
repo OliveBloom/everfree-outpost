@@ -38,6 +38,8 @@ def sethome(client, args):
     pos = pawn.pos()
     pawn.extra()['home_pos'] = pos
 
+    client.send_message('Set home to %d, %d, %d' % (pos.x, pos.y, pos.z))
+
 @chat.command(sethome.doc)
 def home(client, args):
     pawn = client.pawn()
