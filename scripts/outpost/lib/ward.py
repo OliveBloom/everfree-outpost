@@ -3,6 +3,7 @@ from outpost_server.core.engine import EntityProxy, StructureProxy
 from outpost_server.outpost.lib.consts import *
 
 RADIUS = 16
+FRIEND_SPACING = 32
 SPACING = 48
 
 class Wards(object):
@@ -46,6 +47,9 @@ class Wards(object):
 
     def get_name(self, key):
         return self.get_info()[key]['name']
+
+    def get_pos(self, key):
+        return self.get_info()[key]['pos']
 
 
 class Permissions(object):
@@ -108,8 +112,14 @@ def can_add(e, pos):
     name = e.controller().name()
 
     for k in w.find_wards(pos, SPACING):
-        if not p.has_perm(k, name):
-            return False, 'This area is too close to land belonging to %s' % w.get_name(k)
+        if p.has_perm(k, name):
+            d = w.get_pos(k) - pos
+            dist = max(abs(x) for x in (d.x, d.y, d.z))
+            print('dist = %d, %s, %s' % (dist, w.get_pos(k), pos))
+            if dist >= FRIEND_SPACING:
+                continue
+        # No permission, or too close even for friends
+        return False, 'This area is too close to land belonging to %s' % w.get_name(k)
 
     return True, None
 
