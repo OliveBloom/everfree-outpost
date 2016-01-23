@@ -1,7 +1,7 @@
 from outpost_data.core.consts import *
 from outpost_data.core.builder2 import *
 from outpost_data.core.geom import Mesh
-from outpost_data.core.image2 import loader
+from outpost_data.core.image2 import loader, Anim
 from outpost_data.core import structure
 from outpost_data.outpost.lib import meshes
 
@@ -111,21 +111,46 @@ def do_stair(image):
             .station('anvil') \
             .input('wood', 10)
 
-def do_torch(image, variant, variant_disp, color):
-    name = 'torch/' + variant if variant is not None else 'torch'
-    disp_name = variant_disp + ' Torch' if variant is not None else 'Torch'
+TORCH_VARIANTS = (
+        ('red', 'Red', (255, 32, 32)),
+        ('orange', 'Orange', (255, 130, 32)),
+        ('yellow', 'Yellow', (255, 255, 32)),
+        ('green', 'Green', (32, 255, 32)),
+        ('blue', 'Blue', (64, 128, 255)),
+        ('purple', 'Purple', (200, 32, 255)),
+        )
 
-    s = STRUCTURE.new(name) \
-            .mesh(meshes.solid(1, 1, 1)) \
+def do_torch(image):
+    anim = Anim([image.extract((i, 0), (1, 2)) for i in range(4)], 4)
+    s = STRUCTURE.new('torch') \
             .shape(structure.solid(1, 1, 1)) \
             .layer(1) \
-            .anim([image.extract((i, 0), (1, 2)) for i in range(4)], 4) \
-            .light((16, 16, 32), color, 300)
-    i = ITEM.from_structure(s).display_name(disp_name)
+            .mesh_part(meshes.top(1, 1, 1), anim) \
+            .mesh_part(meshes.front(1, 1, 1), anim.still()) \
+            .light((16, 16, 32), (255, 230, 200), 300)
+    i = ITEM.from_structure(s).display_name('Torch')
     r = RECIPE.from_item(i) \
             .station('anvil') \
             .input('wood', 2) \
             .input('stone', 1)
+
+def do_torch_variant(image, idx, v):
+    color, disp_base, light_color = v
+
+    anim = Anim([image.extract((i, 0), (1, 2)) for i in range(4)], 4)
+    s = STRUCTURE.new('torch/' + color) \
+            .shape(structure.solid(1, 1, 1)) \
+            .layer(1) \
+            .mesh_part(meshes.top(1, 1, 1), anim) \
+            .mesh_part(meshes.front(1, 1, 1), anim.still()) \
+            .light((16, 16, 32), light_color, 300)
+    i = ITEM.from_structure(s).display_name(disp_base + ' Torch')
+    r = RECIPE.new('torch/%d/%s' % (idx, color)) \
+            .display_name(disp_base + ' Torch') \
+            .station('anvil') \
+            .input('torch', 10) \
+            .input('gem/' + color, 1) \
+            .output('torch/' + color, 10)
 
 
 def init():
@@ -149,4 +174,6 @@ def init():
             .display_name('Book') \
             .icon(icons('gervais_roguelike/AngbandTk_book.png'))
 
-    do_torch(structures('torch.png'), None, None, (255, 230, 200))
+    do_torch(structures('torch.png'))
+    for i, v in enumerate(TORCH_VARIANTS):
+        do_torch_variant(structures('torch-%s.png' % v[0]), i, v)

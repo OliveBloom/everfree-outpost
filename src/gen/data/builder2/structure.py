@@ -96,3 +96,15 @@ class StructureBuilder(BuilderBase):
             else:
                 x.parts.append(part)
         return self._dict_modify(f, args)
+
+    def mesh_part(self, mesh, img, bounds=None):
+        def f(x, arg):
+            bounds_ = bounds
+            if bounds_ is None:
+                bounds_ = ((0, 0, 0), tuple(y * TILE_SIZE for y in x.shape.size))
+            part = (Model2(mesh, bounds_), img)
+            if x.parts is None:
+                x.parts = [part]
+            else:
+                x.parts.append(part)
+        return self._dict_modify(f, None)
