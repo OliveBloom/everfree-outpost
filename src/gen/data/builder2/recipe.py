@@ -6,7 +6,7 @@ from outpost_data.core.recipe import RecipeDef
 
 class RecipePrototype(PrototypeBase):
     KIND = 'recipe'
-    FIELDS = ('display_name', 'station', 'inputs', 'outputs')
+    FIELDS = ('display_name', 'station', 'ability', 'inputs', 'outputs')
     def __init__(self):
         super(RecipePrototype, self).__init__()
         self.inputs = {}
@@ -22,13 +22,15 @@ class RecipePrototype(PrototypeBase):
         self.name = self.require('name') or '_%x' % id(self)
         display_name = self.require('display_name', default=self.name)
         station = self.require('station', default='anvil')
-        return RecipeDef(self.name, display_name, station, self.inputs, self.outputs)
+        ability = self.ability or 'none'
+        return RecipeDef(self.name, display_name, station, ability, self.inputs, self.outputs)
 
 class RecipeBuilder(BuilderBase):
     PROTO_CLASS = RecipePrototype
 
     display_name = dict_modifier('display_name')
     station = dict_modifier('station')
+    ability = dict_modifier('ability')
     # `inputs` and `outputs` are already dicts, so there's no way for `_dict_modifier`
     # to distinguish the "set all" and "set named" cases.
     inputs = modifier('inputs')

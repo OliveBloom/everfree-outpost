@@ -116,7 +116,7 @@ TORCH_VARIANTS = (
         ('orange', 'Orange', (255, 130, 32)),
         ('yellow', 'Yellow', (255, 255, 32)),
         ('green', 'Green', (32, 255, 32)),
-        ('blue', 'Blue', (64, 128, 255)),
+        ('blue', 'Blue', (32, 64, 255)),
         ('purple', 'Purple', (200, 32, 255)),
         )
 
@@ -148,6 +148,7 @@ def do_torch_variant(image, idx, v):
     r = RECIPE.new('torch/%d/%s' % (idx, color)) \
             .display_name(disp_base + ' Torch') \
             .station('anvil') \
+            .ability('blueprint/colored_torches') \
             .input('torch', 10) \
             .input('gem/' + color, 1) \
             .output('torch/' + color, 10)

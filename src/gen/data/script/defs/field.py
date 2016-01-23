@@ -129,6 +129,7 @@ def _build_field_map():
             from_item = FromObjectField,
             display_name = StringField,
             station = NameField,
+            ability = NameField,
             input = ItemCountField,
             output = ItemCountField
             )

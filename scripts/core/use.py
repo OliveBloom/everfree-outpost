@@ -86,9 +86,9 @@ def item(name):
 def ability(name):
     ability = DATA.item(name)
     def register(f):
-        assert ability not in _USE_ITEM, \
+        assert ability not in _USE_ABILITY, \
                 'duplicate registration for %s (original was %s)' % \
-                (ability, _USE_ITEM[ability].__qualname__)
+                (ability, _USE_ABILITY[ability].__qualname__)
         _USE_ABILITY[ability] = f
         return f
     return register

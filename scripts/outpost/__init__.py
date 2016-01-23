@@ -1,5 +1,6 @@
 from . import ability
 from . import base
+from . import blueprint
 from . import cave
 from . import chat
 from . import chest

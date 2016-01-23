@@ -3,15 +3,17 @@ from .util import err
 
 
 class RecipeDef(object):
-    def __init__(self, name, ui_name, station, inputs, outputs):
+    def __init__(self, name, ui_name, station, ability, inputs, outputs):
         self.name = name
         self.ui_name = ui_name
         self.station_name = station
+        self.ability_name = ability or 'none'
         self.input_names = tuple(inputs.items())
         self.output_names = tuple(outputs.items())
 
         self.id = None
         self.station_id = None
+        self.ability_id = None
         self.input_ids = None
         self.output_ids = None
 
@@ -24,6 +26,7 @@ def resolve_item_ids(recipes, item_id_map):
         return id
 
     for r in recipes:
+        r.ability_id = go(r.name, r.ability_name)
         r.input_ids = tuple((go(r.name, k), v) for k,v in r.input_names)
         r.output_ids = tuple((go(r.name, k), v) for k,v in r.output_names)
 
@@ -38,6 +41,7 @@ def build_client_json(recipes):
         return {
                 'ui_name': r.ui_name,
                 'station': r.station_id,
+                'ability': r.ability_id,
                 'inputs': r.input_ids,
                 'outputs': r.output_ids,
                 }
@@ -48,6 +52,7 @@ def build_server_json(recipes):
         return {
                 'name': r.name,
                 'station': r.station_id,
+                'ability': r.ability_id,
                 'inputs': r.input_ids,
                 'outputs': r.output_ids,
                 }
