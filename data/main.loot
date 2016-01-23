@@ -1,6 +1,6 @@
 [multi_item cave/chest]
 *cave/chest/small
-(2%) *cave/chest/large
+(10%) *cave/chest/large
 
 [choose_item cave/chest/small]
 (1) 80-120 stone
@@ -8,9 +8,9 @@
 (2) 15-20 crystal
 
 [choose_item cave/chest/large]
-(1) hat
 (2) 10-20 book
-(3) santa_hat
+(1) hat
+(1) *random_blueprint
 
 
 [choose_structure cave/floor]
@@ -40,15 +40,23 @@
 (1) *no_structure
 
 
-[choose_item dungeon/chest/small]
+[multi_item dungeon/chest/small]
+*dungeon/chest/small/loot
+(2%) *random_blueprint
+
+[choose_item dungeon/chest/small/loot]
 (3) 8-12 book
 (7) fountain
 
 [choose_item dungeon/chest/large]
 (1) hat
-(2) 25-40 book
-(3) trophy
-(3) santa_hat
+(1) 25-40 book
+(1) trophy
+(1) *random_blueprint
+
+
+[choose_item random_blueprint]
+(1) blueprint/colored_torches
 
 
 [choose_structure no_structure]
