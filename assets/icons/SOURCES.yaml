@@ -8,6 +8,11 @@ stones.png:
     attribution:
         Recolored Williamson's rock and ore tiles to match LPC rocks.
 
+crystal.png:
+    author: Stuart Pernsteiner
+    derived-from: gervais-roguelike-tiles
+    attribution: Based on the blue crystal clusten in dg_misc32.gif
+
 equip_hat_icon.png: &witch-hat
     attribution: Based on the witch hat sprite sheet
 equip_hat_icon_remove.png: *witch-hat
@@ -36,4 +41,3 @@ gervais_roguelike/*.png: &gervais-roguelike
 blueprint.png:
     derived-from: williamson-roguelike-items
     attribution: Page/note icon, recolored to look like a blueprint
-

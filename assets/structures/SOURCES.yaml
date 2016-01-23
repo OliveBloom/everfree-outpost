@@ -88,6 +88,16 @@ torch-green.png: *colored-torches
 torch-blue.png: *colored-torches
 torch-purple.png: *colored-torches
 
+floor-red.png: &colored-floors
+    author: Anonymous
+    attribution: LPC wood floors, recolored by Anonymous
+    derived-from: lpc-base-tiles
+floor-orange.png: *colored-floors
+floor-yellow.png: *colored-floors
+floor-green.png: *colored-floors
+floor-blue.png: *colored-floors
+floor-purple.png: *colored-floors
+
 
 wood_wall.png: &wood-wall
     author: Nonnykins

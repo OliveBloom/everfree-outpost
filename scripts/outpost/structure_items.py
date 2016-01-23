@@ -7,6 +7,12 @@ mallet.register('road/', mallet.TERRAIN_VARIANTS)
 autorotate.register_floor('house_floor', 'wood_floor')
 mallet.register('wood_floor/', mallet.TERRAIN_VARIANTS)
 
+for color in ('red', 'orange', 'yellow', 'green', 'blue', 'purple'):
+    autorotate.register_floor('wood_floor/' + color)
+    mallet.register('wood_floor/%s/' % color, mallet.TERRAIN_VARIANTS)
+
+
+
 
 autorotate.register_fence('fence', 'fence_post')
 mallet.register('fence/', mallet.WALL_VARIANTS)

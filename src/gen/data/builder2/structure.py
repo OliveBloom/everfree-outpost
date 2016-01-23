@@ -10,7 +10,7 @@ DEFAULT_SHAPE = solid(1, 1, 1)
 class StructurePrototype(PrototypeBase):
     KIND = 'structure'
     FIELDS = (
-            'image', 'mesh', 'shape', 'layer', 'parts',
+            'image', 'mesh', 'image_bounds', 'shape', 'layer', 'parts',
             'light_offset', 'light_color', 'light_radius',
             )
 
@@ -23,7 +23,8 @@ class StructurePrototype(PrototypeBase):
         if self.require_one('mesh', 'parts'):
             mesh = self.mesh
             img = self.require('image', reason='mesh')
-            bounds = ((0, 0, 0), tuple(x * TILE_SIZE for x in shape.size))
+            bounds = self.image_bounds or \
+                    ((0, 0, 0), tuple(x * TILE_SIZE for x in shape.size))
             parts = [(Model2(mesh, bounds), img)]
         else:
             parts = self.parts
@@ -66,6 +67,7 @@ class StructureBuilder(BuilderBase):
 
     image = dict_modifier('image')
     mesh = dict_modifier('mesh')
+    bounds = dict_modifier('bounds')
     shape = dict_modifier('shape')
     layer = dict_modifier('layer')
     parts = dict_modifier('parts')
