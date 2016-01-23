@@ -10,8 +10,8 @@ var TAG = require('inventory').TAG;
 
 
 /** @constructor */
-function CraftingUI(station_type, station_id, inv) {
-    this.recipe_list = new RecipeList(station_type, inv);
+function CraftingUI(station_type, station_id, inv, ability_inv) {
+    this.recipe_list = new RecipeList(station_type, inv, ability_inv);
     this.item_list = new ItemGrid(inv, 6);
     this.station_id = station_id;
     this.inv = inv;
@@ -114,12 +114,14 @@ CraftingUI.prototype._updateRecipeDisplay = function() {
 
 
 /** @constructor */
-function RecipeList(station_type, inv) {
+function RecipeList(station_type, inv, ability_inv) {
     var list_div = util.element('div', ['class=recipe-list']);
     var recipe_items = [];
     for (var i = 0; i < RecipeDef.by_id.length; ++i) {
         var recipe = RecipeDef.by_id[i];
-        if (recipe != null && recipe.station == station_type) {
+        if (recipe != null &&
+                recipe.station == station_type &&
+                (recipe.ability == 0 || ability_inv.count(recipe.ability) > 0)) {
             var row = new RecipeRow(i, recipe.ui_name);
             recipe_items.push(row);
             list_div.appendChild(row.dom);

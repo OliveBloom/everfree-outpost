@@ -4,6 +4,7 @@ function RecipeDef_(id, info) {
     this.name = info['name'];
     this.ui_name = info['ui_name'] || info['name'];
     this.station = info['station'];
+    this.ability = info['ability'] || 0;
     this.inputs = info['inputs'];
     this.outputs = info['outputs'];
 }

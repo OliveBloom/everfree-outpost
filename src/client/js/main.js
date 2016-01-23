@@ -835,7 +835,7 @@ function handleOpenDialog(idx, args) {
 function handleOpenCrafting(station_type, station_id, inventory_id) {
     var inv = inv_tracker.get(inventory_id);
 
-    var ui = new CraftingUI(station_type, station_id, inv);
+    var ui = new CraftingUI(station_type, station_id, inv, ability_inv);
     dialog.show(ui);
 
     ui.onaction = function(station_id, inventory_id, recipe_id, count) {
