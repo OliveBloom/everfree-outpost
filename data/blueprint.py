@@ -11,3 +11,4 @@ def init():
     icon = load('icons/blueprint.png')
 
     do_blueprint(icon, 'colored_torches', 'Colored Torches')
+    do_blueprint(icon, 'colored_floors', 'Colored Floors')

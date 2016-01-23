@@ -57,6 +57,7 @@
 
 [choose_item random_blueprint]
 (1) blueprint/colored_torches
+(1) blueprint/colored_floors
 
 
 [choose_structure no_structure]

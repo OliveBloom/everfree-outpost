@@ -19,4 +19,5 @@ def register(item_name, what, where):
                 'This is a passive ability.  Craft %s at %s.' % (what, where))
 
 register('colored_torches', 'colored torches', 'an anvil')
+register('colored_floors', 'colored floors', 'an anvil')
 

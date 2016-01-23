@@ -86,6 +86,7 @@ def do_floor_variant(image, idx, color, disp_base):
     r = RECIPE.new('floor/%d/%s' % (idx, color)) \
             .display_name(disp_base + ' Floor') \
             .station('anvil') \
+            .ability('blueprint/colored_floors') \
             .input('house_floor', 20) \
             .input('gem/' + color, 1) \
             .output('wood_floor/' + color, 20)
