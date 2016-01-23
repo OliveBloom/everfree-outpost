@@ -23,7 +23,7 @@ def copy_builder2_to_builder(b):
         for proto in builder2.INSTANCES[k]._dct.values():
             lst.append(proto.instantiate())
     dump('block', b.blocks)
-    dump('structure', b.structures)
+    b.structures = builder2.STRUCTURE.all()
     b.items = builder2.ITEM.all()
     dump('recipe', b.recipes)
     dump('loot_table', b.loot_tables)

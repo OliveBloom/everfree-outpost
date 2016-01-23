@@ -1,6 +1,7 @@
 from outpost_data.core import image2, geom, util
 from outpost_data.core.builder2.base import *
 from outpost_data.core.consts import *
+from outpost_data.core.image2 import Anim
 from outpost_data.core.structure import solid, StructureDef, StructureDef2, StaticAnimDef, Model2
 
 
@@ -30,7 +31,6 @@ class StructurePrototype(PrototypeBase):
 
         s = StructureDef2(self.name, shape, layer)
         for m, i in parts:
-            print(self.name, m, i)
             s.add_part(m, i)
 
         pos, color, radius = self.check_group(
@@ -74,17 +74,17 @@ class StructureBuilder(BuilderBase):
     light_color = dict_modifier('light_color')
     light_radius = dict_modifier('light_radius')
 
-    def light(offset, color, radius):
-        def f(x):
+    def light(self, offset, color, radius):
+        def f(x, arg):
             x.light_offset = offset
             x.light_color = color
             x.light_radius = radius
-        return self._modify(f)
+        return self._modify(f, None)
 
-    def anim(frames, framerate, oneshot=False):
-        def f(x):
+    def anim(self, frames, framerate, oneshot=False):
+        def f(x, arg):
             x.image = Anim(frames, framerate, oneshot)
-        return self._modify(f)
+        return self._modify(f, None)
 
     def part(self, *args):
         if len(args) == 1:

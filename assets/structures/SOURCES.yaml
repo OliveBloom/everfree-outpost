@@ -71,11 +71,23 @@ statue.png:
     author: Fernando Ariel dos Santos Alves
     license: CC-BY 4.0
 
+
 torch.*:
     author: Stuart Pernsteiner
     attribution:
         Daniel Eddeland's fence post, plus the top of the torch from Curt's animated water and fire.
     derived-from: lpc-water-and-fire, daneeklu-farming-tilesets
+
+torch-red.png: &colored-torches
+    author: Anonymous
+    attribution: torch.png, recolored by Anonymous
+    derived-from: lpc-water-and-fire, daneeklu-farming-tilesets
+torch-orange.png: *colored-torches
+torch-yellow.png: *colored-torches
+torch-green.png: *colored-torches
+torch-blue.png: *colored-torches
+torch-purple.png: *colored-torches
+
 
 wood_wall.png: &wood-wall
     author: Nonnykins

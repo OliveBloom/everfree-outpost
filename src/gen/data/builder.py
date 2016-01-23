@@ -36,6 +36,18 @@ class Objects2:
     def __init__(self, builder):
         self._builder = builder
 
+    def merge(self, other):
+        assert(type(self) is type(other))
+        # bad hack
+        for k, v in other._builder._dct.items():
+            self._builder._dct[k] = v
+
+    def unwrap(self):
+        return self._builder.unwrap()
+
+    def __getitem__(self, k):
+        return self._builder[k]
+
 
 class Blocks(Objects):
     def create(self, name, shape, tiles):
@@ -48,15 +60,23 @@ class Blocks(Objects):
         self._foreach(lambda s: s.set_light(color, radius))
         return self
 
-class Structures(Objects):
+class Structures(Objects2):
     def create(self, name, image, model, shape, layer):
-        s = structure.StructureDef(name, image, model, shape, layer)
-        self._add(s)
-        self.owner.structures.append(s)
+        if isinstance(image, structure.StaticAnimDef):
+            image = image2.Anim(
+                    [image2.Image.from_raw(f) for f in image.frames],
+                    image.framerate, image.oneshot)
+        else:
+            image = image2.Image.from_raw(image)
+        self._builder.new(name) \
+                .image(image) \
+                .mesh(model.to_mesh()) \
+                .shape(shape) \
+                .layer(layer)
         return self
 
     def light(self, pos, color, radius):
-        self._foreach(lambda s: s.set_light(pos, color, radius))
+        self._builder.light(pos, color, radius)
         return self
 
 class Items(Objects2):
@@ -140,7 +160,6 @@ class Extras(Objects):
 
 class Builder(object):
     def __init__(self):
-        self.structures = []
         self.blocks = []
         self.recipes = []
         self.anim_groups = []
@@ -159,7 +178,7 @@ class Builder(object):
 
 
     def structure_builder(self):
-        return Structures(self)
+        return Structures(builder2.STRUCTURE.child())
 
     def mk_structure(self, *args, **kwargs):
         return self.structure_builder().create(*args, **kwargs)
