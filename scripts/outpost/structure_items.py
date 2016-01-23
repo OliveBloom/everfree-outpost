@@ -21,12 +21,15 @@ structure_items.register('bed')
 structure_items.register('table')
 structure_items.register('trophy')
 structure_items.register('fountain')
-structure_items.register('torch')
 structure_items.register('stair', 'stair/n')
 structure_items.register('wood_pillar', 'pillar/wood')
 structure_items.register('stone_pillar', 'pillar/stone')
 structure_items.register('statue', 'statue/e')
 mallet.register('statue/', ('e', 's', 'w', 'n'))
+
+structure_items.register('torch')
+for color in ('red', 'orange', 'yellow', 'green', 'blue', 'purple'):
+    structure_items.register('torch/' + color)
 
 
 def wall_and_door(name, tool, extra_variants=()):
