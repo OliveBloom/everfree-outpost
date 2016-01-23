@@ -25,7 +25,7 @@ def copy_builder2_to_builder(b):
     dump('block', b.blocks)
     b.structures = builder2.STRUCTURE.all()
     b.items = builder2.ITEM.all()
-    dump('recipe', b.recipes)
+    b.recipes = builder2.RECIPE.all()
     dump('loot_table', b.loot_tables)
 
 def postprocess(b):

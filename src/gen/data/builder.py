@@ -94,11 +94,13 @@ class Items(Objects2):
                 r.input(k, v)
         return self
 
-class Recipes(Objects):
+class Recipes(Objects2):
     def create(self, name, ui_name, station, inputs, outputs):
-        r = recipe.RecipeDef(name, ui_name, station, inputs, outputs)
-        self._add(r)
-        self.owner.recipes.append(r)
+        self._builder.new(name) \
+                .display_name(ui_name) \
+                .station(station) \
+                .inputs(inputs) \
+                .outputs(outputs)
         return self
 
 class AnimGroups(Objects):
@@ -161,7 +163,6 @@ class Extras(Objects):
 class Builder(object):
     def __init__(self):
         self.blocks = []
-        self.recipes = []
         self.anim_groups = []
         self.animations = []
         self.sprites = []
@@ -192,7 +193,7 @@ class Builder(object):
 
 
     def recipe_builder(self):
-        return Recipes(self)
+        return Recipes(builder2.RECIPE.child())
 
     def mk_recipe(self, *args, **kwargs):
         return self.recipe_builder().create(*args, **kwargs)
