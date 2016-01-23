@@ -1,3 +1,4 @@
+from outpost_server.core import use
 from outpost_server.outpost.lib import autorotate, door, mallet, structure_items
 
 autorotate.register_floor('road')
@@ -10,6 +11,10 @@ mallet.register('wood_floor/', mallet.TERRAIN_VARIANTS)
 autorotate.register_fence('fence', 'fence_post')
 mallet.register('fence/', mallet.WALL_VARIANTS)
 mallet.register('fence/', ('end/fancy/e', 'end/fancy/w'))
+@use.item('fence_gate')
+def use_fence_gate(e, args):
+    structure_items.place(e, 'fence_gate', 'fence/gate/closed')
+door.register_use('fence/gate', tool_name='axe')
 
 
 structure_items.register('bed')

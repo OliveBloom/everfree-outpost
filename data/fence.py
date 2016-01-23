@@ -1,6 +1,6 @@
 from outpost_data.core.consts import *
 from outpost_data.core.builder2 import *
-from outpost_data.core.image2 import load
+from outpost_data.core.image2 import load, Image
 from outpost_data.core import structure
 from outpost_data.outpost.lib import meshes
 
@@ -10,14 +10,14 @@ FENCE_PART_TABLE = (
         ('corner/nw',       'tee/s',            'corner/ne'),
         ('tee/e',           'cross',            'tee/w'),
         ('corner/sw',       'tee/n',            'corner/se'),
-        ('end/fancy/e',     'gate',             'end/fancy/w'),
+        ('end/fancy/e',     'gate/closed',      'end/fancy/w'),
         )
 FENCE_PARTS = {v: (x, y) for y, vs in enumerate(FENCE_PART_TABLE) for x, v in enumerate(vs)}
 
 FENCE_ITEMS = (
         ('fence', 'Fence', 'edge/horiz'),
         ('fence_post', 'Fence Post', 'end/fancy/e'),
-        ('fence_gate', 'Fence Gate', 'gate'),
+        ('fence_gate', 'Fence Gate', 'gate/closed'),
         )
 
 def init():
@@ -30,6 +30,11 @@ def init():
             .layer(1)
     for k in FENCE_PARTS.keys():
         s.new(k).image(parts[k])
+
+    s_open = s.child().shape(structure.empty(1, 1, 1))
+    s_open.new('gate/open').image(Image(size=(1, 2), unit=TILE_SIZE))
+    s_open.new('gate/opening').image(Image(size=(1, 2), unit=TILE_SIZE))
+    s_open.new('gate/closing').image(Image(size=(1, 2), unit=TILE_SIZE))
 
     r = RECIPE.prefixed('fence') \
             .station('anvil') \

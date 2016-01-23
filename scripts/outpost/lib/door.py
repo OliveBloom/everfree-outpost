@@ -73,10 +73,12 @@ def register_use(basename, tool_name=None, delay=250, mid_delay=3000):
     t_opening, t_open, t_closing, t_closed = register(basename, delay, mid_delay)
 
     @use.structure(t_closed)
+    @use.structure(t_closing)
     def use_closed(e, s, args):
         open_close(s)
 
     @use.structure(t_open)
+    @use.structure(t_opening)
     def use_open(e, s, args):
         close(s)
 
