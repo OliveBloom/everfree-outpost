@@ -56,6 +56,9 @@ class Image(object):
     def with_unit(self, unit):
         return Image(img=self._img, unit=unit)
 
+    def still(self):
+        return self
+
     def extract(self, pos, size=1, unit=None):
         x, y = pos
         w, h = t2(size)
@@ -183,6 +186,9 @@ class Anim(object):
 
     def with_unit(self, *args, **kwargs):
         return self._map_frames('with_unit', args, kwargs)
+
+    def still(self):
+        return self._frames[0]
 
     def extract(self, *args, **kwargs):
         return self._map_frames('extract', args, kwargs)

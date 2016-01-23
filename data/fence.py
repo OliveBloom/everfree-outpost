@@ -2,7 +2,7 @@ from outpost_data.core.consts import *
 from outpost_data.core.builder2 import *
 from outpost_data.core.image2 import load
 from outpost_data.core import structure
-from outpost_data.outpost.lib import models
+from outpost_data.outpost.lib import meshes
 
 FENCE_PART_TABLE = (
         ('end/w',           'edge/horiz',       'end/e'),
@@ -24,7 +24,7 @@ def init():
     parts = sheet.chop(FENCE_PARTS)
 
     s = STRUCTURE.prefixed('fence') \
-            .model(models.front(1, 1, 1)) \
+            .mesh(meshes.front(1, 1, 1)) \
             .shape(structure.solid(1, 1, 1)) \
             .layer(1)
     for k in FENCE_PARTS.keys():

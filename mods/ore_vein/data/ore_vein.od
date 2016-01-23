@@ -10,10 +10,10 @@
 # its model.  The image for this structure is `structures/ore-vein.png` in the
 # `assets` directory (all image paths are relative to `assets/`).
 image: "structures/ore-vein.png"
-# The 3D model for this structure should cover only the front side of a
+# The 3D mesh for this structure should cover only the front side of a
 # 1x1x1-block region.  Since each block is 32x32x32 pixels, the front side of a
 # block is 32x32, which exactly matches the size of the `ore-vein.png` image.
-model: `models.front(1, 1, 1)`
+mesh: `meshes.front(1, 1, 1)`
 # The shape of the structure for collision-detection purposes is a solid cube,
 # 1x1x1 block in size.  The size here should correspond to the size of the
 # model.

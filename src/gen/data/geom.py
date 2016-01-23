@@ -70,7 +70,7 @@ def _copy_tri(t):
     return Triangle(t.verts, t.edges)
 
 class Mesh(object):
-    def __init__(self):
+    def __init__(self, tris=None):
         self.verts = []
         self.vert_idx = {}
         self.free_verts = []
@@ -81,6 +81,10 @@ class Mesh(object):
 
         self.tris = []
         self.free_tris = []
+
+        if tris is not None:
+            for i in range(0, len(tris), 3):
+                self.add_tri(*tris[i : i + 3])
 
     def copy(self):
         other = Mesh()

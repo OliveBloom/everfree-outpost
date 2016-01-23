@@ -5,4 +5,4 @@ from outpost_data.core import image2
 from outpost_data.core.consts import *
 
 # TODO: shouldn't import from .outpost
-from outpost_data.outpost.lib import models
+from outpost_data.outpost.lib import meshes

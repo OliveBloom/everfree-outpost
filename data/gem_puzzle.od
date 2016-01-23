@@ -16,14 +16,14 @@ def gem_icon(gem):
 [structure dungeon/gem_slot/normal]
 multi_names: `COLORS`
 image: `{color: slot_with_gem(slots['normal'], gems[color]) for color in COLORS}`
-model: `models.front(1, 1, 1)`
+mesh: `meshes.front(1, 1, 1)`
 shape: solid(1, 1, 1)
 layer: 1
 
 [structure dungeon/gem_slot/fixed]
 multi_names: `COLORS`
 image: `{color: slot_with_gem(slots['fixed'], gems[color]) for color in COLORS}`
-model: `models.front(1, 1, 1)`
+mesh: `meshes.front(1, 1, 1)`
 shape: solid(1, 1, 1)
 layer: 1
 

@@ -1,7 +1,7 @@
 from outpost_data.core import image2, geom, util
 from outpost_data.core.builder2.base import *
 from outpost_data.core.consts import *
-from outpost_data.core.structure import solid, StructureDef, StructureDef2, StaticAnimDef
+from outpost_data.core.structure import solid, StructureDef, StructureDef2, StaticAnimDef, Model2
 
 
 DEFAULT_SHAPE = solid(1, 1, 1)
@@ -9,9 +9,8 @@ DEFAULT_SHAPE = solid(1, 1, 1)
 class StructurePrototype(PrototypeBase):
     KIND = 'structure'
     FIELDS = (
-            'image', 'model', 'shape', 'layer', 'parts',
+            'image', 'mesh', 'shape', 'layer', 'parts',
             'light_offset', 'light_color', 'light_radius',
-            'anim_frames', 'anim_framerate', 'anim_oneshot',
             )
 
     def instantiate(self):
@@ -20,28 +19,19 @@ class StructurePrototype(PrototypeBase):
         shape = self.require('shape', DEFAULT_SHAPE)
         layer = self.require('layer', 0)
 
-        if self.require_one('model', 'parts'):
-            if self.require_one('image', 'anim_frames'):
-                img = raw_image(self.image)
-            else:
-                frames = self.anim_frames
-                rate = self.require('anim_framerate', default=1, reason='anim_frames')
-                oneshot = self.anim_oneshot or False
-
-                img = StaticAnimDef(self.anim_frames, self.anim_framerate, self.anim_oneshot)
-            model = self.model
-
-            s = StructureDef(self.name, img, model, shape, layer)
+        if self.require_one('mesh', 'parts'):
+            mesh = self.mesh
+            img = self.require('image', reason='mesh')
+            bounds = ((0, 0, 0), tuple(x * TILE_SIZE for x in shape.size))
+            parts = [(Model2(mesh, bounds), img)]
         else:
             parts = self.parts
             self.require_unset('image', 'parts')
-            self.require_unset('anim_frames', 'parts')
-            self.require_unset('anim_framerate', 'parts')
-            self.require_unset('anim_oneshot', 'parts')
 
-            s = StructureDef2(self.name, shape, layer)
-            for m, i in parts:
-                s.add_part(m, i)
+        s = StructureDef2(self.name, shape, layer)
+        for m, i in parts:
+            print(self.name, m, i)
+            s.add_part(m, i)
 
         pos, color, radius = self.check_group(
                 ('light_offset', 'light_color', 'light_radius'))
@@ -51,10 +41,9 @@ class StructurePrototype(PrototypeBase):
         return s
 
     def get_image(self):
+        """Obtain a reasonable depiction of this structure as a still image."""
         if self.image is not None:
-            return self.image
-        elif self.anim_frames is not None and len(self.anim_frames) > 0:
-            return self.anim_frames[0]
+            return self.image.still()
         elif self.shape is not None:
             sx, sy, sz = self.shape.size
             if len(self.parts) == 0:
@@ -65,7 +54,7 @@ class StructurePrototype(PrototypeBase):
             for model, img in self.parts:
                 b_min, b_max = model.bounds
                 bx, by = util.project(b_min)
-                layers.append(img.pad(size, offset=(bx, by)))
+                layers.append(img.still().pad(size, offset=(bx, by)))
 
             return layers[0].stack(layers)
         else:
@@ -76,7 +65,7 @@ class StructureBuilder(BuilderBase):
     PROTO_CLASS = StructurePrototype
 
     image = dict_modifier('image')
-    model = dict_modifier('model')
+    mesh = dict_modifier('mesh')
     shape = dict_modifier('shape')
     layer = dict_modifier('layer')
     parts = dict_modifier('parts')
@@ -84,10 +73,6 @@ class StructureBuilder(BuilderBase):
     light_offset = dict_modifier('light_offset')
     light_color = dict_modifier('light_color')
     light_radius = dict_modifier('light_radius')
-
-    anim_frames = dict_modifier('anim_frames')
-    anim_framerate = dict_modifier('anim_framerate')
-    anim_oneshot = dict_modifier('anim_oneshot')
 
     def light(offset, color, radius):
         def f(x):
@@ -98,9 +83,7 @@ class StructureBuilder(BuilderBase):
 
     def anim(frames, framerate, oneshot=False):
         def f(x):
-            x.anim_frames = frames
-            x.anim_framerate = framerate
-            x.anim_oneshot = oneshot
+            x.image = Anim(frames, framerate, oneshot)
         return self._modify(f)
 
     def part(self, *args):

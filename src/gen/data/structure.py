@@ -125,6 +125,7 @@ class StructurePart(object):
         return ((int(shadow) << 0) |
                 (int(anim) << 1))
 
+# TODO: remove (deprecated)
 class StaticAnimDef(object):
     """An animation for a static element (structure or block).  This class is
     distinct from AnimationDef (sprite animations) because the requirements are

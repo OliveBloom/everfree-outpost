@@ -4,7 +4,7 @@ STONE_IMG = load('icons/stones.png', unit=ICON_SIZE)
 
 [structure rock]
 image: "structures/rock.png"
-model: `models.solid(2, 1, 1)`
+mesh: `meshes.solid(2, 1, 1)`
 shape: solid(2, 1, 1)
 layer: 1
 
