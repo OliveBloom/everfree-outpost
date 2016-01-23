@@ -24,7 +24,7 @@ STAIR_N_MESH = Mesh([tuple(x * TILE_SIZE for x in v)
 def do_bed(image):
     s = STRUCTURE.new('bed') \
             .mesh(BED_MESH) \
-            .shape(structure.solid(2, 1, 2)) \
+            .shape(structure.solid(2, 2, 1)) \
             .layer(1) \
             .image(image)
     i = ITEM.from_structure(s).display_name('Bed')
