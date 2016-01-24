@@ -368,7 +368,7 @@ def init():
     dirt2 = tiles('lpc-base-tiles/dirt2.png')
     dirt2_cross = tiles('lpc-dirt2-cross.png')
 
-    mk_cave_walls2(cave2, grass, dirt, dirt2, dirt2_cross, 'cave')
+    #mk_cave_walls2(cave2, grass, dirt, dirt2, dirt2_cross, 'cave')
 
     top = tiles('lpc-cave-top.png')
     top_cross = tiles('lpc-cave-top-cross.png')
