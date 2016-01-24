@@ -253,29 +253,29 @@ def do_cave_walls(tiles):
         # Get front tile type
         need_w = False
         need_e = False
-        front_mode = None
+        front_desc = None
         for j in (1, 2):
             if ds[j] == 'outer/sw':
-                front_mode = 'outer/w'
+                front_desc = 'outer/w'
             elif ds[j] == 'outer/se':
-                front_mode = 'outer/e'
+                front_desc = 'outer/e'
             elif ds[j] == 'inner/nw' or ds[j] == 'cross/nw':
                 need_w = True
             elif ds[j] == 'inner/ne' or ds[j] == 'cross/ne':
                 need_e = True
             elif ds[j] == 'half/s':
-                front_mode = 'center'
-        if front_mode is None:
+                front_desc = 'center'
+        if front_desc is None:
             if need_w and need_e:
-                front_mode = 'center'
+                front_desc = 'center'
             elif need_w:
-                front_mode = 'inner/w'
+                front_desc = 'inner/w'
             elif need_e:
-                front_mode = 'inner/e'
+                front_desc = 'inner/e'
 
         # Get bottom tile type
         # Describe where grass should go (or, where dirt2 should *not* go)
-        bottom_mode = describe(tuple(x == 1 for x in unpack4(i, 3)))
+        bottom_desc = describe(tuple(x == 1 for x in unpack4(i, 3)))
 
         # Build blocks
         nw, ne, se, sw = unpack4(i, 3)
@@ -291,27 +291,43 @@ def do_cave_walls(tiles):
         for prefix, dct, clear in variants:
             bb_i = bb.prefixed(prefix + str(i))
             bb_i.new('z1').shape('empty' if clear else 'solid').top(top) \
-                    .front(dct[front_mode + '/z1'] if front_mode is not None else None)
+                    .front(dct[front_desc + '/z1'] if front_desc is not None else None)
             bb_i.new('z0/grass').shape('floor' if clear else 'solid') \
-                    .front(dct[front_mode + '/z0'] if front_mode is not None else None) \
-                    .bottom(image2.stack((grass_base, dirt2_dct[bottom_mode])))
+                    .front(dct[front_desc + '/z0'] if front_desc is not None else None) \
+                    .bottom(image2.stack((grass_base, dirt2_dct[bottom_desc])))
             bb_i.new('z0/dirt').shape('floor' if clear else 'solid') \
-                    .front(dct[front_mode + '/z0'] if front_mode is not None else None) \
-                    .bottom(image2.stack((dirt_base, dirt2_dct[bottom_mode])))
+                    .front(dct[front_desc + '/z0'] if front_desc is not None else None) \
+                    .bottom(image2.stack((dirt_base, dirt2_dct[bottom_desc])))
 
         if False:
             from PIL import Image
             im = Image.new('RGBA', (32, 96))
             im.paste(bb_i['z1'].top.raw().raw(), (0, 0))
             im.paste(bb_i['z0/grass'].bottom.raw().raw(), (0, 64))
-            if front_mode:
+            if front_desc:
                 im.paste(bb_i['z1'].front.raw().raw(), (0, 32))
                 x = bb_i['z0/grass'].front.raw().raw()
                 im.paste(x, (0, 64), x)
             im.save('test-%s-%d,%d,%d,%d.png' % ((prefix.replace('/', '_'),) + unpack4(i, 3)))
 
+def do_cave_top(tiles):
+    img = tiles('lpc-cave-top.png')
+    cross_img = tiles('lpc-cave-top.png')
+
+    dct = chop_terrain(img)
+    dct['cross/nw'] = cross_img.extract((0, 1))
+    dct['cross/ne'] = cross_img.extract((0, 0))
+
+    bb = BLOCK.prefixed('cave_top').shape('floor')
+
+    for i in range(16):
+        desc = describe(tuple(x == 0 for x in unpack4(i, 2)))
+        bb.new(str(i)).bottom(dct[desc])
+        bb[str(i)].bottom.raw().raw().save('test-%d-%s.png' % (i, desc.replace('/', '_')))
+
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
     do_cave_walls(tiles)
+    do_cave_top(tiles)
 
 

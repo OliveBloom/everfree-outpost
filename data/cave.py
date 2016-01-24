@@ -372,7 +372,7 @@ def init():
 
     top = tiles('lpc-cave-top.png')
     top_cross = tiles('lpc-cave-top-cross.png')
-    mk_cave_top2(top, top_cross, 'cave_top')
+    #mk_cave_top2(top, top_cross, 'cave_top')
 
 
     junk_img = structures('cave-junk.png')
