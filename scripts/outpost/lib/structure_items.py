@@ -65,7 +65,7 @@ def check_attachment(template, plane, pos):
     if template not in _ATTACH_MAP:
         return True
 
-    s = plane.find_structure_at_point(pos)
+    s = plane.find_structure_at_point_layer(pos, 1)
     if s is None:
         return True
 
