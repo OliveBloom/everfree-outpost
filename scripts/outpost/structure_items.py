@@ -17,9 +17,7 @@ for color in ('red', 'orange', 'yellow', 'green', 'blue', 'purple'):
 autorotate.register_fence('fence', 'fence_post')
 mallet.register('fence/', mallet.WALL_VARIANTS)
 mallet.register('fence/', ('end/fancy/e', 'end/fancy/w'))
-@use.item('fence_gate')
-def use_fence_gate(e, args):
-    structure_items.place(e, 'fence_gate', 'fence/gate/closed')
+structure_items.register('fence_gate', 'fence/gate/closed', tool='axe')
 door.register_use('fence/gate', tool_name='axe')
 
 
