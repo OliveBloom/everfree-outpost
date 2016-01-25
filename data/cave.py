@@ -380,7 +380,7 @@ def init():
         mk_solid_small('cave_junk/%d' % i, extract(junk_img, (i, 0)))
 
     floor_imgs = {'grass': grass, 'dirt': dirt}
-    mk_natural_ramp(tiles('outdoor-ramps.png'), cave2, floor_imgs, 'natural_ramp')
+#    mk_natural_ramp(tiles('outdoor-ramps.png'), cave2, floor_imgs, 'natural_ramp')
 
 
     mk_cave_interior_door('dungeon/door/key',

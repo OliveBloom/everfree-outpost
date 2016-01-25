@@ -155,8 +155,8 @@ def chop_cave_front(img):
     parts = img.chop_grid(FRONT_PARTS)
 
     for z in (0, 1):
-        parts['inner/w/z%d' % z] = parts['outer/w/z%d' % z].modify(blank_left)
-        parts['inner/e/z%d' % z] = parts['outer/e/z%d' % z].modify(blank_right)
+        parts['inner/w/z%d' % z] = parts['center/z%d' % z].modify(blank_left)
+        parts['inner/e/z%d' % z] = parts['center/z%d' % z].modify(blank_right)
 
     return parts
 
@@ -208,6 +208,56 @@ def chop_black():
     return parts
 
 
+RAMP_TOP_PARTS = (
+       ('inner/nw',     'half/s',       'inner/ne'),
+       ('outer/se',     None,           'outer/sw'),
+        )
+
+def chop_ramp_top(cave, ramp):
+    def blank_outside(raw):
+        color = (0, 0, 0, 0)
+        raw.paste(color, (0, 0, 16, 48))
+        raw.paste(color, (80, 0, 96, 48))
+        raw.paste(color, (16, 0, 80, 16))
+    ramp = ramp.modify(blank_outside)
+    ramp.raw().raw().save('test-ramp.png')
+
+    cave_parts = clear_center(cave).chop_grid(BORDER_PARTS)
+
+    parts = ramp.chop_grid(RAMP_TOP_PARTS)
+    parts['half/e'] = image2.stack((
+            parts['outer/se'].modify(blank_left),
+            cave_parts['half/e']))
+    parts['half/w'] = image2.stack((
+            parts['outer/sw'].modify(blank_right),
+            cave_parts['half/w']))
+    return parts
+
+def chop_ramp_front(cave, ramp):
+    cave_parts = chop_cave_front(cave)
+    left_parts = cave_parts.copy()
+    right_parts = cave_parts.copy()
+
+    for z in (0, 1):
+        left_img = ramp.extract((0, 3 - z)).modify(blank_left)
+        for k, v in left_parts.items():
+            if k.endswith('/z%d' % z):
+                left_parts[k] = image2.stack((v, left_img))
+        left_parts['empty/z%d' % z] = left_img
+
+        right_img = ramp.extract((2, 3 - z)).modify(blank_right)
+        for k, v in right_parts.items():
+            if k.endswith('/z%d' % z):
+                right_parts[k] = image2.stack((v, right_img))
+        right_parts['empty/z%d' % z] = right_img
+
+    return {
+            'left': left_parts,
+            'right': right_parts,
+            }
+
+
+
 # NB: Some stuff here may look backwards, but that's because this grid
 # describes where the terrain *isn't*, or in other words, it describes the area
 # where the underlying tile shows through.
@@ -226,108 +276,201 @@ def chop_terrain(img):
     parts['cross/ne'] = image2.stack((parts['outer/nw'], parts['outer/se']))
     return parts
 
+def calc_front_desc(ds):
+    # Get front tile type
+    need_w = False
+    need_e = False
 
-def do_cave_walls(tiles):
-    cave_img = tiles('lpc-cave-walls2.png')
-    grass_img = tiles('lpc-base-tiles/grass.png')
-    dirt_img = tiles('lpc-base-tiles/dirt.png')
-    dirt2_img = tiles('lpc-base-tiles/dirt2.png')
+    for j in (1, 2):
+        if ds[j] == 'outer/sw':
+            return 'outer/w'
+        elif ds[j] == 'outer/se':
+            return 'outer/e'
+        elif ds[j] == 'inner/nw' or ds[j] == 'cross/nw':
+            need_w = True
+        elif ds[j] == 'inner/ne' or ds[j] == 'cross/ne':
+            need_e = True
+        elif ds[j] == 'half/s':
+            return 'center'
 
-    grass_base = grass_img.extract((1, 3))
-    dirt_base = dirt_img.extract((1, 3))
+    if need_w and need_e:
+        return 'center'
+    elif need_w:
+        return 'inner/w'
+    elif need_e:
+        return 'inner/e'
 
-    top_dct = chop_cave_top(cave_img)
-    front_dct = chop_cave_front(cave_img)
-    entrance_dct = chop_cave_entrance(cave_img)
-    black_dct = chop_black()
-    dirt2_dct = chop_terrain(dirt2_img)
+    return None
 
-    bb = BLOCK.prefixed('cave')
+def calc_bottom_desc(i):
+    return describe(tuple(x == 1 for x in unpack4(i, 3)))
 
-    for i in range(3 * 3 * 3 * 3):
-        ds = dissect(unpack4(i, 3), 3)
+class CaveWalls:
+    def __init__(self, tiles):
+        self.tiles = tiles
 
-        # Get top tile
-        top = image2.stack((black_dct[ds[0]], top_dct[ds[1]], top_dct[ds[2]]))
+        self.grass_base = tiles('lpc-base-tiles/grass.png').extract((1, 3))
+        self.dirt_base = tiles('lpc-base-tiles/dirt.png').extract((1, 3))
+        self.dirt2_dct = chop_terrain(tiles('lpc-base-tiles/dirt2.png'))
 
-        # Get front tile type
-        need_w = False
-        need_e = False
-        front_desc = None
-        for j in (1, 2):
-            if ds[j] == 'outer/sw':
-                front_desc = 'outer/w'
-            elif ds[j] == 'outer/se':
-                front_desc = 'outer/e'
-            elif ds[j] == 'inner/nw' or ds[j] == 'cross/nw':
-                need_w = True
-            elif ds[j] == 'inner/ne' or ds[j] == 'cross/ne':
-                need_e = True
-            elif ds[j] == 'half/s':
-                front_desc = 'center'
-        if front_desc is None:
-            if need_w and need_e:
-                front_desc = 'center'
-            elif need_w:
-                front_desc = 'inner/w'
-            elif need_e:
-                front_desc = 'inner/e'
+        self.cave_img = tiles('lpc-cave-walls2.png')
+        self.top_dct = chop_cave_top(self.cave_img)
+        self.black_dct = chop_black()
 
-        # Get bottom tile type
-        # Describe where grass should go (or, where dirt2 should *not* go)
-        bottom_desc = describe(tuple(x == 1 for x in unpack4(i, 3)))
+    def make_top(self, ds):
+        return image2.stack((
+            self.black_dct[ds[0]],
+            self.top_dct[ds[1]],
+            self.top_dct[ds[2]],
+            ))
 
-        # Build blocks
-        nw, ne, se, sw = unpack4(i, 3)
-        clear = nw == ne == se == sw and (nw == 1 or nw == 2)
-        variants = [('', front_dct, clear)]
-        if (ne, se) == (2, 1):
-            variants.append(('entrance/left/', entrance_dct['left'], False))
-        if (nw, sw) == (2, 1):
-            variants.append(('entrance/right/', entrance_dct['right'], False))
-        if (nw, ne, se, sw) == (2, 2, 1, 1):
-            variants.append(('entrance/center/', entrance_dct['center'], True))
-
-        for prefix, dct, clear in variants:
-            bb_i = bb.prefixed(prefix + str(i))
-            bb_i.new('z1').shape('empty' if clear else 'solid').top(top) \
-                    .front(dct[front_desc + '/z1'] if front_desc is not None else None)
-            bb_i.new('z0/grass').shape('floor' if clear else 'solid') \
-                    .front(dct[front_desc + '/z0'] if front_desc is not None else None) \
-                    .bottom(image2.stack((grass_base, dirt2_dct[bottom_desc])))
-            bb_i.new('z0/dirt').shape('floor' if clear else 'solid') \
-                    .front(dct[front_desc + '/z0'] if front_desc is not None else None) \
-                    .bottom(image2.stack((dirt_base, dirt2_dct[bottom_desc])))
+    def do_block(self, bb, clear, front_dct, top, front_desc, bottom_desc):
+        bb.new('z1').shape('empty' if clear else 'solid').top(top) \
+                .front(front_dct[front_desc + '/z1'] if front_desc is not None else None)
+        bb.new('z0/grass').shape('floor' if clear else 'solid') \
+                .front(front_dct[front_desc + '/z0'] if front_desc is not None else None) \
+                .bottom(image2.stack((self.grass_base, self.dirt2_dct[bottom_desc])))
+        bb.new('z0/dirt').shape('floor' if clear else 'solid') \
+                .front(front_dct[front_desc + '/z0'] if front_desc is not None else None) \
+                .bottom(image2.stack((self.dirt_base, self.dirt2_dct[bottom_desc])))
 
         if False:
             from PIL import Image
             im = Image.new('RGBA', (32, 96))
-            im.paste(bb_i['z1'].top.raw().raw(), (0, 0))
-            im.paste(bb_i['z0/grass'].bottom.raw().raw(), (0, 64))
+            im.paste(bb['z1'].top.raw().raw(), (0, 0))
+            im.paste(bb['z0/grass'].bottom.raw().raw(), (0, 64))
             if front_desc:
-                im.paste(bb_i['z1'].front.raw().raw(), (0, 32))
-                x = bb_i['z0/grass'].front.raw().raw()
+                im.paste(bb['z1'].front.raw().raw(), (0, 32))
+                x = bb['z0/grass'].front.raw().raw()
                 im.paste(x, (0, 64), x)
-            im.save('test-%s-%d,%d,%d,%d.png' % ((prefix.replace('/', '_'),) + unpack4(i, 3)))
+            im.save('test-%s.png' % bb._full_prefix.replace('/', '_'))
+
+    def do_cave_walls(self):
+        front_dct = chop_cave_front(self.cave_img)
+
+        bb = BLOCK.prefixed('cave')
+        for i in range(3 * 3 * 3 * 3):
+            ds = dissect(unpack4(i, 3), 3)
+
+            top = self.make_top(ds)
+            front_desc = calc_front_desc(ds)
+            bottom_desc = calc_bottom_desc(i)
+
+            # Build blocks
+            nw, ne, se, sw = unpack4(i, 3)
+            clear = nw == ne == se == sw and (nw == 1 or nw == 2)
+
+            self.do_block(bb.prefixed(str(i)), clear, front_dct,
+                    top, front_desc, bottom_desc)
+
+    def do_cave_entrance(self):
+        entrance_dct = chop_cave_entrance(self.cave_img)
+
+        bb = BLOCK.prefixed('cave/entrance')
+        for i in range(3 * 3 * 3 * 3):
+            ds = dissect(unpack4(i, 3), 3)
+
+            # Build blocks
+            nw, ne, se, sw = unpack4(i, 3)
+
+            east_ok = (ne == 2 and se == 1)
+            west_ok = (nw == 2 and sw == 1)
+            if not east_ok and not west_ok:
+                continue
+
+            top = self.make_top(ds)
+            front_desc = calc_front_desc(ds)
+            bottom_desc = calc_bottom_desc(i)
+
+            if east_ok:
+                self.do_block(bb.prefixed('left/%d' % i), False, entrance_dct['left'],
+                        top, front_desc, bottom_desc)
+            if west_ok:
+                self.do_block(bb.prefixed('right/%d' % i), False, entrance_dct['right'],
+                        top, front_desc, bottom_desc)
+            if east_ok and west_ok:
+                self.do_block(bb.prefixed('center/%d' % i), True, entrance_dct['center'],
+                        top, front_desc, bottom_desc)
+
+    def do_natural_ramp(self):
+        ramp_img = self.tiles('outdoor-ramps.png').extract((0, 0), (3, 5))
+        ramp_top_dct = chop_ramp_top(self.cave_img, ramp_img)
+        ramp_front_dct = chop_ramp_front(self.cave_img, ramp_img)
+
+        bb = BLOCK.prefixed('natural_ramp')
+        for i in range(3 * 3 * 3 * 3):
+            nw, ne, se, sw = unpack4(i, 3)
+
+            left_ok = (ne == se == 1 and nw != 1)
+            right_ok = (nw == sw == 1 and ne != 1)
+            back_ok = (sw == se == 1 and nw != 1 and ne != 1)
+
+            if not left_ok and not right_ok and not back_ok:
+                continue
+
+            ds = dissect(unpack4(i, 3), 3)
+
+            top = image2.stack((
+                self.black_dct[ds[0]],
+                ramp_top_dct[ds[1]],
+                self.top_dct[ds[2]],
+                ))
+            front_desc = calc_front_desc(ds) or 'empty'
+            bottom_desc = calc_bottom_desc(i)
+
+            # Build blocks
+            if left_ok:
+                self.do_block(bb.prefixed('left/%d' % i), False, ramp_front_dct['left'],
+                        top, front_desc, bottom_desc)
+            if right_ok:
+                self.do_block(bb.prefixed('right/%d' % i), False, ramp_front_dct['right'],
+                        top, front_desc, bottom_desc)
+            if back_ok:
+                bb.new('back/%d' % i) \
+                        .shape('solid') \
+                        .top(top)
+
+        bb.new('top') \
+                .shape('floor') \
+                .bottom(ramp_img.extract((0, 4)))
+
+        bb.new('ramp/z0/grass') \
+                .shape('ramp_n') \
+                .bottom(image2.stack((self.grass_base, ramp_img.extract((1, 4))))) \
+                .back(ramp_img.extract((1, 3)))
+
+        bb.new('ramp/z0/dirt') \
+                .shape('ramp_n') \
+                .bottom(image2.stack((self.dirt_base, ramp_img.extract((1, 4))))) \
+                .back(ramp_img.extract((1, 3)))
+
+        bb.new('ramp/z1') \
+                .shape('ramp_n') \
+                .bottom(ramp_img.extract((1, 2))) \
+                .back(ramp_img.extract((1, 1)))
 
 def do_cave_top(tiles):
     img = tiles('lpc-cave-top.png')
-    cross_img = tiles('lpc-cave-top.png')
+    cross_img = tiles('lpc-cave-top-cross.png')
 
     dct = chop_terrain(img)
     dct['cross/nw'] = cross_img.extract((0, 1))
     dct['cross/ne'] = cross_img.extract((0, 0))
+    for k,v in dct.items():
+        v.raw().raw().save('test-%s.png' % k.replace('/', '_'))
 
     bb = BLOCK.prefixed('cave_top').shape('floor')
 
     for i in range(16):
         desc = describe(tuple(x == 0 for x in unpack4(i, 2)))
         bb.new(str(i)).bottom(dct[desc])
-        bb[str(i)].bottom.raw().raw().save('test-%d-%s.png' % (i, desc.replace('/', '_')))
 
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
-    do_cave_walls(tiles)
+
     do_cave_top(tiles)
 
-
+    cw = CaveWalls(tiles)
+    cw.do_cave_walls()
+    cw.do_cave_entrance()
+    cw.do_natural_ramp()
