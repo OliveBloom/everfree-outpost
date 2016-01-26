@@ -1,67 +1,41 @@
-from outpost_data.core.builder import *
-from outpost_data.core.images import loader
-from outpost_data.core.structure import Shape
-from outpost_data.core.util import chop_image_named, chop_terrain, stack
+from outpost_data.core import image2
+from outpost_data.core.consts import *
+from outpost_data.core.builder2 import *
+from outpost_data.core.image2 import loader, Anim
+from outpost_data.core import structure
+from outpost_data.outpost.lib import meshes
 
-from outpost_data.outpost.lib.terrain import *
 
+OPEN_DOOR_SHAPE = structure.Shape(3, 1, 2, (
+    'solid', 'floor', 'solid',
+    'solid', 'empty', 'solid',
+    ))
 
-def mk_cave_inside(img, basename, dirt):
-    name = lambda n: '%s/%s' % (basename, n)
-    blks = block_builder()
+def do_dungeon_door(basename, img, door_anim):
+    sb = STRUCTURE.prefixed(basename) \
+            .shape(structure.solid(3, 1, 2)) \
+            .layer(1)
 
-    extra_parts = (
-            ('front/left/z1', 'front/center/z1', 'front/right/z1'),
-            ('front/left/z0', 'front/center/z0', 'front/right/z0'),
-            )
-    p = chop_image_named(img, TERRAIN_PARTS + extra_parts)
-    p['black'] = p['center/v3']
+    door_model = structure.Model2(meshes.front(3, 1, 2),
+            ((0, 1 * TILE_SIZE, 0), (3 * TILE_SIZE, 1 * TILE_SIZE, 2 * TILE_SIZE)))
 
-    def wall(n, side=None):
-        if side is not None:
-            f1 = p['front/%s/z1' % side]
-            f0 = p['front/%s/z0' % side]
-        else:
-            f1 = None
-            f0 = None
-        blks.create(name(n) + '/z1', 'solid', {'top': p[n], 'front': f1})
-        blks.create(name(n) + '/z0', 'solid', {'front': f0, 'bottom': dirt})
+    sb.new('open') \
+            .shape(OPEN_DOOR_SHAPE) \
+            .part(door_model, door_anim.get_frame(-1))
+    sb.new('closed').part(door_model, door_anim.get_frame(0))
+    sb.new('opening').part(door_model, door_anim)
+    sb.new('closing').part(door_model, door_anim.reversed())
 
-    blks.create(name('center/z1'), 'empty', {})
-    blks.create(name('center/z0'), 'floor', {'bottom': dirt})
+    # The doorway needs to be drawn over top of the animated door.
+    sb.mesh_part(meshes.solid(3, 1, 2), img)
 
-    blks.create(name('outside/z1'), 'solid', {'top': p['black']})
-    blks.create(name('outside/z0'), 'solid', {})
-
-    wall('edge/n', 'center')
-    wall('edge/s')
-    wall('edge/e')
-    wall('edge/w')
-
-    wall('corner/outer/nw', 'center')
-    wall('corner/outer/ne', 'center')
-    wall('corner/outer/sw')
-    wall('corner/outer/se')
-
-    wall('corner/inner/nw')
-    wall('corner/inner/ne')
-    wall('corner/inner/sw', 'left')
-    wall('corner/inner/se', 'right')
-
-    return blks
 
 def init():
-    tiles = loader('tiles')
-    icons = loader('icons')
+    structures = loader('structures', unit=TILE_SIZE)
 
-    dirt2 = chop_terrain(tiles('lpc-base-tiles/dirt2.png'))
-    cave_floor = dirt2['center/v0']
-
-    mk_cave_inside(tiles('lpc-cave-inside.png'), 'cave_inside', cave_floor)
-
-    mk_floor_blocks(tiles('lpc-base-tiles/water.png'), 'cave_water', base_img=cave_floor)
-
-    mk_floor_blocks(tiles('lpc-base-tiles/lava.png'), 'cave_lava', base_img=cave_floor) \
-            .light((255, 100, 0), 50)
-
-    mk_floor_blocks(tiles('lpc-base-tiles/holemid.png'), 'cave_pit', base_img=cave_floor)
+    door_anim_sheet = structures('cave-door.png').with_unit((3 * TILE_SIZE, 2 * TILE_SIZE))
+    door_anim = Anim(
+            [door_anim_sheet.extract((0, i)) for i in range(door_anim_sheet.size[1])],
+            16, oneshot=True)
+    do_dungeon_door('dungeon/door/key', structures('cave-doorway-keyhole.png'), door_anim)
+    do_dungeon_door('dungeon/door/puzzle', structures('cave-doorway-plain.png'), door_anim)
