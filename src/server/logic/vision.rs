@@ -12,18 +12,17 @@ use vision;
 impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
     fn on_terrain_chunk_appear(&mut self,
                                cid: ClientId,
-                               tcid: TerrainChunkId,
-                               cpos: V2) {
-        self.on_terrain_chunk_update(cid, tcid, cpos);
+                               tcid: TerrainChunkId) {
+        self.on_terrain_chunk_update(cid, tcid);
     }
 
     fn on_terrain_chunk_update(&mut self,
                                cid: ClientId,
-                               tcid: TerrainChunkId,
-                               cpos: V2) {
+                               tcid: TerrainChunkId) {
         use util::encode_rle16;
         let tc = unwrap_or!(self.world().get_terrain_chunk(tcid),
             { warn!("no terrain available for {:?}", tcid); return });
+        let cpos = tc.chunk_pos();
         let data = encode_rle16(tc.blocks().iter().map(|&x| x));
         self.messages().send_client(cid, ClientResponse::TerrainChunk(cpos, data));
     }

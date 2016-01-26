@@ -164,7 +164,7 @@ pub fn update_view(mut eng: EngineRef, cid: ClientId) {
         logic::chunks::load_chunk(eng.borrow(), new_pid, cpos);
     }
 
-    vision::Fragment::set_client_view(&mut eng.as_vision_fragment(), cid, new_pid, new_region);
+    vision::Fragment::set_client_area(&mut eng.as_vision_fragment(), cid, new_pid, new_region);
 
     for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
         logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);

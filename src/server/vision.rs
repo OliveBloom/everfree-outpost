@@ -14,6 +14,8 @@
 //! updates and client messages, ensuring that each client receives updates only for objects it can
 //! actually see.
 use std::collections::{HashMap, HashSet, VecMap};
+use std::fmt::Debug;
+use std::hash::Hash;
 use std::mem;
 
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
@@ -37,29 +39,134 @@ pub fn vision_region(pos: V3) -> Region<V2> {
 
 
 type ViewerId = ClientId;
+type Location = (PlaneId, V2);
 
-pub struct Vision {
-    viewers: VecMap<Viewer>,
-    viewers_by_pos: HashMap<(PlaneId, V2), HashSet<ViewerId>>,
 
-    entities: VecMap<Entity>,
-    terrain_chunks: VecMap<TerrainChunk>,
-    structures: VecMap<Structure>,
+/// Generic method of working with viewable objects.
+trait Tag {
+    type Id: Copy + Eq + Hash + Debug;
 
-    // NB: PLANE_LIMBO gets special treatment so that it always appears empty, no matter what is
-    // actually present.  This is done by skipping insertions into x_by_pos when the PlaneId is
-    // PLANE_LIMBO.  Thus, none of the x_by_pos maps should ever have PLANE_LIMBO in theer keys.
-    entities_by_pos: HashMap<(PlaneId, V2), HashSet<EntityId>>,
-    terrain_chunks_by_pos: HashMap<(PlaneId, V2), HashSet<TerrainChunkId>>,
-    structures_by_pos: HashMap<(PlaneId, V2), HashSet<StructureId>>,
+    fn raw_id(id: Self::Id) -> u32;
+    fn make_id(raw: u32) -> Self::Id;
 
-    inventory_viewers: HashMap<InventoryId, HashSet<ViewerId>>,
+    fn viewable_map(v: &ViewableMaps) -> &ViewableMap;
+    fn viewable_map_mut(v: &mut ViewableMaps) -> &mut ViewableMap;
+
+    fn visible(v: &Viewer) -> &RefcountedMap<Self::Id, ()>;
+    fn visible_mut(v: &mut Viewer) -> &mut RefcountedMap<Self::Id, ()>;
+
+    fn on_appear<H: Hooks>(cid: ClientId, id: Self::Id, h: &mut H);
+    fn on_disappear<H: Hooks>(cid: ClientId, id: Self::Id, h: &mut H);
+}
+
+struct EntityTag;
+struct TerrainChunkTag;
+struct StructureTag;
+// If you add to this, be sure to update code below that maps over every tag.
+
+impl Tag for EntityTag {
+    type Id = EntityId;
+
+    fn raw_id(id: EntityId) -> u32 { id.unwrap() }
+    fn make_id(raw: u32) -> EntityId { EntityId(raw) }
+
+    fn viewable_map(v: &ViewableMaps) -> &ViewableMap {
+        &v.entities
+    }
+    fn viewable_map_mut(v: &mut ViewableMaps) -> &mut ViewableMap {
+        &mut v.entities
+    }
+
+    fn visible(v: &Viewer) -> &RefcountedMap<EntityId, ()> {
+        &v.visible_entities
+    }
+    fn visible_mut(v: &mut Viewer) -> &mut RefcountedMap<EntityId, ()> {
+        &mut v.visible_entities
+    }
+
+    fn on_appear<H: Hooks>(cid: ClientId, eid: EntityId, h: &mut H) {
+        h.on_entity_appear(cid, eid);
+    }
+
+    fn on_disappear<H: Hooks>(cid: ClientId, eid: EntityId, h: &mut H) {
+        h.on_entity_disappear(cid, eid);
+    }
+}
+
+impl Tag for TerrainChunkTag {
+    type Id = TerrainChunkId;
+
+    fn raw_id(id: TerrainChunkId) -> u32 { id.unwrap() }
+    fn make_id(raw: u32) -> TerrainChunkId { TerrainChunkId(raw) }
+
+    fn viewable_map(v: &ViewableMaps) -> &ViewableMap {
+        &v.terrain_chunks
+    }
+    fn viewable_map_mut(v: &mut ViewableMaps) -> &mut ViewableMap {
+        &mut v.terrain_chunks
+    }
+
+    fn visible(v: &Viewer) -> &RefcountedMap<TerrainChunkId, ()> {
+        &v.visible_terrain_chunks
+    }
+    fn visible_mut(v: &mut Viewer) -> &mut RefcountedMap<TerrainChunkId, ()> {
+        &mut v.visible_terrain_chunks
+    }
+
+    fn on_appear<H: Hooks>(cid: ClientId, eid: TerrainChunkId, h: &mut H) {
+        h.on_terrain_chunk_appear(cid, eid);
+    }
+
+    fn on_disappear<H: Hooks>(cid: ClientId, eid: TerrainChunkId, h: &mut H) {
+        h.on_terrain_chunk_disappear(cid, eid);
+    }
+}
+
+impl Tag for StructureTag {
+    type Id = StructureId;
+
+    fn raw_id(id: StructureId) -> u32 { id.unwrap() }
+    fn make_id(raw: u32) -> StructureId { StructureId(raw) }
+
+    fn viewable_map(v: &ViewableMaps) -> &ViewableMap {
+        &v.structures
+    }
+    fn viewable_map_mut(v: &mut ViewableMaps) -> &mut ViewableMap {
+        &mut v.structures
+    }
+
+    fn visible(v: &Viewer) -> &RefcountedMap<StructureId, ()> {
+        &v.visible_structures
+    }
+    fn visible_mut(v: &mut Viewer) -> &mut RefcountedMap<StructureId, ()> {
+        &mut v.visible_structures
+    }
+
+    fn on_appear<H: Hooks>(cid: ClientId, eid: StructureId, h: &mut H) {
+        h.on_structure_appear(cid, eid);
+    }
+
+    fn on_disappear<H: Hooks>(cid: ClientId, eid: StructureId, h: &mut H) {
+        h.on_structure_disappear(cid, eid);
+    }
 }
 
 
+/// Vision subsystem state
+pub struct Vision {
+    viewers: VecMap<Viewer>,
+    viewers_by_pos: HashMap<Location, HashSet<ViewerId>>,
+
+    maps: ViewableMaps,
+
+    // Inventories have no position, so they don't need a whole ViewableMap.
+    inventory_viewers: HashMap<InventoryId, HashSet<ViewerId>>,
+}
+
 struct Viewer {
+    id: ViewerId,
     plane: PlaneId,
-    view: Region<V2>,
+    area: Region<V2>,
 
     visible_entities: RefcountedMap<EntityId, ()>,
     visible_terrain_chunks: RefcountedMap<TerrainChunkId, ()>,
@@ -67,25 +174,59 @@ struct Viewer {
     visible_inventories: RefcountedMap<InventoryId, ()>,
 }
 
-struct Entity {
+impl Viewer {
+    fn new(id: ViewerId) -> Viewer {
+        Viewer {
+            id: id,
+            plane: PLANE_LIMBO,
+            area: Region::empty(),
+
+            visible_entities: RefcountedMap::new(),
+            visible_terrain_chunks: RefcountedMap::new(),
+            visible_structures: RefcountedMap::new(),
+            visible_inventories: RefcountedMap::new(),
+        }
+    }
+}
+
+struct ViewableMaps {
+    entities: ViewableMap,
+    terrain_chunks: ViewableMap,
+    structures: ViewableMap,
+}
+
+struct ViewableMap {
+    objs: VecMap<Viewable>,
+    objs_by_pos: HashMap<Location, HashSet<u32>>,
+}
+
+impl ViewableMap {
+    fn new() -> ViewableMap {
+        ViewableMap {
+            objs: VecMap::new(),
+            objs_by_pos: HashMap::new(),
+        }
+    }
+}
+
+struct Viewable {
     plane: PlaneId,
     area: SmallSet<V2>,
     viewers: HashSet<ViewerId>,
 }
 
-struct TerrainChunk {
-    plane: PlaneId,
-    cpos: V2,
-    viewers: HashSet<ViewerId>,
+impl Viewable {
+    fn new() -> Viewable {
+        Viewable {
+            plane: PLANE_LIMBO,
+            area: SmallSet::new(),
+            viewers: HashSet::new(),
+        }
+    }
 }
 
-struct Structure {
-    plane: PlaneId,
-    area: SmallSet<V2>,
-    viewers: HashSet<ViewerId>,
-}
 
-
+/// Hooks for handling vision events.
 #[allow(unused_variables)]
 pub trait Hooks {
     fn on_entity_appear(&mut self, cid: ClientId, eid: EntityId) {}
@@ -100,16 +241,13 @@ pub trait Hooks {
 
     fn on_terrain_chunk_appear(&mut self,
                                cid: ClientId,
-                               tcid: TerrainChunkId,
-                               cpos: V2) {}
+                               tcid: TerrainChunkId) {}
     fn on_terrain_chunk_disappear(&mut self,
                                   cid: ClientId,
-                                  tcid: TerrainChunkId,
-                                  cpos: V2) {}
+                                  tcid: TerrainChunkId) {}
     fn on_terrain_chunk_update(&mut self,
                                cid: ClientId,
-                               tcid: TerrainChunkId,
-                               cpos: V2) {}
+                               tcid: TerrainChunkId) {}
 
     fn on_structure_appear(&mut self, cid: ClientId, sid: StructureId) {}
     fn on_structure_disappear(&mut self, cid: ClientId, sid: StructureId) {}
@@ -126,35 +264,104 @@ pub trait Hooks {
 pub struct NoHooks;
 impl Hooks for NoHooks { }
 
+
+// Main implementation
+
+/// Mark a single object as visible to a viewer.
+fn retain_obj<T: Tag, H: Hooks>(v: &mut Viewer,
+                                obj: &mut Viewable,
+                                id: T::Id,
+                                h: &mut H) {
+    let vid = v.id;
+    T::visible_mut(v).retain(id, || {
+        trace!("{:?}: retained +{:?}", vid, id);
+        T::on_appear(vid, id, h);
+        obj.viewers.insert(vid);
+    });
+}
+
+/// Unmark a single object.
+fn release_obj<T: Tag, H: Hooks>(v: &mut Viewer,
+                                 obj: &mut Viewable,
+                                 id: T::Id,
+                                 h: &mut H) {
+    let vid = v.id;
+    T::visible_mut(v).release(id, |()| {
+        trace!("{:?}: released -{:?}", vid, id);
+        T::on_disappear(vid, id, h);
+        obj.viewers.remove(&vid);
+    });
+}
+
+/// Mark all objects of a certain type in a chunk for a particular viewer.
+fn viewer_retain_typed<T: Tag, H: Hooks>(v: &mut Viewer,
+                                         vms: &mut ViewableMaps,
+                                         loc: Location,
+                                         h: &mut H) {
+    let vm = T::viewable_map_mut(vms);
+    for &id in vm.objs_by_pos.get(&loc).map(|x| x.iter()).unwrap_iter() {
+        retain_obj::<T, H>(v, &mut vm.objs[id as usize], T::make_id(id), h);
+    }
+}
+
+/// Unmark all objects of a certain type in a chunk for a particular viewer.
+fn viewer_release_typed<T: Tag, H: Hooks>(v: &mut Viewer,
+                                          vms: &mut ViewableMaps,
+                                          loc: Location,
+                                          h: &mut H) {
+    let vm = T::viewable_map_mut(vms);
+    for &id in vm.objs_by_pos.get(&loc).map(|x| x.iter()).unwrap_iter() {
+        release_obj::<T, H>(v, &mut vm.objs[id as usize], T::make_id(id), h);
+    }
+}
+
+/// Mark all objects in a chunk for a particular viewer.
+fn viewer_retain<H: Hooks>(v: &mut Viewer,
+                           vms: &mut ViewableMaps,
+                           loc: Location,
+                           h: &mut H) {
+    viewer_retain_typed::<EntityTag, H>(v, vms, loc, h);
+    viewer_retain_typed::<TerrainChunkTag, H>(v, vms, loc, h);
+    viewer_retain_typed::<StructureTag, H>(v, vms, loc, h);
+}
+
+/// Unmark all objects in a chunk for a particular viewer.
+fn viewer_release<H: Hooks>(v: &mut Viewer,
+                            vms: &mut ViewableMaps,
+                            loc: Location,
+                            h: &mut H) {
+    viewer_release_typed::<EntityTag, H>(v, vms, loc, h);
+    viewer_release_typed::<TerrainChunkTag, H>(v, vms, loc, h);
+    viewer_release_typed::<StructureTag, H>(v, vms, loc, h);
+}
+
+
 impl Vision {
     pub fn new() -> Vision {
         Vision {
             viewers: VecMap::new(),
             viewers_by_pos: HashMap::new(),
 
-            entities: VecMap::new(),
-            terrain_chunks: VecMap::new(),
-            structures: VecMap::new(),
-
-            entities_by_pos: HashMap::new(),
-            terrain_chunks_by_pos: HashMap::new(),
-            structures_by_pos: HashMap::new(),
+            maps: ViewableMaps {
+                entities: ViewableMap::new(),
+                terrain_chunks: ViewableMap::new(),
+                structures: ViewableMap::new(),
+            },
 
             inventory_viewers: HashMap::new(),
         }
     }
-}
 
-impl Vision {
+
     pub fn add_client<H>(&mut self,
                          cid: ClientId,
                          plane: PlaneId,
-                         view: Region<V2>,
+                         area: Region<V2>,
                          h: &mut H)
             where H: Hooks {
         trace!("{:?} created", cid);
-        self.viewers.insert(cid.unwrap() as usize, Viewer::new());
-        self.set_client_view(cid, plane, view, h);
+        self.viewers.insert(cid.unwrap() as usize, Viewer::new(cid));
+        self.set_client_area(cid, plane, area, h);
     }
 
     pub fn remove_client<H>(&mut self,
@@ -162,96 +369,43 @@ impl Vision {
                             h: &mut H)
             where H: Hooks {
         trace!("{:?} destroyed", cid);
-        self.set_client_view(cid, PLANE_LIMBO, Region::empty(), h);
+        self.set_client_area(cid, PLANE_LIMBO, Region::empty(), h);
         self.viewers.remove(&(cid.unwrap() as usize));
     }
 
-    // This code is carefully arranged to produce events in the proper order.  Specifically, when a
-    // single update produces both "gone" and "appear" events, all "gone" events should appear
-    // before all "appear" events.  This avoids giving an inconsistent view, in which (for example)
-    // two structures more than `VIEW_SIZE` distance apart are visible at the same time.
-
-    pub fn set_client_view<H>(&mut self,
+    pub fn set_client_area<H>(&mut self,
                               cid: ClientId,
                               new_plane: PlaneId,
-                              new_view: Region<V2>,
+                              new_area: Region<V2>,
                               h: &mut H)
             where H: Hooks {
         let raw_cid = cid.unwrap() as usize;
         let viewer = unwrap_or!(self.viewers.get_mut(&raw_cid));
         let old_plane = mem::replace(&mut viewer.plane, new_plane);
-        let old_view = mem::replace(&mut viewer.view, new_view);
+        let old_area = mem::replace(&mut viewer.area, new_area);
         let plane_change = old_plane != new_plane;
+        let vms = &mut self.maps;
 
-        let entities = &mut self.entities;
-        let terrain_chunks = &mut self.terrain_chunks;
-        let structures = &mut self.structures;
+        // Send all "disappear" events first, then all "appear" events.  This prevents the client
+        // from seeing a mix of old and new structures in the same place.
 
-        for p in old_view.points().filter(|&p| !new_view.contains(p) || plane_change) {
-            let pos = (old_plane, p);
-
-            for &eid in self.entities_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                viewer.visible_entities.release(eid, |()| {
-                    trace!("{:?} moved: --{:?}", cid, eid);
-                    h.on_entity_disappear(cid, eid);
-                    entities[eid.unwrap() as usize].viewers.remove(&cid);
-                });
+        for p in old_area.points().filter(|&p| !new_area.contains(p) || plane_change) {
+            let loc = (old_plane, p);
+            viewer_release(viewer, vms, loc, h);
+            if old_plane != PLANE_LIMBO {
+                multimap_remove(&mut self.viewers_by_pos, loc, cid);
             }
-
-            for &tcid in self.terrain_chunks_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                viewer.visible_terrain_chunks.release(tcid, |()| {
-                    trace!("{:?} moved: --{:?}", cid, tcid);
-                    let cpos = terrain_chunks[tcid.unwrap() as usize].cpos;
-                    h.on_terrain_chunk_disappear(cid, tcid, cpos);
-                    terrain_chunks[tcid.unwrap() as usize].viewers.remove(&cid);
-                });
-            }
-
-            for &sid in self.structures_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                viewer.visible_structures.release(sid, |()| {
-                    trace!("{:?} moved: --{:?}", cid, sid);
-                    h.on_structure_disappear(cid, sid);
-                    structures[sid.unwrap() as usize].viewers.remove(&cid);
-                });
-            }
-
-            multimap_remove(&mut self.viewers_by_pos, pos, cid);
         }
 
         if plane_change {
             h.on_plane_change(cid, old_plane, new_plane);
         }
 
-        for p in new_view.points().filter(|&p| !old_view.contains(p) || plane_change) {
-            let pos = (new_plane, p);
-
-            for &eid in self.entities_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                viewer.visible_entities.retain(eid, || {
-                    trace!("{:?} moved: ++{:?}", cid, eid);
-                    h.on_entity_appear(cid, eid);
-                    entities[eid.unwrap() as usize].viewers.insert(cid);
-                });
-            }
-
-            for &tcid in self.terrain_chunks_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                viewer.visible_terrain_chunks.retain(tcid, || {
-                    trace!("{:?} moved: ++{:?}", cid, tcid);
-                    let cpos = terrain_chunks[tcid.unwrap() as usize].cpos;
-                    h.on_terrain_chunk_appear(cid, tcid, cpos);
-                    terrain_chunks[tcid.unwrap() as usize].viewers.insert(cid);
-                });
-            }
-
-            for &sid in self.structures_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                viewer.visible_structures.retain(sid, || {
-                    trace!("{:?} moved: ++{:?}", cid, sid);
-                    h.on_structure_appear(cid, sid);
-                    structures[sid.unwrap() as usize].viewers.insert(cid);
-                });
-            }
-
+        for p in new_area.points().filter(|&p| !old_area.contains(p) || plane_change) {
+            let loc = (new_plane, p);
+            viewer_retain(viewer, vms, loc, h);
             if new_plane != PLANE_LIMBO {
-                multimap_insert(&mut self.viewers_by_pos, pos, cid);
+                multimap_insert(&mut self.viewers_by_pos, loc, cid);
             }
         }
     }
@@ -261,7 +415,77 @@ impl Vision {
     }
 
     pub fn client_view_area(&self, cid: ClientId) -> Option<Region<V2>> {
-        self.viewers.get(&(cid.unwrap() as usize)).map(|c| c.view)
+        self.viewers.get(&(cid.unwrap() as usize)).map(|c| c.area)
+    }
+
+
+    fn add_viewable<T, H>(&mut self,
+                          id: T::Id,
+                          plane: PlaneId,
+                          area: SmallSet<V2>,
+                          h: &mut H)
+            where T: Tag, H: Hooks {
+        trace!("add {:?}", id);
+        T::viewable_map_mut(&mut self.maps).objs.insert(T::raw_id(id) as usize,
+                                                        Viewable::new());
+        self.set_viewable_area::<T, H>(id, plane, area, h);
+    }
+
+    fn remove_viewable<T, H>(&mut self,
+                             id: T::Id,
+                             h: &mut H)
+            where T: Tag, H: Hooks {
+        trace!("remove {:?}", id);
+        self.set_viewable_area::<T, H>(id, PLANE_LIMBO, SmallSet::new(), h);
+        T::viewable_map_mut(&mut self.maps).objs.remove(&(T::raw_id(id) as usize));
+    }
+
+    fn set_viewable_area<T, H>(&mut self,
+                               id: T::Id,
+                               new_plane: PlaneId,
+                               new_area: SmallSet<V2>,
+                               h: &mut H)
+            where T: Tag, H: Hooks {
+        let vm = T::viewable_map_mut(&mut self.maps);
+        let obj = &mut vm.objs[T::raw_id(id) as usize];
+
+        let old_plane = mem::replace(&mut obj.plane, new_plane);
+        // SmallSet is non-Copy, so insert a dummy value here and set the real one later.
+        let old_area = mem::replace(&mut obj.area, SmallSet::new());
+        let plane_change = new_plane != old_plane;
+
+        // Send all "appear" events before all "disappear" events.  There are four cases here:
+        //  - Neither old nor new position is visible: Refcount remains unchanged (at zero).
+        //  - Only old position is visible: First loop has no effect, second decrements refcount
+        //    (possibly generating `gone` event).
+        //  - Only new position is visible: First loop increments refcount (possibly generating
+        //    `appeear` event), second has no effect.
+        //  - Both old and new are visible: Since old position is visible, refcount is positive,
+        //    First loop increments, and second decrements.  No events are generated because the
+        //    refcount is positive the whole way through.
+        for &p in new_area.iter().filter(|&p| !old_area.contains(p) || plane_change) {
+            let loc = (new_plane, p);
+            for &vid in self.viewers_by_pos.get(&loc).map(|x| x.iter()).unwrap_iter() {
+                let v = &mut self.viewers[vid.unwrap() as usize];
+                retain_obj::<T, H>(v, obj, id, h);
+            }
+            if new_plane != PLANE_LIMBO {
+                multimap_insert(&mut vm.objs_by_pos, loc, T::raw_id(id));
+            }
+        }
+
+        for &p in old_area.iter().filter(|&p| !new_area.contains(p) || plane_change) {
+            let loc = (old_plane, p);
+            for &vid in self.viewers_by_pos.get(&loc).map(|x| x.iter()).unwrap_iter() {
+                let v = &mut self.viewers[vid.unwrap() as usize];
+                release_obj::<T, H>(v, obj, id, h);
+            }
+            if old_plane != PLANE_LIMBO {
+                multimap_remove(&mut vm.objs_by_pos, loc, T::raw_id(id));
+            }
+        }
+
+        obj.area = new_area;
     }
 
 
@@ -271,18 +495,14 @@ impl Vision {
                          area: SmallSet<V2>,
                          h: &mut H)
             where H: Hooks {
-        trace!("{:?} created", eid);
-        self.entities.insert(eid.unwrap() as usize, Entity::new());
-        self.set_entity_area(eid, plane, area, h);
+        self.add_viewable::<EntityTag, H>(eid, plane, area, h);
     }
 
     pub fn remove_entity<H>(&mut self,
                             eid: EntityId,
                             h: &mut H)
             where H: Hooks {
-        trace!("{:?} destroyed", eid);
-        self.set_entity_area(eid, PLANE_LIMBO, SmallSet::new(), h);
-        self.entities.remove(&(eid.unwrap() as usize));
+        self.remove_viewable::<EntityTag, H>(eid, h);
     }
 
     pub fn set_entity_area<H>(&mut self,
@@ -291,65 +511,19 @@ impl Vision {
                               new_area: SmallSet<V2>,
                               h: &mut H)
             where H: Hooks {
-        let raw_eid = eid.unwrap() as usize;
-        let entity = &mut self.entities[raw_eid];
+        self.set_viewable_area::<EntityTag, H>(eid, new_plane, new_area, h);
 
-        let old_plane = mem::replace(&mut entity.plane, new_plane);
-        // SmallSet is non-Copy, so insert a dummy value here and set the real one later.
-        let old_area = mem::replace(&mut entity.area, SmallSet::new());
-        let plane_change = new_plane != old_plane;
-
-        // This looks like a violation of "send `gone` before `appear`", but it's not.  There are
-        // four cases:
-        //  - Neither old nor new position is visible: Refcount remains unchanged (at zero).
-        //  - Only old position is visible: First loop has no effect, second decrements refcount
-        //    (possibly generating `gone` event).
-        //  - Only new position is visible: First loop increments refcount (possibly generating
-        //    `appeear` event), second has no effect.
-        //  - Both old and new are visible: Since old position is visible, refcount is positive,
-        //    First loop increments, and second decrements.  No events are generated because the
-        //    refoucnt is positive the whole way through.
-        for &p in new_area.iter().filter(|&p| !old_area.contains(p) || plane_change) {
-            let pos = (new_plane, p);
-            for &cid in self.viewers_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                self.viewers[cid.unwrap() as usize].visible_entities.retain(eid, || {
-                    trace!("{:?} moved: ++{:?}", eid, cid);
-                    h.on_entity_appear(cid, eid);
-                    entity.viewers.insert(cid);
-                });
-            }
-            if new_plane != PLANE_LIMBO {
-                multimap_insert(&mut self.entities_by_pos, pos, eid);
-            }
-        }
-
-        for &p in old_area.iter().filter(|&p| !new_area.contains(p) || plane_change) {
-            let pos = (old_plane, p);
-            for &cid in self.viewers_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                self.viewers[cid.unwrap() as usize].visible_entities.release(eid, |()| {
-                    trace!("{:?} moved: --{:?}", eid, cid);
-                    h.on_entity_disappear(cid, eid);
-                    entity.viewers.remove(&cid);
-                });
-            }
-            multimap_remove(&mut self.entities_by_pos, pos, eid);
-        }
-
+        let entity = &self.maps.entities.objs[eid.unwrap() as usize];
         for &cid in entity.viewers.iter() {
-            trace!("{:?} moved: **{:?}", eid, cid);
             h.on_entity_motion_update(cid, eid);
         }
-
-        entity.area = new_area;
     }
 
     pub fn update_entity_appearance<H>(&mut self,
                                        eid: EntityId,
                                        h: &mut H)
             where H: Hooks {
-        let raw_eid = eid.unwrap() as usize;
-        let entity = &self.entities[raw_eid];
-
+        let entity = &self.maps.entities.objs[eid.unwrap() as usize];
         for &cid in entity.viewers.iter() {
             h.on_entity_appearance_update(cid, eid);
         }
@@ -362,55 +536,25 @@ impl Vision {
                                 cpos: V2,
                                 h: &mut H)
             where H: Hooks {
-        trace!("{:?} created @ {:?}, {:?}", tcid, plane, cpos);
-        self.terrain_chunks.insert(tcid.unwrap() as usize, TerrainChunk::new());
-        let terrain_chunk = &mut self.terrain_chunks[tcid.unwrap() as usize];
-
-        // Structures don't move, so we can inline the two halves of the set_x_area logic.
-
-        let pos = (plane, cpos);
-        for &cid in self.viewers_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-            self.viewers[cid.unwrap() as usize].visible_terrain_chunks.retain(tcid, || {
-                trace!("{:?} moved: ++{:?}", tcid, cid);
-                h.on_terrain_chunk_appear(cid, tcid, cpos);
-                terrain_chunk.viewers.insert(cid);
-            });
-        }
-        if plane != PLANE_LIMBO {
-            multimap_insert(&mut self.terrain_chunks_by_pos, pos, tcid);
-        }
-
-        terrain_chunk.plane = plane;
-        terrain_chunk.cpos = cpos;
+        let mut area = SmallSet::new();
+        area.insert(cpos);
+        self.add_viewable::<TerrainChunkTag, H>(tcid, plane, area, h);
     }
 
     pub fn remove_terrain_chunk<H>(&mut self,
                                    tcid: TerrainChunkId,
                                    h: &mut H)
             where H: Hooks {
-        trace!("{:?} destroyed", tcid);
-        let terrain_chunk = self.terrain_chunks.remove(&(tcid.unwrap() as usize)).unwrap();
-
-        let pos = (terrain_chunk.plane, terrain_chunk.cpos);
-        for &cid in self.viewers_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-            self.viewers[cid.unwrap() as usize].visible_terrain_chunks.release(tcid, |()| {
-                debug!("{:?} moved: --{:?}", tcid, cid);
-                h.on_terrain_chunk_disappear(cid, tcid, terrain_chunk.cpos);
-            });
-        }
-        multimap_remove(&mut self.terrain_chunks_by_pos, pos, tcid);
+        self.remove_viewable::<TerrainChunkTag, H>(tcid, h);
     }
 
     pub fn update_terrain_chunk<H>(&mut self,
                                    tcid: TerrainChunkId,
                                    h: &mut H)
             where H: Hooks {
-
-        let raw_tcid = tcid.unwrap() as usize;
-        let terrain_chunk = &self.terrain_chunks[raw_tcid];
-
+        let terrain_chunk = &self.maps.terrain_chunks.objs[tcid.unwrap() as usize];
         for &cid in terrain_chunk.viewers.iter() {
-            h.on_terrain_chunk_update(cid, tcid, terrain_chunk.cpos);
+            h.on_terrain_chunk_update(cid, tcid);
         }
     }
 
@@ -421,18 +565,14 @@ impl Vision {
                             area: SmallSet<V2>,
                             h: &mut H)
             where H: Hooks {
-        trace!("{:?} created", sid);
-        self.structures.insert(sid.unwrap() as usize, Structure::new());
-        self.set_structure_area(sid, plane, area, h);
+        self.add_viewable::<StructureTag, H>(sid, plane, area, h);
     }
 
     pub fn remove_structure<H>(&mut self,
                                sid: StructureId,
                                h: &mut H)
             where H: Hooks {
-        trace!("{:?} destroyed", sid);
-        self.set_structure_area(sid, PLANE_LIMBO, SmallSet::new(), h);
-        self.structures.remove(&(sid.unwrap() as usize));
+        self.remove_viewable::<StructureTag, H>(sid, h);
     }
 
     pub fn set_structure_area<H>(&mut self,
@@ -441,52 +581,15 @@ impl Vision {
                                  new_area: SmallSet<V2>,
                                  h: &mut H)
             where H: Hooks {
-        let raw_sid = sid.unwrap() as usize;
-        let structure = &mut self.structures[raw_sid];
-
-        let old_plane = mem::replace(&mut structure.plane, new_plane);
-        // SmallSet is non-Copy, so insert a dummy value here and set the real one later.
-        let old_area = mem::replace(&mut structure.area, SmallSet::new());
-        let plane_change = new_plane != old_plane;
-
-        // This ordering of events is okay for the same reason as in set_entity_structure.
-
-        for &p in new_area.iter().filter(|&p| !old_area.contains(p) || plane_change) {
-            let pos = (new_plane, p);
-            for &cid in self.viewers_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                self.viewers[cid.unwrap() as usize].visible_structures.retain(sid, || {
-                    trace!("{:?} moved: ++{:?}", sid, cid);
-                    h.on_structure_appear(cid, sid);
-                    structure.viewers.insert(cid);
-                });
-            }
-            if new_plane != PLANE_LIMBO {
-                multimap_insert(&mut self.structures_by_pos, pos, sid);
-            }
-        }
-
-        for &p in old_area.iter().filter(|&p| !new_area.contains(p) || plane_change) {
-            let pos = (old_plane, p);
-            for &cid in self.viewers_by_pos.get(&pos).map(|x| x.iter()).unwrap_iter() {
-                self.viewers[cid.unwrap() as usize].visible_structures.release(sid, |()| {
-                    trace!("{:?} moved: --{:?}", sid, cid);
-                    h.on_structure_disappear(cid, sid);
-                    structure.viewers.remove(&cid);
-                });
-            }
-            multimap_remove(&mut self.structures_by_pos, pos, sid);
-        }
-
-        structure.area = new_area;
+        self.set_viewable_area::<StructureTag, H>(sid, new_plane, new_area, h);
     }
 
     pub fn change_structure_template<H>(&mut self,
                                         sid: StructureId,
                                         h: &mut H)
             where H: Hooks {
-        let structure = self.structures.get(&(sid.unwrap() as usize)).unwrap();
+        let structure = &self.maps.structures.objs[sid.unwrap() as usize];
         for &cid in structure.viewers.iter() {
-            trace!("{:?} changed: **{:?}", sid, cid);
             h.on_structure_template_change(cid, sid);
         }
     }
@@ -532,49 +635,8 @@ impl Vision {
     }
 }
 
-impl Viewer {
-    fn new() -> Viewer {
-        Viewer {
-            plane: PLANE_LIMBO,
-            view: Region::empty(),
-            visible_entities: RefcountedMap::new(),
-            visible_terrain_chunks: RefcountedMap::new(),
-            visible_structures: RefcountedMap::new(),
-            visible_inventories: RefcountedMap::new(),
-        }
-    }
-}
 
-impl Entity {
-    fn new() -> Entity {
-        Entity {
-            plane: PLANE_LIMBO,
-            area: SmallSet::new(),
-            viewers: HashSet::new(),
-        }
-    }
-}
-
-impl TerrainChunk {
-    fn new() -> TerrainChunk {
-        TerrainChunk {
-            plane: PLANE_LIMBO,
-            cpos: scalar(0),
-            viewers: HashSet::new(),
-        }
-    }
-}
-
-impl Structure {
-    fn new() -> Structure {
-        Structure {
-            plane: PLANE_LIMBO,
-            area: SmallSet::new(),
-            viewers: HashSet::new(),
-        }
-    }
-}
-
+// Fragment
 
 macro_rules! gen_Fragment {
     ($( fn $name:ident($($arg:ident: $arg_ty:ty),*); )*) => {
@@ -597,7 +659,7 @@ macro_rules! gen_Fragment {
 gen_Fragment! {
     fn add_client(cid: ClientId, plane: PlaneId, view: Region<V2>);
     fn remove_client(cid: ClientId);
-    fn set_client_view(cid: ClientId, plane: PlaneId, view: Region<V2>);
+    fn set_client_area(cid: ClientId, plane: PlaneId, view: Region<V2>);
 
     fn add_entity(eid: EntityId, plane: PlaneId, area: SmallSet<V2>);
     fn remove_entity(eid: EntityId);
