@@ -72,46 +72,6 @@ def warn(s):
     sys.stderr.write('warning: ' + s + '\n')
 
 
-def chop_image_named(img, table, size=(TILE_SIZE, TILE_SIZE)):
-    sx, sy = size
-    result = {}
-    for i, row in enumerate(table):
-        for j, part_name in enumerate(row):
-            if part_name is None:
-                continue
-            x = j * sx
-            y = i * sy
-            tile = img.crop((x, y, x + sx, y + sy))
-            result[part_name] = tile
-    return result
-
-def chop_terrain(img):
-    return chop_image_named(img, TERRAIN_PARTS, (TILE_SIZE, TILE_SIZE))
-
-def chop_image(img, size=(TILE_SIZE, TILE_SIZE)):
-    w, h = img.size
-    sx, sy = size
-    tw = (w + sx - 1) // sx
-    th = (h + sy - 1) // sy
-    return chop_image_named(img, [[(i, j) for i in range(tw)] for j in range(th)], size)
-
-def stack(base, *args):
-    img = base.copy()
-    for layer in args:
-        img.paste(layer, (0, 0), layer)
-    return img
-
-def extract(img, pos, size=(1, 1)):
-    x, y = pos
-    w, h = size
-
-    x *= TILE_SIZE
-    y *= TILE_SIZE
-    w *= TILE_SIZE
-    h *= TILE_SIZE
-    return img.crop((x, y, x + w, y + h))
-
-
 class Page(object):
     def __init__(self, size):
         self.w, self.h = size
@@ -199,31 +159,6 @@ def build_sheets(imgs, offsets, num_pages, page_size, scale):
         sheets[page].paste(img, (x * sx, y * sy))
 
     return sheets
-
-def build_sheet(objs):
-    """Build a sprite sheet for fixed-size objects.  Each object should have
-    `image` and `id` fields.  The `image` will be copied into the sheet at a
-    position based on its `id`.  The width of the sheet in objects (used for
-    computing positions from IDs) will be SHEET_PX // obj_width.
-    """
-
-    if len(objs) == 0:
-        return Image.new('RGBA', (1, 1))
-
-    obj_w, obj_h = objs[0].image.size
-    sheet_cols = SHEET_PX // obj_w
-    sheet_rows = (len(objs) + sheet_cols - 1) // sheet_cols
-    assert sheet_rows * obj_h <= SHEET_PX
-    sheet = Image.new('RGBA', (SHEET_PX, SHEET_PX))
-
-    for o in objs:
-        assert o.id < len(objs)
-        x = o.id % sheet_cols
-        y = o.id // sheet_cols
-        sheet.paste(o.image, (x * obj_w, y * obj_h))
-
-    return sheet
-
 
 def dedupe_images(imgs):
     """Deduplicate a set of images.  Returns a list of images and a dict

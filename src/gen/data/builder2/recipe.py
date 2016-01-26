@@ -57,7 +57,6 @@ class RecipeBuilder(BuilderBase):
             item, count = item_count
             x.outputs[item] = count
         return self._dict_modify(f, args)
-        self._modify
 
     def from_item(self, i, name=None, **kwargs):
         if isinstance(i, ItemPrototype):

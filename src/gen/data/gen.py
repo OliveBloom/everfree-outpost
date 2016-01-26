@@ -30,13 +30,6 @@ IdMaps = namedtuple('IdMaps', (
     'attachments_by_slot',
 ))
 
-def copy_builder2_to_builder(b):
-    def dump(k, lst):
-        for proto in builder2.INSTANCES[k]._dct.values():
-            lst.append(proto.instantiate())
-    dump('block', b.blocks)
-    dump('loot_table', b.loot_tables)
-
 def collect_defs(b):
     return Defs(
             builder2.BLOCK.all(),
@@ -172,7 +165,6 @@ def time(msg, f, *args):
 
 def generate(output_dir):
     b = builder.INSTANCE
-    copy_builder2_to_builder(b)
     defs = collect_defs(b)
     postprocess(defs)
 

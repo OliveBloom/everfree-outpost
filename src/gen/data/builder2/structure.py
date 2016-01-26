@@ -2,7 +2,7 @@ from outpost_data.core import image2, geom, util
 from outpost_data.core.builder2.base import *
 from outpost_data.core.consts import *
 from outpost_data.core.image2 import Anim
-from outpost_data.core.structure import solid, StructureDef, StructureDef2, StaticAnimDef, Model2
+from outpost_data.core.structure import solid, StructureDef2, Model2
 
 
 DEFAULT_SHAPE = solid(1, 1, 1)

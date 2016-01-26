@@ -271,7 +271,7 @@ class Compiler(object):
                 idx = stack.index(i)
                 names = [self.compiled[j]['name'] for j in stack[idx:]]
                 names.append(names[0])
-                raise ValueError('detected cycle among loot tables: %s' % names)
+                util.err('detected cycle among loot tables: %s' % names)
 
             if i in visited:
                 return
@@ -301,7 +301,7 @@ class Compiler(object):
     def compile(self):
         for name, tables in self.table_map.items():
             self.compile_table(name, tables)
-        #self.cycle_check()
+        self.cycle_check()
         return self.compiled
 
 

@@ -125,68 +125,6 @@ class StructurePart(object):
         return ((int(shadow) << 0) |
                 (int(anim) << 1))
 
-# TODO: remove (deprecated)
-class StaticAnimDef(object):
-    """An animation for a static element (structure or block).  This class is
-    distinct from AnimationDef (sprite animations) because the requirements are
-    not actually very similar."""
-    def __init__(self, frames, framerate, oneshot=False):
-        self.length = len(frames)
-        self.framerate = framerate
-        self.oneshot = oneshot
-        self.frames = frames
-        self.size = frames[0].size
-
-        # Set by `self.process_frames()`
-        self.static_base = None
-        self.anim_offset = None
-        self.anim_size = None
-        self.anim_sheet = None
-        self.process_frames()
-
-        # Set by `build_anim_sheets`
-        self.sheet_idx = None
-        self.offset = None
-
-    def process_frames(self):
-        assert all(f.size == self.frames[0].size for f in self.frames), \
-                'all animation frames must be the same size'
-
-        w, h = self.frames[0].size
-        first = self.frames[0].getdata()
-        px_size = len(first) // (w * h)
-
-        base = self.frames[0].convert('RGBA')
-
-        min_x, min_y = w, h
-        max_x, max_y = 0, 0
-        for f in self.frames[1:]:
-            data = f.getdata()
-            for i in range(w * h):
-                if data[i] != first[i]:
-                    i //= px_size
-                    x = i % w
-                    y = i // w
-                    min_x = min(min_x, x)
-                    min_y = min(min_y, y)
-                    max_x = max(max_x, x + 1)
-                    max_y = max(max_y, y + 1)
-
-                    base.paste((0, 0, 0, 0), (x, y, x + 1, y + 1))
-
-        self.static_base = base
-        self.anim_offset = (min_x, min_y)
-        self.anim_size = (max_x - min_x, max_y - min_y)
-        
-        sheet = Image.new('RGBA', (len(self.frames) * (max_x - min_x), max_y - min_y))
-        for i, f in enumerate(self.frames):
-            tmp = ImageChops.subtract(f, base)
-            tmp = tmp.crop((min_x, min_y, max_x, max_y))
-            sheet.paste(tmp, ((max_x - min_x) * i, 0))
-
-        self.anim_sheet = sheet
-
-
 
 class StructureDef2(object):
     def __init__(self, name, shape, layer):
@@ -237,25 +175,6 @@ class StructureDef2(object):
     def add_part(self, model2, img):
         self.parts.append(StructurePart(model2, img))
 
-    def get_image(self):
-        img_size = (self.size[0], self.size[1] + self.size[2])
-        px_size = tuple(x * TILE_SIZE for x in img_size)
-
-        # part.base is relative to the 0,0,0 corner, so part.base[1] may be as
-        # low as -self.size[2] * TILE_SIZE.
-        y_off = self.size[2] * TILE_SIZE
-
-        layers = []
-        for p in self.parts:
-            bx, by = p.base
-            layers.append(p.img.pad(px_size, offset=(bx, by + y_off)))
-
-        if len(layers) > 0:
-            result = image2.stack(layers)
-        else:
-            result = image2.Image(size=px_size)
-        return result.raw().raw()
-
     def set_light(self, pos, color, radius):
         self.light_pos = pos
         self.light_color = color
@@ -268,31 +187,6 @@ class StructureDef2(object):
             flags = flags | p.get_flags()
         return flags
 
-class StructureDef(StructureDef2):
-    def __init__(self, name, image, model, shape, layer):
-        super(StructureDef, self).__init__(name, shape, layer)
-        px_size = tuple(x * TILE_SIZE for x in shape.size)
-        mesh = model.to_mesh()
-
-        if isinstance(image, StaticAnimDef):
-            base = image2.Image(img=image_cache.ConstImage(image.static_base))
-            base_model2 = Model2(mesh, ((0, 0, 0), px_size))
-            self.add_part(base_model2, base)
-
-            frame_sheet = image2.Image(img=image_cache.ConstImage(image.anim_sheet),
-                    unit=image.anim_size)
-            frames = [frame_sheet.extract((x, 0)) for x in range(image.length)]
-            anim = image2.Anim(frames, image.framerate, image.oneshot)
-            box_min = geom.sub(image.anim_offset, (0, shape.size[2] * TILE_SIZE))
-            box_max = geom.add(box_min, image.anim_size)
-            anim_mesh = mesh.copy()
-            geom.clip_xv(anim_mesh, *(box_min + box_max))
-            anim_model2 = Model2(anim_mesh, anim_mesh.get_bounds())
-            self.add_part(anim_model2, anim)
-        else:
-            image = image2.Image(img=image_cache.ConstImage(image))
-            model2 = Model2(mesh, ((0, 0, 0), px_size))
-            self.add_part(model2, image)
 
 # Sprite sheets
 

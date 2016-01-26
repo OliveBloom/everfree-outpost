@@ -48,61 +48,6 @@ class Objects2:
     def __getitem__(self, k):
         return self._builder[k]
 
-
-class Blocks(Objects):
-    def create(self, name, shape, tiles):
-        b = block.BlockDef(name, shape, tiles)
-        self._add(b)
-        self.owner.blocks.append(b)
-        return self
-
-    def light(self, color, radius):
-        self._foreach(lambda s: s.set_light(color, radius))
-        return self
-
-class Structures(Objects2):
-    def create(self, name, image, model, shape, layer):
-        if isinstance(image, structure.StaticAnimDef):
-            image = image2.Anim(
-                    [image2.Image.from_raw(f) for f in image.frames],
-                    image.framerate, image.oneshot)
-        else:
-            image = image2.Image.from_raw(image)
-        self._builder.new(name) \
-                .image(image) \
-                .mesh(model.to_mesh()) \
-                .shape(shape) \
-                .layer(layer)
-        return self
-
-    def light(self, pos, color, radius):
-        self._builder.light(pos, color, radius)
-        return self
-
-class Items(Objects2):
-    def create(self, name, ui_name, image):
-        self._builder.new(name) \
-                .display_name(ui_name) \
-                .icon(image2.Image.from_raw(image))
-        return self
-
-    def recipe(self, station, inputs, count=1):
-        for n in self._builder.keys():
-            r = builder2.RECIPE.from_item(self._builder[n]) \
-                    .station(station)
-            for k,v in inputs.items():
-                r.input(k, v)
-        return self
-
-class Recipes(Objects2):
-    def create(self, name, ui_name, station, inputs, outputs):
-        self._builder.new(name) \
-                .display_name(ui_name) \
-                .station(station) \
-                .inputs(inputs) \
-                .outputs(outputs)
-        return self
-
 class AnimGroups(Objects):
     def create(self, name):
         g = animation.AnimGroupDef(name)
@@ -152,51 +97,13 @@ class AttachSlots(Objects):
         self._foreach(go)
         return self
 
-class Extras(Objects):
-    def create(self, name, func):
-        e = extra.ExtraDef(name, func)
-        self._add(e)
-        self.owner.extras.append(e)
-        return self
-
 
 class Builder(object):
     def __init__(self):
-        self.blocks = []
         self.anim_groups = []
         self.animations = []
         self.sprites = []
         self.attach_slots = []
-        self.loot_tables = []
-        self.extras = []
-
-
-    def block_builder(self):
-        return Blocks(self)
-
-    def mk_block(self, *args, **kwargs):
-        return self.block_builder().create(*args, **kwargs)
-
-
-    def structure_builder(self):
-        return Structures(builder2.STRUCTURE.child())
-
-    def mk_structure(self, *args, **kwargs):
-        return self.structure_builder().create(*args, **kwargs)
-
-
-    def item_builder(self):
-        return Items(builder2.ITEM.child())
-
-    def mk_item(self, *args, **kwargs):
-        return self.item_builder().create(*args, **kwargs)
-
-
-    def recipe_builder(self):
-        return Recipes(builder2.RECIPE.child())
-
-    def mk_recipe(self, *args, **kwargs):
-        return self.recipe_builder().create(*args, **kwargs)
 
 
     def anim_group_builder(self):
@@ -220,28 +127,11 @@ class Builder(object):
         return self.attach_slot_builder().create(*args, **kwargs)
 
 
-    def extra_builder(self):
-        return Extras(self)
-
-    def mk_extra(self, *args, **kwargs):
-        return self.extra_builder().create(*args, **kwargs)
-
-
 INSTANCE = Builder()
-mk_block = INSTANCE.mk_block
-mk_structure = INSTANCE.mk_structure
-mk_item = INSTANCE.mk_item
-mk_recipe = INSTANCE.mk_recipe
 mk_anim_group = INSTANCE.mk_anim_group
 mk_sprite = INSTANCE.mk_sprite
 mk_attach_slot = INSTANCE.mk_attach_slot
-mk_extra = INSTANCE.mk_extra
 
-block_builder = INSTANCE.block_builder
-structure_builder = INSTANCE.structure_builder
-item_builder = INSTANCE.item_builder
-recipe_builder = INSTANCE.recipe_builder
 anim_group_builder = INSTANCE.anim_group_builder
 sprite_builder = INSTANCE.sprite_builder
 attach_slot_builder = INSTANCE.attach_slot_builder
-extra_builder = INSTANCE.extra_builder
