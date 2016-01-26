@@ -14,6 +14,11 @@ class StructurePrototype(PrototypeBase):
             'light_offset', 'light_color', 'light_radius',
             )
 
+    def clone(self):
+        obj = super(StructurePrototype, self).clone()
+        obj.parts = self.parts.copy() if self.parts is not None else None
+        return obj
+
     def instantiate(self):
         self.name = self.require('name') or '_%x' % id(self)
 
