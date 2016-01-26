@@ -222,7 +222,6 @@ def chop_ramp_top(cave, ramp):
         raw.paste(color, (80, 0, 96, 48))
         raw.paste(color, (16, 0, 80, 16))
     ramp = ramp.modify(blank_outside)
-    ramp.raw().raw().save('test-ramp.png')
 
     cave_parts = clear_center(cave).chop_grid(BORDER_PARTS)
 
@@ -458,8 +457,6 @@ def do_cave_top(tiles):
     dct = chop_terrain(img)
     dct['cross/nw'] = cross_img.extract((0, 1))
     dct['cross/ne'] = cross_img.extract((0, 0))
-    for k,v in dct.items():
-        v.raw().raw().save('test-%s.png' % k.replace('/', '_'))
 
     bb = BLOCK.prefixed('cave_top').shape('floor')
 
