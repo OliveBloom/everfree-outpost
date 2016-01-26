@@ -624,6 +624,12 @@ impl Vision {
         let viewer = unwrap_or!(self.viewers.get_mut(&(cid.unwrap() as usize)));
         let inventory_viewers = &mut self.inventory_viewers;
 
+        if viewer.visible_inventories.get(&iid).is_none() {
+            // Prevent a panic if the arguments are bad.
+            warn!("{:?} tried to unsubscribe non-visible inventory {:?}", cid, iid);
+            return;
+        }
+
         viewer.visible_inventories.release(iid, |()| {
             multimap_remove(inventory_viewers, iid, cid);
             h.on_inventory_disappear(cid, iid);
