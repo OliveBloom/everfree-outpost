@@ -1,14 +1,13 @@
-from ..core.builder import *
-from ..core import util
+from outpost_data.core.builder2 import EXTRA
 
 
-def gen_default_anim(b, maps):
+def gen_default_anim(maps):
     return maps.animations['pony/stand-0']
 
-def gen_editor_anim(b, maps):
+def gen_editor_anim(maps):
     return maps.animations['pony/stand-4']
 
-def gen_physics_anim_table(b, maps):
+def gen_physics_anim_table(maps):
     SPEED_NAMES = ('stand', 'walk', None, 'run')
     table = []
     for speed in SPEED_NAMES:
@@ -21,7 +20,7 @@ def gen_physics_anim_table(b, maps):
 
     return table
 
-def gen_anim_dir_table(b, maps):
+def gen_anim_dir_table(maps):
     dct = {}
     for speed in ('stand', 'run', 'walk'):
         for dir_ in range(8):
@@ -29,7 +28,7 @@ def gen_anim_dir_table(b, maps):
             dct[anim_id] = dir_
     return dct
 
-def gen_pony_slot_table(b, maps):
+def gen_pony_slot_table(maps):
     result = []
     for sex in ('f', 'm'):
         parts = {}
@@ -39,7 +38,7 @@ def gen_pony_slot_table(b, maps):
         result.append(parts)
     return result
 
-def gen_pony_bases_table(b, maps):
+def gen_pony_bases_table(maps):
     result = []
     for bits in range(8):
         # This mimics the logic in client/js/graphics/appearance/pony.js
@@ -53,9 +52,9 @@ def gen_pony_bases_table(b, maps):
     return result
 
 def init():
-    mk_extra('default_anim', gen_default_anim)
-    mk_extra('editor_anim', gen_editor_anim)
-    mk_extra('physics_anim_table', gen_physics_anim_table)
-    mk_extra('anim_dir_table', gen_anim_dir_table)
-    mk_extra('pony_slot_table', gen_pony_slot_table)
-    mk_extra('pony_bases_table', gen_pony_bases_table)
+    EXTRA.new('default_anim').func(gen_default_anim)
+    EXTRA.new('editor_anim').func(gen_editor_anim)
+    EXTRA.new('physics_anim_table').func(gen_physics_anim_table)
+    EXTRA.new('anim_dir_table').func(gen_anim_dir_table)
+    EXTRA.new('pony_slot_table').func(gen_pony_slot_table)
+    EXTRA.new('pony_bases_table').func(gen_pony_bases_table)

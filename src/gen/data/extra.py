@@ -5,12 +5,12 @@ class ExtraDef(object):
 
         self.value = None
 
-    def resolve(self, builder, id_maps):
-        self.value = self.func(builder, id_maps)
+    def resolve(self, id_maps):
+        self.value = self.func(id_maps)
 
-def resolve_all(extras, builder, id_maps):
+def resolve_all(extras, id_maps):
     for e in extras:
-        e.resolve(builder, id_maps)
+        e.resolve(id_maps)
 
 
 # JSON output

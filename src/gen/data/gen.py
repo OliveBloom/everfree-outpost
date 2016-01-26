@@ -8,6 +8,18 @@ from . import structure, block, item, recipe, animation, attachment, loot_table,
 from outpost_data.core.loader import TimeIt
 
 
+Defs = namedtuple('Defs', (
+    'blocks',
+    'structures',
+    'items',
+    'recipes',
+    'animations',
+    'sprites',
+    'attach_slots',
+    'loot_tables',
+    'extras',
+))
+
 IdMaps = namedtuple('IdMaps', (
     'structures',
     'blocks',
@@ -23,26 +35,36 @@ def copy_builder2_to_builder(b):
         for proto in builder2.INSTANCES[k]._dct.values():
             lst.append(proto.instantiate())
     dump('block', b.blocks)
-    b.structures = builder2.STRUCTURE.all()
-    b.items = builder2.ITEM.all()
-    b.recipes = builder2.RECIPE.all()
     dump('loot_table', b.loot_tables)
 
-def postprocess(b):
+def collect_defs(b):
+    return Defs(
+            builder2.BLOCK.all(),
+            builder2.STRUCTURE.all(),
+            builder2.ITEM.all(),
+            builder2.RECIPE.all(),
+            b.animations,
+            b.sprites,
+            b.attach_slots,
+            builder2.LOOT_TABLE.all(),
+            builder2.EXTRA.all(),
+            )
+
+def postprocess(defs):
     id_maps = IdMaps(
-        util.assign_ids(b.structures),
-        util.assign_ids(b.blocks, ['empty', 'placeholder']),
-        util.assign_ids(b.items, ['none']),
-        util.assign_ids(b.recipes),
-        util.assign_ids(b.animations),
-        util.assign_ids(b.attach_slots),
-        dict((s.name, util.assign_ids(s.variants, ['none'])) for s in b.attach_slots),
+        util.assign_ids(defs.structures),
+        util.assign_ids(defs.blocks, ['empty', 'placeholder']),
+        util.assign_ids(defs.items, ['none']),
+        util.assign_ids(defs.recipes),
+        util.assign_ids(defs.animations),
+        util.assign_ids(defs.attach_slots),
+        dict((s.name, util.assign_ids(s.variants, ['none'])) for s in defs.attach_slots),
     )
 
-    recipe.resolve_item_ids(b.recipes, id_maps.items)
-    recipe.resolve_structure_ids(b.recipes, id_maps.structures)
-    loot_table.resolve_object_ids(b.loot_tables, id_maps)
-    extra.resolve_all(b.extras, b, id_maps)
+    recipe.resolve_item_ids(defs.recipes, id_maps.items)
+    recipe.resolve_structure_ids(defs.recipes, id_maps.structures)
+    loot_table.resolve_object_ids(defs.loot_tables, id_maps)
+    extra.resolve_all(defs.extras, id_maps)
 
 def write_json(output_dir, basename, j):
     with open(os.path.join(output_dir, basename), 'w') as f:
@@ -151,24 +173,25 @@ def time(msg, f, *args):
 def generate(output_dir):
     b = builder.INSTANCE
     copy_builder2_to_builder(b)
-    postprocess(b)
+    defs = collect_defs(b)
+    postprocess(defs)
 
     print('Generating:')
-    time('structures', emit_structures, output_dir, b.structures)
-    time('blocks', emit_blocks, output_dir, b.blocks)
-    time('items', emit_items, output_dir, b.items)
-    time('recipes', emit_recipes, output_dir, b.recipes)
-    time('animations', emit_animations, output_dir, b.animations)
-    time('sprites', emit_sprites, output_dir, b.sprites)
-    time('attach_slots', emit_attach_slots, output_dir, b.attach_slots)
-    time('loot_tables', emit_loot_tables, output_dir, b.loot_tables)
-    time('extras', emit_extras, output_dir, b.extras)
+    time('structures', emit_structures, output_dir, defs.structures)
+    time('blocks', emit_blocks, output_dir, defs.blocks)
+    time('items', emit_items, output_dir, defs.items)
+    time('recipes', emit_recipes, output_dir, defs.recipes)
+    time('animations', emit_animations, output_dir, defs.animations)
+    time('sprites', emit_sprites, output_dir, defs.sprites)
+    time('attach_slots', emit_attach_slots, output_dir, defs.attach_slots)
+    time('loot_tables', emit_loot_tables, output_dir, defs.loot_tables)
+    time('extras', emit_extras, output_dir, defs.extras)
 
     print('%d structures, %d blocks, %d items, %d recipes' %
-            (len(b.structures), len(b.blocks), len(b.items), len(b.recipes)))
+            (len(defs.structures), len(defs.blocks), len(defs.items), len(defs.recipes)))
     print('%d animations, %d sprites, %d attach_slots, %d loot tables, %d extras' %
-            (len(b.animations), len(b.sprites), len(b.attach_slots),
-                len(b.loot_tables), len(b.extras)))
+            (len(defs.animations), len(defs.sprites), len(defs.attach_slots),
+                len(defs.loot_tables), len(defs.extras)))
 
     with open(os.path.join(output_dir, 'stamp'), 'w') as f:
         pass
