@@ -370,7 +370,14 @@ impl Vision {
             where H: Hooks {
         trace!("{:?} destroyed", cid);
         self.set_client_area(cid, PLANE_LIMBO, Region::empty(), h);
-        self.viewers.remove(&(cid.unwrap() as usize));
+
+        let raw_cid = cid.unwrap() as usize;
+        for (&iid, _) in self.viewers[&raw_cid].visible_inventories.iter() {
+            multimap_remove(&mut self.inventory_viewers, iid, cid);
+            h.on_inventory_disappear(cid, iid);
+        }
+
+        self.viewers.remove(&raw_cid);
     }
 
     pub fn set_client_area<H>(&mut self,

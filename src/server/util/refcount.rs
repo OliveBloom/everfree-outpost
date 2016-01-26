@@ -1,4 +1,4 @@
-use std::collections::hash_map::HashMap;
+use std::collections::hash_map::{self, HashMap};
 use std::hash::Hash;
 
 
@@ -95,5 +95,23 @@ impl<K: Eq+Hash, V> RefcountedMap<K, V> {
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         self.map.get_mut(key).map(|rc| rc.data_mut())
+    }
+
+    pub fn iter(&self) -> Iter<K, V> {
+        Iter { inner: self.map.iter() }
+    }
+}
+
+struct Iter<'a, K: 'a, V: 'a> {
+    inner: hash_map::Iter<'a, K, Refcounted<V>>,
+}
+
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+    fn next(&mut self) -> Option<(&'a K, &'a V)> {
+        match self.inner.next() {
+            Some((k, v)) => Some((k, &v.data)),
+            None => None,
+        }
     }
 }
