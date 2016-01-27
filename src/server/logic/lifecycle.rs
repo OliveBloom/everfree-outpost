@@ -18,7 +18,7 @@ pub fn start_up(mut eng: EngineRef) {
     let world_time =
         if let Some(mut file) = eng.storage().open_world_file() {
             let b = bundle::read_bundle(&mut file).unwrap();
-            bundle::import_bundle(&mut eng.as_world_fragment(), &b);
+            bundle::import_world(&mut eng.as_world_fragment(), &b);
             b.world.as_ref().unwrap().now
         } else {
             0
