@@ -53,10 +53,17 @@ void main(void) {
     layer(result, sheetEyes);
     layerTinted(result, sheetMane, colorHair);
     layerTinted(result, sheetTail, colorHair);
-    for (int i = 0; i < 3; ++i) {
-        if (hasEquip[i]) {
-            layer(result, sheetEquip[i]);
-        }
+
+    // Unroll because GLSL 1.30 requires constant indices for uniform sampler
+    // arrays.
+    if (hasEquip[0]) {
+        layer(result, sheetEquip[0]);
+    }
+    if (hasEquip[1]) {
+        layer(result, sheetEquip[1]);
+    }
+    if (hasEquip[2]) {
+        layer(result, sheetEquip[2]);
     }
 
     if (result.a == 0.0) {
