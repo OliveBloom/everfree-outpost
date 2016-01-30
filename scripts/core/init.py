@@ -7,6 +7,7 @@ from outpost_server import core
 import outpost_server.core.data
 import outpost_server.core.chat
 import outpost_server.core.eval
+import outpost_server.core.state_machine
 import outpost_server.core.timer
 import outpost_server.core.use
 
@@ -51,31 +52,18 @@ def hack_apply_structure_extras(eng, sid, k, v):
 
     p = s.plane()
 
-# Fix this once Bundle save/load code is working
-def hack_run_load_hook(eng, sid):
-    from outpost_server.core import state_machine, timer
-    from outpost_server.core.engine import StructureProxy
-    s = StructureProxy(eng, sid)
-    t = s.extra().get('sm', {}).get('timer')
-    if t is not None:
-        when = t['when']
-        cookie = timer.schedule(s.engine, when, 
-                lambda eng: state_machine.callback(eng, sid, when))
-        s.extra()['sm']['timer']['cookie'] = cookie
-
-
 def init(storage, data, hooks):
     core.data.init(data)    # Must be first
 
     core.chat.init(hooks)
     core.eval.init(hooks)
+    core.state_machine.init(hooks)
     core.timer.init(hooks)
     core.use.init(hooks)
 
     hooks.server_startup(startup)
     hooks.client_login(client_login)
     hooks.hack_apply_structure_extras(hack_apply_structure_extras)
-    hooks.hack_run_load_hook(hack_run_load_hook)
 
     for d in outpost_server.__path__:
         for m in os.listdir(d):

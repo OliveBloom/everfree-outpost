@@ -4,6 +4,7 @@ use engine::split;
 use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
+use world;
 
 use super::{Pack, Unpack};
 use super::rust_ref::{RustRef, RustRefType};
@@ -57,8 +58,10 @@ define_script_hooks!(
     client_use_item,
     client_use_ability,
 
+    structure_import_hook,
+    // structure_export_hook,   // unimplemented
+
     hack_apply_structure_extras,
-    hack_run_load_hook,
 );
 
 impl ScriptHooks {
@@ -123,18 +126,20 @@ impl ScriptHooks {
     }
 
 
+    pub fn call_structure_import_hook<'d, F>(&self,
+                                             f: F,
+                                             sid: StructureId) -> PyResult<()>
+            where F: world::Fragment<'d> + split::Part + split::PartFlags {
+        call_with_engine1(&self.structure_import_hook, f, sid)
+    }
+
+
     pub fn call_hack_apply_structure_extras(&self,
                                             eng: split::EngineRef,
                                             sid: StructureId,
                                             k: &str,
                                             v: &str) -> PyResult<()> {
         call_with_engine3(&self.hack_apply_structure_extras, eng, sid, k, v)
-    }
-
-    pub fn call_hack_run_load_hook(&self,
-                                   eng: split::EngineRef,
-                                   sid: StructureId) -> PyResult<()> {
-        call_with_engine1(&self.hack_run_load_hook, eng, sid)
     }
 }
 
@@ -159,7 +164,8 @@ pub fn call_void<A: Pack>(f: PyRef, args: A) -> PyResult<()> {
     Ok(())
 }
 
-fn call_with_engine0(opt_func: &Option<PyBox>, eng: split::EngineRef) -> PyResult<()> {
+fn call_with_engine0<E>(opt_func: &Option<PyBox>, eng: E) -> PyResult<()>
+        where E: split::Part + split::PartFlags {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng,))
@@ -169,10 +175,11 @@ fn call_with_engine0(opt_func: &Option<PyBox>, eng: split::EngineRef) -> PyResul
     }
 }
 
-fn call_with_engine1<A>(opt_func: &Option<PyBox>,
-                        eng: split::EngineRef,
-                        a: A) -> PyResult<()>
-        where A: Pack {
+fn call_with_engine1<E, A>(opt_func: &Option<PyBox>,
+                           eng: E,
+                           a: A) -> PyResult<()>
+        where E: split::Part + split::PartFlags,
+              A: Pack {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a))
@@ -182,11 +189,12 @@ fn call_with_engine1<A>(opt_func: &Option<PyBox>,
     }
 }
 
-fn call_with_engine2<A, B>(opt_func: &Option<PyBox>,
-                           eng: split::EngineRef,
-                           a: A,
-                           b: B) -> PyResult<()>
-        where A: Pack, B: Pack {
+fn call_with_engine2<E, A, B>(opt_func: &Option<PyBox>,
+                              eng: E,
+                              a: A,
+                              b: B) -> PyResult<()>
+        where E: split::Part + split::PartFlags,
+              A: Pack, B: Pack {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a, b))
@@ -196,12 +204,13 @@ fn call_with_engine2<A, B>(opt_func: &Option<PyBox>,
     }
 }
 
-fn call_with_engine3<A, B, C>(opt_func: &Option<PyBox>,
-                              eng: split::EngineRef,
-                              a: A,
-                              b: B,
-                              c: C) -> PyResult<()>
-        where A: Pack, B: Pack, C: Pack {
+fn call_with_engine3<E, A, B, C>(opt_func: &Option<PyBox>,
+                                 eng: E,
+                                 a: A,
+                                 b: B,
+                                 c: C) -> PyResult<()>
+        where E: split::Part + split::PartFlags,
+              A: Pack, B: Pack, C: Pack {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a, b, c))

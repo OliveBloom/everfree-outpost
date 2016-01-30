@@ -7,6 +7,7 @@ bitflags! {
 
 bitflags! {
     flags StructureFlags: u32 {
-        const S_HAS_SAVE_HOOKS      = 0x00000001,
+        const S_HAS_IMPORT_HOOK     = 0x00000001,
+        // const S_HAS_EXPORT_HOOK     = 0x00000002, // unimplemented
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::iter::FromIterator;
+use std::ptr;
 
 use types::*;
 
@@ -282,6 +283,17 @@ impl<'d> Importer<'d> {
         }
         for (i, s) in b.structures.iter().enumerate() {
             self.add_structure(f, StructureId(i as u32), s);
+        }
+
+        {
+            // TODO: SUPER UNSAFE!!!
+            let mut eng = unsafe { ptr::read(f as *mut F as *mut ::engine::split::EngineRef) };
+            for i in 0 .. b.structures.len() {
+                if b.structures[i].flags.contains(w::flags::S_HAS_IMPORT_HOOK) {
+                    eng.script_hooks().call_structure_import_hook(eng.as_world_fragment(),
+                                                                  self.structure_id_map[i]);
+                }
+            }
         }
 
         // Only notify listeners once all imports are done, so they don't get an inconsistent view.

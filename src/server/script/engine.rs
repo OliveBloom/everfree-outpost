@@ -625,21 +625,20 @@ define_python_class! {
             Ok(s.template_id())
         }
 
-        fn world_structure_set_has_save_hooks(eng: glue::WorldFragment,
-                                              sid: StructureId,
-                                              set: bool) -> PyResult<()> {
+        fn world_structure_set_has_import_hook(eng: glue::WorldFragment,
+                                               sid: StructureId,
+                                               set: bool) -> PyResult<()> {
             use world::flags;
             let mut eng = eng;
             let mut s = pyunwrap!(eng.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             let flags =
                 if set {
-                    s.flags() | flags::S_HAS_SAVE_HOOKS
+                    s.flags() | flags::S_HAS_IMPORT_HOOK
                 } else {
-                    s.flags() & !flags::S_HAS_SAVE_HOOKS
+                    s.flags() & !flags::S_HAS_IMPORT_HOOK
                 };
             s.set_flags(flags);
-            info!("set flags for {:?} to {:?}", sid, flags);
             Ok(())
         }
 

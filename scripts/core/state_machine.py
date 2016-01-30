@@ -65,7 +65,7 @@ class StateMachine:
 
         # TODO: hack
         if isinstance(self.obj, StructureProxy):
-            self.obj._eng.world_structure_set_has_save_hooks(self.obj.id, True)
+            self.obj._eng.world_structure_set_has_import_hook(self.obj.id, True)
 
     def schedule(self, delay, msg):
         self.schedule_at(self.obj.engine.now() + delay, msg)
@@ -77,7 +77,7 @@ class StateMachine:
 
         # TODO: hack
         if isinstance(self.obj, StructureProxy):
-            self.obj._eng.world_structure_set_has_save_hooks(self.obj.id, False)
+            self.obj._eng.world_structure_set_has_import_hook(self.obj.id, False)
 
 _TEMPLATE_SM = {}
 
@@ -118,6 +118,19 @@ def callback(eng, id, when):
 
     # TODO: hack
     if isinstance(obj, StructureProxy):
-        obj._eng.world_structure_set_has_save_hooks(obj.id, False)
+        obj._eng.world_structure_set_has_import_hook(obj.id, False)
 
     cls(obj).process(msg)
+
+
+def structure_import_hook(eng, sid):
+    s = StructureProxy(eng, sid)
+    t = s.extra().get('sm', {}).get('timer')
+    if t is not None:
+        when = t['when']
+        cookie = timer.schedule(s.engine, when, 
+                lambda eng: callback(eng, sid, when))
+        s.extra()['sm']['timer']['cookie'] = cookie
+
+def init(hooks):
+    hooks.structure_import_hook(structure_import_hook)
