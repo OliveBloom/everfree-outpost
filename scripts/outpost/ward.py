@@ -32,8 +32,6 @@ def use_structure(e, s, args):
     structure_items.take(e, s, ITEM, ignore_ward=True)
 
 
-# Lua commands (included here for /help purposes)
-
 @chat.command('''
     /permit <name>: Give <name> permission to bypass your ward
     /revoke <name>: Revoke <name>'s permission to bypass your ward
