@@ -42,7 +42,7 @@ var KeybindingEditor = require('ui/keybinding').KeybindingEditor;
 var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
 var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
-var Hotbar = require('ui/hotbar').Hotbar;
+var GameUI = require('ui_gl/hotbar').GameUI;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 var DNDState = require('ui/dnd').DNDState;
 
@@ -122,7 +122,7 @@ var chat;
 var error_list;
 var inv_update_list;
 var music_test;
-var hotbar;
+var ui_gl;
 
 var main_menu;
 var debug_menu;
@@ -185,7 +185,7 @@ function init() {
     chat = new ChatWindow();
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
-    hotbar = new Hotbar();
+    ui_gl = new GameUI();
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -230,7 +230,7 @@ function init() {
             cursor = new Cursor(canvas.ctx, assets, TILE_SIZE / 2 + 1);
             day_night = new DayNight(assets);
 
-            hotbar.init();
+            ui_gl.hotbar.init();
 
             var info = assets['server_info'];
             openConn(info, function() {
@@ -411,7 +411,6 @@ function buildUI() {
     var key_list = $('key-list');
 
     ui_div.appendChild(key_list);
-    ui_div.appendChild(hotbar.dom);
     ui_div.appendChild(chat.container);
     ui_div.appendChild(inv_update_list.container);
     ui_div.appendChild(banner.container);
@@ -627,9 +626,9 @@ function setupKeyHandler() {
                         conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
                     };
 
-                    ui.enableSelect(hotbar.getItem(), function(idx, new_id) {
-                        hotbar.setSlot(idx, new_id, true);
-                        hotbar.selectSlot(idx);
+                    ui.enableSelect(ui_gl.hotbar.getItem(), function(idx, new_id) {
+                        ui_gl.hotbar.setSlot(idx, new_id, true);
+                        ui_gl.hotbar.selectSlot(idx);
                     });
 
                     ui.oncancel = function() {
@@ -649,9 +648,9 @@ function setupKeyHandler() {
                         conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
                     };
 
-                    ui.enableSelect(hotbar.getAbility(), function(idx, new_id) {
-                        hotbar.setSlot(idx, new_id,  false);
-                        hotbar.selectSlot(idx);
+                    ui.enableSelect(ui_gl.hotbar.getAbility(), function(idx, new_id) {
+                        ui_gl.hotbar.setSlot(idx, new_id,  false);
+                        ui_gl.hotbar.selectSlot(idx);
                     });
 
                     ui.oncancel = function() {
@@ -665,16 +664,16 @@ function setupKeyHandler() {
                     conn.sendInteract(time);
                     break;
                 case 'use_item':
-                    conn.sendUseItem(time, hotbar.getItem());
+                    conn.sendUseItem(time, ui_gl.hotbar.getItem());
                     break;
                 case 'use_ability':
-                    conn.sendUseAbility(time, hotbar.getAbility());
+                    conn.sendUseAbility(time, ui_gl.hotbar.getAbility());
                     break;
 
                 default:
                     if (binding != null && binding.startsWith('hotbar_')) {
                         var idx = +binding.substring(7) - 1;
-                        hotbar.selectSlot(idx);
+                        ui_gl.hotbar.selectSlot(idx);
                         break;
                     } else {
                         return shouldStop;
@@ -916,7 +915,7 @@ function handleMainInventory(iid) {
         item_inv.unsubscribe();
     }
     item_inv = inv_tracker.get(iid);
-    hotbar.attachItems(item_inv.clone());
+    ui_gl.hotbar.attachItems(item_inv.clone());
     if (Config.show_inventory_updates.get()) {
         inv_update_list.attach(item_inv.clone());
     }
@@ -927,7 +926,7 @@ function handleAbilityInventory(iid) {
         ability_inv.unsubscribe();
     }
     ability_inv = inv_tracker.get(iid);
-    hotbar.attachAbilities(ability_inv.clone());
+    ui_gl.hotbar.attachAbilities(ability_inv.clone());
 }
 
 function handlePlaneFlags(flags) {
