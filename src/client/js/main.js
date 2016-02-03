@@ -43,6 +43,7 @@ var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
 var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
 var GameUI = require('ui_gl/hotbar').GameUI;
+var UIRenderContext = require('ui_gl/render').UIRenderContext;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 var DNDState = require('ui/dnd').DNDState;
 
@@ -141,6 +142,7 @@ var physics;
 var prediction;
 
 var renderer = null;
+var ui_renderer = null;
 var cursor;
 var show_cursor = false;
 var slice_radius;
@@ -186,6 +188,7 @@ function init() {
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
     ui_gl = new GameUI();
+    ui_gl.runLayout();
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -225,6 +228,7 @@ function init() {
             renderer = new Renderer(canvas.ctx, assets);
             renderer.initData(BlockDef.by_id, TemplateDef.by_id,
                     TemplatePart.by_index, assets['template_vert_defs']);
+            ui_renderer = new UIRenderContext(canvas.ctx, assets);
             runner.job('preload-textures', preloadTextures);
 
             cursor = new Cursor(canvas.ctx, assets, TILE_SIZE / 2 + 1);
@@ -1203,7 +1207,9 @@ function frame(ac, client_now) {
         s.slice_frac = radius;
         s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
     }
-    renderer.render(s);
+    renderer.render(s, function(size, fb) {
+        ui_renderer.render(ui_gl, size, fb);
+    });
 
     if (show_cursor && pony != null) {
         var facing = FACINGS[pony.animId() % FACINGS.length];

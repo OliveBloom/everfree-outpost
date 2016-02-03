@@ -1,0 +1,169 @@
+var ItemDef = require('data/items').ItemDef;
+var G = require('graphics/glutil');
+var SB = require('graphics/shaderbuilder');
+
+/** @constructor */
+function UIRenderContext(gl, assets) {
+    this.gl = gl;
+    this.assets = assets;
+    this.shaders = makeUIShaders(gl, assets);
+    this.textures = makeUITextures(gl, assets);
+    this.buffers = new UIRenderBuffers();
+}
+exports.UIRenderContext = UIRenderContext;
+
+function makeTexture(gl, img) {
+    var tex = new G.Texture(gl);
+    tex.loadImage(img);
+    return tex;
+}
+
+function makeUITextures(gl, assets) {
+    return {
+        ui_atlas: makeTexture(gl, assets['ui_atlas']),
+        items: makeTexture(gl, assets['items_img']),
+    };
+}
+
+function makeUIShaders(gl, assets) {
+    var s = {};
+    var ctx = new SB.ShaderBuilderContext(gl, assets, {},
+            function(img) { return makeTexture(gl, img); });
+
+    s.blit = ctx.start('ui_blit.vert', 'ui_blit.frag')
+        .uniformVec2('screenSize')
+        .uniformVec2('sheetSize')
+        .attributes(new Attributes(8)
+                .field(0, gl.SHORT, 2, 'source')
+                .field(4, gl.SHORT, 2, 'dest'))
+        .texture('sheet', null)
+        .finish();
+
+    return s;
+}
+
+UIRenderContext.prototype.updateBuffers = function(root) {
+    if (root._damaged) {
+        this.buffers.reset();
+        this._walkUpdateBuffers(root, 0, 0);
+    }
+};
+
+UIRenderContext.prototype._walkUpdateBuffers = function(w, x, y) {
+    w.render(this.buffers, x, y);
+    w._damaged = false;
+    for (var i = 0; i < w.children.length; ++i) {
+        var c = w.children[i];
+        this._walkUpdateBuffers(c, x + c._x, y + c._y);
+    }
+};
+
+UIRenderContext.prototype.render = function(root, size, fb) {
+    this.updateBuffers(root);
+
+    var gl = this.gl;
+    gl.viewport(0, 0, size[0], size[1]);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.GEQUAL);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    var this_ = this;
+    fb.use(function(fb_idx) {
+        this_.shaders.blit.draw(fb_idx,
+                0, this_.buffers.ui_atlas.length / 4,
+                {
+                    'screenSize': size,
+                    'sheetSize': [256, 256],
+                },
+                { '*': this_.buffers.ui_atlas.getGlBuffer(gl) },
+                { 'sheet': this_.textures.ui_atlas });
+
+        this_.shaders.blit.draw(fb_idx,
+                0, this_.buffers.items.length / 4,
+                {
+                    'screenSize': size,
+                    'sheetSize': [1024, 1024],
+                },
+                { '*': this_.buffers.items.getGlBuffer(gl) },
+                { 'sheet': this_.textures.items });
+    });
+
+    gl.disable(gl.DEPTH_TEST);
+};
+
+
+/** UIRenderBuffers */
+function UIRenderBuffers() {
+    this.ui_atlas = new UIBuffer();
+    this.items = new UIBuffer();
+}
+
+UIRenderBuffers.prototype.reset = function() {
+    this.ui_atlas = new UIBuffer();
+    this.items = new UIBuffer();
+};
+
+function addQuad(buf, sx, sy, sw, sh, dx, dy, dw, dh) {
+    buf.push(sx + 0,  sy + 0,  dx + 0,  dy + 0);
+    buf.push(sx + 0,  sy + sh, dx + 0,  dy + dh);
+    buf.push(sx + sw, sy + 0,  dx + dw, dy + 0);
+
+    buf.push(sx + sw, sy + 0,  dx + dw, dy + 0);
+    buf.push(sx + 0,  sy + sh, dx + 0,  dy + dh);
+    buf.push(sx + sw, sy + sh, dx + dw, dy + dh);
+}
+
+UIRenderBuffers.prototype.drawUI = function(sx, sy, sw, sh, dx, dy, dw, dh) {
+    if (dw == null) {
+        dw = sw;
+    }
+    if (dh == null) {
+        dh = sh;
+    }
+    addQuad(this.ui_atlas,
+            sx, sy, sw, sh,
+            dx, dy, dw, dh);
+};
+
+UIRenderBuffers.prototype.drawItem = function(id, dx, dy) {
+    var def = ItemDef.by_id[id];
+    addQuad(this.items,
+            def.tile_x * TILE_SIZE, def.tile_y * TILE_SIZE,
+            TILE_SIZE, TILE_SIZE,
+            dx, dy,
+            16, 16);
+};
+
+
+/** @constructor */
+function UIBuffer() {
+    this.data = new Int16Array(16);
+    this.length = 0;
+    this.gl_data = null;
+}
+
+UIBuffer.prototype.push = function() {
+    while (this.length + arguments.length >= this.data.length) {
+        this._grow();
+    }
+
+    for (var i = 0; i < arguments.length; ++i) {
+        this.data[this.length] = arguments[i];
+        ++this.length;
+    }
+};
+
+UIBuffer.prototype._grow = function() {
+    var new_data = new Int16Array(this.data.length * 2);
+    new_data.set(this.data);
+    this.data = new_data;
+};
+
+UIBuffer.prototype.getGlBuffer = function(gl) {
+    if (this.gl_data == null) {
+        this.gl_data = new G.Buffer(gl);
+        this.gl_data.loadData(this.data.subarray(0, this.length));
+    }
+    return this.gl_data;
+}

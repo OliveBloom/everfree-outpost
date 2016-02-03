@@ -578,7 +578,7 @@ Renderer.prototype.updateCavernMap = function(phys_asm, pos) {
     }
 };
 
-Renderer.prototype.render = function(scene) {
+Renderer.prototype.render = function(scene, draw_ui) {
     // Prepare all components for rendering
     var start_prep = Date.now();
 
@@ -613,6 +613,10 @@ Renderer.prototype.render = function(scene) {
         });
     } else {
         this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_final);
+    }
+
+    if (draw_ui != null) {
+        draw_ui(scene.camera_size, this.buffers.fb_final);
     }
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);

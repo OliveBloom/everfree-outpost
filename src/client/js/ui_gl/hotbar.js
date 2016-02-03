@@ -30,9 +30,23 @@ ItemBox.prototype.setQuantity = function(qty) {
     }
 };
 
+ItemBox.prototype.setColor = function(color) {
+    if (this.color != color) {
+        this.color = color;
+        this.damage();
+    }
+};
+
 ItemBox.prototype.setDisabled = function(disabled) {
     this.disabled = disabled;
     this.damage();
+};
+
+ItemBox.prototype.render = function(buf, x, y) {
+    buf.drawUI(14 + 24 * this.color, 0, 24, 24, x, y);
+    if (this.item_id != -1) {
+        buf.drawItem(this.item_id, x + 4, y + 4);
+    }
 };
 
 
@@ -146,11 +160,11 @@ Hotbar.prototype._setActiveAbility = function(idx) {
     }
 
     if (this.active_ability != -1) {
-        this.boxes[this.active_ability].color = 2;
+        this.boxes[this.active_ability].setColor(0);
     }
     this.active_ability = idx;
     if (this.active_ability != -1) {
-        this.boxes[this.active_ability].color = 0;
+        this.boxes[this.active_ability].setColor(2);
     }
 
     Config.hotbar.get()['active_ability'] = idx;
@@ -164,11 +178,11 @@ Hotbar.prototype._setActiveItem = function(idx) {
     }
 
     if (this.active_item != -1) {
-        this.boxes[this.active_item].color = 1;
+        this.boxes[this.active_item].setColor(0);
     }
     this.active_item = idx;
     if (this.active_item != -1) {
-        this.boxes[this.active_item].color = 0;
+        this.boxes[this.active_item].setColor(1);
     }
 
     Config.hotbar.get()['active_item'] = idx;
@@ -223,12 +237,26 @@ Hotbar.prototype.attachItems = function(inv) {
     // TODO: gray out items when quantity is zero.
 };
 
+Hotbar.prototype.render = function(buf, x, y) {
+    buf.drawUI(0, 0, 14, 7, 
+            x + ((this._width - 14) / 2)|0, y);
+    buf.drawUI(0, 8, 14, 7, 
+            x + ((this._width - 14) / 2)|0, y + this._height - 7);
+    buf.drawUI(1, 7, 12, 1,
+            x + ((this._width - 12) / 2)|0,
+            y + 7,
+            12,
+            this._height - 7 * 2);
 
+};
+
+
+/** @constructor */
 function GameUI() {
     W.Widget.call(this);
     this.hotbar = new Hotbar();
 
-    this.addChild(hotbar);
+    this.addChild(this.hotbar);
 }
 GameUI.prototype = Object.create(W.Widget.prototype);
 GameUI.prototype.constructor = GameUI;

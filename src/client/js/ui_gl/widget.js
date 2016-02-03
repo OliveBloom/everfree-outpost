@@ -7,6 +7,7 @@ function Widget() {
     this._y = null;
     this._width = null;
     this._height = null;
+    this._damaged = false;
 }
 exports.Widget = Widget;
 
@@ -16,6 +17,7 @@ Widget.prototype.addChild = function(w) {
     }
     w.owner = this;
     this.children.push(w);
+    this.damage();
 };
 
 Widget.prototype.removeChild = function(w) {
@@ -26,6 +28,7 @@ Widget.prototype.removeChild = function(w) {
     var index = this.children.indexOf(w);
     console.assert(index != -1, "child widget not found in this.children");
     this.children.splice(index, 1);
+    this.damage();
 };
 
 Widget.prototype.runLayout = function() {
@@ -36,7 +39,15 @@ Widget.prototype.runLayout = function() {
 };
 
 Widget.prototype.damage = function() {
-    // TODO
+    if (!this._damaged) {
+        this._damaged = true;
+        if (this.owner != null) {
+            this.owner.damage();
+        }
+    }
+};
+
+Widget.prototype.render = function(buffers) {
 };
 
 Widget.prototype.calcSize = function(w, h) {

@@ -25,8 +25,11 @@ def main(src_dir, build_dir, out_file):
         if hide_dep:
             hidden_deps.add(path)
 
-    add('image', 'font',    build('font.png'))
-    add('url',   'items',   build('items.png'))
+    add('image', 'tiles',       build('tiles.png'))
+    add('image', 'font',        build('font.png'))
+    add('url',   'items',       build('items.png'))
+    add('image', 'items_img',   build('items.png'))
+    add('image', 'ui_atlas',    src('assets/ui/atlas.png'))
 
     add('json', 'block_defs',       build('blocks_client.json'))
     add('json', 'item_defs',        build('items_client.json'))
@@ -59,7 +62,9 @@ def main(src_dir, build_dir, out_file):
     add('text', 'light2.vert',          src('assets/shaders/light2.vert'))
     add('text', 'slicing.inc',          src('assets/shaders/slicing.inc'))
 
-    add('image', 'tiles', build('tiles.png'))
+    add('text', 'ui_blit.vert',         src('assets/shaders/ui_blit.vert'))
+    add('text', 'ui_blit.frag',         src('assets/shaders/ui_blit.frag'))
+
 
     with open(build('structures_list.json')) as f:
         sprites_list = json.load(f)
