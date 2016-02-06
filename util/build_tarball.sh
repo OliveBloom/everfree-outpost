@@ -69,9 +69,10 @@ build_win32_worker() {
 
     # TODO: more hack
     for lib in libboost_system-mt libgcc_s_dw2-1 libsqlite3-0 \
-            libstdc++-6 libwinpthread-1 lua51; do
+            libstdc++-6 libwinpthread-1 python3.4m; do
         cp -v /mingw32/bin/${lib}.dll ../dist-win32/bin
     done
+    cp -rv /mingw32/lib/python3.4 ../dist-win32/python
 }
 
 mk_mod() {

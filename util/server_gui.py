@@ -187,6 +187,10 @@ class Application(ttk.Frame):
 
         env = os.environ.copy()
         env['RUST_LOG'] = 'info'
+        env['PYTHONPATH'] = ';'.join((
+            os.path.abspath('python'),
+            os.path.abspath(os.path.join('python', 'lib-dynload')),
+            ))
         self.wrapper = WrapperProcessMonitor(('bin/wrapper',), env=env)
         self.wrapper.on_event = self._handle_wrapper_event
 
