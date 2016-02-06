@@ -103,6 +103,7 @@ def main(mods):
     # TODO: SUPER HACK
     for f in glob.glob('prebuilt/bin/*.dll'):
         shutil.copy(f, 'dist/bin')
+    shutil.copytree('prebuilt/python', 'dist/python')
 
 if __name__ == '__main__':
     mods, = sys.argv[1:]
