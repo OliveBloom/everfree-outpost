@@ -119,33 +119,44 @@ impl<T> SmallVec<T> {
     }
 
     fn to_large_push(&mut self, val: T) {
-        let mut v = Vec::with_capacity(self.len() * 2 + 1);
-
-        let mut interp = unsafe { self.to_interp() };
-        for i in 0..interp.len {
-            let val = unsafe { ptr::read(interp.ptr.offset(i as isize)) };
+        unsafe {
+            // Move all elements of `self` into a vector, then push `val`.
+            let mut v = Vec::with_capacity(self.len() * 2 + 1);
+            let mut interp = self.to_interp();
+            for i in 0..interp.len {
+                let val = ptr::read(interp.ptr.offset(i as isize));
+                v.push(val);
+            }
             v.push(val);
-        }
-        v.push(val);
 
-        interp.is_large = true;
-        unsafe { interp.from_vec(v) };
-        unsafe { self.from_interp(interp) };
+            // Update `self` with the new large interpretation.
+            interp.is_large = true;
+            interp.from_vec(v);
+            self.from_interp(interp);
+        }
     }
 
     fn to_small_pop(&mut self) -> T {
-        let mut interp = unsafe { self.to_interp() };
-        let mut v = unsafe { interp.to_vec() };
+        // Empty `self` into a vector.
+        let mut v = unsafe {
+            let mut interp = self.to_interp();
+            let v = interp.to_vec();
+            interp.is_large = false;
+            // It's easier to empty `self` and obtain a fresh `interp` than to turn a large interp
+            // into a small one.
+            self.from_interp(interp);
+            v
+        };
 
-        interp.len = 0;
-        interp.is_large = false;
-
+        // Obtain `result`, then repopulate `self` from the contents of the vector.
         let result = v.pop().unwrap();
-        for val in v.into_iter() {
-            interp.push(val);
+        unsafe {
+            let mut interp = self.to_interp();
+            for val in v.into_iter() {
+                interp.push(val);
+            }
+            self.from_interp(interp);
         }
-
-        unsafe { self.from_interp(interp) };
         result
     }
 }
