@@ -181,6 +181,7 @@ function init() {
 
     ui_div = util.element('div', ['ui-container']);
     debug = new DebugMonitor();
+    window.DEBUG = debug;
     banner = new Banner();
     keyboard = new Keyboard();
     dnd = new DNDState(keyboard);
@@ -189,7 +190,7 @@ function init() {
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
     ui_gl = new GameUI();
-    ui_gl.runLayout();
+    ui_gl.calcSize(0, 0);
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -439,7 +440,11 @@ function buildUI() {
         key_list.classList.add('hidden');
     }
 
-    if (!Config.debug_show_panel.get()) {
+    var show_debug = Config.debug_show_panel.get();
+    if (show_debug == 1) {
+        ui_gl.fps.show();
+    }
+    if (show_debug != 2) {
         debug.container.classList.add('hidden');
     }
 
@@ -602,8 +607,10 @@ function setupKeyHandler() {
                     $('key-list').classList.toggle('hidden', !show);
                     break;
                 case 'debug_show_panel':
-                    var show = Config.debug_show_panel.toggle();
-                    debug.container.classList.toggle('hidden', !show);
+                    var setting = (Config.debug_show_panel.get() + 1) % 3;
+                    Config.debug_show_panel.set(setting);
+                    ui_gl.fps.toggle(setting == 1);
+                    debug.container.classList.toggle('hidden', setting != 2);
                     break;
                 case 'debug_test':
                     dialog.show(new PonyEditor(Config.login_name.get()));
@@ -1203,6 +1210,8 @@ function frame(ac, client_now) {
     s.camera_pos = [camera_pos.x, camera_pos.y];
     s.camera_size = [camera_size.x, camera_size.y];
     s.ambient_color = day_night.getAmbientColor(predict_now);
+
+    ui_gl.calcSize(camera_size.x, camera_size.y);
 
     var radius = slice_radius.get(predict_now);
     if (radius > 0 && pony != null) {
