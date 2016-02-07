@@ -55,6 +55,7 @@ var TemplatePart = require('data/templates').TemplatePart;
 var AnimationDef = require('data/animations').AnimationDef;
 var AttachSlotDef = require('data/attachments').AttachSlotDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
+var FontMetrics = require('data/fontmetrics').FontMetrics;
 
 var Chunk = require('data/chunk').Chunk;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
@@ -304,6 +305,7 @@ function loadAssets(next) {
             }
 
             ExtraDefs.init(assets['extra_defs']);
+            FontMetrics.register(assets['font_metrics']);
 
             var css = '.item-icon {' +
                 'background-image: url("' + assets['items'] + '");' +

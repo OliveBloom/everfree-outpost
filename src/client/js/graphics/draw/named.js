@@ -1,4 +1,5 @@
 var Config = require('config').Config;
+var FontMetrics = require('data/fontmetrics').FontMetrics;
 
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
 var buildPrograms = require('graphics/glutil').buildPrograms;
@@ -33,7 +34,7 @@ function NameBuffer(assets) {
     this.ctx = new OffscreenContext(NAME_BUFFER_WIDTH, NAME_BUFFER_HEIGHT);
     this.cache = new StringCache(NAME_BUFFER_COUNT);
 
-    this.font = new Font(assets['font'], assets['font_metrics']);
+    this.font_img = assets['font'];
 }
 exports.NameBuffer = NameBuffer;
 
@@ -42,7 +43,7 @@ NameBuffer.prototype._draw = function(s, idx) {
     var y = NAME_HEIGHT * ((idx / NAME_BUFFER_COUNT_X)|0);
     var ctx = this.ctx;
 
-    var str_width = this.font.measureWidth(s);
+    var str_width = FontMetrics.instance.measureWidth(s);
     var offset_x = Math.floor((NAME_WIDTH - str_width) / 2);
 
     ctx.save();
@@ -50,7 +51,12 @@ NameBuffer.prototype._draw = function(s, idx) {
     ctx.clearRect(x, y, NAME_WIDTH, NAME_HEIGHT);
     ctx.rect(x, y, NAME_WIDTH, NAME_HEIGHT);
     ctx.clip();
-    this.font.drawString(ctx, s, x + offset_x, y);
+    var img = this.font_img;
+    FontMetrics.instance.drawString(s, function(sx, sy, w, h, dx, dy) {
+        ctx.drawImage(img,
+                sx, sy, w, h,
+                x + offset_x + dx, y + dy, w, h);
+    });
 
     ctx.restore();
 };
@@ -71,71 +77,6 @@ NameBuffer.prototype.offset = function(s) {
 
 NameBuffer.prototype.image = function() {
     return this.ctx.canvas;
-};
-
-
-/** @constructor */
-function Font(image, metrics) {
-    this.image = image;
-
-    this.first_char = metrics['first_char'];
-    this.xs = metrics['xs'];
-    this.y = metrics['y'];
-    this.widths = metrics['widths'];
-    this.height = metrics['height'];
-    this.spacing = metrics['spacing'];
-    this.space_width = metrics['space_width'];
-}
-
-Font.prototype.getHeight = function() {
-    return this.height;
-};
-
-Font.prototype.measureWidth = function(s) {
-    var total = 0;
-    for (var i = 0; i < s.length; ++i) {
-        var code = s.charCodeAt(i);
-        var idx = code - this.first_char;
-
-        var width;
-        if (code == 0x20) {
-            width = this.space_width;
-        } else {
-            width = this.widths[idx] || 0;
-        }
-
-        total += width;
-        if (i > 0) {
-            total += this.spacing;
-        }
-    }
-    return total;
-};
-
-Font.prototype.drawString = function(ctx, s, x, y) {
-    var h = this.getHeight();
-
-    for (var i = 0; i < s.length; ++i) {
-        var code = s.charCodeAt(i);
-        var idx = code - this.first_char;
-
-        if (code == 0x20) {
-            x += this.space_width;
-            continue;
-        } else if (idx < 0 || idx >= this.widths.length) {
-            // Invalid character
-            continue;
-        }
-
-        var src_x = this.xs[idx];
-        var src_y = this.y;
-        var w = this.widths[idx];
-
-        ctx.drawImage(this.image,
-                src_x, src_y, w, h,
-                x, y, w, h);
-        x += w + this.spacing;
-    }
 };
 
 
