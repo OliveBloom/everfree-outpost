@@ -22,6 +22,7 @@ function makeUITextures(gl, assets) {
     return {
         ui_atlas: makeTexture(gl, assets['ui_atlas']),
         items: makeTexture(gl, assets['items_img']),
+        font: makeTexture(gl, assets['font']),
     };
 }
 
@@ -87,6 +88,16 @@ UIRenderContext.prototype.render = function(root, size, fb) {
                 },
                 { '*': this_.buffers.items.getGlBuffer(gl) },
                 { 'sheet': this_.textures.items });
+
+        var font_tex = this_.textures.font;
+        this_.shaders.blit.draw(fb_idx,
+                0, this_.buffers.text.length / 4,
+                {
+                    'screenSize': size,
+                    'sheetSize': [font_tex.width, font_tex.height],
+                },
+                { '*': this_.buffers.text.getGlBuffer(gl) },
+                { 'sheet': font_tex });
     });
 
     gl.disable(gl.DEPTH_TEST);
@@ -97,11 +108,13 @@ UIRenderContext.prototype.render = function(root, size, fb) {
 function UIRenderBuffers() {
     this.ui_atlas = new UIBuffer();
     this.items = new UIBuffer();
+    this.text = new UIBuffer();
 }
 
 UIRenderBuffers.prototype.reset = function() {
     this.ui_atlas = new UIBuffer();
     this.items = new UIBuffer();
+    this.text = new UIBuffer();
 };
 
 function addQuad(buf, sx, sy, sw, sh, dx, dy, dw, dh) {
@@ -133,6 +146,12 @@ UIRenderBuffers.prototype.drawItem = function(id, dx, dy) {
             TILE_SIZE, TILE_SIZE,
             dx, dy,
             16, 16);
+};
+
+UIRenderBuffers.prototype.drawChar = function(sx, sy, w, h, dx, dy) {
+    addQuad(this.text,
+            sx, sy, w, h,
+            dx, dy, w, h);
 };
 
 

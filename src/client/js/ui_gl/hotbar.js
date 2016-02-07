@@ -1,5 +1,6 @@
 var Config = require('config').Config;
 var ItemDef = require('data/items').ItemDef;
+var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
 
 
@@ -46,6 +47,16 @@ ItemBox.prototype.render = function(buf, x, y) {
     buf.drawUI(14 + 24 * this.color, 0, 24, 24, x, y);
     if (this.item_id != -1) {
         buf.drawItem(this.item_id, x + 4, y + 4);
+    }
+
+    if (this.qty != -1) {
+        var s = '' + this.qty;
+        var w = FontMetrics.instance.measureWidth(s);
+        var qx = x + 20 - w;
+        var qy = y + 20 - FontMetrics.instance.height + 1;
+        FontMetrics.instance.drawString(s, function(sx, sy, w, h, dx, dy) {
+            buf.drawChar(sx, sy, w, h, qx + dx, qy + dy);
+        });
     }
 };
 
@@ -248,30 +259,4 @@ Hotbar.prototype.render = function(buf, x, y) {
             12,
             this._height - 7 * 2);
 
-};
-
-
-/** @constructor */
-function GameUI() {
-    W.Widget.call(this);
-    this.hotbar = new Hotbar();
-
-    this.addChild(this.hotbar);
-}
-GameUI.prototype = Object.create(W.Widget.prototype);
-GameUI.prototype.constructor = GameUI;
-exports.GameUI = GameUI;
-
-GameUI.prototype.calcSize = function(w, h) {
-    this._width = w;
-    this._height = h;
-};
-
-GameUI.prototype.runLayout = function() {
-    this._x = 0;
-    this._y = 0;
-
-    this.hotbar.runLayout();
-    this.hotbar._x = 1;
-    this.hotbar._y = 1;
 };

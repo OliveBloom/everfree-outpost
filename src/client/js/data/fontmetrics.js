@@ -38,7 +38,7 @@ FontMetrics_.prototype.drawString = function(s, callback) {
         var idx = code - this.first_char;
 
         if (code == 0x20) {
-            x += this.space_width;
+            dest_x += this.space_width;
             continue;
         } else if (idx < 0 || idx >= this.widths.length) {
             // Invalid character
