@@ -613,7 +613,7 @@ function setupKeyHandler() {
                     debug.container.classList.toggle('hidden', setting != 2);
                     break;
                 case 'debug_test':
-                    dialog.show(new PonyEditor(Config.login_name.get()));
+                    chat.container.classList.toggle('hidden');
                     break;
                 case 'chat':
                     chat.startTyping(keyboard, conn, '');
