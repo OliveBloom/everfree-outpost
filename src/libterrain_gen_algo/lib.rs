@@ -27,6 +27,7 @@ pub mod dsc;
 pub mod pattern;
 pub mod triangulate;
 pub mod union_find;
+pub mod perlin;
 
 
 pub fn line_points<F: FnMut(V2, bool)>(start: V2, end: V2, mut f: F) {
@@ -98,4 +99,18 @@ pub fn reservoir_sample_weighted<R, T, W, I>(rng: &mut R, iter: I) -> Option<T>
         }
     }
     Some(choice)
+}
+
+pub fn bilinear<F>(mut f: F, pos: V2, res: i32) -> i32
+        where F: FnMut(V2) -> i32 {
+    let cell = pos.div_floor(scalar(res));
+    let off = pos - cell * scalar(res);
+
+    let left = (f(cell + V2::new(0, 0)) * (res - off.y) +
+                f(cell + V2::new(0, 1)) * off.y) / res;
+    let right = (f(cell + V2::new(1, 0)) * (res - off.y) +
+                 f(cell + V2::new(1, 1)) * off.y) / res;
+    let center = (left * (res - off.x) + right * off.x) / res;
+
+    center
 }
