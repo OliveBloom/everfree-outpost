@@ -1,6 +1,10 @@
 NeoSans.png:
     derived-from: grafx2-fonts
 
+hotbar-font.png:
+    derived-from: grafx2-fonts
+    attribution: Characters taken from "Kronos", with minor edits
+
 day_night_cycle_gradient.png:
     derived-from: nilsson-lpc-entry
 

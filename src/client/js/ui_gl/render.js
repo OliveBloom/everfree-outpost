@@ -22,7 +22,7 @@ function makeUITextures(gl, assets) {
     return {
         ui_atlas: makeTexture(gl, assets['ui_atlas']),
         items: makeTexture(gl, assets['items_img']),
-        font: makeTexture(gl, assets['font']),
+        font: makeTexture(gl, assets['fonts']),
     };
 }
 

@@ -16,6 +16,8 @@ def build_parser():
     parser.add_argument('--first-char', metavar='CODE',
             default=0x21,
             help='ASCII code of the first glyph in the font')
+    parser.add_argument('--char-list', metavar='STRING',
+            help='list of all characters present in the font, in order')
     parser.add_argument('--space-width', metavar='SIZE',
             default=2,
             help='width of the space character in pixels')
@@ -94,22 +96,38 @@ def build_mask(src, boxes, margin_x, margin_y):
 
     return out
 
-def build_metrics(boxes, margin_x, margin_y):
-    xs = []
+def build_metrics(args, boxes, margin_x, margin_y):
+    if args.char_list is None:
+        first_char = int(args.first_char, 0)
+        last_char = first_char + len(boxes)
+        codes = range(first_char, last_char)
+    else:
+        first_char = min(ord(c) for c in args.char_list)
+        last_char = max(ord(c) for c in args.char_list) + 1
+        codes = (ord(c) for c in args.char_list)
+    num_chars = last_char - first_char
+
+    xs = [0] * num_chars
     y = 0
-    widths = [x1 - x0 + margin_x for x0,y0,x1,y1 in boxes]
-    height = max(y1 - y0 + margin_y for x0,y0,x1,y1 in boxes)
+    widths = [0] * num_chars
+    height = 0
 
     cur_x = 0
-    for w in widths:
-        xs.append(cur_x)
+    for code, (x0,y0,x1,y1) in zip(codes, boxes):
+        xs[code - first_char] = cur_x
+
+        w = x1 - x0 + margin_x
+        widths[code - first_char] = w
         cur_x += w
+
+        height = max(height, y1 - y0 + margin_y)
 
     return {
             'xs': xs,
             'y': y,
             'widths': widths,
             'height': height,
+            'first_char': first_char,
             }
 
 def main():
@@ -121,7 +139,7 @@ def main():
     boxes = get_glyph_boxes(img)
     adjust_palette(img)
     mask = build_mask(img, boxes, 1, 1)
-    metrics = build_metrics(boxes, 1, 1)
+    metrics = build_metrics(args, boxes, 1, 1)
 
 
     out = Image.new('RGBA', mask.size, (0, 0, 0, 0))
@@ -136,7 +154,6 @@ def main():
 
 
     metrics['spacing'] = 0
-    metrics['first_char'] = int(args.first_char, 0)
     metrics['space_width'] = int(args.space_width)
 
     with open(args.font_metrics_out, 'w') as f:

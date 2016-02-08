@@ -54,8 +54,9 @@ FPSDisplay.prototype.render = function(buf, x, y) {
         return;
     }
     var s = window.DEBUG._fps + ' FPS';
-    x -= FontMetrics.instance.measureWidth(s);
-    FontMetrics.instance.drawString(s, function(sx, sy, w, h, dx, dy) {
+    var fm = FontMetrics.by_name['name'];
+    x -= fm.measureWidth(s);
+    fm.drawString(s, function(sx, sy, w, h, dx, dy) {
         buf.drawChar(sx, sy, w, h, x + dx, y + dy);
     });
 };

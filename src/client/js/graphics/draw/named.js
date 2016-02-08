@@ -34,7 +34,7 @@ function NameBuffer(assets) {
     this.ctx = new OffscreenContext(NAME_BUFFER_WIDTH, NAME_BUFFER_HEIGHT);
     this.cache = new StringCache(NAME_BUFFER_COUNT);
 
-    this.font_img = assets['font'];
+    this.font_img = assets['fonts'];
 }
 exports.NameBuffer = NameBuffer;
 
@@ -43,7 +43,8 @@ NameBuffer.prototype._draw = function(s, idx) {
     var y = NAME_HEIGHT * ((idx / NAME_BUFFER_COUNT_X)|0);
     var ctx = this.ctx;
 
-    var str_width = FontMetrics.instance.measureWidth(s);
+    var fm = FontMetrics.by_name['name'];
+    var str_width = fm.measureWidth(s);
     var offset_x = Math.floor((NAME_WIDTH - str_width) / 2);
 
     ctx.save();
@@ -52,7 +53,7 @@ NameBuffer.prototype._draw = function(s, idx) {
     ctx.rect(x, y, NAME_WIDTH, NAME_HEIGHT);
     ctx.clip();
     var img = this.font_img;
-    FontMetrics.instance.drawString(s, function(sx, sy, w, h, dx, dy) {
+    fm.drawString(s, function(sx, sy, w, h, dx, dy) {
         ctx.drawImage(img,
                 sx, sy, w, h,
                 x + offset_x + dx, y + dy, w, h);

@@ -57,8 +57,13 @@ FontMetrics_.prototype.drawString = function(s, callback) {
 var FontMetrics = {};
 exports.FontMetrics = FontMetrics;
 
-FontMetrics.instance = null;
+FontMetrics.by_name = {};
 
-FontMetrics.register = function(info) {
-    FontMetrics.instance = new FontMetrics_(info);
+FontMetrics.init = function(all_info) {
+    var names = Object.getOwnPropertyNames(all_info);
+    for (var i = 0; i < names.length; ++i) {
+        var name = names[i];
+        var info = all_info[name];
+        FontMetrics.by_name[name] = new FontMetrics_(info);
+    }
 };

@@ -306,7 +306,7 @@ function loadAssets(next) {
             }
 
             ExtraDefs.init(assets['extra_defs']);
-            FontMetrics.register(assets['font_metrics']);
+            FontMetrics.init(assets['fonts_metrics']);
 
             var css = '.item-icon {' +
                 'background-image: url("' + assets['items'] + '");' +
