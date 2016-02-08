@@ -42,7 +42,8 @@ var KeybindingEditor = require('ui/keybinding').KeybindingEditor;
 var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
 var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
-var Hotbar = require('ui/hotbar').Hotbar;
+var GameUI = require('ui_gl/hud').GameUI;
+var UIRenderContext = require('ui_gl/render').UIRenderContext;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 var DNDState = require('ui/dnd').DNDState;
 
@@ -54,6 +55,7 @@ var TemplatePart = require('data/templates').TemplatePart;
 var AnimationDef = require('data/animations').AnimationDef;
 var AttachSlotDef = require('data/attachments').AttachSlotDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
+var FontMetrics = require('data/fontmetrics').FontMetrics;
 
 var Chunk = require('data/chunk').Chunk;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
@@ -122,7 +124,7 @@ var chat;
 var error_list;
 var inv_update_list;
 var music_test;
-var hotbar;
+var ui_gl;
 
 var main_menu;
 var debug_menu;
@@ -141,6 +143,7 @@ var physics;
 var prediction;
 
 var renderer = null;
+var ui_renderer = null;
 var cursor;
 var show_cursor = false;
 var slice_radius;
@@ -178,6 +181,7 @@ function init() {
 
     ui_div = util.element('div', ['ui-container']);
     debug = new DebugMonitor();
+    window.DEBUG = debug;
     banner = new Banner();
     keyboard = new Keyboard();
     dnd = new DNDState(keyboard);
@@ -185,7 +189,8 @@ function init() {
     chat = new ChatWindow();
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
-    hotbar = new Hotbar();
+    ui_gl = new GameUI();
+    ui_gl.calcSize(0, 0);
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -225,12 +230,13 @@ function init() {
             renderer = new Renderer(canvas.ctx, assets);
             renderer.initData(BlockDef.by_id, TemplateDef.by_id,
                     TemplatePart.by_index, assets['template_vert_defs']);
+            ui_renderer = new UIRenderContext(canvas.ctx, assets);
             runner.job('preload-textures', preloadTextures);
 
             cursor = new Cursor(canvas.ctx, assets, TILE_SIZE / 2 + 1);
             day_night = new DayNight(assets);
 
-            hotbar.init();
+            ui_gl.hotbar.init();
 
             var info = assets['server_info'];
             openConn(info, function() {
@@ -300,6 +306,7 @@ function loadAssets(next) {
             }
 
             ExtraDefs.init(assets['extra_defs']);
+            FontMetrics.init(assets['fonts_metrics']);
 
             var css = '.item-icon {' +
                 'background-image: url("' + assets['items'] + '");' +
@@ -411,7 +418,6 @@ function buildUI() {
     var key_list = $('key-list');
 
     ui_div.appendChild(key_list);
-    ui_div.appendChild(hotbar.dom);
     ui_div.appendChild(chat.container);
     ui_div.appendChild(inv_update_list.container);
     ui_div.appendChild(banner.container);
@@ -434,7 +440,11 @@ function buildUI() {
         key_list.classList.add('hidden');
     }
 
-    if (!Config.debug_show_panel.get()) {
+    var show_debug = Config.debug_show_panel.get();
+    if (show_debug == 1) {
+        ui_gl.fps.show();
+    }
+    if (show_debug != 2) {
         debug.container.classList.add('hidden');
     }
 
@@ -597,11 +607,13 @@ function setupKeyHandler() {
                     $('key-list').classList.toggle('hidden', !show);
                     break;
                 case 'debug_show_panel':
-                    var show = Config.debug_show_panel.toggle();
-                    debug.container.classList.toggle('hidden', !show);
+                    var setting = (Config.debug_show_panel.get() + 1) % 3;
+                    Config.debug_show_panel.set(setting);
+                    ui_gl.fps.toggle(setting == 1);
+                    debug.container.classList.toggle('hidden', setting != 2);
                     break;
                 case 'debug_test':
-                    dialog.show(new PonyEditor(Config.login_name.get()));
+                    chat.container.classList.toggle('hidden');
                     break;
                 case 'chat':
                     chat.startTyping(keyboard, conn, '');
@@ -627,9 +639,9 @@ function setupKeyHandler() {
                         conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
                     };
 
-                    ui.enableSelect(hotbar.getItem(), function(idx, new_id) {
-                        hotbar.setSlot(idx, new_id, true);
-                        hotbar.selectSlot(idx);
+                    ui.enableSelect(ui_gl.hotbar.getItem(), function(idx, new_id) {
+                        ui_gl.hotbar.setSlot(idx, new_id, true);
+                        ui_gl.hotbar.selectSlot(idx);
                     });
 
                     ui.oncancel = function() {
@@ -649,9 +661,9 @@ function setupKeyHandler() {
                         conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
                     };
 
-                    ui.enableSelect(hotbar.getAbility(), function(idx, new_id) {
-                        hotbar.setSlot(idx, new_id,  false);
-                        hotbar.selectSlot(idx);
+                    ui.enableSelect(ui_gl.hotbar.getAbility(), function(idx, new_id) {
+                        ui_gl.hotbar.setSlot(idx, new_id,  false);
+                        ui_gl.hotbar.selectSlot(idx);
                     });
 
                     ui.oncancel = function() {
@@ -665,16 +677,16 @@ function setupKeyHandler() {
                     conn.sendInteract(time);
                     break;
                 case 'use_item':
-                    conn.sendUseItem(time, hotbar.getItem());
+                    conn.sendUseItem(time, ui_gl.hotbar.getItem());
                     break;
                 case 'use_ability':
-                    conn.sendUseAbility(time, hotbar.getAbility());
+                    conn.sendUseAbility(time, ui_gl.hotbar.getAbility());
                     break;
 
                 default:
                     if (binding != null && binding.startsWith('hotbar_')) {
                         var idx = +binding.substring(7) - 1;
-                        hotbar.selectSlot(idx);
+                        ui_gl.hotbar.selectSlot(idx);
                         break;
                     } else {
                         return shouldStop;
@@ -916,7 +928,7 @@ function handleMainInventory(iid) {
         item_inv.unsubscribe();
     }
     item_inv = inv_tracker.get(iid);
-    hotbar.attachItems(item_inv.clone());
+    ui_gl.hotbar.attachItems(item_inv.clone());
     if (Config.show_inventory_updates.get()) {
         inv_update_list.attach(item_inv.clone());
     }
@@ -927,7 +939,7 @@ function handleAbilityInventory(iid) {
         ability_inv.unsubscribe();
     }
     ability_inv = inv_tracker.get(iid);
-    hotbar.attachAbilities(ability_inv.clone());
+    ui_gl.hotbar.attachAbilities(ability_inv.clone());
 }
 
 function handlePlaneFlags(flags) {
@@ -1199,12 +1211,16 @@ function frame(ac, client_now) {
     s.camera_size = [camera_size.x, camera_size.y];
     s.ambient_color = day_night.getAmbientColor(predict_now);
 
+    ui_gl.calcSize(camera_size.x, camera_size.y);
+
     var radius = slice_radius.get(predict_now);
     if (radius > 0 && pony != null) {
         s.slice_frac = radius;
         s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
     }
-    renderer.render(s);
+    renderer.render(s, function(size, fb) {
+        ui_renderer.render(ui_gl, size, fb);
+    });
 
     if (show_cursor && pony != null) {
         var facing = FACINGS[pony.animId() % FACINGS.length];

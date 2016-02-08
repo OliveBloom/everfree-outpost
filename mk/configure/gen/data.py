@@ -9,9 +9,14 @@ def rules(i):
         rule process_font
             command = $python3 $root/src/gen/process_font.py $
                 --font-image-in=$in $
-                --first-char=$first_char $
+                $extra_args $
                 --font-image-out=$out_img $
                 --font-metrics-out=$out_metrics
+            description = GEN $out_img
+
+        rule stack_fonts
+            command = $python3 $root/src/gen/stack_fonts.py $
+                $out_img $out_metrics $in
             description = GEN $out_img
 
         rule process_day_night
@@ -27,14 +32,29 @@ def rules(i):
             description = GEN $out
     ''', **locals())
 
-def font(out_base, src_img):
-    out_img = out_base + '.png'
-    out_metrics = out_base + '_metrics.json'
+def font(basename, src_img, charset_args='--first-char=0x21'):
+    out_img = '$b_data/fonts/' + basename + '.png'
+    out_metrics = '$b_data/fonts/' + basename + '_metrics.json'
 
     return template('''
         build %out_img %out_metrics: process_font %src_img $
             | $root/src/gen/process_font.py
-            first_char = 0x21
+            extra_args = %charset_args
+            out_img = %out_img
+            out_metrics = %out_metrics
+    ''', **locals())
+
+def font_stack(out_base, in_basenames):
+    out_img = out_base + '.png'
+    out_metrics = out_base + '_metrics.json'
+
+    return template('''
+        build %out_img %out_metrics: stack_fonts $
+            %for name in in_basenames
+                $b_data/fonts/%name.png $
+                $b_data/fonts/%{name}_metrics.json $
+            %end
+            | $root/src/gen/stack_fonts.py
             out_img = %out_img
             out_metrics = %out_metrics
     ''', **locals())
@@ -80,7 +100,7 @@ def pack():
 
         build $b_data/outpost.pack: build_pack $
             | $root/mk/misc/make_pack.py $
-            || $b_data/stamp $b_data/font.png $b_data/day_night.json
+            || $b_data/stamp $b_data/fonts.png $b_data/day_night.json
     ''', **locals())
 
 def credits(out_path):

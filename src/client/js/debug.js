@@ -35,6 +35,7 @@ function DebugMonitor() {
 
     this._frames = new TimeSeries(5000);
     this._frame_start = 0;
+    this._fps = 0;
 }
 exports.DebugMonitor = DebugMonitor;
 
@@ -64,6 +65,7 @@ DebugMonitor.prototype.frameEnd = function() {
     var fps = frames / dur;
     this.fps.textContent =
         fstr1(fps) + ' fps (' + frames + ' in ' + fstr1(dur) + 's)';
+    this._fps = fstr1(fps);
 
     var work = this._frames.sum;
     var frame_work = work / frames;
