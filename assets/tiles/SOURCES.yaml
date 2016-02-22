@@ -22,3 +22,9 @@ outdoor-ramps.png:
     author: Anonymous
     derived-from: lpc-base-tiles
 
+cave-top-grass.png: &cave-top-grass
+    tile: LPC Grass Hill Top
+    author: Anonymous
+    derived-from: lpc-base-tiles
+cave-top-grass-cross.png: *cave-top-grass
+

@@ -96,9 +96,15 @@ def mk_template_data(pack, data_dir):
         name = server[i]['name']
         layer = client[i]['layer']
         size = tuple(client[i]['size'])
-        disp_size = tuple(client[i]['display_size'])
-        sheet_idx = client[i]['sheet']
-        offset = tuple(client[i]['offset'])
+
+        # TODO: update for multipart structures
+        #disp_size = tuple(client[i]['display_size'])
+        #sheet_idx = client[i]['sheet']
+        #offset = tuple(client[i]['offset'])
+        disp_size = (0, 0)
+        sheet_idx = 0
+        offset = (0, 0)
+
         templates[name] = TemplateDef(i, layer, size, disp_size, sheet_idx, offset)
 
     return templates

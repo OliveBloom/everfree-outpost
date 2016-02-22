@@ -325,6 +325,65 @@ class CaveWalls:
             self.top_dct[ds[2]],
             ))
 
+    def make_wall_front_dict(self, z):
+        front_dct = chop_cave_front(self.cave_img)
+        result = {}
+
+        for i in range(3 * 3 * 3 * 3):
+            parts = unpack4(i, 3)
+            ds = dissect(parts, 3)
+
+            front_desc = calc_front_desc(ds)
+            if front_desc is None:
+                continue
+            name = ''.join(str(x) for x in parts)
+            result[name] = front_dct['%s/z%d' % (front_desc, z)]
+
+        return result
+
+    def do_cave_z1(self):
+        front_dct = self.make_wall_front_dict(1)
+        bb = BLOCK.prefixed('cave_z1')
+
+        for i in range(3 * 3 * 3 * 3):
+            parts = unpack4(i, 3)
+            ds = dissect(parts, 3)
+            name = ''.join(str(x) for x in parts)
+
+            top = self.make_top(ds)
+            front = front_dct.get(name)
+
+            clear = name in ('1111', '2222')
+            bb.new(name).shape('empty' if clear else 'solid').top(top).front(front)
+
+    def do_cave_z0(self, code, imgname):
+        bottom = chop_terrain(self.tiles(imgname))['empty']
+        front_dct = self.make_wall_front_dict(0)
+        bb = BLOCK.prefixed('terrain/%s' % (code * 4))
+
+        for i in range(3 * 3 * 3 * 3):
+            parts = unpack4(i, 3)
+            ds = dissect(parts, 3)
+            name = ''.join(str(x) for x in parts)
+
+            front = front_dct.get(name)
+
+            clear = name in ('1111', '2222')
+            bb.new('c%s' % name).shape('floor' if clear else 'solid') \
+                    .bottom(bottom).front(front)
+
+
+    def do_block_z1(self, bb, name, clear, top, front):
+
+        bb.new('z1').shape('empty' if clear else 'solid').top(top) \
+                .front(front_dct[front_desc + '/z1'] if front_desc is not None else None)
+        bb.new('z0/grass').shape('floor' if clear else 'solid') \
+                .front(front_dct[front_desc + '/z0'] if front_desc is not None else None) \
+                .bottom(image2.stack((self.grass_base, self.dirt2_dct[bottom_desc])))
+        bb.new('z0/dirt').shape('floor' if clear else 'solid') \
+                .front(front_dct[front_desc + '/z0'] if front_desc is not None else None) \
+                .bottom(image2.stack((self.dirt_base, self.dirt2_dct[bottom_desc])))
+
     def do_block(self, bb, clear, front_dct, top, front_desc, bottom_desc):
         bb.new('z1').shape('empty' if clear else 'solid').top(top) \
                 .front(front_dct[front_desc + '/z1'] if front_desc is not None else None)
@@ -450,19 +509,23 @@ class CaveWalls:
                 .bottom(ramp_img.extract((1, 2))) \
                 .back(ramp_img.extract((1, 1)))
 
-def do_cave_top(tiles):
-    img = tiles('lpc-cave-top.png')
-    cross_img = tiles('lpc-cave-top-cross.png')
+def do_cave_top(tiles, code, imgname):
+    img = tiles('%s.png' % imgname)
+    cross_img = tiles('%s-cross.png' % imgname)
 
     dct = chop_terrain(img)
     dct['cross/nw'] = cross_img.extract((0, 1))
     dct['cross/ne'] = cross_img.extract((0, 0))
 
-    bb = BLOCK.prefixed('cave_top').shape('floor')
+    bb = BLOCK.prefixed('terrain/%s' % (code * 4)).shape('floor')
 
     for i in range(16):
-        desc = describe(tuple(x == 0 for x in unpack4(i, 2)))
-        bb.new(str(i)).bottom(dct[desc])
+        digits = unpack4(i, 2)
+        desc = describe(digits)
+        name = 'e' + ''.join(str(x) for x in digits)
+        bb.new(name).bottom(dct[desc])
+
+    bb = BLOCK.new('terrain/%s' % (code * 4)).shape('floor').bottom(dct['empty'])
 
 
 def do_cave_junk(img):
@@ -478,11 +541,15 @@ def init():
     tiles = loader('tiles', unit=TILE_SIZE)
     structures = loader('structures', unit=TILE_SIZE)
 
-    do_cave_top(tiles)
+    do_cave_top(tiles, 'm', 'lpc-cave-top')
+    do_cave_top(tiles, 'g', 'cave-top-grass')
 
     cw = CaveWalls(tiles)
     cw.do_cave_walls()
     cw.do_cave_entrance()
     cw.do_natural_ramp()
+
+    cw.do_cave_z0('g', 'cave-top-grass.png')
+    cw.do_cave_z1()
 
     do_cave_junk(structures('cave-junk.png'))

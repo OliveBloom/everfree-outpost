@@ -73,6 +73,12 @@ impl<'d, T: Summary> Cache<'d, T> {
         self.get_mut(pid, cpos)
     }
 
+    pub fn insert(&mut self, pid: Stable<PlaneId>, cpos: V2, val: Box<T>) -> &mut T {
+        self.make_space(1);
+        self.cache.insert((pid, cpos), CacheEntry::new(val));
+        self.get_mut(pid, cpos)
+    }
+
     pub fn load(&mut self, pid: Stable<PlaneId>, cpos: V2) -> io::Result<()> {
         if let Some(_) = self.cache.get_refresh(&(pid, cpos)) {
             // Already in the cache.
@@ -97,6 +103,14 @@ impl<'d, T: Summary> Cache<'d, T> {
         let entry = &mut self.cache[&(pid, cpos)];
         entry.dirty = true;
         &mut entry.data
+    }
+
+    pub fn load_or_create(&mut self, pid: Stable<PlaneId>, cpos: V2) -> &mut T {
+        if let Ok(()) = self.load(pid, cpos) {
+            self.get_mut(pid, cpos)
+        } else {
+            self.create(pid, cpos)
+        }
     }
 }
 

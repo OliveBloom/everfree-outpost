@@ -101,7 +101,7 @@ pub fn reservoir_sample_weighted<R, T, W, I>(rng: &mut R, iter: I) -> Option<T>
     Some(choice)
 }
 
-pub fn bilinear<F>(mut f: F, pos: V2, res: i32) -> i32
+pub fn bilinear<F>(pos: V2, res: i32, mut f: F) -> i32
         where F: FnMut(V2) -> i32 {
     let cell = pos.div_floor(scalar(res));
     let off = pos - cell * scalar(res);
