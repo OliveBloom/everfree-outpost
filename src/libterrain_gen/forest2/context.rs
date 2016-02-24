@@ -109,8 +109,7 @@ impl Summary for CaveDetail {
 bitflags! {
     flags TerrainFlags: u8 {
         const T_FLOOR       = 0x01,
-        const T_WALL        = 0x02,
-        const T_WATER       = 0x04,
+        const T_CAVE        = 0x02,
     }
 }
 
@@ -122,6 +121,9 @@ pub enum FloorType {
     Mountain = 2,
     Snow = 3,
     Ash = 4,
+    Water = 5,
+    Lava = 6,
+    Pit = 7,
 }
 
 impl FloorType {
@@ -133,6 +135,9 @@ impl FloorType {
             2 => Some(Mountain),
             3 => Some(Snow),
             4 => Some(Ash),
+            5 => Some(Water),
+            6 => Some(Lava),
+            7 => Some(Pit),
             _ => None,
         }
     }

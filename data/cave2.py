@@ -541,15 +541,15 @@ def init():
     tiles = loader('tiles', unit=TILE_SIZE)
     structures = loader('structures', unit=TILE_SIZE)
 
-    do_cave_top(tiles, 'm', 'lpc-cave-top')
-    do_cave_top(tiles, 'g', 'cave-top-grass')
+    #do_cave_top(tiles, 'm', 'lpc-cave-top')
+    #do_cave_top(tiles, 'g', 'cave-top-grass')
 
     cw = CaveWalls(tiles)
     cw.do_cave_walls()
     cw.do_cave_entrance()
     cw.do_natural_ramp()
 
-    cw.do_cave_z0('g', 'cave-top-grass.png')
-    cw.do_cave_z1()
+    #cw.do_cave_z0('g', 'cave-top-grass.png')
+    #cw.do_cave_z1()
 
     do_cave_junk(structures('cave-junk.png'))

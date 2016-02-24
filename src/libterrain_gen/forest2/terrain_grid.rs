@@ -38,12 +38,12 @@ pub fn generate(ctx: &mut Context,
             };
         let block_height = cmp::max(0, h / 32) as usize;
         for layer in 0 .. block_height {
-            chunk.buf[layer][bounds.index(p)].flags.insert(context::T_FLOOR | context::T_WALL);
+            chunk.buf[layer][bounds.index(p)].flags.insert(context::T_FLOOR | context::T_CAVE);
         }
         chunk.buf[block_height][bounds.index(p)].flags.insert(context::T_FLOOR);
 
         if h < -128 {
-            chunk.buf[0][bounds.index(p)].flags.insert(context::T_WATER);
+            chunk.buf[0][bounds.index(p)].floor_type = context::FloorType::Water;
         }
     }
 }

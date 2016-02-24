@@ -68,6 +68,9 @@ fn calc_tile_name(corners: [Cell; 4]) -> (String, Option<String>) {
             FloorType::Mountain => "m",
             FloorType::Snow => "s",
             FloorType::Ash => "a",
+            FloorType::Water => "w",
+            FloorType::Lava => "l",
+            FloorType::Pit => "p",
         };
         s.push_str(code);
     }
@@ -79,23 +82,16 @@ fn calc_tile_name(corners: [Cell; 4]) -> (String, Option<String>) {
         }
     }
 
-    if corners.iter().any(|c| c.flags.contains(context::T_WATER)) {
-        s.push_str("/w");
-        for c in &corners {
-            s.push_str(if c.flags.contains(context::T_WATER) { "1" } else { "0" });
-        }
-    }
-
-    let has_wall = corners.iter().any(|c| c.flags.contains(context::T_WALL) ||
-                                          c.floor_type == FloorType::Cave);
-    if has_wall {
+    let has_cave = corners.iter().any(|c| c.flags.contains(context::T_CAVE));
+    if has_cave {
         let mut z1 = String::new();
         s.push_str("/c");
         z1.push_str("cave_z1/");
         for c in &corners {
+            // 0 - cave (blocked), 1 - outside, 2 - cave interior
             let code =
-                if c.flags.contains(context::T_WALL) { "0" }
-                else if c.floor_type == FloorType::Cave { "2" }
+                if c.flags.contains(context::T_CAVE | context::T_FLOOR) { "2" }
+                else if c.flags.contains(context::T_CAVE) { "0" }
                 else { "1" };
             s.push_str(code);
             z1.push_str(code);
