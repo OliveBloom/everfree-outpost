@@ -27,7 +27,7 @@ impl<'d> Provider<'d> {
         let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE));
         let grid_bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));
 
-        for layer in 0 .. CHUNK_SIZE / 2 {
+        for layer in 0 .. CHUNK_SIZE / 2 - 4{
             let z = layer * 2;
             let tl = &t.buf[layer as usize];
             for pos in bounds.points() {
@@ -90,7 +90,7 @@ fn calc_tile_name(corners: [Cell; 4]) -> (String, Option<String>) {
         for c in &corners {
             // 0 - cave (blocked), 1 - outside, 2 - cave interior
             let code =
-                if c.flags.contains(context::T_CAVE | context::T_FLOOR) { "2" }
+                if c.flags.contains(context::T_CAVE_INSIDE) { "2" }
                 else if c.flags.contains(context::T_CAVE) { "0" }
                 else { "1" };
             s.push_str(code);

@@ -7,6 +7,7 @@ use libphysics::CHUNK_SIZE;
 use libserver_config::Storage;
 use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
+use libserver_util::BitSlice;
 
 use cache::{Cache, Summary};
 use forest2;
@@ -79,9 +80,42 @@ impl Summary for HeightMap {
 }
 
 
-pub type CaveDetailLayer = [u8; (CHUNK_SIZE * CHUNK_SIZE) as usize / 8];
+pub struct HeightDetail {
+    pub buf: [i32; ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize],
+}
+
+impl Summary for HeightDetail {
+    fn alloc() -> Box<HeightDetail> {
+        Box::new(unsafe { mem::zeroed() })
+    }
+
+    fn write_to(&self, mut f: File) -> io::Result<()> {
+        f.write_bytes_slice(&self.buf)
+    }
+
+    fn read_from(mut f: File) -> io::Result<Box<HeightDetail>> {
+        let mut result = HeightDetail::alloc();
+        try!(f.read_bytes_slice(&mut result.buf));
+        Ok(result)
+    }
+}
+
+
+const CAVE_DETAIL_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;
+const CAVE_DETAIL_BITS: usize = (CAVE_DETAIL_SIZE + 7) / 8;
+pub type CaveDetailLayer = [u8; CAVE_DETAIL_BITS];
 pub struct CaveDetail {
-    pub buf: [CaveDetailLayer; CHUNK_SIZE as usize / 2],
+    buf: [CaveDetailLayer; CHUNK_SIZE as usize / 2],
+}
+
+impl CaveDetail {
+    pub fn layer(&self, layer: usize) -> &BitSlice {
+        BitSlice::from_bytes(&self.buf[layer])
+    }
+
+    pub fn layer_mut(&mut self, layer: usize) -> &mut BitSlice {
+        BitSlice::from_bytes_mut(&mut self.buf[layer])
+    }
 }
 
 impl Summary for CaveDetail {
@@ -110,6 +144,7 @@ bitflags! {
     flags TerrainFlags: u8 {
         const T_FLOOR       = 0x01,
         const T_CAVE        = 0x02,
+        const T_CAVE_INSIDE = 0x04,
     }
 }
 
@@ -208,6 +243,7 @@ pub struct Context<'d> {
     rng: XorShiftRng,
     globals: Cache<'d, PlaneGlobals>,
     height_map: Cache<'d, HeightMap>,
+    height_detail: Cache<'d, HeightDetail>,
     cave_detail: Cache<'d, CaveDetail>,
     terrain_grid: Cache<'d, TerrainGrid>,
 }
@@ -218,19 +254,28 @@ impl<'d> Context<'d> {
             rng: rng,
             globals: Cache::new(storage, "globals"),
             height_map: Cache::new(storage, "height_map"),
+            height_detail: Cache::new(storage, "height_detail"),
             cave_detail: Cache::new(storage, "cave_detail"),
             terrain_grid: Cache::new(storage, "terrain_grid"),
         }
     }
 
-    pub fn globals(&mut self, pid: Stable<PlaneId>) -> &PlaneGlobals {
+    fn globals_mut(&mut self, pid: Stable<PlaneId>) -> &mut PlaneGlobals {
         if let Ok(()) = self.globals.load(pid, scalar(0)) {
-            self.globals.get(pid, scalar(0))
+            self.globals.get_mut(pid, scalar(0))
         } else {
             let g = self.globals.create(pid, scalar(0));
             *g = PlaneGlobals::new(&mut self.rng);
             g
         }
+    }
+
+    pub fn globals(&mut self, pid: Stable<PlaneId>) -> &PlaneGlobals {
+        self.globals_mut(pid)
+    }
+
+    pub fn get_rng(&mut self, pid: Stable<PlaneId>) -> XorShiftRng {
+        self.globals_mut(pid).rng.gen()
     }
 
     pub fn height_map(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightMap {
@@ -251,12 +296,22 @@ impl<'d> Context<'d> {
         hm.buf[bounds.index(pos)]
     }
 
+    pub fn height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightDetail {
+        if let Ok(()) = self.height_detail.load(pid, pos) {
+            self.height_detail.get(pid, pos)
+        } else {
+            let mut x = HeightDetail::alloc();
+            forest2::height_detail::generate(self, &mut *x, pid, pos);
+            self.height_detail.insert(pid, pos, x)
+        }
+    }
+
     pub fn cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveDetail {
         if let Ok(()) = self.cave_detail.load(pid, pos) {
             self.cave_detail.get(pid, pos)
         } else {
             let mut x = CaveDetail::alloc();
-            //forest2::cave_detail::generate(self, &mut *x, pid, pos);
+            forest2::cave_detail::generate(self, &mut *x, pid, pos);
             self.cave_detail.insert(pid, pos, x)
         }
     }

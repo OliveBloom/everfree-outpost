@@ -343,6 +343,7 @@ def chop_terrain_codes(img):
 
 Layer = namedtuple('Layer', ('name', 'dct', 'is_base'))
 
+FloorInfo = namedtuple('FloorInfo', ('name', 'bottom'))
 def iter_terrain_floor(layers):
     letters = [l.name for l in layers]
     for code in iter_codes(len(layers)):
@@ -357,7 +358,21 @@ def iter_terrain_floor(layers):
                 key = describe(tuple(x == i for x in code))
             parts.append(l.dct[key])
         img = image2.stack(parts)
-        yield name, img
+        yield FloorInfo(name, img)
+
+CaveInfo = namedtuple('CaveInfo', ('name', 'front', 'clear'))
+def iter_cave_z0(cave_img):
+    cave_front_dct = chop_cave_front(cave_img)
+
+    for code in iter_codes(3):
+        ds = dissect(code, 3)
+        name = ''.join(str(x) for x in code)
+
+        front_desc = calc_front_desc(ds)
+        front = cave_front_dct['%s/z0' % front_desc] if front_desc is not None else None
+
+        clear = name in ('1111', '2222')
+        yield CaveInfo(name, front, clear)
 
 
 def init():
@@ -401,17 +416,25 @@ def init():
         d = describe(tuple(x == 0 for x in code))
         floor_bb.new('gggg/e%s' % ''.join(str(x) for x in code)).bottom(grass_top[d])
 
-    # Cave walls
+    # Terrain with cave walls
+    for floor in iter_terrain_floor(collect_layers('gc')):
+        for cave in iter_cave_z0(tiles('lpc-cave-walls2.png')):
+            BLOCK.new('terrain/%s/c%s' % (floor.name, cave.name)) \
+                    .bottom(floor.bottom) \
+                    .front(cave.front) \
+                    .shape('floor' if cave.clear else 'solid')
+
+    # Cave walls (z1 part)
     cave_top_dct = chop_cave_top(tiles('lpc-cave-walls2.png'))
     cave_front_dct = chop_cave_front(tiles('lpc-cave-walls2.png'))
     black_dct = chop_black()
+
     for code in iter_codes(3):
         ds = dissect(code, 3)
         name = ''.join(str(x) for x in code)
 
         front_desc = calc_front_desc(ds)
-        front_z0 = cave_front_dct['%s/z0' % front_desc] if front_desc is not None else None
-        front_z1 = cave_front_dct['%s/z1' % front_desc] if front_desc is not None else None
+        front = cave_front_dct['%s/z1' % front_desc] if front_desc is not None else None
 
         top = image2.stack((
             black_dct[ds[0]],
@@ -420,15 +443,6 @@ def init():
             ))
 
         clear = name in ('1111', '2222')
-        BLOCK.new('terrain/gggg/c%s' % name) \
-                .shape('empty' if clear else 'solid') \
-                .bottom(grass_top['full']).front(front_z0)
         BLOCK.new('cave_z1/%s' % name) \
                 .shape('floor' if clear else 'solid') \
-                .top(top).front(front_z1)
-
-        empty_name = ''.join(str(int(x == 1)) for x in code)
-        BLOCK.new('terrain/gggg/e%s/c%s' % (empty_name, name)) \
-                .shape('empty' if clear else 'solid') \
-                .front(front_z0)
-
+                .top(top).front(front)
