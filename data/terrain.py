@@ -375,6 +375,171 @@ def iter_cave_z0(cave_img):
         yield CaveInfo(name, front, clear)
 
 
+# Cave ramps are tricky because we want them to integrate well with the
+# surrounding walls.  The current solution is to mostly treat the two grid
+# intersections at the back of the ramp as 0 (black), producing a 3x2 block of
+# wall (possibly merged into surrounding walls), but then use custom tiles at
+# the front so the ramp looks like it was cut into the wall.
+#
+# Freestanding:         With nearby walls:
+#  2   2   2   2         1   1|  0   0
+#   /---------\          -----/
+#   |         |                     
+#   | /-----\ |          -\ /-----\
+#  2| |0   0| |2         2| |0   0|  0
+#   | | ramp| |          -/ | ramp|  
+#   | | here| |             | here|  
+#   \-/ - - \-/             | - - \---
+#  2   2   2   2         0  |2   2   2
+#
+# For the five wall tiles adjacent to the 0s (the ramp itself is excluded), the
+# outer half is rendered normally:
+#
+# Freestanding:         With nearby walls:
+#  2   2   2   2         1   1|  0   0
+#   /---------\          -----/
+#   |         |                     
+#   |         |          -\        
+#  2|  0   0  |2         2|  0   0   0
+#   |         |          -/          
+#   |         |                      
+#   \---------/             /---------
+#  2   2   2   2         0  |2   2   2
+#
+# But the inner half is rendered according to a modified view of the terrain:
+#
+# Freestanding:         With nearby walls:
+#  2|  *   *  |2         1|  *   *   0
+#  -/         \-         -/    
+#                                   
+#     /-----\               /-----\
+#  *  |#   #|  *         *  |#   #|  *
+#     |     |               |     |  
+#     |     |               |     |  
+#  ---/     \---            |     \---
+#  2   2   2   2         0  |2   2   2
+#
+# ('*' tiles are overridden to 0, and '#' tiles are 2.)
+#
+# Merging the two halves produces the combined view shown above.  Note that
+# this results in some wall shapes that are otherwise impossible, such as the
+# U-shaped tiles in the freestanding example.
+
+CAVE_RAMP_SIDE = (
+        'top/back/%(side)s',
+        'top/front/%(side)s/corner',
+        'front/%(side)s/z1',
+        'front/%(side)s/z0',
+        'top/front/%(side)s/edge',
+        None,
+        )
+
+CAVE_RAMP_CENTER = (
+        'top/back/center/%(terrain)s',
+        'ramp/%(terrain)s/0',
+        'ramp/%(terrain)s/1',
+        'ramp/%(terrain)s/2',
+        'ramp/%(terrain)s/3',
+        'ramp/%(terrain)s/cover',
+        )
+
+def _format(s, dct):
+    if s is None:
+        return None
+    else:
+        return s % dct
+
+CAVE_RAMP_PARTS = tuple(zip(
+    (_format(x, {'side': 'left'}) for x in CAVE_RAMP_SIDE),
+    (_format(x, {'terrain': 'dirt'}) for x in CAVE_RAMP_CENTER),
+    (_format(x, {'side': 'right'}) for x in CAVE_RAMP_SIDE),
+    (_format(x, {'terrain': 'grass'}) for x in CAVE_RAMP_CENTER),
+    (_format(x, {'terrain': 'dirt2'}) for x in CAVE_RAMP_CENTER),
+    ))
+
+def do_cave_ramps(tiles):
+    ramp = tiles('cave-stair.png').chop_grid(CAVE_RAMP_PARTS)
+    wall_top = chop_cave_top(tiles('lpc-cave-walls2.png'))
+    wall_front = chop_cave_front(tiles('lpc-cave-walls2.png'))
+    black = chop_black()
+    cave_bottom = tiles('lpc-base-tiles/dirt2.png').extract((1, 3))
+
+    bb = BLOCK.child().shape('solid')
+
+    for code in iter_codes(3):
+        nw, ne, se, sw = code
+        ds = dissect(code, 3)
+        name = ''.join(str(x) for x in code)
+
+        def get_front(z, side):
+            front_desc = calc_front_desc(ds)
+            ramp_front = ramp['front/%s/z%d' % (side, z)]
+            if front_desc is not None:
+                return image2.stack((wall_front['%s/z%d' % (front_desc, z)], ramp_front))
+            else:
+                return ramp_front
+
+        def get_top(side):
+            return image2.stack((
+                black[ds[0]],
+                wall_top[ds[1]],
+                wall_top[ds[2]],
+                ramp['top/%s' % side],
+                ))
+
+        if ne == 0 and se == 2:
+            # Front left
+            bb.new('ramp/xy01/z0/cccc/c%s' % name).front(get_front(0, 'left')) \
+                    .bottom(cave_bottom)
+            bb.new('ramp/xy01/z1/cccc/c%s' % name).front(get_front(0, 'left')) \
+                    .top(get_top('front/left/%s' % ('corner' if sw == 2 else 'edge')))
+
+        if nw == 0 and sw == 2:
+            # Front right
+            bb.new('ramp/xy21/z0/cccc/c%s' % name).front(get_front(0, 'right')) \
+                    .bottom(cave_bottom)
+            bb.new('ramp/xy21/z1/cccc/c%s' % name).front(get_front(0, 'right')) \
+                    .top(get_top('front/right/%s' % ('corner' if se == 2 else 'edge')))
+
+        def normal_front(z):
+            front_desc = calc_front_desc(ds)
+            if front_desc is not None:
+                return wall_front['%s/z%d' % (front_desc, z)]
+            else:
+                return None
+
+        if se == 0:
+            # Back right
+            bb.new('ramp/xy00/z0/cccc/c%s' % name).front(normal_front(0)) \
+                    .bottom(cave_bottom)
+            bb.new('ramp/xy00/z1/cccc/c%s' % name).front(normal_front(1)) \
+                    .top(get_top('back/left'))
+
+        if sw == 0:
+            # Back left
+            bb.new('ramp/xy20/z0/cccc/c%s' % name).front(normal_front(0)) \
+                    .bottom(cave_bottom)
+            bb.new('ramp/xy20/z1/cccc/c%s' % name).front(normal_front(1)) \
+                    .top(get_top('back/right'))
+
+        if sw == 0 and se == 0:
+            # Back center
+            bb.new('ramp/xy10/z0/cccc/c%s' % name).front(normal_front(0)) \
+                    .bottom(cave_bottom)
+            bb.new('ramp/xy10/z1/cccc/c%s' % name).front(normal_front(1)) \
+                    .top(get_top('back/center/dirt2'))
+
+    bb_ramp = BLOCK.child().shape('ramp_n')
+    bb_ramp.new('ramp/dirt2/z0') \
+            .bottom(image2.stack((
+                ramp['ramp/dirt2/3'],
+                cave_bottom,
+                ))) \
+            .back(ramp['ramp/dirt2/2'])
+    bb_ramp.new('ramp/dirt2/z1') \
+            .bottom(ramp['ramp/dirt2/1']) \
+            .back(ramp['ramp/dirt2/0'])
+
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
 
@@ -446,3 +611,5 @@ def init():
         BLOCK.new('cave_z1/%s' % name) \
                 .shape('floor' if clear else 'solid') \
                 .top(top).front(front)
+
+    do_cave_ramps(tiles)

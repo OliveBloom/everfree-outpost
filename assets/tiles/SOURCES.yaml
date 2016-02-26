@@ -28,3 +28,10 @@ cave-top-grass.png: &cave-top-grass
     derived-from: lpc-base-tiles
 cave-top-grass-cross.png: *cave-top-grass
 
+cave-stair*.png:
+    title: Cave Stair / Natural Ramp
+    author: Anonymous
+    derived-from: lpc-base-tiles
+    attribution: >
+        This is "outdoor ramps" with some tweaks and repacking.
+
