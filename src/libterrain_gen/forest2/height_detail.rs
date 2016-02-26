@@ -9,6 +9,7 @@ use libterrain_gen_algo::bilinear;
 
 use cache::Summary;
 use forest2::context::Context;
+use forest2::height_map;
 
 
 pub struct HeightDetail {
@@ -38,9 +39,9 @@ pub fn generate(ctx: &mut Context,
                 pos: V2) {
     let mut height_points = [0; 4 * 4];
     let height_bounds = Region::new(scalar(-1), scalar(3));
-    for p in height_bounds.points() {
-        height_points[height_bounds.index(p)] = ctx.point_height(pid, pos + p);
-    }
+    height_map::fold_region(ctx, pid, height_bounds + pos, (), |_, p, val| {
+        height_points[height_bounds.index(p - pos)] = val;
+    });
     let height_points = height_points;
 
     let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));

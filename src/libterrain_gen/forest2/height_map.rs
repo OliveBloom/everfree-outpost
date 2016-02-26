@@ -59,3 +59,26 @@ pub fn generate(ctx: &mut Context,
         chunk.buf[bounds.index(offset)] = val;
     }
 }
+
+pub fn fold_region<F, S>(ctx: &mut Context,
+                         pid: Stable<PlaneId>,
+                         bounds: Region<V2>,
+                         init: S,
+                         mut f: F) -> S
+        where F: FnMut(S, V2, i32) -> S {
+    let grid_bounds = bounds.div_round_signed(HEIGHTMAP_SIZE as i32);
+
+    let mut state = init;
+    for gpos in grid_bounds.points() {
+        let chunk = ctx.height_map(pid, gpos);
+        let chunk_bounds = Region::new(gpos, gpos + scalar(1)) *
+                           scalar(HEIGHTMAP_SIZE as i32);
+        for p in bounds.intersect(chunk_bounds).points() {
+            let val = chunk.buf[chunk_bounds.index(p)];
+            state = f(state, p, val);
+        }
+    }
+
+    state
+}
+
