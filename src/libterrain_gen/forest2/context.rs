@@ -12,6 +12,8 @@ use libserver_util::BitSlice;
 use cache::{Cache, Summary};
 use forest2;
 
+use forest2::cave_ramps::{self, CaveRamps};
+
 
 pub struct PlaneGlobals {
     pub rng: XorShiftRng,
@@ -244,6 +246,7 @@ pub struct Context<'d> {
     globals: Cache<'d, PlaneGlobals>,
     height_map: Cache<'d, HeightMap>,
     height_detail: Cache<'d, HeightDetail>,
+    cave_ramps: Cache<'d, CaveRamps>,
     cave_detail: Cache<'d, CaveDetail>,
     terrain_grid: Cache<'d, TerrainGrid>,
 }
@@ -255,6 +258,7 @@ impl<'d> Context<'d> {
             globals: Cache::new(storage, "globals"),
             height_map: Cache::new(storage, "height_map"),
             height_detail: Cache::new(storage, "height_detail"),
+            cave_ramps: Cache::new(storage, "cave_ramps"),
             cave_detail: Cache::new(storage, "cave_detail"),
             terrain_grid: Cache::new(storage, "terrain_grid"),
         }
@@ -303,6 +307,32 @@ impl<'d> Context<'d> {
             let mut x = HeightDetail::alloc();
             forest2::height_detail::generate(self, &mut *x, pid, pos);
             self.height_detail.insert(pid, pos, x)
+        }
+    }
+
+    pub fn point_height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> i32 {
+        let size = scalar(CHUNK_SIZE);
+        let cpos = pos.div_floor(size);
+        let bounds = Region::new(cpos * size, (cpos + scalar(1)) * size);
+        let hm = self.height_detail(pid, cpos);
+        hm.buf[bounds.index(pos)]
+    }
+
+    pub fn cave_ramps(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveRamps {
+        if let Ok(()) = self.cave_ramps.load(pid, pos) {
+            self.cave_ramps.get(pid, pos)
+        } else {
+            let mut x = CaveRamps::alloc();
+            cave_ramps::generate(self, &mut *x, pid, pos);
+            self.cave_ramps.insert(pid, pos, x)
+        }
+    }
+
+    pub fn get_cave_ramps(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveRamps> {
+        if let Ok(()) = self.cave_ramps.load(pid, pos) {
+            Some(self.cave_ramps.get(pid, pos))
+        } else {
+            None
         }
     }
 
