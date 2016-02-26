@@ -1,15 +1,12 @@
 use std::fs::File;
 use std::io;
-use std::mem;
-use rand::Rng;
 
-use libphysics::CHUNK_SIZE;
 use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::context::{self, Context};
+use forest2::context::Context;
 
 
 pub struct CaveRamps {

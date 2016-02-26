@@ -14,7 +14,6 @@ use prop::{LocalProperty, GlobalProperty};
 use super::summary::ChunkSummary;
 use super::summary::PlaneSummary;
 
-use super::ENTRANCE_POS;
 use super::plan::Plan;
 use super::vault::Vault;
 use super::caves::Caves;
@@ -239,10 +238,6 @@ impl<'a> Context<'a> {
                                            template_id!(self, "bookshelf/{}", book_count));
                 self.gc.structures.push(gs);
             }
-        }
-
-        for off in Region::new(scalar(0), V2::new(w, h)).points() {
-            let off = V2::new(off.x, 2 * off.y);
         }
     }
 

@@ -1,6 +1,5 @@
 use std::fs::File;
 use std::io;
-use std::mem;
 use rand::{Rng, XorShiftRng, SeedableRng};
 
 use libphysics::CHUNK_SIZE;
@@ -9,7 +8,6 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::{Cache, Summary};
-use forest2;
 
 use forest2::height_map::{self, HeightMap};
 use forest2::height_detail::{self, HeightDetail};

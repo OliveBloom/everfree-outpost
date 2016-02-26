@@ -4,8 +4,8 @@ use libphysics::CHUNK_SIZE;
 use libserver_config::{Data, Storage};
 use libserver_types::*;
 
-use {GenChunk, GenStructure};
-use forest2::context::{self, Context};
+use GenChunk;
+use forest2::context::Context;
 use forest2::terrain_grid::{self, Cell, FloorType};
 
 pub struct Provider<'d> {

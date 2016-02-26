@@ -1,19 +1,18 @@
-use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::iter::{self, Peekable};
+use std::collections::{BinaryHeap, HashSet};
+use std::iter::Peekable;
 use std::mem;
 use std::slice;
 use rand::Rng;
 
 use libserver_types::*;
 use libserver_config::Data;
-use libserver_util::{SmallVec, SmallSet};
+use libserver_util::SmallVec;
 use libserver_util::{make_array, make_array_with};
 
 use StdRng;
 use algo::disk_sampler::DiskSampler;
 use algo::{reservoir_sample, reservoir_sample_weighted};
 use algo::triangulate;
-use algo::union_find::UnionFind;
 use prop::GlobalProperty;
 
 use super::{DUNGEON_SIZE, ENTRANCE_POS};
@@ -89,7 +88,7 @@ impl<T> Graph<T> {
         Some(mk_iter().nth(rng.gen_range(0, count)).unwrap())
     }
 
-    fn map<U, F: FnMut(T) -> U>(self, mut f: F) -> Graph<U> {
+    fn map<U, F: FnMut(T) -> U>(self, f: F) -> Graph<U> {
         Graph {
             verts: self.verts.into_iter().map(f).collect(),
             edges: self.edges,
@@ -340,7 +339,7 @@ fn triangulated_graph(raw_verts: &[V2], bounds: Region<V2>) -> Graph<V2> {
 
     let mut idx_map = Vec::with_capacity(raw_verts.len());
     let mut g = Graph::new();
-    for (i, &p) in raw_verts.iter().enumerate() {
+    for &p in raw_verts {
         if bounds.contains(p) {
             let g_idx = g.add_vert(p - bounds.min);
             idx_map.push(g_idx);
@@ -368,7 +367,7 @@ fn simple_blob(g: &Graph<BaseVert>, rng: &mut StdRng, start: u16, size: usize) -
     let mut level = make_array(0, g.verts.len());
     // Keep lists of vertices connected by 1 edge, by 2 edges, and by 3+ edges.
     let mut pending = [HashSet::new(), HashSet::new(), HashSet::new()];
-    let mut total_pending = 0;
+    let mut total_pending;
 
     const MAX_EDGES: usize = 3;
     const CHOSEN: u8 = 255;
@@ -735,7 +734,7 @@ impl Temporary {
     }
 
     fn place_door(&mut self,
-                  rng: &mut StdRng,
+                  _rng: &mut StdRng,
                   path: Vec<u16>,
                   start: u16,
                   entrance: u16,
@@ -809,7 +808,7 @@ impl Temporary {
         }
     }
 
-    fn gen_library(&mut self, rng: &mut StdRng, v: u16) -> bool {
+    fn gen_library(&mut self, _rng: &mut StdRng, _v: u16) -> bool {
         false
     }
 

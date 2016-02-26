@@ -1,4 +1,3 @@
-use std::cmp;
 use rand::Rng;
 
 use libphysics::CHUNK_SIZE;
@@ -6,12 +5,10 @@ use libserver_types::*;
 
 use StdRng;
 use algo;
-use algo::blob::BlobGrid;
 use algo::cellular::CellularGrid;
-use algo::dsc::DscGrid;
 use prop::LocalProperty;
 
-use super::{DUNGEON_SIZE, ENTRANCE_POS};
+use super::ENTRANCE_POS;
 use super::summary::ChunkSummary;
 use super::summary::PlaneSummary;
 use super::vault::Vault;
@@ -43,9 +40,8 @@ impl<'a> LocalProperty for Caves<'a> {
     type Temporary = CellularGrid;
     type Result = ();
 
-    fn init(&mut self, summ: &ChunkSummary) -> CellularGrid {
+    fn init(&mut self, _summ: &ChunkSummary) -> CellularGrid {
         let mut grid = CellularGrid::new(scalar(CHUNK_SIZE * 3 + 1));
-        let base = self.cpos * scalar(CHUNK_SIZE) - scalar(CHUNK_SIZE);
 
         for pos in grid.bounds().points() {
             grid.set(pos, true);
@@ -84,7 +80,7 @@ impl<'a> LocalProperty for Caves<'a> {
             if !bounds.contains(a) && !bounds.contains(b) {
                 continue;
             }
-            algo::line_points(a, b, |pos, big| {
+            algo::line_points(a, b, |pos, _big| {
                 for pos in Region::new(pos, pos + scalar(2)).points() {
                     if bounds.contains(pos) {
                         grid.set_fixed(pos - base, false);
