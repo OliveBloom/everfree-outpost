@@ -1,7 +1,39 @@
+use std::fs::File;
+use std::io;
+use std::mem;
+use rand::Rng;
+
+use libphysics::CHUNK_SIZE;
 use libserver_types::*;
+use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::perlin;
 
-use forest2::context::{Context, HeightMap, HEIGHTMAP_SIZE};
+use cache::Summary;
+use forest2::context::Context;
+
+
+pub const HEIGHTMAP_SIZE: usize = 64;
+
+pub struct HeightMap {
+    pub buf: [i32; HEIGHTMAP_SIZE * HEIGHTMAP_SIZE],
+}
+
+impl Summary for HeightMap {
+    fn alloc() -> Box<HeightMap> {
+        Box::new(unsafe { mem::zeroed() })
+    }
+
+    fn write_to(&self, mut f: File) -> io::Result<()> {
+        f.write_bytes_slice(&self.buf)
+    }
+
+    fn read_from(mut f: File) -> io::Result<Box<HeightMap>> {
+        let mut result = HeightMap::alloc();
+        try!(f.read_bytes_slice(&mut result.buf));
+        Ok(result)
+    }
+}
+
 
 pub fn generate(ctx: &mut Context,
                 chunk: &mut HeightMap,

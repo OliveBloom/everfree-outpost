@@ -5,7 +5,8 @@ use libserver_config::{Data, Storage};
 use libserver_types::*;
 
 use {GenChunk, GenStructure};
-use forest2::context::{self, Context, Cell, FloorType};
+use forest2::context::{self, Context};
+use forest2::terrain_grid::{self, Cell, FloorType};
 
 pub struct Provider<'d> {
     data: &'d Data,
@@ -75,14 +76,14 @@ fn calc_tile_name(corners: [Cell; 4]) -> (String, Option<String>) {
         s.push_str(code);
     }
 
-    if corners.iter().any(|c| !c.flags.contains(context::T_FLOOR)) {
+    if corners.iter().any(|c| !c.flags.contains(terrain_grid::T_FLOOR)) {
         s.push_str("/e");
         for c in &corners {
-            s.push_str(if c.flags.contains(context::T_FLOOR) { "0" } else { "1" });
+            s.push_str(if c.flags.contains(terrain_grid::T_FLOOR) { "0" } else { "1" });
         }
     }
 
-    let has_cave = corners.iter().any(|c| c.flags.contains(context::T_CAVE));
+    let has_cave = corners.iter().any(|c| c.flags.contains(terrain_grid::T_CAVE));
     if has_cave {
         let mut z1 = String::new();
         s.push_str("/c");
@@ -90,8 +91,8 @@ fn calc_tile_name(corners: [Cell; 4]) -> (String, Option<String>) {
         for c in &corners {
             // 0 - cave (blocked), 1 - outside, 2 - cave interior
             let code =
-                if c.flags.contains(context::T_CAVE_INSIDE) { "2" }
-                else if c.flags.contains(context::T_CAVE) { "0" }
+                if c.flags.contains(terrain_grid::T_CAVE_INSIDE) { "2" }
+                else if c.flags.contains(terrain_grid::T_CAVE) { "0" }
                 else { "1" };
             s.push_str(code);
             z1.push_str(code);

@@ -1,10 +1,58 @@
+use std::fs::File;
+use std::io;
+use std::mem;
 use rand::Rng;
 
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
+use libserver_util::BitSlice;
+use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::cellular::CellularGrid;
 
-use forest2::context::{self, Context, CaveDetail};
+use cache::Summary;
+use forest2::context::{self, Context};
+
+
+pub const LAYER_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;
+pub const LAYER_BYTE_SIZE: usize = (LAYER_SIZE + 7) / 8;
+
+pub type CaveDetailLayer = [u8; LAYER_BYTE_SIZE];
+
+pub struct CaveDetail {
+    buf: [CaveDetailLayer; CHUNK_SIZE as usize / 2],
+}
+
+impl CaveDetail {
+    pub fn layer(&self, layer: usize) -> &BitSlice {
+        BitSlice::from_bytes(&self.buf[layer])
+    }
+
+    pub fn layer_mut(&mut self, layer: usize) -> &mut BitSlice {
+        BitSlice::from_bytes_mut(&mut self.buf[layer])
+    }
+}
+
+impl Summary for CaveDetail {
+    fn alloc() -> Box<CaveDetail> {
+        Box::new(unsafe { mem::zeroed() })
+    }
+
+    fn write_to(&self, mut f: File) -> io::Result<()> {
+        for layer in &self.buf {
+            try!(f.write_bytes_slice(layer));
+        }
+        Ok(())
+    }
+
+    fn read_from(mut f: File) -> io::Result<Box<CaveDetail>> {
+        let mut result = CaveDetail::alloc();
+        for layer in &mut result.buf {
+            try!(f.read_bytes_slice(layer));
+        }
+        Ok(result)
+    }
+}
+
 
 fn generate_layer(ctx: &mut Context,
                   chunk: &mut CaveDetail,

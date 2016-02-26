@@ -7,12 +7,15 @@ use libphysics::CHUNK_SIZE;
 use libserver_config::Storage;
 use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
-use libserver_util::BitSlice;
 
 use cache::{Cache, Summary};
 use forest2;
 
+use forest2::height_map::{self, HeightMap};
+use forest2::height_detail::{self, HeightDetail};
 use forest2::cave_ramps::{self, CaveRamps};
+use forest2::cave_detail::{self, CaveDetail};
+use forest2::terrain_grid::{self, TerrainGrid};
 
 
 pub struct PlaneGlobals {
@@ -59,188 +62,6 @@ impl Summary for PlaneGlobals {
     }
 }
 
-
-pub const HEIGHTMAP_SIZE: usize = 64;
-pub struct HeightMap {
-    pub buf: [i32; HEIGHTMAP_SIZE * HEIGHTMAP_SIZE],
-}
-
-impl Summary for HeightMap {
-    fn alloc() -> Box<HeightMap> {
-        Box::new(unsafe { mem::zeroed() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        f.write_bytes_slice(&self.buf)
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<HeightMap>> {
-        let mut result = HeightMap::alloc();
-        try!(f.read_bytes_slice(&mut result.buf));
-        Ok(result)
-    }
-}
-
-
-pub struct HeightDetail {
-    pub buf: [i32; ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize],
-}
-
-impl Summary for HeightDetail {
-    fn alloc() -> Box<HeightDetail> {
-        Box::new(unsafe { mem::zeroed() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        f.write_bytes_slice(&self.buf)
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<HeightDetail>> {
-        let mut result = HeightDetail::alloc();
-        try!(f.read_bytes_slice(&mut result.buf));
-        Ok(result)
-    }
-}
-
-
-const CAVE_DETAIL_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;
-const CAVE_DETAIL_BITS: usize = (CAVE_DETAIL_SIZE + 7) / 8;
-pub type CaveDetailLayer = [u8; CAVE_DETAIL_BITS];
-pub struct CaveDetail {
-    buf: [CaveDetailLayer; CHUNK_SIZE as usize / 2],
-}
-
-impl CaveDetail {
-    pub fn layer(&self, layer: usize) -> &BitSlice {
-        BitSlice::from_bytes(&self.buf[layer])
-    }
-
-    pub fn layer_mut(&mut self, layer: usize) -> &mut BitSlice {
-        BitSlice::from_bytes_mut(&mut self.buf[layer])
-    }
-}
-
-impl Summary for CaveDetail {
-    fn alloc() -> Box<CaveDetail> {
-        Box::new(unsafe { mem::zeroed() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        for layer in &self.buf {
-            try!(f.write_bytes_slice(layer));
-        }
-        Ok(())
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<CaveDetail>> {
-        let mut result = CaveDetail::alloc();
-        for layer in &mut result.buf {
-            try!(f.read_bytes_slice(layer));
-        }
-        Ok(result)
-    }
-}
-
-
-bitflags! {
-    flags TerrainFlags: u8 {
-        const T_FLOOR       = 0x01,
-        const T_CAVE        = 0x02,
-        const T_CAVE_INSIDE = 0x04,
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u8)]
-pub enum FloorType {
-    Grass = 0,      // So we can init with mem::zeroed()
-    Cave = 1,
-    Mountain = 2,
-    Snow = 3,
-    Ash = 4,
-    Water = 5,
-    Lava = 6,
-    Pit = 7,
-}
-
-impl FloorType {
-    fn from_primitive(x: u8) -> Option<FloorType> {
-        use self::FloorType::*;
-        match x {
-            0 => Some(Grass),
-            1 => Some(Cave),
-            2 => Some(Mountain),
-            3 => Some(Snow),
-            4 => Some(Ash),
-            5 => Some(Water),
-            6 => Some(Lava),
-            7 => Some(Pit),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Cell {
-    pub flags: TerrainFlags,
-    pub floor_type: FloorType,
-}
-pub type TerrainLayer = [Cell; ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize];
-/// Full terrain information for each grid intersection in a chunk.  This is the final
-/// representation used to generate the chunk's block data.
-pub struct TerrainGrid {
-    pub buf: [TerrainLayer; (CHUNK_SIZE / 2) as usize],
-}
-
-impl Summary for TerrainGrid {
-    fn alloc() -> Box<TerrainGrid> {
-        Box::new(unsafe { mem::zeroed() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        let mut buffer = [(0, 0); ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize];
-        for layer in 0 .. (CHUNK_SIZE / 2) as usize {
-            for i in 0 .. buffer.len() {
-                let info = &self.buf[layer][i];
-                buffer[i] = (info.flags.bits(), info.floor_type as u8);
-            }
-            try!(f.write_bytes_slice(&buffer));
-        }
-        Ok(())
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<TerrainGrid>> {
-        let mut result = TerrainGrid::alloc();
-        let mut buffer = [(0, 0); ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize];
-        for layer in 0 .. (CHUNK_SIZE / 2) as usize {
-            try!(f.read_bytes_slice(&mut buffer));
-            for i in 0 .. buffer.len() {
-                let (raw_flags, raw_floor_type) = buffer[i];
-                let flags = match TerrainFlags::from_bits(raw_flags) {
-                    Some(x) => x,
-                    None => {
-                        return Err(io::Error::new(io::ErrorKind::Other,
-                                                  "invalid terran flags"));
-                    },
-                };
-                let floor_type = match FloorType::from_primitive(raw_floor_type) {
-                    Some(x) => x,
-                    None => {
-                        return Err(io::Error::new(io::ErrorKind::Other,
-                                                  "invalid floor type"));
-                    },
-                };
-
-                result.buf[layer][i].flags = flags;
-                result.buf[layer][i].floor_type = floor_type;
-            }
-        }
-        Ok(result)
-    }
-}
-
-
-
 pub struct Context<'d> {
     rng: XorShiftRng,
     globals: Cache<'d, PlaneGlobals>,
@@ -264,6 +85,7 @@ impl<'d> Context<'d> {
         }
     }
 
+
     fn globals_mut(&mut self, pid: Stable<PlaneId>) -> &mut PlaneGlobals {
         if let Ok(()) = self.globals.load(pid, scalar(0)) {
             self.globals.get_mut(pid, scalar(0))
@@ -282,18 +104,48 @@ impl<'d> Context<'d> {
         self.globals_mut(pid).rng.gen()
     }
 
-    pub fn height_map(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightMap {
-        if let Ok(()) = self.height_map.load(pid, pos) {
-            self.height_map.get(pid, pos)
+
+    #[inline]
+    fn entry<T, F, G>(&mut self,
+                      pid: Stable<PlaneId>,
+                      pos: V2,
+                      get_cache: F,
+                      generate: G) -> &T
+            where T: Summary,
+                  F: for<'a> Fn(&'a mut Context<'d>) -> &'a mut Cache<'d, T>,
+                  G: FnOnce(&mut Context, &mut T, Stable<PlaneId>, V2) {
+        if let Ok(()) = get_cache(self).load(pid, pos) {
+            get_cache(self).get(pid, pos)
         } else {
-            let mut x = HeightMap::alloc();
-            forest2::height_map::generate(self, &mut *x, pid, pos);
-            self.height_map.insert(pid, pos, x)
+            let mut x = T::alloc();
+            generate(self, &mut *x, pid, pos);
+            get_cache(self).insert(pid, pos, x)
         }
     }
 
+    #[inline]
+    fn get_entry<T, F>(&mut self,
+                       pid: Stable<PlaneId>,
+                       pos: V2,
+                       get_cache: F) -> Option<&T>
+            where T: Summary,
+                  F: for<'a> Fn(&'a mut Context<'d>) -> &'a mut Cache<'d, T> {
+        if let Ok(()) = get_cache(self).load(pid, pos) {
+            Some(get_cache(self).get(pid, pos))
+        } else {
+            None
+        }
+    }
+
+
+    pub fn height_map(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightMap {
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.height_map,
+                   height_map::generate)
+    }
+
     pub fn point_height(&mut self, pid: Stable<PlaneId>, pos: V2) -> i32 {
-        let size = scalar(HEIGHTMAP_SIZE as i32);
+        let size = scalar(height_map::HEIGHTMAP_SIZE as i32);
         let cpos = pos.div_floor(size);
         let bounds = Region::new(cpos * size, (cpos + scalar(1)) * size);
         let hm = self.height_map(pid, cpos);
@@ -301,13 +153,9 @@ impl<'d> Context<'d> {
     }
 
     pub fn height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightDetail {
-        if let Ok(()) = self.height_detail.load(pid, pos) {
-            self.height_detail.get(pid, pos)
-        } else {
-            let mut x = HeightDetail::alloc();
-            forest2::height_detail::generate(self, &mut *x, pid, pos);
-            self.height_detail.insert(pid, pos, x)
-        }
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.height_detail,
+                   height_detail::generate)
     }
 
     pub fn point_height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> i32 {
@@ -319,48 +167,30 @@ impl<'d> Context<'d> {
     }
 
     pub fn cave_ramps(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveRamps {
-        if let Ok(()) = self.cave_ramps.load(pid, pos) {
-            self.cave_ramps.get(pid, pos)
-        } else {
-            let mut x = CaveRamps::alloc();
-            cave_ramps::generate(self, &mut *x, pid, pos);
-            self.cave_ramps.insert(pid, pos, x)
-        }
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.cave_ramps,
+                   cave_ramps::generate)
     }
 
     pub fn get_cave_ramps(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveRamps> {
-        if let Ok(()) = self.cave_ramps.load(pid, pos) {
-            Some(self.cave_ramps.get(pid, pos))
-        } else {
-            None
-        }
+        self.get_entry(pid, pos,
+                       |ctx| &mut ctx.cave_ramps)
     }
 
     pub fn cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveDetail {
-        if let Ok(()) = self.cave_detail.load(pid, pos) {
-            self.cave_detail.get(pid, pos)
-        } else {
-            let mut x = CaveDetail::alloc();
-            forest2::cave_detail::generate(self, &mut *x, pid, pos);
-            self.cave_detail.insert(pid, pos, x)
-        }
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.cave_detail,
+                   cave_detail::generate)
     }
 
     pub fn get_cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveDetail> {
-        if let Ok(()) = self.cave_detail.load(pid, pos) {
-            Some(self.cave_detail.get(pid, pos))
-        } else {
-            None
-        }
+        self.get_entry(pid, pos,
+                       |ctx| &mut ctx.cave_detail)
     }
 
     pub fn terrain_grid(&mut self, pid: Stable<PlaneId>, pos: V2) -> &TerrainGrid {
-        if let Ok(()) = self.terrain_grid.load(pid, pos) {
-            self.terrain_grid.get(pid, pos)
-        } else {
-            let mut x = TerrainGrid::alloc();
-            forest2::terrain_grid::generate(self, &mut *x, pid, pos);
-            self.terrain_grid.insert(pid, pos, x)
-        }
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.terrain_grid,
+                   terrain_grid::generate)
     }
 }

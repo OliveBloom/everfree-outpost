@@ -1,8 +1,37 @@
+use std::fs::File;
+use std::io;
+use std::mem;
+use rand::Rng;
+
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
+use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::bilinear;
 
-use forest2::context::{self, Context, HeightDetail};
+use cache::Summary;
+use forest2::context::{self, Context};
+
+
+pub struct HeightDetail {
+    pub buf: [i32; ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize],
+}
+
+impl Summary for HeightDetail {
+    fn alloc() -> Box<HeightDetail> {
+        Box::new(unsafe { mem::zeroed() })
+    }
+
+    fn write_to(&self, mut f: File) -> io::Result<()> {
+        f.write_bytes_slice(&self.buf)
+    }
+
+    fn read_from(mut f: File) -> io::Result<Box<HeightDetail>> {
+        let mut result = HeightDetail::alloc();
+        try!(f.read_bytes_slice(&mut result.buf));
+        Ok(result)
+    }
+}
+
 
 pub fn generate(ctx: &mut Context,
                 chunk: &mut HeightDetail,
