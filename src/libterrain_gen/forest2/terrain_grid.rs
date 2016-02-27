@@ -9,6 +9,7 @@ use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::Summary;
 use forest2::context::Context;
+use forest2::cave_ramps;
 
 
 bitflags! {
@@ -122,7 +123,7 @@ pub fn generate(ctx: &mut Context,
             let h = detail.buf[bounds.index(p)];
             let h =
                 if h.abs() >= 256 {
-                    warn!("perlin noise value exceeds bounds: {} @ {:?}", h, p);
+                    //warn!("perlin noise value exceeds bounds: {} @ {:?}", h, p);
                     255 * h.signum()
                 } else {
                     h
@@ -154,6 +155,16 @@ pub fn generate(ctx: &mut Context,
                 if chunk.buf[layer][bounds.index(p)].flags.contains(T_CAVE) {
                     chunk.buf[layer][bounds.index(p)].flags.insert(T_CAVE_INSIDE);
                 }
+            }
+        }
+    }
+
+    // HACK
+    let bounds_global = bounds + cpos * scalar(CHUNK_SIZE);
+    for r in &cave_ramps::ramps_in_region(ctx, pid, bounds_global) {
+        for p in Region::new(r.pos, r.pos + V2::new(2, 3)).intersect(bounds_global).points() {
+            for z in 0 .. 8 {
+                chunk.buf[z][bounds_global.index(p)].floor_type = FloorType::Cave;
             }
         }
     }

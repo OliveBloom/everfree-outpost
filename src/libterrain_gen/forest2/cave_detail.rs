@@ -11,6 +11,7 @@ use libterrain_gen_algo::cellular::CellularGrid;
 
 use cache::Summary;
 use forest2::context::Context;
+use forest2::cave_ramps;
 
 
 pub const LAYER_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;
@@ -77,6 +78,27 @@ fn generate_layer(ctx: &mut Context,
             }
         }
     }
+
+        /*
+    let grid_bounds_global = Region::new(cpos - scalar(1), cpos + scalar(2)) * scalar(CHUNK_SIZE);
+    info!("collecing ramps @{:?}", cpos);
+    for r in &cave_ramps::ramps_in_region(ctx, pid, grid_bounds_global.expand(scalar(1))) {
+        if r.layer == layer as u8 {
+            info!("  ramp at {:?} z={}", r.pos, r.layer);
+            grid.set_fixed(r.pos + V2::new(0, 0), true);
+            grid.set_fixed(r.pos + V2::new(1, 0), true);
+            grid.set_fixed(r.pos + V2::new(0, 1), false);
+            grid.set_fixed(r.pos + V2::new(1, 1), false);
+            grid.set_fixed(r.pos + V2::new(0, 2), false);
+            grid.set_fixed(r.pos + V2::new(1, 2), false);
+        } else if r.layer + 1 == layer as u8 {
+            info!("  ramp_top at {:?} z={}", r.pos, r.layer + 1);
+            for p in Region::new(r.pos, r.pos + V2::new(2, 3)).expand(scalar(1)).points() {
+                grid.set_fixed(p, false);
+            }
+        }
+    }
+        */
 
     // Fill remaining space at random.
     grid.init(|_| rng.gen_range(0, 10) < 5);

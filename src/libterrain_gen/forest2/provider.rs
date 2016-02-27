@@ -28,7 +28,7 @@ impl<'d> Provider<'d> {
         let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE));
         let grid_bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));
 
-        for layer in 0 .. CHUNK_SIZE / 2 - 4{
+        for layer in 0 .. CHUNK_SIZE / 2 {
             let z = layer * 2;
             let tl = &t.buf[layer as usize];
             for pos in bounds.points() {

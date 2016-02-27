@@ -11,7 +11,7 @@ use cache::{Cache, Summary};
 
 use forest2::height_map::{self, HeightMap};
 use forest2::height_detail::{self, HeightDetail};
-use forest2::cave_ramps::{self, CaveRamps};
+use forest2::cave_ramps::{self, RampPositions, CaveRamps};
 use forest2::cave_detail::{self, CaveDetail};
 use forest2::terrain_grid::{self, TerrainGrid};
 
@@ -65,6 +65,7 @@ pub struct Context<'d> {
     globals: Cache<'d, PlaneGlobals>,
     height_map: Cache<'d, HeightMap>,
     height_detail: Cache<'d, HeightDetail>,
+    cave_ramp_positions: Cache<'d, RampPositions>,
     cave_ramps: Cache<'d, CaveRamps>,
     cave_detail: Cache<'d, CaveDetail>,
     terrain_grid: Cache<'d, TerrainGrid>,
@@ -77,6 +78,7 @@ impl<'d> Context<'d> {
             globals: Cache::new(storage, "globals"),
             height_map: Cache::new(storage, "height_map"),
             height_detail: Cache::new(storage, "height_detail"),
+            cave_ramp_positions: Cache::new(storage, "cave_ramp_positions"),
             cave_ramps: Cache::new(storage, "cave_ramps"),
             cave_detail: Cache::new(storage, "cave_detail"),
             terrain_grid: Cache::new(storage, "terrain_grid"),
@@ -164,15 +166,34 @@ impl<'d> Context<'d> {
         hm.buf[bounds.index(pos)]
     }
 
-    pub fn cave_ramps(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveRamps {
+    pub fn cave_ramps(&mut self,
+                      pid: Stable<PlaneId>,
+                      pos: V2) -> &CaveRamps {
         self.entry(pid, pos,
                    |ctx| &mut ctx.cave_ramps,
                    cave_ramps::generate)
     }
 
-    pub fn get_cave_ramps(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveRamps> {
+    pub fn get_cave_ramps(&mut self,
+                          pid: Stable<PlaneId>,
+                          pos: V2) -> Option<&CaveRamps> {
         self.get_entry(pid, pos,
                        |ctx| &mut ctx.cave_ramps)
+    }
+
+    pub fn cave_ramp_positions(&mut self,
+                               pid: Stable<PlaneId>,
+                               pos: V2) -> &RampPositions {
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.cave_ramp_positions,
+                   cave_ramps::generate_positions)
+    }
+
+    pub fn get_cave_ramp_positions(&mut self,
+                                   pid: Stable<PlaneId>,
+                                   pos: V2) -> Option<&RampPositions> {
+        self.get_entry(pid, pos,
+                       |ctx| &mut ctx.cave_ramp_positions)
     }
 
     pub fn cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveDetail {
