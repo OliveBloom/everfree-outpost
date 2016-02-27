@@ -162,6 +162,7 @@ pub fn generate(ctx: &mut Context,
     // HACK
     let bounds_global = bounds + cpos * scalar(CHUNK_SIZE);
     for r in &cave_ramps::ramps_in_region(ctx, pid, bounds_global) {
+        info!("  applying ramp @ {:?} z={}", r.pos, r.layer);
         for p in Region::new(r.pos, r.pos + V2::new(2, 3)).intersect(bounds_global).points() {
             for z in 0 .. 8 {
                 chunk.buf[z][bounds_global.index(p)].floor_type = FloorType::Cave;

@@ -40,7 +40,7 @@ impl<'d> Provider<'d> {
 
                 let z0_id = match self.data.block_data.find_id(&name) {
                     Some(x) => x,
-                    None => { warn!("no such block: {}", name); 0 }
+                    None => { /*warn!("no such block: {}", name);*/ 0 }
                 };
                 gc.set_block(pos.extend(z + 0), z0_id);
                 if let Some(z1_name) = z1_name {

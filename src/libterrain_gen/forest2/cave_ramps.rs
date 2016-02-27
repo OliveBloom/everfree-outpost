@@ -1,6 +1,7 @@
 use std::cmp;
 use std::fs::File;
 use std::io;
+use rand::Rng;
 
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
@@ -129,25 +130,37 @@ pub fn generate(ctx: &mut Context,
                 chunk: &mut CaveRamps,
                 pid: Stable<PlaneId>,
                 cpos: V2) {
+    let mut rng = ctx.get_rng(pid);
+
     let bounds = Region::new(cpos, cpos + scalar(1)) * scalar(CHUNK_SIZE);
     info!("generating fine ramps at {:?} ({:?})", cpos, bounds);
     for &pos in &ramp_positions_in_region(ctx, pid, bounds) {
         let ramp_bounds = Region::new(pos - scalar(1),
                                       pos + RAMP_SIZE + scalar(1));
-        let top_layer = height_detail::fold_region(ctx, pid, ramp_bounds, 8, |acc, _, h| {
-            let cur = cmp::max(0, h) / 32;
-            cmp::min(cur as u8, acc)
-        });
-        if top_layer == 0 || top_layer == 8 {
+        let layer = rng.gen_range(0, 7);
+        let (at_top, above) = height_detail::fold_region(
+            ctx, pid, ramp_bounds, (0, 0), |(t, a), _, h| {
+                let cur = cmp::max(0, h) / 32;
+                if cur == layer as i32 + 1 {
+                    (t + 1, a)
+                } else if cur > layer as i32 + 1 {
+                    (t, a + 1)
+                } else {
+                    (t, a)
+                }
+            });
+        // The entire uppper level should either be surface (`at_top`) or cave (`above`).
+        if !(at_top == ramp_bounds.volume() || above == ramp_bounds.volume()) {
+            info!("  discarded {:?} z={} ({} {})", pos, layer, at_top, above);
             continue;
         }
 
         chunk.ramps.push(Ramp {
             pos: pos - bounds.min,
-            layer: top_layer - 1,
+            layer: layer,
         });
 
-        info!("  filtered {:?} -> {:?}", pos, pos - bounds.min);
+        info!("  kept {:?} z={} ({} {})", pos, layer, at_top, above);
     }
 }
 
