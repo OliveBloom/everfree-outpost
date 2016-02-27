@@ -4,10 +4,11 @@ use libphysics::CHUNK_SIZE;
 use libserver_config::{Data, Storage};
 use libserver_types::*;
 
-use GenChunk;
+use {GenChunk, GenStructure};
 use forest2::context::Context;
 use forest2::terrain_grid::{self, Cell, FloorType};
 use forest2::cave_ramps;
+use forest2::cave_junk;
 
 pub struct Provider<'d> {
     data: &'d Data,
@@ -24,6 +25,7 @@ impl<'d> Provider<'d> {
 
     pub fn generate(&mut self, pid: Stable<PlaneId>, cpos: V2) -> GenChunk {
         let mut gc = GenChunk::new();
+        let mut rng = self.ctx.get_rng(pid);
 
         let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE));
         let base = cpos * scalar(CHUNK_SIZE);
@@ -155,6 +157,32 @@ impl<'d> Provider<'d> {
             }
         }
 
+        macro_rules! template_id {
+            ($name:expr) => (self.data.structure_templates.get_id($name))
+        };
+
+        // Apply cave junk
+        for &(pos, layer) in &cave_junk::junk_in_region(&mut self.ctx, pid, bounds + base) {
+            let pos = pos - base;
+            let spec = specs[layer as usize][bounds.index(pos)];
+            if !spec.is_cave_floor() {
+                continue;
+            }
+            let pos = pos.extend(layer as i32 * 2);
+
+            let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
+            if let Some(id) = opt_id {
+                let gs = GenStructure::new(pos, id);
+                gc.structures.push(gs);
+            }
+        }
+
+        // Anvil (at spawn)
+        if cpos == scalar(0) {
+            let gs = GenStructure::new(scalar(0), template_id!("anvil"));
+            gc.structures.push(gs);
+        }
+
         gc
     }
 }
@@ -210,6 +238,11 @@ impl TileSpec {
     fn has_cave(&self) -> bool {
         self.cave != [1; 4] &&
         self.cave != [2; 4]
+    }
+
+    fn is_cave_floor(&self) -> bool {
+        self.empty != [true; 4] &&
+        self.cave == [2; 4]
     }
 
     fn push_terrain_code(&self, s: &mut String) {

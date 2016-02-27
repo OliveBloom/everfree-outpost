@@ -13,6 +13,7 @@ use forest2::height_map::{self, HeightMap};
 use forest2::height_detail::{self, HeightDetail};
 use forest2::cave_ramps::{self, RampPositions, CaveRamps};
 use forest2::cave_detail::{self, CaveDetail};
+use forest2::cave_junk::{self, CaveJunk};
 use forest2::terrain_grid::{self, TerrainGrid};
 
 
@@ -68,6 +69,7 @@ pub struct Context<'d> {
     cave_ramp_positions: Cache<'d, RampPositions>,
     cave_ramps: Cache<'d, CaveRamps>,
     cave_detail: Cache<'d, CaveDetail>,
+    cave_junk: Cache<'d, CaveJunk>,
     terrain_grid: Cache<'d, TerrainGrid>,
 }
 
@@ -81,6 +83,7 @@ impl<'d> Context<'d> {
             cave_ramp_positions: Cache::new(storage, "cave_ramp_positions"),
             cave_ramps: Cache::new(storage, "cave_ramps"),
             cave_detail: Cache::new(storage, "cave_detail"),
+            cave_junk: Cache::new(storage, "cave_junk"),
             terrain_grid: Cache::new(storage, "terrain_grid"),
         }
     }
@@ -205,6 +208,17 @@ impl<'d> Context<'d> {
     pub fn get_cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveDetail> {
         self.get_entry(pid, pos,
                        |ctx| &mut ctx.cave_detail)
+    }
+
+    pub fn cave_junk(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveJunk {
+        self.entry(pid, pos,
+                   |ctx| &mut ctx.cave_junk,
+                   cave_junk::generate)
+    }
+
+    pub fn get_cave_junk(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveJunk> {
+        self.get_entry(pid, pos,
+                       |ctx| &mut ctx.cave_junk)
     }
 
     pub fn terrain_grid(&mut self, pid: Stable<PlaneId>, pos: V2) -> &TerrainGrid {
