@@ -440,7 +440,13 @@ CAVE_RAMP_CENTER = (
         'ramp/%(terrain)s/1',
         'ramp/%(terrain)s/2',
         'ramp/%(terrain)s/3',
-        'ramp/%(terrain)s/cover',
+        None,
+        )
+
+CAVE_RAMP_CAPS = (
+        'ramp/grass/cap0', 'ramp/grass/cap1',
+        'ramp/dirt/cap0', 'ramp/dirt/cap1',
+        'ramp/dirt2/cap0', 'ramp/dirt2/cap1',
         )
 
 def _format(s, dct):
@@ -455,6 +461,7 @@ CAVE_RAMP_PARTS = tuple(zip(
     (_format(x, {'side': 'right'}) for x in CAVE_RAMP_SIDE),
     (_format(x, {'terrain': 'grass'}) for x in CAVE_RAMP_CENTER),
     (_format(x, {'terrain': 'dirt2'}) for x in CAVE_RAMP_CENTER),
+    CAVE_RAMP_CAPS,
     ))
 
 def do_cave_ramps(tiles):
@@ -491,14 +498,14 @@ def do_cave_ramps(tiles):
             # Front left
             bb.new('ramp/xy01/z0/cccc/c%s' % name).front(get_front(0, 'left')) \
                     .bottom(cave_bottom)
-            bb.new('ramp/xy01/z1/cccc/c%s' % name).front(get_front(0, 'left')) \
+            bb.new('ramp/xy01/z1/c%s' % name).front(get_front(1, 'left')) \
                     .top(get_top('front/left/%s' % ('corner' if sw == 2 else 'edge')))
 
         if nw == 0 and sw == 2:
             # Front right
             bb.new('ramp/xy21/z0/cccc/c%s' % name).front(get_front(0, 'right')) \
                     .bottom(cave_bottom)
-            bb.new('ramp/xy21/z1/cccc/c%s' % name).front(get_front(0, 'right')) \
+            bb.new('ramp/xy21/z1/c%s' % name).front(get_front(1, 'right')) \
                     .top(get_top('front/right/%s' % ('corner' if se == 2 else 'edge')))
 
         def normal_front(z):
@@ -512,33 +519,41 @@ def do_cave_ramps(tiles):
             # Back right
             bb.new('ramp/xy00/z0/cccc/c%s' % name).front(normal_front(0)) \
                     .bottom(cave_bottom)
-            bb.new('ramp/xy00/z1/cccc/c%s' % name).front(normal_front(1)) \
+            bb.new('ramp/xy00/z1/c%s' % name).front(normal_front(1)) \
                     .top(get_top('back/left'))
 
         if sw == 0:
             # Back left
             bb.new('ramp/xy20/z0/cccc/c%s' % name).front(normal_front(0)) \
                     .bottom(cave_bottom)
-            bb.new('ramp/xy20/z1/cccc/c%s' % name).front(normal_front(1)) \
+            bb.new('ramp/xy20/z1/c%s' % name).front(normal_front(1)) \
                     .top(get_top('back/right'))
 
         if sw == 0 and se == 0:
             # Back center
             bb.new('ramp/xy10/z0/cccc/c%s' % name).front(normal_front(0)) \
                     .bottom(cave_bottom)
-            bb.new('ramp/xy10/z1/cccc/c%s' % name).front(normal_front(1)) \
+            bb.new('ramp/xy10/z1/c%s' % name).front(normal_front(1)) \
                     .top(get_top('back/center/dirt2'))
 
     bb_ramp = BLOCK.child().shape('ramp_n')
     bb_ramp.new('ramp/dirt2/z0') \
             .bottom(image2.stack((
-                ramp['ramp/dirt2/3'],
                 cave_bottom,
+                ramp['ramp/dirt2/3'],
                 ))) \
             .back(ramp['ramp/dirt2/2'])
     bb_ramp.new('ramp/dirt2/z1') \
             .bottom(ramp['ramp/dirt2/1']) \
             .back(ramp['ramp/dirt2/0'])
+
+    for terrain in ('grass', 'dirt', 'dirt2'):
+        BLOCK.new('ramp/%s/cap0' % terrain) \
+                .shape('floor') \
+                .bottom(ramp['ramp/%s/cap0' % terrain])
+        BLOCK.new('ramp/%s/cap1' % terrain) \
+                .shape('empty') \
+                .bottom(ramp['ramp/%s/cap1' % terrain])
 
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
@@ -575,11 +590,17 @@ def init():
 
             floor_bb.new(name).bottom(img)
 
-    # Grass hilltop edges
+    # Hilltop edges
     grass_top = chop_terrain(tiles('cave-top-grass.png'), tiles('cave-top-grass-cross.png'))
     for code in iter_codes(2):
         d = describe(tuple(x == 0 for x in code))
         floor_bb.new('gggg/e%s' % ''.join(str(x) for x in code)).bottom(grass_top[d])
+
+    # Cave top (for ramp tops inside caves)
+    cave_top = chop_terrain(tiles('lpc-cave-top2.png'), tiles('lpc-cave-top2-cross.png'))
+    for code in iter_codes(2):
+        d = describe(tuple(x == 0 for x in code))
+        floor_bb.new('cccc/e%s' % ''.join(str(x) for x in code)).bottom(cave_top[d])
 
     # Terrain with cave walls
     for floor in iter_terrain_floor(collect_layers('gc')):

@@ -190,7 +190,7 @@ pub fn ramps_in_region(ctx: &mut Context,
                        pid: Stable<PlaneId>,
                        bounds: Region<V2>) -> Vec<Ramp> {
     let expanded = Region::new(bounds.min - RAMP_SIZE + scalar(1), bounds.max);
-    let chunk_bounds = bounds.div_round_signed(CHUNK_SIZE);
+    let chunk_bounds = expanded.div_round_signed(CHUNK_SIZE);
     let mut result = Vec::new();
 
     for cpos in chunk_bounds.points() {

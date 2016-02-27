@@ -8,6 +8,10 @@ lpc-cave-top-cross.png: *lpc-base
 lpc-cave-top.png: *lpc-base
 lpc-cave-inside.png: *lpc-base
 
+lpc-cave-top2*.png:
+    derived-from: lpc-base-tiles
+    attribution: LPC cave top, recolored to match dirt2.png (cave interior)
+
 farmland-interior-parts.png:
     title: LPC Farmland - Interior Tiles
     author: Stuart Pernsteiner
