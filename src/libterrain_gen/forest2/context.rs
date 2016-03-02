@@ -64,16 +64,16 @@ impl Summary for PlaneGlobals {
 
 pub struct Context<'d> {
     rng: XorShiftRng,
-    globals: Cache<'d, PlaneGlobals>,
-    height_map: Cache<'d, HeightMap>,
-    height_detail: Cache<'d, HeightDetail>,
-    cave_ramp_positions: Cache<'d, RampPositions>,
-    cave_ramps: Cache<'d, CaveRamps>,
-    cave_detail: Cache<'d, CaveDetail>,
-    cave_junk: Cache<'d, CaveJunk>,
-    tree_positions: Cache<'d, TreePositions>,
-    trees: Cache<'d, Trees>,
-    terrain_grid: Cache<'d, TerrainGrid>,
+    globals: Cache<'d, (Stable<PlaneId>, V2), PlaneGlobals>,
+    height_map: Cache<'d, (Stable<PlaneId>, V2), HeightMap>,
+    height_detail: Cache<'d, (Stable<PlaneId>, V2), HeightDetail>,
+    cave_ramp_positions: Cache<'d, (Stable<PlaneId>, V2), RampPositions>,
+    cave_ramps: Cache<'d, (Stable<PlaneId>, V2), CaveRamps>,
+    cave_detail: Cache<'d, (Stable<PlaneId>, V2), CaveDetail>,
+    cave_junk: Cache<'d, (Stable<PlaneId>, V2), CaveJunk>,
+    tree_positions: Cache<'d, (Stable<PlaneId>, V2), TreePositions>,
+    trees: Cache<'d, (Stable<PlaneId>, V2), Trees>,
+    terrain_grid: Cache<'d, (Stable<PlaneId>, V2), TerrainGrid>,
 }
 
 impl<'d> Context<'d> {
@@ -95,10 +95,10 @@ impl<'d> Context<'d> {
 
 
     fn globals_mut(&mut self, pid: Stable<PlaneId>) -> &mut PlaneGlobals {
-        if let Ok(()) = self.globals.load(pid, scalar(0)) {
-            self.globals.get_mut(pid, scalar(0))
+        if let Ok(()) = self.globals.load((pid, scalar(0))) {
+            self.globals.get_mut((pid, scalar(0)))
         } else {
-            let g = self.globals.create(pid, scalar(0));
+            let g = self.globals.create((pid, scalar(0)));
             *g = PlaneGlobals::new(&mut self.rng);
             g
         }
@@ -120,14 +120,15 @@ impl<'d> Context<'d> {
                       get_cache: F,
                       generate: G) -> &T
             where T: Summary,
-                  F: for<'a> Fn(&'a mut Context<'d>) -> &'a mut Cache<'d, T>,
+                  F: for<'a> Fn(&'a mut Context<'d>)
+                      -> &'a mut Cache<'d, (Stable<PlaneId>, V2), T>,
                   G: FnOnce(&mut Context, &mut T, Stable<PlaneId>, V2) {
-        if let Ok(()) = get_cache(self).load(pid, pos) {
-            get_cache(self).get(pid, pos)
+        if let Ok(()) = get_cache(self).load((pid, pos)) {
+            get_cache(self).get((pid, pos))
         } else {
             let mut x = T::alloc();
             generate(self, &mut *x, pid, pos);
-            get_cache(self).insert(pid, pos, x)
+            get_cache(self).insert((pid, pos), x)
         }
     }
 
@@ -137,9 +138,10 @@ impl<'d> Context<'d> {
                        pos: V2,
                        get_cache: F) -> Option<&T>
             where T: Summary,
-                  F: for<'a> Fn(&'a mut Context<'d>) -> &'a mut Cache<'d, T> {
-        if let Ok(()) = get_cache(self).load(pid, pos) {
-            Some(get_cache(self).get(pid, pos))
+                  F: for<'a> Fn(&'a mut Context<'d>)
+                      -> &'a mut Cache<'d, (Stable<PlaneId>, V2), T> {
+        if let Ok(()) = get_cache(self).load((pid, pos)) {
+            Some(get_cache(self).get((pid, pos)))
         } else {
             None
         }

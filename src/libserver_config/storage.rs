@@ -114,12 +114,10 @@ impl Storage {
 
     pub fn summary_file_path(&self,
                              name: &str,
-                             stable_pid: Stable<PlaneId>,
-                             cpos: V2) -> PathBuf {
+                             suffix: &Path) -> PathBuf {
         self.base.join(SAVE_DIR).join(SUMMARY_DIR)
-            .join(format!("{:x}", stable_pid.unwrap()))
             .join(name)
-            .join(format!("{},{}.dat", cpos.x, cpos.y))
+            .join(suffix)
     }
 
 
@@ -145,9 +143,8 @@ impl Storage {
 
     pub fn open_summary_file(&self,
                              name: &str,
-                             stable_pid: Stable<PlaneId>,
-                             cpos: V2) -> Option<File> {
-        try_open_file(self.summary_file_path(name, stable_pid, cpos))
+                             suffix: &Path) -> Option<File> {
+        try_open_file(self.summary_file_path(name, suffix))
     }
 
 
@@ -177,9 +174,8 @@ impl Storage {
 
     pub fn create_summary_file(&self,
                                name: &str,
-                               stable_pid: Stable<PlaneId>,
-                               cpos: V2) -> File {
-        let path = self.summary_file_path(name, stable_pid, cpos);
+                               suffix: &Path) -> File {
+        let path = self.summary_file_path(name, suffix);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         File::create(path).unwrap()
     }

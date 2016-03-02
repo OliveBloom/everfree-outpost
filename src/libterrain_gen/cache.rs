@@ -1,10 +1,36 @@
 use std::error::Error;
 use std::fs::File;
+use std::hash::Hash;
 use std::io;
+use std::path::PathBuf;
 use linked_hash_map::LinkedHashMap;
 
 use libserver_types::*;
 use libserver_config::Storage;
+
+
+pub trait Key: Hash + Eq + Copy {
+    fn to_path(&self) -> PathBuf;
+}
+
+impl Key for V2 {
+    fn to_path(&self) -> PathBuf {
+        PathBuf::from(format!("{},{}", self.x, self.y))
+    }
+}
+
+impl<ID: Hash + Eq + Copy> Key for Stable<ID> {
+    fn to_path(&self) -> PathBuf {
+        PathBuf::from(format!("{}", self.unwrap()))
+    }
+}
+
+impl<A: Key, B: Key> Key for (A, B) {
+    fn to_path(&self) -> PathBuf {
+        self.0.to_path()
+            .join(self.1.to_path())
+    }
+}
 
 
 pub trait Summary {
@@ -33,16 +59,16 @@ impl<T> CacheEntry<T> {
     }
 }
 
-pub struct Cache<'d, T: Summary> {
+pub struct Cache<'d, K: Key, T: Summary> {
     storage: &'d Storage,
     name: &'static str,
-    cache: LinkedHashMap<(Stable<PlaneId>, V2), CacheEntry<T>>,
+    cache: LinkedHashMap<K, CacheEntry<T>>,
 }
 
 const CACHE_LIMIT: usize = 1024;
 
-impl<'d, T: Summary> Cache<'d, T> {
-    pub fn new(storage: &'d Storage, name: &'static str) -> Cache<'d, T> {
+impl<'d, K: Key, T: Summary> Cache<'d, K, T> {
+    pub fn new(storage: &'d Storage, name: &'static str) -> Cache<'d, K, T> {
         Cache {
             storage: storage,
             name: name,
@@ -53,9 +79,9 @@ impl<'d, T: Summary> Cache<'d, T> {
     fn make_space(&mut self, extra: usize) {
         assert!(extra <= CACHE_LIMIT);
         while self.cache.len() + extra > CACHE_LIMIT {
-            let ((pid, cpos), entry) = self.cache.pop_front().unwrap();
+            let (key, entry) = self.cache.pop_front().unwrap();
             if entry.dirty {
-                let file = self.storage.create_summary_file(self.name, pid, cpos);
+                let file = self.storage.create_summary_file(self.name, &key.to_path());
                 match entry.data.write_to(file) {
                     Ok(_) => {},
                     Err(e) => {
@@ -67,54 +93,54 @@ impl<'d, T: Summary> Cache<'d, T> {
         }
     }
 
-    pub fn create(&mut self, pid: Stable<PlaneId>, cpos: V2) -> &mut T {
+    pub fn create(&mut self, key: K) -> &mut T {
         self.make_space(1);
-        self.cache.insert((pid, cpos), CacheEntry::new(T::alloc()));
-        self.get_mut(pid, cpos)
+        self.cache.insert(key, CacheEntry::new(T::alloc()));
+        self.get_mut(key)
     }
 
-    pub fn insert(&mut self, pid: Stable<PlaneId>, cpos: V2, val: Box<T>) -> &mut T {
+    pub fn insert(&mut self, key: K, val: Box<T>) -> &mut T {
         self.make_space(1);
-        self.cache.insert((pid, cpos), CacheEntry::new(val));
-        self.get_mut(pid, cpos)
+        self.cache.insert(key, CacheEntry::new(val));
+        self.get_mut(key)
     }
 
-    pub fn load(&mut self, pid: Stable<PlaneId>, cpos: V2) -> io::Result<()> {
-        if let Some(_) = self.cache.get_refresh(&(pid, cpos)) {
+    pub fn load(&mut self, key: K) -> io::Result<()> {
+        if let Some(_) = self.cache.get_refresh(&key) {
             // Already in the cache.
             Ok(())
         } else {
             self.make_space(1);
-            let path = self.storage.summary_file_path(self.name, pid, cpos);
+            let path = self.storage.summary_file_path(self.name, &key.to_path());
             let file = try!(File::open(path));
             let summary = try!(T::read_from(file));
-            self.cache.insert((pid, cpos), CacheEntry::new(summary));
+            self.cache.insert(key, CacheEntry::new(summary));
             Ok(())
         }
     }
 
     // No explicit `unload` - data is unloaded automatically in LRU fashion.
 
-    pub fn get(&self, pid: Stable<PlaneId>, cpos: V2) -> &T {
-        &self.cache[&(pid, cpos)].data
+    pub fn get(&self, key: K) -> &T {
+        &self.cache[&key].data
     }
 
-    pub fn get_mut(&mut self, pid: Stable<PlaneId>, cpos: V2) -> &mut T {
-        let entry = &mut self.cache[&(pid, cpos)];
+    pub fn get_mut(&mut self, key: K) -> &mut T {
+        let entry = &mut self.cache[&key];
         entry.dirty = true;
         &mut entry.data
     }
 
-    pub fn load_or_create(&mut self, pid: Stable<PlaneId>, cpos: V2) -> &mut T {
-        if let Ok(()) = self.load(pid, cpos) {
-            self.get_mut(pid, cpos)
+    pub fn load_or_create(&mut self, key: K) -> &mut T {
+        if let Ok(()) = self.load(key) {
+            self.get_mut(key)
         } else {
-            self.create(pid, cpos)
+            self.create(key)
         }
     }
 }
 
-impl<'d, T: Summary> Drop for Cache<'d, T> {
+impl<'d, K: Key, T: Summary> Drop for Cache<'d, K, T> {
     fn drop(&mut self) {
         // Evict everything.
         self.make_space(CACHE_LIMIT);
