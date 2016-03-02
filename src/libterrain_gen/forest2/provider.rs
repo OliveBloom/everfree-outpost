@@ -9,6 +9,7 @@ use forest2::context::Context;
 use forest2::terrain_grid::{self, Cell, FloorType};
 use forest2::cave_ramps;
 use forest2::cave_junk;
+use forest2::trees;
 
 pub struct Provider<'d> {
     data: &'d Data,
@@ -171,6 +172,17 @@ impl<'d> Provider<'d> {
             let pos = pos.extend(layer as i32 * 2);
 
             let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
+            if let Some(id) = opt_id {
+                let gs = GenStructure::new(pos, id);
+                gc.structures.push(gs);
+            }
+        }
+
+        // Apply trees
+        for &(pos, layer) in &trees::trees_in_region(&mut self.ctx, pid, bounds + base) {
+            let pos = (pos - base).extend(layer as i32 * 2);
+
+            let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "forest/floor");
             if let Some(id) = opt_id {
                 let gs = GenStructure::new(pos, id);
                 gc.structures.push(gs);

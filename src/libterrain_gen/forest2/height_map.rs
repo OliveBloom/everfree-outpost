@@ -56,7 +56,8 @@ pub fn generate(ctx: &mut Context,
     for offset in bounds.points() {
         let p = pos * size + offset;
         let val = perlin::sample(&coarse_params, p) + perlin::sample(&fine_params, p);
-        chunk.buf[bounds.index(offset)] = val;
+        //chunk.buf[bounds.index(offset)] = val;
+        chunk.buf[bounds.index(offset)] = 0;
     }
 }
 
