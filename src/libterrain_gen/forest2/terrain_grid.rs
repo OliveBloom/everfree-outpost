@@ -8,7 +8,7 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::Summary;
-use forest2::context::{Context, HeightDetailPass};
+use forest2::context::{Context, HeightDetailPass, CaveDetailPass};
 use forest2::cave_ramps;
 
 
@@ -144,11 +144,10 @@ pub fn generate(ctx: &mut Context,
 
     // Apply cave info
     {
-        /*
-        let detail = ctx.cave_detail(pid, cpos);
         for layer in 0 .. CHUNK_SIZE as usize / 2 {
+            let detail = ctx.result::<CaveDetailPass>((pid, cpos, layer as u8));
             for p in bounds.points() {
-                if detail.layer(layer).get(bounds.index(p)) {
+                if detail.data().get(bounds.index(p)) {
                     // It's a wall.
                     continue;
                 }
@@ -158,7 +157,6 @@ pub fn generate(ctx: &mut Context,
                 }
             }
         }
-        */
     }
 
     // Apply ramps
