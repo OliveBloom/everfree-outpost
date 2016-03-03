@@ -210,13 +210,12 @@ impl<'d> Context<'d> {
                   F: FnMut(S, V2, <P::Value as GridLike>::Elem) -> S {
         let spacing = <P::Value as GridLike>::spacing();
         let size = <P::Value as GridLike>::size();
-        assert!(spacing.x == spacing.y);
-        let grid_bounds = bounds.div_round_signed(spacing.x);
+        let grid_bounds = bounds.div_round_signed(spacing);
 
         let mut state = init;
         for gpos in grid_bounds.points() {
             let chunk = self.result::<P>((pid, gpos));
-            let chunk_bounds = Region::new(gpos, gpos + scalar(1)) * size;
+            let chunk_bounds = Region::new(gpos, gpos + scalar(1)) * scalar(size);
             for p in bounds.intersect(chunk_bounds).points() {
                 let val = chunk.get(p - chunk_bounds.min);
                 state = f(state, p, val);

@@ -52,15 +52,11 @@ impl Summary for CaveDetail {
 impl common::GridLike for CaveDetail {
     type Elem = bool;
 
-    fn spacing() -> V2 { scalar(CHUNK_SIZE) }
-    fn size() -> V2 { scalar(CHUNK_SIZE + 1) }
+    fn spacing() -> i32 { CHUNK_SIZE }
+    fn size() -> i32 { CHUNK_SIZE + 1 }
 
     fn get(&self, offset: V2) -> bool {
         self.data().get(Self::bounds().index(offset))
-    }
-
-    fn set(&mut self, offset: V2, val: bool) {
-        self.data_mut().set(Self::bounds().index(offset), val)
     }
 }
 
