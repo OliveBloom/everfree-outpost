@@ -9,7 +9,7 @@ use libserver_util::bytes::{Bytes, ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::context::Context;
+use forest2::context::{Context, HeightMapPass};
 use forest2::height_map;
 
 
@@ -68,7 +68,7 @@ pub fn generate(ctx: &mut Context,
 
     let global_bounds = Region::new(gpos, gpos + scalar(1)) * scalar(GRID_SIZE);
     let chunk_bounds = global_bounds.div_round_signed(CHUNK_SIZE);
-    let max_layer = height_map::fold_region(ctx, pid, chunk_bounds, 0, |acc, _, height| {
+    let max_layer = ctx.grid_fold::<HeightMapPass,_,_>(pid, chunk_bounds, 0, |acc, _, height| {
         let cur = cmp::max(0, cmp::min(7, height / 32)) as u8;
         cmp::max(acc, cur)
     });

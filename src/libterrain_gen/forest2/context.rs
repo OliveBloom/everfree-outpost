@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io;
+use std::ops::Index;
 use rand::{Rng, XorShiftRng, SeedableRng};
 
 use libphysics::CHUNK_SIZE;
@@ -8,6 +9,7 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::{Cache, Summary};
+use forest2::common::{self, GenPass, GridLike};
 
 use forest2::height_map::{self, HeightMap};
 use forest2::height_detail::{self, HeightDetail};
@@ -16,6 +18,40 @@ use forest2::cave_detail::{self, CaveDetail};
 use forest2::cave_junk::{self, CaveJunk};
 use forest2::trees::{self, TreePositions, Trees};
 use forest2::terrain_grid::{self, TerrainGrid};
+
+
+pub struct PlaneGlobalsPass;
+
+impl GenPass for PlaneGlobalsPass {
+    type Key = Stable<PlaneId>;
+    type Value = PlaneGlobals;
+
+    fn field_mut<'a, 'd>(ctx: &'a mut Context<'d>)
+                         -> &'a mut Cache<'d, Self::Key, Self::Value> {
+        &mut ctx.globals
+    }
+
+    fn generate(ctx: &mut Context, key: Self::Key, value: &mut Self::Value) {
+        *value = PlaneGlobals::new(&mut ctx.rng);
+    }
+}
+
+
+pub struct HeightMapPass;
+
+impl GenPass for HeightMapPass {
+    type Key = (Stable<PlaneId>, V2);
+    type Value = HeightMap;
+
+    fn field_mut<'a, 'd>(ctx: &'a mut Context<'d>)
+                         -> &'a mut Cache<'d, Self::Key, Self::Value> {
+        &mut ctx.height_map
+    }
+
+    fn generate(ctx: &mut Context, (pid, pos): Self::Key, value: &mut Self::Value) {
+        height_map::generate(ctx, value, pid, pos);
+    }
+}
 
 
 pub struct PlaneGlobals {
@@ -64,7 +100,7 @@ impl Summary for PlaneGlobals {
 
 pub struct Context<'d> {
     rng: XorShiftRng,
-    globals: Cache<'d, (Stable<PlaneId>, V2), PlaneGlobals>,
+    globals: Cache<'d, Stable<PlaneId>, PlaneGlobals>,
     height_map: Cache<'d, (Stable<PlaneId>, V2), HeightMap>,
     height_detail: Cache<'d, (Stable<PlaneId>, V2), HeightDetail>,
     cave_ramp_positions: Cache<'d, (Stable<PlaneId>, V2), RampPositions>,
@@ -95,10 +131,10 @@ impl<'d> Context<'d> {
 
 
     fn globals_mut(&mut self, pid: Stable<PlaneId>) -> &mut PlaneGlobals {
-        if let Ok(()) = self.globals.load((pid, scalar(0))) {
-            self.globals.get_mut((pid, scalar(0)))
+        if let Ok(()) = self.globals.load(pid) {
+            self.globals.get_mut(pid)
         } else {
-            let g = self.globals.create((pid, scalar(0)));
+            let g = self.globals.create(pid);
             *g = PlaneGlobals::new(&mut self.rng);
             g
         }
@@ -112,6 +148,61 @@ impl<'d> Context<'d> {
         self.globals_mut(pid).rng.gen()
     }
 
+
+    pub fn result<P: GenPass>(&mut self, key: P::Key) -> &P::Value {
+        if let Ok(()) = P::field_mut(self).load(key) {
+            P::field_mut(self).get(key)
+        } else {
+            let mut value = P::Value::alloc();
+            P::generate(self, key, &mut value);
+            P::field_mut(self).insert(key, value)
+        }
+    }
+
+    pub fn result_mut<P: GenPass>(&mut self, key: P::Key) -> &mut P::Value {
+        if let Ok(()) = P::field_mut(self).load(key) {
+            P::field_mut(self).get_mut(key)
+        } else {
+            let mut value = P::Value::alloc();
+            P::generate(self, key, &mut value);
+            P::field_mut(self).insert(key, value)
+        }
+    }
+
+    pub fn get_result<P: GenPass>(&mut self, key: P::Key) -> Option<&P::Value> {
+        if let Ok(()) = P::field_mut(self).load(key) {
+            Some(P::field_mut(self).get(key))
+        } else {
+            None
+        }
+    }
+
+
+    pub fn grid_fold<P, F, S>(&mut self,
+                              pid: Stable<PlaneId>,
+                              bounds: Region<V2>,
+                              init: S,
+                              mut f: F) -> S
+            where P: GenPass<Key=(Stable<PlaneId>, V2)>,
+                  P::Value: GridLike,
+                  F: FnMut(S, V2, <P::Value as GridLike>::Elem) -> S {
+        let chunk_size = <P::Value as GridLike>::size();
+        assert!(chunk_size.x == chunk_size.y);
+        let scale = chunk_size.x;
+        let grid_bounds = bounds.div_round_signed(scale);
+
+        let mut state = init;
+        for gpos in grid_bounds.points() {
+            let chunk = self.result::<P>((pid, gpos));
+            let chunk_bounds = Region::new(gpos, gpos + scalar(1)) * chunk_size;
+            for p in bounds.intersect(chunk_bounds).points() {
+                let val = chunk.get(p - chunk_bounds.min);
+                state = f(state, p, val);
+            }
+        }
+
+        state
+    }
 
     #[inline]
     fn entry<T, F, G>(&mut self,
@@ -147,20 +238,6 @@ impl<'d> Context<'d> {
         }
     }
 
-
-    pub fn height_map(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightMap {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.height_map,
-                   height_map::generate)
-    }
-
-    pub fn point_height(&mut self, pid: Stable<PlaneId>, pos: V2) -> i32 {
-        let size = scalar(height_map::HEIGHTMAP_SIZE as i32);
-        let cpos = pos.div_floor(size);
-        let bounds = Region::new(cpos * size, (cpos + scalar(1)) * size);
-        let hm = self.height_map(pid, cpos);
-        hm.buf[bounds.index(pos)]
-    }
 
     pub fn height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightDetail {
         self.entry(pid, pos,

@@ -12,25 +12,7 @@ use forest2::context::Context;
 
 pub const HEIGHTMAP_SIZE: usize = 64;
 
-pub struct HeightMap {
-    pub buf: [i32; HEIGHTMAP_SIZE * HEIGHTMAP_SIZE],
-}
-
-impl Summary for HeightMap {
-    fn alloc() -> Box<HeightMap> {
-        Box::new(unsafe { mem::zeroed() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        f.write_bytes_slice(&self.buf)
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<HeightMap>> {
-        let mut result = HeightMap::alloc();
-        try!(f.read_bytes_slice(&mut result.buf));
-        Ok(result)
-    }
-}
+define_grid!(HeightMap: i32; HEIGHTMAP_SIZE);
 
 
 pub fn generate(ctx: &mut Context,
@@ -56,30 +38,7 @@ pub fn generate(ctx: &mut Context,
     for offset in bounds.points() {
         let p = pos * size + offset;
         let val = perlin::sample(&coarse_params, p) + perlin::sample(&fine_params, p);
-        //chunk.buf[bounds.index(offset)] = val;
-        chunk.buf[bounds.index(offset)] = 0;
+        //chunk.data[bounds.index(offset)] = val;
+        chunk.data[bounds.index(offset)] = 0;
     }
 }
-
-pub fn fold_region<F, S>(ctx: &mut Context,
-                         pid: Stable<PlaneId>,
-                         bounds: Region<V2>,
-                         init: S,
-                         mut f: F) -> S
-        where F: FnMut(S, V2, i32) -> S {
-    let grid_bounds = bounds.div_round_signed(HEIGHTMAP_SIZE as i32);
-
-    let mut state = init;
-    for gpos in grid_bounds.points() {
-        let chunk = ctx.height_map(pid, gpos);
-        let chunk_bounds = Region::new(gpos, gpos + scalar(1)) *
-                           scalar(HEIGHTMAP_SIZE as i32);
-        for p in bounds.intersect(chunk_bounds).points() {
-            let val = chunk.buf[chunk_bounds.index(p)];
-            state = f(state, p, val);
-        }
-    }
-
-    state
-}
-
