@@ -62,6 +62,73 @@ macro_rules! define_grid {
 }
 
 
+pub trait PointsLike {
+    type Elem: HasPos;
+    fn spacing() -> i32;
+    fn as_slice(&self) -> &[Self::Elem];
+}
+
+pub trait HasPos: Clone {
+    fn pos(&self) -> V2;
+    fn pos_mut(&mut self) -> &mut V2;
+
+    fn with_pos(&self, pos: V2) -> Self {
+        let mut x = self.clone();
+        *x.pos_mut() = pos;
+        x
+    }
+}
+
+impl HasPos for V2 {
+    fn pos(&self) -> V2 { *self }
+    fn pos_mut(&mut self) -> &mut V2 { self }
+    fn with_pos(&self, pos: V2) -> V2 { pos }
+}
+
+macro_rules! define_points {
+    ($Points:ident : $T:ty; $SPACING:expr) => {
+        pub struct $Points {
+            pub data: Vec<$T>,
+        }
+
+        impl ::cache::Summary for $Points {
+            fn alloc() -> Box<$Points> {
+                Box::new($Points { data:  Vec::new() })
+            }
+
+            fn write_to(&self, mut f: File) -> io::Result<()> {
+                use libserver_util::bytes::WriteBytes;
+                try!(f.write_bytes(self.data.len() as u32));
+                try!(f.write_bytes_slice(&self.data));
+                Ok(())
+            }
+
+            fn read_from(mut f: File) -> io::Result<Box<$Points>> {
+                use std::vec::Vec;
+                use libserver_util::bytes::ReadBytes;
+
+                let len = try!(f.read_bytes::<u32>()) as usize;
+                let mut result = $Points::alloc();
+                result.data = Vec::with_capacity(len);
+                unsafe {
+                    result.data.set_len(len);
+                    try!(f.read_bytes_slice(&mut result.data));
+                }
+                Ok(result)
+            }
+        }
+
+        impl ::forest2::common::PointsLike for $Points {
+            type Elem = $T;
+
+            fn spacing() -> i32 { $SPACING }
+
+            fn as_slice(&self) -> &[Self::Elem] { &self.data }
+        }
+    }
+}
+
+
 pub trait GenPass {
     type Key: cache::Key + 'static;
     type Value: cache::Summary + 'static;

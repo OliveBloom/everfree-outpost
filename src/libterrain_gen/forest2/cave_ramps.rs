@@ -9,35 +9,45 @@ use libserver_util::bytes::{Bytes, ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::context::{Context, HeightDetailPass};
+use forest2::common::HasPos;
+use forest2::context::{Context, HeightDetailPass, RampPositionsPass};
 use forest2::height_detail;
 
 
-pub struct RampPositions {
-    /// Ramp positions, relative to the current grid chunk
-    pub ramps: Vec<V2>,
-}
+pub const GRID_SIZE: i32 = 256;
+pub const SPACING: i32 = 16;
 
-impl Summary for RampPositions {
-    fn alloc() -> Box<RampPositions> {
-        Box::new(RampPositions { ramps:  Vec::new() })
-    }
+define_points!(RampPositions: V2; GRID_SIZE);
 
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        try!(f.write_bytes(self.ramps.len() as u32));
-        try!(f.write_bytes_slice(&self.ramps));
-        Ok(())
-    }
+pub fn generate_positions(ctx: &mut Context,
+                          chunk: &mut RampPositions,
+                          pid: Stable<PlaneId>,
+                          gpos: V2) {
+    let mut disk = DiskSampler::new(scalar(3 * GRID_SIZE), SPACING, 2 * SPACING);
+    let mut rng = ctx.get_rng(pid);
 
-    fn read_from(mut f: File) -> io::Result<Box<RampPositions>> {
-        let len = try!(f.read_bytes::<u32>()) as usize;
-        let mut result = RampPositions::alloc();
-        result.ramps = Vec::with_capacity(len);
-        unsafe {
-            result.ramps.set_len(len);
-            try!(f.read_bytes_slice(&mut result.ramps));
+    // Init disk sampler with points from adjacent chunks.
+    for offset in Region::<V2>::new(scalar(-1), scalar(2)).points() {
+        let base = (offset + scalar(1)) * scalar(GRID_SIZE);
+
+        if let Some(detail) = ctx.get_result::<RampPositionsPass>((pid, gpos + offset)) {
+            for &p in &detail.data {
+                disk.add_init_point(p + base);
+            }
         }
-        Ok(result)
+    }
+
+    // Generate
+    disk.generate(&mut rng, 20);
+
+    // Save results into the `chunk`.
+    let base = scalar::<V2>(GRID_SIZE);
+    let bounds = Region::new(base, base + scalar(GRID_SIZE));
+    for &pos in disk.points() {
+        if !bounds.contains(pos) {
+            continue;
+        }
+        chunk.data.push(pos - base);
     }
 }
 
@@ -56,6 +66,11 @@ impl Ramp {
             layer: self.layer,
         }
     }
+}
+
+impl HasPos for Ramp {
+    fn pos(&self) -> V2 { self.pos }
+    fn pos_mut(&mut self) -> &mut V2 { &mut self.pos }
 }
 
 unsafe impl Bytes for Ramp {}
@@ -87,45 +102,6 @@ impl Summary for CaveRamps {
     }
 }
 
-
-pub const GRID_SIZE: i32 = 256;
-pub const SPACING: i32 = 16;
-
-pub fn generate_positions(ctx: &mut Context,
-                          chunk: &mut RampPositions,
-                          pid: Stable<PlaneId>,
-                          gpos: V2) {
-    let mut disk = DiskSampler::new(scalar(3 * GRID_SIZE), SPACING, 2 * SPACING);
-    let mut rng = ctx.get_rng(pid);
-
-    // Init disk sampler with points from adjacent chunks.
-    for offset in Region::<V2>::new(scalar(-1), scalar(2)).points() {
-        let base = (offset + scalar(1)) * scalar(GRID_SIZE);
-
-        if let Some(detail) = ctx.get_cave_ramp_positions(pid, gpos + offset) {
-            for &p in &detail.ramps {
-                disk.add_init_point(p + base);
-            }
-        }
-    }
-
-    // Generate
-    disk.generate(&mut rng, 20);
-
-    // Save results into the `chunk`.
-    let base = scalar::<V2>(GRID_SIZE);
-    let bounds = Region::new(base, base + scalar(GRID_SIZE));
-    for &pos in disk.points() {
-        if !bounds.contains(pos) {
-            continue;
-        }
-        chunk.ramps.push(pos - base);
-        info!("  produced ramp @ {:?}", pos - base);
-    }
-
-    info!("produced {} ramps @ {:?}", chunk.ramps.len(), gpos);
-}
-
 pub fn generate(ctx: &mut Context,
                 chunk: &mut CaveRamps,
                 pid: Stable<PlaneId>,
@@ -134,7 +110,7 @@ pub fn generate(ctx: &mut Context,
 
     let bounds = Region::new(cpos, cpos + scalar(1)) * scalar(CHUNK_SIZE);
     info!("generating fine ramps at {:?} ({:?})", cpos, bounds);
-    for &pos in &ramp_positions_in_region(ctx, pid, bounds) {
+    for &pos in &ctx.collect_points::<RampPositionsPass>(pid, bounds) {
         let ramp_bounds = Region::new(pos - scalar(1),
                                       pos + RAMP_SIZE + scalar(1));
         let layer = rng.gen_range(0, 7);
@@ -165,26 +141,6 @@ pub fn generate(ctx: &mut Context,
 }
 
 const RAMP_SIZE: V2 = V2 { x: 2, y: 3 };
-
-pub fn ramp_positions_in_region(ctx: &mut Context,
-                                pid: Stable<PlaneId>,
-                                bounds: Region<V2>) -> Vec<V2> {
-    let expanded = Region::new(bounds.min - RAMP_SIZE + scalar(1), bounds.max);
-    let grid_bounds = bounds.div_round_signed(GRID_SIZE);
-    let mut result = Vec::new();
-
-    for gpos in grid_bounds.points() {
-        let ramps = ctx.cave_ramp_positions(pid, gpos);
-        for &p in &ramps.ramps {
-            let pos = p + gpos * scalar(GRID_SIZE);
-            if expanded.contains(pos) {
-                result.push(pos);
-            }
-        }
-    }
-
-    result
-}
 
 pub fn ramps_in_region(ctx: &mut Context,
                        pid: Stable<PlaneId>,
