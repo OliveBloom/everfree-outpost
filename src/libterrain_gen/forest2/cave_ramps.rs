@@ -9,7 +9,7 @@ use libserver_util::bytes::{Bytes, ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::context::Context;
+use forest2::context::{Context, HeightDetailPass};
 use forest2::height_detail;
 
 
@@ -138,8 +138,8 @@ pub fn generate(ctx: &mut Context,
         let ramp_bounds = Region::new(pos - scalar(1),
                                       pos + RAMP_SIZE + scalar(1));
         let layer = rng.gen_range(0, 7);
-        let (at_top, above) = height_detail::fold_region(
-            ctx, pid, ramp_bounds, (0, 0), |(t, a), _, h| {
+        let (at_top, above) = ctx.grid_fold::<HeightDetailPass,_,_>(
+            pid, ramp_bounds, (0, 0), |(t, a), _, h| {
                 let cur = cmp::max(0, h) / 32;
                 if cur == layer as i32 + 1 {
                     (t + 1, a)

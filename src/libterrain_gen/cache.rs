@@ -25,10 +25,24 @@ impl<ID: Hash + Eq + Copy> Key for Stable<ID> {
     }
 }
 
+impl Key for u8 {
+    fn to_path(&self) -> PathBuf {
+        PathBuf::from(format!("{}", *self))
+    }
+}
+
 impl<A: Key, B: Key> Key for (A, B) {
     fn to_path(&self) -> PathBuf {
         self.0.to_path()
             .join(self.1.to_path())
+    }
+}
+
+impl<A: Key, B: Key, C: Key> Key for (A, B, C) {
+    fn to_path(&self) -> PathBuf {
+        self.0.to_path()
+            .join(self.1.to_path())
+            .join(self.2.to_path())
     }
 }
 

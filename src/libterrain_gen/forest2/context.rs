@@ -20,6 +20,26 @@ use forest2::trees::{self, TreePositions, Trees};
 use forest2::terrain_grid::{self, TerrainGrid};
 
 
+macro_rules! define_gen_pass {
+    ($Pass:ident ( $Value:ty ): $name:ident) => {
+        pub struct $Pass;
+        
+        impl GenPass for $Pass {
+            type Key = (Stable<PlaneId>, V2);
+            type Value = $Value;
+
+            fn field_mut<'a, 'd>(ctx: &'a mut Context<'d>)
+                                 -> &'a mut Cache<'d, Self::Key, Self::Value> {
+                &mut ctx.$name
+            }
+
+            fn generate(ctx: &mut Context, (pid, pos): Self::Key, value: &mut Self::Value) {
+                $name::generate(ctx, value, pid, pos);
+            }
+        }
+    }
+}
+
 pub struct PlaneGlobalsPass;
 
 impl GenPass for PlaneGlobalsPass {
@@ -37,19 +57,21 @@ impl GenPass for PlaneGlobalsPass {
 }
 
 
-pub struct HeightMapPass;
+define_gen_pass!(HeightMapPass(HeightMap): height_map);
+define_gen_pass!(HeightDetailPass(HeightDetail): height_detail);
 
-impl GenPass for HeightMapPass {
-    type Key = (Stable<PlaneId>, V2);
-    type Value = HeightMap;
+pub struct CaveDetailPass;
+impl GenPass for CaveDetailPass {
+    type Key = (Stable<PlaneId>, V2, u8);
+    type Value = CaveDetail;
 
     fn field_mut<'a, 'd>(ctx: &'a mut Context<'d>)
                          -> &'a mut Cache<'d, Self::Key, Self::Value> {
-        &mut ctx.height_map
+        &mut ctx.cave_detail
     }
 
-    fn generate(ctx: &mut Context, (pid, pos): Self::Key, value: &mut Self::Value) {
-        height_map::generate(ctx, value, pid, pos);
+    fn generate(ctx: &mut Context, (pid, pos, layer): Self::Key, value: &mut Self::Value) {
+        cave_detail::generate(ctx, value, pid, pos, layer);
     }
 }
 
@@ -105,7 +127,7 @@ pub struct Context<'d> {
     height_detail: Cache<'d, (Stable<PlaneId>, V2), HeightDetail>,
     cave_ramp_positions: Cache<'d, (Stable<PlaneId>, V2), RampPositions>,
     cave_ramps: Cache<'d, (Stable<PlaneId>, V2), CaveRamps>,
-    cave_detail: Cache<'d, (Stable<PlaneId>, V2), CaveDetail>,
+    cave_detail: Cache<'d, (Stable<PlaneId>, V2, u8), CaveDetail>,
     cave_junk: Cache<'d, (Stable<PlaneId>, V2), CaveJunk>,
     tree_positions: Cache<'d, (Stable<PlaneId>, V2), TreePositions>,
     trees: Cache<'d, (Stable<PlaneId>, V2), Trees>,
@@ -186,15 +208,15 @@ impl<'d> Context<'d> {
             where P: GenPass<Key=(Stable<PlaneId>, V2)>,
                   P::Value: GridLike,
                   F: FnMut(S, V2, <P::Value as GridLike>::Elem) -> S {
-        let chunk_size = <P::Value as GridLike>::size();
-        assert!(chunk_size.x == chunk_size.y);
-        let scale = chunk_size.x;
-        let grid_bounds = bounds.div_round_signed(scale);
+        let spacing = <P::Value as GridLike>::spacing();
+        let size = <P::Value as GridLike>::size();
+        assert!(spacing.x == spacing.y);
+        let grid_bounds = bounds.div_round_signed(spacing.x);
 
         let mut state = init;
         for gpos in grid_bounds.points() {
             let chunk = self.result::<P>((pid, gpos));
-            let chunk_bounds = Region::new(gpos, gpos + scalar(1)) * chunk_size;
+            let chunk_bounds = Region::new(gpos, gpos + scalar(1)) * size;
             for p in bounds.intersect(chunk_bounds).points() {
                 let val = chunk.get(p - chunk_bounds.min);
                 state = f(state, p, val);
@@ -239,20 +261,6 @@ impl<'d> Context<'d> {
     }
 
 
-    pub fn height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &HeightDetail {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.height_detail,
-                   height_detail::generate)
-    }
-
-    pub fn point_height_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> i32 {
-        let size = scalar(CHUNK_SIZE);
-        let cpos = pos.div_floor(size);
-        let bounds = Region::new(cpos * size, (cpos + scalar(1)) * size);
-        let hm = self.height_detail(pid, cpos);
-        hm.buf[bounds.index(pos)]
-    }
-
     pub fn cave_ramps(&mut self,
                       pid: Stable<PlaneId>,
                       pos: V2) -> &CaveRamps {
@@ -281,17 +289,6 @@ impl<'d> Context<'d> {
                                    pos: V2) -> Option<&RampPositions> {
         self.get_entry(pid, pos,
                        |ctx| &mut ctx.cave_ramp_positions)
-    }
-
-    pub fn cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveDetail {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.cave_detail,
-                   cave_detail::generate)
-    }
-
-    pub fn get_cave_detail(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveDetail> {
-        self.get_entry(pid, pos,
-                       |ctx| &mut ctx.cave_detail)
     }
 
     pub fn cave_junk(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveJunk {

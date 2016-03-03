@@ -8,6 +8,7 @@ use forest2::context::Context;
 
 pub trait GridLike {
     type Elem: Copy;
+    fn spacing() -> V2;
     fn size() -> V2;
     fn bounds() -> Region<V2> { Region::new(scalar(0), Self::size()) }
     fn get(&self, offset: V2) -> Self::Elem;
@@ -15,7 +16,13 @@ pub trait GridLike {
 }
 
 macro_rules! define_grid {
-    ($Grid:ident : $T:ty; $SIZE:expr) => {
+    ($Grid:ident : $T:ty; $SPACING:expr) => {
+        define_grid!($Grid: $T; $SPACING; $SPACING);
+    };
+    ($Grid:ident : $T:ty; $SPACING:expr; + $extra:expr) => {
+        define_grid!($Grid: $T; $SPACING; $SPACING + $extra);
+    };
+    ($Grid:ident : $T:ty; $SPACING:expr; $SIZE:expr) => {
         pub struct $Grid {
             pub data: [$T; $SIZE * $SIZE],
         }
@@ -44,6 +51,7 @@ macro_rules! define_grid {
         impl ::forest2::common::GridLike for $Grid {
             type Elem = $T;
 
+            fn spacing() -> V2 { scalar($SPACING as i32) }
             fn size() -> V2 { scalar($SIZE as i32) }
 
             fn get(&self, offset: V2) -> $T {

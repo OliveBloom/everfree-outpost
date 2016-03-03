@@ -9,7 +9,7 @@ use libserver_util::bytes::{Bytes, ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::context::Context;
+use forest2::context::{Context, HeightDetailPass};
 use forest2::height_detail;
 
 
@@ -113,14 +113,15 @@ pub fn generate(ctx: &mut Context,
 
     for &pos in &positions_in_region(ctx, pid, bounds) {
         let obj_bounds = Region::new(pos, pos + MAX_OBJECT_SIZE + scalar(1));
-        let (min, max) = height_detail::fold_region(ctx, pid, obj_bounds, (7, 0), |(min, max), _, h| {
-            let h =
-                if h < -127 { -1 }
-                else if h < 0 { 0 }
-                else if h > 255 { 7 }
-                else { h / 32 };
-            (cmp::min(min, h), cmp::max(max, h))
-        });
+        let (min, max) = ctx.grid_fold::<HeightDetailPass,_,_>(
+            pid, obj_bounds, (7, 0), |(min, max), _, h| {
+                let h =
+                    if h < -127 { -1 }
+                    else if h < 0 { 0 }
+                    else if h > 255 { 7 }
+                    else { h / 32 };
+                (cmp::min(min, h), cmp::max(max, h))
+            });
         if min < 0 || min != max {
             // Covered area is uneven or underwater
             continue;

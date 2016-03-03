@@ -8,7 +8,7 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::Summary;
-use forest2::context::Context;
+use forest2::context::{Context, HeightDetailPass};
 use forest2::cave_ramps;
 
 
@@ -118,9 +118,9 @@ pub fn generate(ctx: &mut Context,
 
     // Apply heightmap info
     {
-        let detail = ctx.height_detail(pid, cpos);
+        let detail = ctx.result::<HeightDetailPass>((pid, cpos));
         for p in bounds.points() {
-            let h = detail.buf[bounds.index(p)];
+            let h = detail.data[bounds.index(p)];
             let h =
                 if h.abs() >= 256 {
                     //warn!("perlin noise value exceeds bounds: {} @ {:?}", h, p);
@@ -144,6 +144,7 @@ pub fn generate(ctx: &mut Context,
 
     // Apply cave info
     {
+        /*
         let detail = ctx.cave_detail(pid, cpos);
         for layer in 0 .. CHUNK_SIZE as usize / 2 {
             for p in bounds.points() {
@@ -157,6 +158,7 @@ pub fn generate(ctx: &mut Context,
                 }
             }
         }
+        */
     }
 
     // Apply ramps

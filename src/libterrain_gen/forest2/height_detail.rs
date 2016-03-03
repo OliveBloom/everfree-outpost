@@ -12,25 +12,7 @@ use forest2::context::{Context, HeightMapPass};
 use forest2::height_map;
 
 
-pub struct HeightDetail {
-    pub buf: [i32; ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize],
-}
-
-impl Summary for HeightDetail {
-    fn alloc() -> Box<HeightDetail> {
-        Box::new(unsafe { mem::zeroed() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        f.write_bytes_slice(&self.buf)
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<HeightDetail>> {
-        let mut result = HeightDetail::alloc();
-        try!(f.read_bytes_slice(&mut result.buf));
-        Ok(result)
-    }
-}
+define_grid!(HeightDetail: i32; CHUNK_SIZE as usize; +1);
 
 
 pub fn generate(ctx: &mut Context,
@@ -47,27 +29,6 @@ pub fn generate(ctx: &mut Context,
     let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));
     for p in bounds.points() {
         let h = bilinear(p, CHUNK_SIZE, |p| height_points[height_bounds.index(p)]);
-        chunk.buf[bounds.index(p)] = h;
+        chunk.data[bounds.index(p)] = h;
     }
-}
-
-pub fn fold_region<F, S>(ctx: &mut Context,
-                         pid: Stable<PlaneId>,
-                         bounds: Region<V2>,
-                         init: S,
-                         mut f: F) -> S
-        where F: FnMut(S, V2, i32) -> S {
-    let chunk_bounds = bounds.div_round_signed(CHUNK_SIZE);
-
-    let mut state = init;
-    for cpos in chunk_bounds.points() {
-        let chunk = ctx.height_detail(pid, cpos);
-        let chunk_bounds = Region::new(cpos, cpos + scalar(1)) * scalar(CHUNK_SIZE);
-        for p in bounds.intersect(chunk_bounds).points() {
-            let val = chunk.buf[chunk_bounds.index(p)];
-            state = f(state, p, val);
-        }
-    }
-
-    state
 }

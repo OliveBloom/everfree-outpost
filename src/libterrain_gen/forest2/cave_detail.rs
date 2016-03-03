@@ -10,26 +10,25 @@ use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::cellular::CellularGrid;
 
 use cache::Summary;
-use forest2::context::Context;
+use forest2::common;
+use forest2::context::{Context, CaveDetailPass};
 use forest2::cave_ramps;
 
 
 pub const LAYER_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;
 pub const LAYER_BYTE_SIZE: usize = (LAYER_SIZE + 7) / 8;
 
-pub type CaveDetailLayer = [u8; LAYER_BYTE_SIZE];
-
 pub struct CaveDetail {
-    buf: [CaveDetailLayer; CHUNK_SIZE as usize / 2],
+    raw: [u8; LAYER_BYTE_SIZE],
 }
 
 impl CaveDetail {
-    pub fn layer(&self, layer: usize) -> &BitSlice {
-        BitSlice::from_bytes(&self.buf[layer])
+    pub fn data(&self) -> &BitSlice {
+        BitSlice::from_bytes(&self.raw)
     }
 
-    pub fn layer_mut(&mut self, layer: usize) -> &mut BitSlice {
-        BitSlice::from_bytes_mut(&mut self.buf[layer])
+    pub fn data_mut(&mut self) -> &mut BitSlice {
+        BitSlice::from_bytes_mut(&mut self.raw)
     }
 }
 
@@ -39,42 +38,51 @@ impl Summary for CaveDetail {
     }
 
     fn write_to(&self, mut f: File) -> io::Result<()> {
-        for layer in &self.buf {
-            try!(f.write_bytes_slice(layer));
-        }
+        try!(f.write_bytes_slice(&self.raw));
         Ok(())
     }
 
     fn read_from(mut f: File) -> io::Result<Box<CaveDetail>> {
         let mut result = CaveDetail::alloc();
-        for layer in &mut result.buf {
-            try!(f.read_bytes_slice(layer));
-        }
+        try!(f.read_bytes_slice(&mut result.raw));
         Ok(result)
     }
 }
 
+impl common::GridLike for CaveDetail {
+    type Elem = bool;
 
-fn generate_layer(ctx: &mut Context,
-                  chunk: &mut CaveDetail,
-                  pid: Stable<PlaneId>,
-                  cpos: V2,
-                  layer: usize) {
+    fn spacing() -> V2 { scalar(CHUNK_SIZE) }
+    fn size() -> V2 { scalar(CHUNK_SIZE + 1) }
+
+    fn get(&self, offset: V2) -> bool {
+        self.data().get(Self::bounds().index(offset))
+    }
+
+    fn set(&mut self, offset: V2, val: bool) {
+        self.data_mut().set(Self::bounds().index(offset), val)
+    }
+}
+
+
+pub fn generate(ctx: &mut Context,
+                chunk: &mut CaveDetail,
+                pid: Stable<PlaneId>,
+                cpos: V2,
+                layer: u8) {
     let mut grid = CellularGrid::new(scalar(CHUNK_SIZE * 3 + 1));
     let mut rng = ctx.get_rng(pid);
 
-    // Init all chunks in `grid` using either `cave_detail` (if previously generated) or
-    // `height_detail`.
+    // Init all chunks in `grid` using either `cave_detail` (if previously generated)
     for offset in Region::<V2>::new(scalar(-1), scalar(2)).points() {
         // These coordinates are relative to the origin of `grid`.
         let base = (offset + scalar(1)) * scalar(CHUNK_SIZE);
         let chunk_bounds = Region::new(base, base + scalar(CHUNK_SIZE + 1));
 
-        if let Some(detail) = ctx.get_cave_detail(pid, cpos + offset) {
+        if let Some(detail) = ctx.get_result::<CaveDetailPass>((pid, cpos + offset, layer)) {
             // Load previously-generated detail as fixed values.
-            let slice = detail.layer(layer);
             for pos in chunk_bounds.points() {
-                grid.set_fixed(pos, slice.get(chunk_bounds.index(pos)));
+                grid.set_fixed(pos, detail.data().get(chunk_bounds.index(pos)));
             }
         }
     }
@@ -82,7 +90,7 @@ fn generate_layer(ctx: &mut Context,
     let grid_bounds_global = Region::new(cpos - scalar(1), cpos + scalar(2)) * scalar(CHUNK_SIZE);
     info!("collecing ramps @{:?}", cpos);
     for r in &cave_ramps::ramps_in_region(ctx, pid, grid_bounds_global.expand(scalar(1))) {
-        if r.layer == layer as u8 {
+        if r.layer == layer {
             info!("  ramp at {:?} z={}", r.pos, r.layer);
             let wall_bounds = Region::new(r.pos + V2::new(0, 0), r.pos + V2::new(2, 1));
             let open_bounds = Region::new(r.pos + V2::new(0, 1), r.pos + V2::new(2, 3));
@@ -93,7 +101,7 @@ fn generate_layer(ctx: &mut Context,
             for p in open_bounds.intersect(grid_bounds_global).points() {
                 grid.set_fixed(p - grid_bounds_global.min, false);
             }
-        } else if r.layer + 1 == layer as u8 {
+        } else if r.layer + 1 == layer {
             info!("  ramp_top at {:?} z={}", r.pos, r.layer + 1);
             let open_bounds = Region::new(r.pos + V2::new(0, 1),
                                           r.pos + V2::new(2, 3)).expand(scalar(1));
@@ -114,17 +122,7 @@ fn generate_layer(ctx: &mut Context,
     // Save results into the `chunk`.
     let base = scalar::<V2>(CHUNK_SIZE);
     let chunk_bounds = Region::new(base, base + scalar(CHUNK_SIZE + 1));
-    let slice = chunk.layer_mut(layer);
     for pos in chunk_bounds.points() {
-        slice.set(chunk_bounds.index(pos), grid.get(pos));
-    }
-}
-
-pub fn generate(ctx: &mut Context,
-                chunk: &mut CaveDetail,
-                pid: Stable<PlaneId>,
-                cpos: V2) {
-    for layer in 0 .. CHUNK_SIZE as usize / 2 {
-        generate_layer(ctx, chunk, pid, cpos, layer);
+        chunk.data_mut().set(chunk_bounds.index(pos), grid.get(pos));
     }
 }
