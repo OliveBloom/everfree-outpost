@@ -5,7 +5,7 @@ use libserver_config::{Data, Storage};
 use libserver_types::*;
 
 use {GenChunk, GenStructure};
-use forest2::context::{Context, CaveRampsPass, CaveJunkPass, TreesPass};
+use forest2::context::{Context, TerrainGridPass, CaveRampsPass, CaveJunkPass, TreesPass};
 use forest2::terrain_grid::{self, Cell, FloorType};
 use forest2::cave_ramps;
 use forest2::cave_junk;
@@ -41,16 +41,17 @@ impl<'d> Provider<'d> {
             };
         }
 
+        // TODO: move specs to its own TileSpecsPass
         let mut specs = Box::new(
             [[TileSpec::empty(); CHUNK_SIZE as usize * CHUNK_SIZE as usize]; 8]);
 
         {
-            let t = self.ctx.terrain_grid(pid, cpos);
+            let t = self.ctx.result::<TerrainGridPass>((pid, cpos));
 
             // Apply terrain grid
             for layer in 0 .. CHUNK_SIZE / 2 {
                 let z = layer * 2;
-                let tl = &t.buf[layer as usize];
+                let tl = &t.data[layer as usize];
                 for pos in bounds.points() {
                     let nw = tl[grid_bounds.index(pos + V2::new(0, 0))];
                     let ne = tl[grid_bounds.index(pos + V2::new(1, 0))];

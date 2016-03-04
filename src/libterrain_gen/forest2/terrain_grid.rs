@@ -55,11 +55,12 @@ pub struct Cell {
     pub flags: TerrainFlags,
     pub floor_type: FloorType,
 }
+// TODO: move layering to Context level, like for cave_detail
 pub type TerrainLayer = [Cell; ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize];
 /// Full terrain information for each grid intersection in a chunk.  This is the final
 /// representation used to generate the chunk's block data.
 pub struct TerrainGrid {
-    pub buf: [TerrainLayer; (CHUNK_SIZE / 2) as usize],
+    pub data: [TerrainLayer; (CHUNK_SIZE / 2) as usize],
 }
 
 impl Summary for TerrainGrid {
@@ -71,7 +72,7 @@ impl Summary for TerrainGrid {
         let mut buffer = [(0, 0); ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize];
         for layer in 0 .. (CHUNK_SIZE / 2) as usize {
             for i in 0 .. buffer.len() {
-                let info = &self.buf[layer][i];
+                let info = &self.data[layer][i];
                 buffer[i] = (info.flags.bits(), info.floor_type as u8);
             }
             try!(f.write_bytes_slice(&buffer));
@@ -101,8 +102,8 @@ impl Summary for TerrainGrid {
                     },
                 };
 
-                result.buf[layer][i].flags = flags;
-                result.buf[layer][i].floor_type = floor_type;
+                result.data[layer][i].flags = flags;
+                result.data[layer][i].floor_type = floor_type;
             }
         }
         Ok(result)
@@ -131,13 +132,13 @@ pub fn generate(ctx: &mut Context,
             let block_height = cmp::max(0, h / 32) as usize;
             let idx = bounds.index(p);
             for layer in 0 .. block_height {
-                chunk.buf[layer][idx].flags.insert(T_CAVE | T_FLOOR);
-                chunk.buf[layer][idx].floor_type = FloorType::Cave;
+                chunk.data[layer][idx].flags.insert(T_CAVE | T_FLOOR);
+                chunk.data[layer][idx].floor_type = FloorType::Cave;
             }
-            chunk.buf[block_height][idx].flags.insert(T_FLOOR);
+            chunk.data[block_height][idx].flags.insert(T_FLOOR);
 
             if h < -128 {
-                chunk.buf[0][idx].floor_type = FloorType::Water;
+                chunk.data[0][idx].floor_type = FloorType::Water;
             }
         }
     }
@@ -152,8 +153,8 @@ pub fn generate(ctx: &mut Context,
                     continue;
                 }
 
-                if chunk.buf[layer][bounds.index(p)].flags.contains(T_CAVE) {
-                    chunk.buf[layer][bounds.index(p)].flags.insert(T_CAVE_INSIDE);
+                if chunk.data[layer][bounds.index(p)].flags.contains(T_CAVE) {
+                    chunk.data[layer][bounds.index(p)].flags.insert(T_CAVE_INSIDE);
                 }
             }
         }
@@ -166,7 +167,7 @@ pub fn generate(ctx: &mut Context,
                                      bounds_global.max - rel_bounds.min);
     for r in &ctx.collect_points::<CaveRampsPass>(pid, collect_bounds) {
         for p in (rel_bounds + r.pos).intersect(bounds_global).points() {
-            chunk.buf[r.layer as usize + 1][bounds_global.index(p)].flags.remove(T_FLOOR);
+            chunk.data[r.layer as usize + 1][bounds_global.index(p)].flags.remove(T_FLOOR);
         }
     }
 }

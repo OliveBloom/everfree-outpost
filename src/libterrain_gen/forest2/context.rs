@@ -94,6 +94,7 @@ define_gen_pass_layered!(CaveJunkPass(CaveJunk): cave_junk);
 define_gen_pass!(TreePositionsPass(TreePositions):
                  tree_positions, trees::generate_positions);
 define_gen_pass!(TreesPass(Trees): trees);
+define_gen_pass!(TerrainGridPass(TerrainGrid): terrain_grid);
 
 
 pub struct PlaneGlobals {
@@ -323,46 +324,5 @@ impl<'d> Context<'d> {
             v.push(val.with_pos(pos));
         });
         v
-    }
-
-    #[inline]
-    fn entry<T, F, G>(&mut self,
-                      pid: Stable<PlaneId>,
-                      pos: V2,
-                      get_cache: F,
-                      generate: G) -> &T
-            where T: Summary,
-                  F: for<'a> Fn(&'a mut Context<'d>)
-                      -> &'a mut Cache<'d, (Stable<PlaneId>, V2), T>,
-                  G: FnOnce(&mut Context, &mut T, Stable<PlaneId>, V2) {
-        if let Ok(()) = get_cache(self).load((pid, pos)) {
-            get_cache(self).get((pid, pos))
-        } else {
-            let mut x = T::alloc();
-            generate(self, &mut *x, pid, pos);
-            get_cache(self).insert((pid, pos), x)
-        }
-    }
-
-    #[inline]
-    fn get_entry<T, F>(&mut self,
-                       pid: Stable<PlaneId>,
-                       pos: V2,
-                       get_cache: F) -> Option<&T>
-            where T: Summary,
-                  F: for<'a> Fn(&'a mut Context<'d>)
-                      -> &'a mut Cache<'d, (Stable<PlaneId>, V2), T> {
-        if let Ok(()) = get_cache(self).load((pid, pos)) {
-            Some(get_cache(self).get((pid, pos)))
-        } else {
-            None
-        }
-    }
-
-
-    pub fn terrain_grid(&mut self, pid: Stable<PlaneId>, pos: V2) -> &TerrainGrid {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.terrain_grid,
-                   terrain_grid::generate)
     }
 }
