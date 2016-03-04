@@ -72,8 +72,8 @@ impl<'d> Provider<'d> {
 
         // Apply ramps
         let rel_bounds = Region::new(V2::new(-1, -1), V2::new(2, 2));
-        let collect_bounds = Region::new(bounds.min - rel_bounds.max + scalar(1),
-                                         bounds.max - rel_bounds.min);
+        let collect_bounds = Region::new(base + bounds.min - rel_bounds.max + scalar(1),
+                                         base + bounds.max - rel_bounds.min);
         for r in &self.ctx.collect_points::<CaveRampsPass>(pid, collect_bounds) {
             let ramp_pos = r.pos - base;
             let z = r.layer as i32 * 2;

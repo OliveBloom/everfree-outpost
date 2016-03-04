@@ -15,7 +15,7 @@ use forest2::height_detail;
 
 
 pub const GRID_SIZE: i32 = 256;
-pub const SPACING: i32 = 16;
+pub const SPACING: i32 = 12;
 
 define_points!(RampPositions: V2; GRID_SIZE);
 

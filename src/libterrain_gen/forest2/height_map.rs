@@ -39,6 +39,5 @@ pub fn generate(ctx: &mut Context,
         let p = pos * size + offset;
         let val = perlin::sample(&coarse_params, p) + perlin::sample(&fine_params, p);
         chunk.data[bounds.index(offset)] = val;
-        //chunk.data[bounds.index(offset)] = 0;
     }
 }
