@@ -267,6 +267,7 @@ TERRAIN_PARTS = (
        ('inner/nw', 'half/s',       'inner/ne'),
        ('half/e',   'full',         'half/w'),
        ('inner/sw', 'half/n',       'inner/se'),
+       ('full/v1',  'full/v2',      'full/v3'),
        )
 
 def chop_terrain(img, cross_img=None):
@@ -562,7 +563,7 @@ def init():
         return Layer(letter, chop_terrain(tiles(img_name)), is_base)
 
     layer_dct = {
-            'g': mk_layer('g', 'lpc-base-tiles/grassalt.png'),
+            'g': mk_layer('g', 'lpc-grassalt-with-variants.png'),
             'm': mk_layer('m', 'lpc-base-tiles/dirt.png'),
             'c': mk_layer('c', 'lpc-base-tiles/dirt2.png'),
             #'s': mk_layer('s', 'TODO'),
@@ -589,6 +590,14 @@ def init():
             seen.add(name)
 
             floor_bb.new(name).bottom(img)
+    
+    # Variants
+    for layer in layer_dct.values():
+        name = layer.name * 4
+        for i in range(4):
+            key = 'full/v%d' % i if i > 0 else 'full'
+            floor_bb.new('%s/v%d' % (name, i)).bottom(layer.dct[key])
+
 
     # Hilltop edges
     grass_top = chop_terrain(tiles('cave-top-grass.png'), tiles('cave-top-grass-cross.png'))

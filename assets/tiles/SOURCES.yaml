@@ -7,6 +7,7 @@ lpc-watergrass-cross.png: *lpc-base
 lpc-cave-top-cross.png: *lpc-base
 lpc-cave-top.png: *lpc-base
 lpc-cave-inside.png: *lpc-base
+lpc-grassalt-with-variants.png: *lpc-base
 
 lpc-cave-top2*.png:
     derived-from: lpc-base-tiles
@@ -38,4 +39,3 @@ cave-stair*.png:
     derived-from: lpc-base-tiles
     attribution: >
         This is "outdoor ramps" with some tweaks and repacking.
-

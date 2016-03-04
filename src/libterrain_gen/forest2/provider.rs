@@ -1,4 +1,5 @@
-use rand::XorShiftRng;
+use std::cmp;
+use rand::{Rng, XorShiftRng};
 
 use libphysics::CHUNK_SIZE;
 use libserver_config::{Data, Storage};
@@ -61,7 +62,18 @@ impl<'d> Provider<'d> {
                     specs[layer as usize][bounds.index(pos)] = spec;
 
                     let name = spec.name();
-                    gc.set_block(pos.extend(z + 0), get_id!(&name));
+                    let z0_id =
+                        if !spec.has_variants() {
+                            get_id!(&name)
+                        } else {
+                            let rate = spec.variant_zero_rate();
+                            // Give 1/rate chance of choosing any nonzero variant.
+                            let v = rng.gen_range(0, 3 * rate);
+                            // 1, 2, 3 map to themselves (variants).  Everything else maps to 0.
+                            let v = if v >= 4 { 0 } else { v };
+                            get_id!(&format!("{}/v{}", name, v))
+                        };
+                    gc.set_block(pos.extend(z + 0), z0_id);
                     if spec.has_cave() {
                         let z1_name = spec.cave_z1_name();
                         gc.set_block(pos.extend(z + 1), get_id!(&z1_name));
@@ -247,6 +259,19 @@ impl TileSpec {
         }
 
         s
+    }
+
+    fn has_variants(&self) -> bool {
+        !self.has_empty() &&
+        !self.has_cave() &&
+        self.terrain.iter().all(|&x| x == self.terrain[0])
+    }
+
+    fn variant_zero_rate(&self) -> i32 {
+        match self.terrain[0] {
+            'w' | 'l' => 100,
+            _ => 10,
+        }
     }
 
     fn has_empty(&self) -> bool {
