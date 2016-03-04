@@ -83,16 +83,15 @@ pub fn generate(ctx: &mut Context,
         let layer = rng.gen_range(0, 7);
         let (at_top, above) = ctx.grid_fold::<HeightDetailPass,_,_>(
             pid, ramp_bounds, (0, 0), |(t, a), _, h| {
-                let cur = cmp::max(0, h) / 32;
-                if cur == layer as i32 + 1 {
+                if h == layer as i8 + 1 {
                     (t + 1, a)
-                } else if cur > layer as i32 + 1 {
+                } else if h > layer as i8 + 1 {
                     (t, a + 1)
                 } else {
                     (t, a)
                 }
             });
-        // The entire uppper level should either be surface (`at_top`) or cave (`above`).
+        // The entire upper level should either be surface (`at_top`) or cave (`above`).
         if !(at_top == ramp_bounds.volume() || above == ramp_bounds.volume()) {
             continue;
         }

@@ -122,14 +122,7 @@ pub fn generate(ctx: &mut Context,
         let detail = ctx.result::<HeightDetailPass>((pid, cpos));
         for p in bounds.points() {
             let h = detail.data[bounds.index(p)];
-            let h =
-                if h.abs() >= 256 {
-                    //warn!("perlin noise value exceeds bounds: {} @ {:?}", h, p);
-                    255 * h.signum()
-                } else {
-                    h
-                };
-            let block_height = cmp::max(0, h / 32) as usize;
+            let block_height = if h >= 0 { h as usize } else { 0 };
             let idx = bounds.index(p);
             for layer in 0 .. block_height {
                 chunk.data[layer][idx].flags.insert(T_CAVE | T_FLOOR);
@@ -137,7 +130,7 @@ pub fn generate(ctx: &mut Context,
             }
             chunk.data[block_height][idx].flags.insert(T_FLOOR);
 
-            if h < -128 {
+            if h < 0 {
                 chunk.data[0][idx].floor_type = FloorType::Water;
             }
         }

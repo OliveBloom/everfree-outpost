@@ -74,15 +74,7 @@ pub fn generate(ctx: &mut Context,
     let rel_bounds = Region::new(scalar(0), scalar(4));
     for &pos in &ctx.collect_points::<TreePositionsPass>(pid, bounds) {
         let (min, max) = ctx.grid_fold::<HeightDetailPass,_,_>(
-            pid, rel_bounds + pos, (8, -1), |(min, max), pos, val| {
-                let h =
-                    if val < -128 {
-                        -1
-                    } else if val < 0 {
-                        0
-                    } else {
-                        cmp::min(val / 32, 7)
-                    };
+            pid, rel_bounds + pos, (8, -1), |(min, max), _, h| {
                 (cmp::min(min, h),
                  cmp::max(max, h))
             });

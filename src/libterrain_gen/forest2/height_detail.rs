@@ -12,7 +12,7 @@ use forest2::context::{Context, HeightMapPass};
 use forest2::height_map;
 
 
-define_grid!(HeightDetail: i32; CHUNK_SIZE as usize; +1);
+define_grid!(HeightDetail: i8; CHUNK_SIZE as usize; +1);
 
 
 pub fn generate(ctx: &mut Context,
@@ -29,6 +29,16 @@ pub fn generate(ctx: &mut Context,
     let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));
     for p in bounds.points() {
         let h = bilinear(p, CHUNK_SIZE, |p| height_points[height_bounds.index(p)]);
-        chunk.data[bounds.index(p)] = h;
+        chunk.data[bounds.index(p)] =
+            if h < -192 {
+                -1
+            } else if h < 0 {
+                0
+            } else if h < 256 {
+                // 0 .. 255 maps to 0 .. 7
+                (h / 32) as i8
+            } else {
+                7
+            };
     }
 }
