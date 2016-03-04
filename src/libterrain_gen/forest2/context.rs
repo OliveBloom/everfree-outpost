@@ -43,6 +43,30 @@ macro_rules! define_gen_pass {
     }
 }
 
+macro_rules! define_gen_pass_layered {
+    ($Pass:ident ( $Value:ty ): $name:ident) => {
+        define_gen_pass_layered!($Pass ( $Value ): $name, $name::generate);
+    };
+    ($Pass:ident ( $Value:ty ): $field:ident, $generate:path) => {
+        pub struct $Pass;
+
+        impl GenPass for $Pass {
+            type Key = (Stable<PlaneId>, V2, u8);
+            type Value = $Value;
+
+            fn field_mut<'a, 'd>(ctx: &'a mut Context<'d>)
+                                 -> &'a mut Cache<'d, Self::Key, Self::Value> {
+                &mut ctx.$field
+            }
+
+            fn generate(ctx: &mut Context, (pid, pos, layer): Self::Key, value: &mut Self::Value) {
+                $generate(ctx, value, pid, pos, layer);
+            }
+        }
+    };
+}
+
+
 pub struct PlaneGlobalsPass;
 
 impl GenPass for PlaneGlobalsPass {
@@ -62,23 +86,14 @@ impl GenPass for PlaneGlobalsPass {
 
 define_gen_pass!(HeightMapPass(HeightMap): height_map);
 define_gen_pass!(HeightDetailPass(HeightDetail): height_detail);
+define_gen_pass_layered!(CaveDetailPass(CaveDetail): cave_detail);
 define_gen_pass!(RampPositionsPass(RampPositions):
                  cave_ramp_positions, cave_ramps::generate_positions);
-
-pub struct CaveDetailPass;
-impl GenPass for CaveDetailPass {
-    type Key = (Stable<PlaneId>, V2, u8);
-    type Value = CaveDetail;
-
-    fn field_mut<'a, 'd>(ctx: &'a mut Context<'d>)
-                         -> &'a mut Cache<'d, Self::Key, Self::Value> {
-        &mut ctx.cave_detail
-    }
-
-    fn generate(ctx: &mut Context, (pid, pos, layer): Self::Key, value: &mut Self::Value) {
-        cave_detail::generate(ctx, value, pid, pos, layer);
-    }
-}
+define_gen_pass!(CaveRampsPass(CaveRamps): cave_ramps);
+define_gen_pass_layered!(CaveJunkPass(CaveJunk): cave_junk);
+define_gen_pass!(TreePositionsPass(TreePositions):
+                 tree_positions, trees::generate_positions);
+define_gen_pass!(TreesPass(Trees): trees);
 
 
 pub struct PlaneGlobals {
@@ -133,7 +148,7 @@ pub struct Context<'d> {
     cave_ramp_positions: Cache<'d, (Stable<PlaneId>, V2), RampPositions>,
     cave_ramps: Cache<'d, (Stable<PlaneId>, V2), CaveRamps>,
     cave_detail: Cache<'d, (Stable<PlaneId>, V2, u8), CaveDetail>,
-    cave_junk: Cache<'d, (Stable<PlaneId>, V2), CaveJunk>,
+    cave_junk: Cache<'d, (Stable<PlaneId>, V2, u8), CaveJunk>,
     tree_positions: Cache<'d, (Stable<PlaneId>, V2), TreePositions>,
     trees: Cache<'d, (Stable<PlaneId>, V2), Trees>,
     terrain_grid: Cache<'d, (Stable<PlaneId>, V2), TerrainGrid>,
@@ -212,7 +227,8 @@ impl<'d> Context<'d> {
                               mut f: F) -> S
             where P: GenPass<Key=(Stable<PlaneId>, V2)>,
                   P::Value: GridLike,
-                  F: FnMut(S, V2, <P::Value as GridLike>::Elem) -> S {
+                  F: FnMut(S, V2, <P::Value as GridLike>::Elem) -> S,
+                  <P::Value as GridLike>::Elem: ::std::fmt::Display {
         let spacing = <P::Value as GridLike>::spacing();
         let size = <P::Value as GridLike>::size();
         let grid_bounds = bounds.div_round_signed(spacing);
@@ -220,9 +236,10 @@ impl<'d> Context<'d> {
         let mut state = init;
         for gpos in grid_bounds.points() {
             let chunk = self.result::<P>((pid, gpos));
-            let chunk_bounds = Region::new(gpos, gpos + scalar(1)) * scalar(size);
+            let base = gpos * scalar(spacing);
+            let chunk_bounds = Region::new(base, base + scalar(size));
             for p in bounds.intersect(chunk_bounds).points() {
-                let val = chunk.get(p - chunk_bounds.min);
+                let val = chunk.get(p - base);
                 state = f(state, p, val);
             }
         }
@@ -268,6 +285,46 @@ impl<'d> Context<'d> {
         v
     }
 
+    pub fn points_fold_layer<P, F, S>(&mut self,
+                                      pid: Stable<PlaneId>,
+                                      bounds: Region<V2>,
+                                      layer: u8,
+                                      init: S,
+                                      mut f: F) -> S
+            where P: GenPass<Key=(Stable<PlaneId>, V2, u8)>,
+                  P::Value: PointsLike,
+                  F: FnMut(S, V2, &<P::Value as PointsLike>::Elem) -> S {
+        let spacing = <P::Value as PointsLike>::spacing();
+        let grid_bounds = bounds.div_round_signed(spacing);
+
+        let mut state = init;
+        for gpos in grid_bounds.points() {
+            let chunk = self.result::<P>((pid, gpos, layer));
+            let base = gpos * scalar(spacing);
+            for val in chunk.as_slice() {
+                let abs_pos = val.pos() + base;
+                if bounds.contains(abs_pos) {
+                    state = f(state, abs_pos, val);
+                }
+            }
+        }
+
+        state
+    }
+
+    pub fn collect_points_layer<P>(&mut self,
+                                   pid: Stable<PlaneId>,
+                                   bounds: Region<V2>,
+                                   layer: u8) -> Vec<<P::Value as PointsLike>::Elem>
+            where P: GenPass<Key=(Stable<PlaneId>, V2, u8)>,
+                  P::Value: PointsLike {
+        let mut v = Vec::new();
+        self.points_fold_layer::<P, _, ()>(pid, bounds, layer, (), |(), pos, val| {
+            v.push(val.with_pos(pos));
+        });
+        v
+    }
+
     #[inline]
     fn entry<T, F, G>(&mut self,
                       pid: Stable<PlaneId>,
@@ -302,49 +359,6 @@ impl<'d> Context<'d> {
         }
     }
 
-
-    pub fn cave_ramps(&mut self,
-                      pid: Stable<PlaneId>,
-                      pos: V2) -> &CaveRamps {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.cave_ramps,
-                   cave_ramps::generate)
-    }
-
-    pub fn get_cave_ramps(&mut self,
-                          pid: Stable<PlaneId>,
-                          pos: V2) -> Option<&CaveRamps> {
-        self.get_entry(pid, pos,
-                       |ctx| &mut ctx.cave_ramps)
-    }
-
-    pub fn cave_junk(&mut self, pid: Stable<PlaneId>, pos: V2) -> &CaveJunk {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.cave_junk,
-                   cave_junk::generate)
-    }
-
-    pub fn get_cave_junk(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&CaveJunk> {
-        self.get_entry(pid, pos,
-                       |ctx| &mut ctx.cave_junk)
-    }
-
-    pub fn tree_positions(&mut self, pid: Stable<PlaneId>, pos: V2) -> &TreePositions {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.tree_positions,
-                   trees::generate_positions)
-    }
-
-    pub fn get_tree_positions(&mut self, pid: Stable<PlaneId>, pos: V2) -> Option<&TreePositions> {
-        self.get_entry(pid, pos,
-                       |ctx| &mut ctx.tree_positions)
-    }
-
-    pub fn trees(&mut self, pid: Stable<PlaneId>, pos: V2) -> &Trees {
-        self.entry(pid, pos,
-                   |ctx| &mut ctx.trees,
-                   trees::generate)
-    }
 
     pub fn terrain_grid(&mut self, pid: Stable<PlaneId>, pos: V2) -> &TerrainGrid {
         self.entry(pid, pos,

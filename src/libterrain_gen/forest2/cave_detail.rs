@@ -11,7 +11,7 @@ use libterrain_gen_algo::cellular::CellularGrid;
 
 use cache::Summary;
 use forest2::common;
-use forest2::context::{Context, CaveDetailPass};
+use forest2::context::{Context, CaveDetailPass, CaveRampsPass};
 use forest2::cave_ramps;
 
 
@@ -83,11 +83,14 @@ pub fn generate(ctx: &mut Context,
         }
     }
 
-    let grid_bounds_global = Region::new(cpos - scalar(1), cpos + scalar(2)) * scalar(CHUNK_SIZE);
-    info!("collecing ramps @{:?}", cpos);
-    for r in &cave_ramps::ramps_in_region(ctx, pid, grid_bounds_global.expand(scalar(1))) {
+    let grid_bounds_global = grid.bounds() + (cpos - scalar(1)) * scalar(CHUNK_SIZE);
+    // Bounds of affected area, relative to ramp position.
+    let rel_bounds = Region::new(V2::new(0, 0), V2::new(2, 3)).expand(scalar(1));
+    // Covers all ramps whose affected area overlaps the grid.
+    let collect_bounds = Region::new(grid_bounds_global.min - rel_bounds.max + scalar(1),
+                                     grid_bounds_global.max - rel_bounds.min);
+    for r in &ctx.collect_points::<CaveRampsPass>(pid, collect_bounds) {
         if r.layer == layer {
-            info!("  ramp at {:?} z={}", r.pos, r.layer);
             let wall_bounds = Region::new(r.pos + V2::new(0, 0), r.pos + V2::new(2, 1));
             let open_bounds = Region::new(r.pos + V2::new(0, 1), r.pos + V2::new(2, 3));
 
@@ -98,7 +101,6 @@ pub fn generate(ctx: &mut Context,
                 grid.set_fixed(p - grid_bounds_global.min, false);
             }
         } else if r.layer + 1 == layer {
-            info!("  ramp_top at {:?} z={}", r.pos, r.layer + 1);
             let open_bounds = Region::new(r.pos + V2::new(0, 1),
                                           r.pos + V2::new(2, 3)).expand(scalar(1));
             for p in open_bounds.intersect(grid_bounds_global).points() {

@@ -5,7 +5,7 @@ use libserver_config::{Data, Storage};
 use libserver_types::*;
 
 use {GenChunk, GenStructure};
-use forest2::context::Context;
+use forest2::context::{Context, CaveRampsPass, CaveJunkPass, TreesPass};
 use forest2::terrain_grid::{self, Cell, FloorType};
 use forest2::cave_ramps;
 use forest2::cave_junk;
@@ -70,8 +70,10 @@ impl<'d> Provider<'d> {
         }
 
         // Apply ramps
-        for r in &cave_ramps::ramps_in_region(&mut self.ctx, pid,
-                                              bounds.expand(scalar(1)) + base) {
+        let rel_bounds = Region::new(V2::new(-1, -1), V2::new(2, 2));
+        let collect_bounds = Region::new(bounds.min - rel_bounds.max + scalar(1),
+                                         bounds.max - rel_bounds.min);
+        for r in &self.ctx.collect_points::<CaveRampsPass>(pid, collect_bounds) {
             let ramp_pos = r.pos - base;
             let z = r.layer as i32 * 2;
 
@@ -163,24 +165,27 @@ impl<'d> Provider<'d> {
         };
 
         // Apply cave junk
-        for &(pos, layer) in &cave_junk::junk_in_region(&mut self.ctx, pid, bounds + base) {
-            let pos = pos - base;
-            let spec = specs[layer as usize][bounds.index(pos)];
-            if !spec.is_cave_floor() {
-                continue;
-            }
-            let pos = pos.extend(layer as i32 * 2);
+        for layer in 0 .. CHUNK_SIZE as u8 / 2 {
+            let points = self.ctx.collect_points_layer::<CaveJunkPass>(pid, bounds + base, layer);
+            for &pos in &points {
+                let pos = pos - base;
+                let spec = specs[layer as usize][bounds.index(pos)];
+                if !spec.is_cave_floor() {
+                    continue;
+                }
+                let pos = pos.extend(layer as i32 * 2);
 
-            let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
-            if let Some(id) = opt_id {
-                let gs = GenStructure::new(pos, id);
-                gc.structures.push(gs);
+                let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
+                if let Some(id) = opt_id {
+                    let gs = GenStructure::new(pos, id);
+                    gc.structures.push(gs);
+                }
             }
         }
 
         // Apply trees
-        for &(pos, layer) in &trees::trees_in_region(&mut self.ctx, pid, bounds + base) {
-            let pos = (pos - base).extend(layer as i32 * 2);
+        for t in &self.ctx.collect_points::<TreesPass>(pid, bounds + base) {
+            let pos = (t.pos - base).extend(t.layer as i32 * 2);
 
             let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "forest/floor");
             if let Some(id) = opt_id {

@@ -59,15 +59,6 @@ pub struct Ramp {
     pub layer: u8,
 }
 
-impl Ramp {
-    fn offset(self, off: V2) -> Ramp {
-        Ramp {
-            pos: self.pos + off,
-            layer: self.layer,
-        }
-    }
-}
-
 impl HasPos for Ramp {
     fn pos(&self) -> V2 { self.pos }
     fn pos_mut(&mut self) -> &mut V2 { &mut self.pos }
@@ -75,32 +66,9 @@ impl HasPos for Ramp {
 
 unsafe impl Bytes for Ramp {}
 
-pub struct CaveRamps {
-    pub ramps: Vec<Ramp>,
-}
+define_points!(CaveRamps: Ramp; CHUNK_SIZE as usize);
 
-impl Summary for CaveRamps {
-    fn alloc() -> Box<CaveRamps> {
-        Box::new(CaveRamps { ramps:  Vec::new() })
-    }
-
-    fn write_to(&self, mut f: File) -> io::Result<()> {
-        try!(f.write_bytes(self.ramps.len() as u32));
-        try!(f.write_bytes_slice(&self.ramps));
-        Ok(())
-    }
-
-    fn read_from(mut f: File) -> io::Result<Box<CaveRamps>> {
-        let len = try!(f.read_bytes::<u32>()) as usize;
-        let mut result = CaveRamps::alloc();
-        result.ramps = Vec::with_capacity(len);
-        unsafe {
-            result.ramps.set_len(len);
-            try!(f.read_bytes_slice(&mut result.ramps));
-        }
-        Ok(result)
-    }
-}
+const RAMP_SIZE: V2 = V2 { x: 2, y: 3 };
 
 pub fn generate(ctx: &mut Context,
                 chunk: &mut CaveRamps,
@@ -109,7 +77,6 @@ pub fn generate(ctx: &mut Context,
     let mut rng = ctx.get_rng(pid);
 
     let bounds = Region::new(cpos, cpos + scalar(1)) * scalar(CHUNK_SIZE);
-    info!("generating fine ramps at {:?} ({:?})", cpos, bounds);
     for &pos in &ctx.collect_points::<RampPositionsPass>(pid, bounds) {
         let ramp_bounds = Region::new(pos - scalar(1),
                                       pos + RAMP_SIZE + scalar(1));
@@ -127,37 +94,12 @@ pub fn generate(ctx: &mut Context,
             });
         // The entire uppper level should either be surface (`at_top`) or cave (`above`).
         if !(at_top == ramp_bounds.volume() || above == ramp_bounds.volume()) {
-            info!("  discarded {:?} z={} ({} {})", pos, layer, at_top, above);
             continue;
         }
 
-        chunk.ramps.push(Ramp {
+        chunk.data.push(Ramp {
             pos: pos - bounds.min,
             layer: layer,
         });
-
-        info!("  kept {:?} z={} ({} {})", pos, layer, at_top, above);
     }
-}
-
-const RAMP_SIZE: V2 = V2 { x: 2, y: 3 };
-
-pub fn ramps_in_region(ctx: &mut Context,
-                       pid: Stable<PlaneId>,
-                       bounds: Region<V2>) -> Vec<Ramp> {
-    let expanded = Region::new(bounds.min - RAMP_SIZE + scalar(1), bounds.max);
-    let chunk_bounds = expanded.div_round_signed(CHUNK_SIZE);
-    let mut result = Vec::new();
-
-    for cpos in chunk_bounds.points() {
-        let base = cpos * scalar(CHUNK_SIZE);
-        let ramps = ctx.cave_ramps(pid, cpos);
-        for r in &ramps.ramps {
-            if expanded.contains(r.pos + base) {
-                result.push(r.offset(base));
-            }
-        }
-    }
-
-    result
 }

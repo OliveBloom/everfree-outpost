@@ -8,7 +8,7 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::Summary;
-use forest2::context::{Context, HeightDetailPass, CaveDetailPass};
+use forest2::context::{Context, HeightDetailPass, CaveDetailPass, CaveRampsPass};
 use forest2::cave_ramps;
 
 
@@ -161,9 +161,11 @@ pub fn generate(ctx: &mut Context,
 
     // Apply ramps
     let bounds_global = bounds + cpos * scalar(CHUNK_SIZE);
-    for r in &cave_ramps::ramps_in_region(ctx, pid, bounds_global) {
-        info!("  applying ramp @ {:?} z={}", r.pos, r.layer);
-        for p in Region::new(r.pos, r.pos + V2::new(2, 3)).intersect(bounds_global).points() {
+    let rel_bounds = Region::new(V2::new(0, 0), V2::new(2, 3));
+    let collect_bounds = Region::new(bounds_global.min - rel_bounds.max + scalar(1),
+                                     bounds_global.max - rel_bounds.min);
+    for r in &ctx.collect_points::<CaveRampsPass>(pid, collect_bounds) {
+        for p in (rel_bounds + r.pos).intersect(bounds_global).points() {
             chunk.buf[r.layer as usize + 1][bounds_global.index(p)].flags.remove(T_FLOOR);
         }
     }

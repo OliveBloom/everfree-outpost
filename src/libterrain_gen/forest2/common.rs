@@ -121,7 +121,7 @@ macro_rules! define_points {
         impl ::forest2::common::PointsLike for $Points {
             type Elem = $T;
 
-            fn spacing() -> i32 { $SPACING }
+            fn spacing() -> i32 { $SPACING as i32 }
 
             fn as_slice(&self) -> &[Self::Elem] { &self.data }
         }
