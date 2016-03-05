@@ -128,7 +128,7 @@ DNDState.prototype._addIcon = function(evt) {
 
     document.body.appendChild(this.icon);
     this.icon.style.position = 'absolute';
-    var scale = document.body.dataset.uiScale;
+    var scale = document.body.dataset['uiScale'];
     this.icon.style.transform = 'scale(' + scale + ')';
     this.icon.style.transformOrigin = 'left top';
     this._updateIcon(evt);

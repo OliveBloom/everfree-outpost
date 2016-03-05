@@ -20,7 +20,7 @@ function resizeCanvas(ac, w, h) {
 
     ac.resize(phys_w, phys_h, virt_w, virt_h);
 
-    document.body.dataset.worldScale = factor;
+    document.body.dataset['worldScale'] = factor;
 }
 
 function resizeUI(ui_div, w, h) {
@@ -34,7 +34,7 @@ function resizeUI(ui_div, w, h) {
     ui_div.style.height = virt_h + 'px';
     ui_div.style.transform = 'scale(' + factor + ')';
 
-    document.body.dataset.uiScale = factor;
+    document.body.dataset['uiScale'] = factor;
 }
 
 function handleResize(anim_canvas, ui_div, w, h) {

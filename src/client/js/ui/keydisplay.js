@@ -20,10 +20,10 @@ KeyDisplay.prototype.onKeyDown = function(evt) {
 
     var new_key = util.element('kbd');
     new_key.innerHTML = name;
-    new_key.dataset.code = evt.keyCode;
+    new_key.dataset['code'] = evt.keyCode;
 
     for (var cur = this.container.firstElementChild; cur != null; cur = cur.nextElementSibling) {
-        if (cur.dataset.code >= evt.keyCode) {
+        if (cur.dataset['code'] >= evt.keyCode) {
             this.container.insertBefore(new_key, cur);
             return;
         }
@@ -35,7 +35,7 @@ KeyDisplay.prototype.onKeyUp = function(evt) {
     var cur = this.container.firstElementChild;
     while (cur != null) {
         var next = cur.nextElementSibling;
-        if (cur.dataset.code == evt.keyCode) {
+        if (cur.dataset['code'] == evt.keyCode) {
             this.container.removeChild(cur);
         }
         cur = next;
