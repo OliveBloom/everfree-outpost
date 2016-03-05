@@ -1,19 +1,12 @@
-use std::fs::File;
-use std::io;
-use std::mem;
-
 use libserver_types::*;
-use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::perlin;
 
-use cache::Summary;
 use forest::context::Context;
 
 
 pub const HEIGHTMAP_SIZE: usize = 64;
 
 define_grid!(HeightMap: i32; HEIGHTMAP_SIZE);
-
 
 pub fn generate(ctx: &mut Context,
                 chunk: &mut HeightMap,

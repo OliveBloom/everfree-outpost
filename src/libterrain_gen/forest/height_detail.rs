@@ -1,19 +1,11 @@
-use std::fs::File;
-use std::io;
-use std::mem;
-
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
-use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::bilinear;
 
-use cache::Summary;
 use forest::context::{Context, HeightMapPass};
-use forest::height_map;
 
 
 define_grid!(HeightDetail: i8; CHUNK_SIZE as usize; +1);
-
 
 pub fn generate(ctx: &mut Context,
                 chunk: &mut HeightDetail,

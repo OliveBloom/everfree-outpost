@@ -1,5 +1,3 @@
-use std::iter;
-
 use libserver_types::*;
 
 use cache::{self, Cache};
@@ -34,12 +32,12 @@ macro_rules! define_grid {
                 Box::new(unsafe { mem::zeroed() })
             }
 
-            fn write_to(&self, mut f: File) -> ::std::io::Result<()> {
+            fn write_to(&self, mut f: ::std::fs::File) -> ::std::io::Result<()> {
                 use libserver_util::bytes::WriteBytes;
                 f.write_bytes_slice(&self.data)
             }
 
-            fn read_from(mut f: File) -> ::std::io::Result<Box<$Grid>> {
+            fn read_from(mut f: ::std::fs::File) -> ::std::io::Result<Box<$Grid>> {
                 use libserver_util::bytes::ReadBytes;
                 let mut result = $Grid::alloc();
                 try!(f.read_bytes_slice(&mut result.data));
@@ -96,14 +94,14 @@ macro_rules! define_points {
                 Box::new($Points { data:  Vec::new() })
             }
 
-            fn write_to(&self, mut f: File) -> io::Result<()> {
+            fn write_to(&self, mut f: ::std::fs::File) -> ::std::io::Result<()> {
                 use libserver_util::bytes::WriteBytes;
                 try!(f.write_bytes(self.data.len() as u32));
                 try!(f.write_bytes_slice(&self.data));
                 Ok(())
             }
 
-            fn read_from(mut f: File) -> io::Result<Box<$Points>> {
+            fn read_from(mut f: ::std::fs::File) -> ::std::io::Result<Box<$Points>> {
                 use std::vec::Vec;
                 use libserver_util::bytes::ReadBytes;
 

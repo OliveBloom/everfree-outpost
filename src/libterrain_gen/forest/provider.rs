@@ -1,4 +1,3 @@
-use std::cmp;
 use rand::{Rng, XorShiftRng};
 
 use libphysics::CHUNK_SIZE;
@@ -8,9 +7,6 @@ use libserver_types::*;
 use {GenChunk, GenStructure};
 use forest::context::{Context, TerrainGridPass, CaveRampsPass, CaveJunkPass, TreesPass};
 use forest::terrain_grid::{self, Cell, FloorType};
-use forest::cave_ramps;
-use forest::cave_junk;
-use forest::trees;
 
 pub struct Provider<'d> {
     data: &'d Data,

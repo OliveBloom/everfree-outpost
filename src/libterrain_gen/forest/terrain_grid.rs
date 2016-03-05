@@ -1,4 +1,3 @@
-use std::cmp;
 use std::fs::File;
 use std::io;
 use std::mem;
@@ -9,7 +8,6 @@ use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::Summary;
 use forest::context::{Context, HeightDetailPass, CaveDetailPass, CaveRampsPass};
-use forest::cave_ramps;
 
 
 bitflags! {

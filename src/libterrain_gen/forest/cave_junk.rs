@@ -1,16 +1,10 @@
 use std::cmp;
-use std::fs::File;
-use std::io;
-use rand::Rng;
 
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
-use libserver_util::bytes::{Bytes, ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
-use cache::Summary;
 use forest::context::{Context, HeightMapPass, CaveJunkPass};
-use forest::height_map;
 
 
 define_points!(CaveJunk: V2; CHUNK_SIZE as usize);

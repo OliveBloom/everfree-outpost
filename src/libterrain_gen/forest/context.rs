@@ -1,15 +1,13 @@
 use std::fs::File;
 use std::io;
-use std::ops::Index;
 use rand::{Rng, XorShiftRng, SeedableRng};
 
-use libphysics::CHUNK_SIZE;
 use libserver_config::Storage;
 use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::{Cache, Summary};
-use forest::common::{self, GenPass, GridLike, PointsLike, HasPos};
+use forest::common::{GenPass, GridLike, PointsLike, HasPos};
 
 use forest::height_map::{self, HeightMap};
 use forest::height_detail::{self, HeightDetail};
@@ -78,7 +76,7 @@ impl GenPass for PlaneGlobalsPass {
         &mut ctx.globals
     }
 
-    fn generate(ctx: &mut Context, key: Self::Key, value: &mut Self::Value) {
+    fn generate(ctx: &mut Context, _key: Self::Key, value: &mut Self::Value) {
         *value = PlaneGlobals::new(&mut ctx.rng);
     }
 }

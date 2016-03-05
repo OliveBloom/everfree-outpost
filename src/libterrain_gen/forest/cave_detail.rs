@@ -12,7 +12,6 @@ use libterrain_gen_algo::cellular::CellularGrid;
 use cache::Summary;
 use forest::common;
 use forest::context::{Context, CaveDetailPass, CaveRampsPass};
-use forest::cave_ramps;
 
 
 pub const LAYER_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;
