@@ -1,5 +1,7 @@
+data/animations.json
 data/blocks.json
 data/items.json
+data/loot_tables.json
 data/recipes.json
 data/structures.json
 
