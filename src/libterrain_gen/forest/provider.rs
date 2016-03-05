@@ -178,6 +178,7 @@ impl<'d> Provider<'d> {
         };
 
         // Apply cave junk
+        let chest_id = template_id!("chest");
         for layer in 0 .. CHUNK_SIZE as u8 / 2 {
             let points = self.ctx.collect_points_layer::<CaveJunkPass>(pid, bounds + base, layer);
             for &pos in &points {
@@ -190,7 +191,18 @@ impl<'d> Provider<'d> {
 
                 let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
                 if let Some(id) = opt_id {
-                    let gs = GenStructure::new(pos, id);
+                    let mut gs = GenStructure::new(pos, id);
+                    if id == chest_id {
+                        let contents = self.data.loot_tables.eval_item_table(&mut rng,
+                                                                             "cave/chest");
+                        let mut s = String::new();
+                        for (item_id, count) in contents {
+                            s.push_str(&format!("{}:{},",
+                                                self.data.item_data.name(item_id),
+                                                count));
+                        }
+                        gs.extra.insert("loot".to_owned(), s);
+                    }
                     gc.structures.push(gs);
                 }
             }
