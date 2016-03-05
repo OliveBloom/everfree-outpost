@@ -53,13 +53,13 @@ def use_tree(e, s, args):
 def axe_tree(e, s, args):
     ward.check(e, s.pos())
     s.replace(STUMP)
-    e.inv().bulk_add(WOOD, 15)
+    e.inv().bulk_add(WOOD, 40)
 
 @tool.axe(STUMP)
 def axe_stump(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
-    e.inv().bulk_add(WOOD, 5)
+    e.inv().bulk_add(WOOD, 10)
 
 
 ROCK = DATA.template('rock')
@@ -74,6 +74,5 @@ def use_rock(e, s, args):
 def pickaxe_rock(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
-    e.inv().bulk_add(STONE, 20)
-    if random.randrange(10) < 5:
-        e.inv().bulk_add(CRYSTAL, 1)
+    e.inv().bulk_add(STONE, 50)
+    e.inv().bulk_add(CRYSTAL, random.randrange(0, 3))
