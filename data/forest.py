@@ -31,10 +31,6 @@ STUMP_SHAPE = structure.Shape(3, 3, 1, [
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
 
-    terrain2.terrain_blocks('grass', tiles('lpc-base-tiles/grass.png'), shape='floor')
-    terrain2.terrain_blocks('water_grass', tiles('lpc-base-tiles/watergrass.png'))
-    terrain2.terrain_cross_blocks('water_grass', tiles('lpc-watergrass-cross.png'))
-
     terrain2.interior_blocks('farmland', tiles('farmland-interior-parts.png'), shape='floor')
 
     structures = loader('structures', unit=TILE_SIZE)
