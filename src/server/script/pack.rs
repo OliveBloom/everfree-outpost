@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use types::*;
-
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 

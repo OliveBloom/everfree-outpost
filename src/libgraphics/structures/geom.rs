@@ -2,9 +2,9 @@ use core::prelude::*;
 use core::ptr;
 
 use physics::v3::{V3, V2, scalar, Region};
-use physics::{CHUNK_SIZE, TILE_SIZE};
+use physics::CHUNK_SIZE;
 
-use types::{StructureTemplate, HAS_ANIM, TemplatePart, TemplateVertex};
+use types::{StructureTemplate, TemplatePart, TemplateVertex};
 
 use super::Buffer;
 

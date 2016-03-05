@@ -31,7 +31,7 @@ pub fn use_ability(eng: EngineRef, cid: ClientId, item_id: ItemId, args: Option<
     warn_on_err!(eng.script_hooks().call_client_use_ability(eng, cid, item_id, args));
 }
 
-pub fn open_inventory(eng: EngineRef, cid: ClientId) {
+pub fn open_inventory(_eng: EngineRef, cid: ClientId) {
     error!("UNIMPLEMENTED: open_inventory - called by {:?}", cid);
 }
 

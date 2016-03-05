@@ -4,7 +4,6 @@ use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 
-use libphysics::v3::V2;
 use libserver_types::{Stable, PlaneId, TerrainChunkId};
 
 

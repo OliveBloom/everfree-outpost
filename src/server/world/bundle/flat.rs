@@ -298,7 +298,6 @@ macro_rules! flat {
                         let r = <$ty as Section>::borrow(&self.$name);
                         let buf = unsafe { <$ty as Section>::as_bytes(r) };
                         assert!(buf.len() == <$ty as Section>::byte_len(&self.$name));
-                        let padding = (ALIGNMENT - buf.len() % ALIGNMENT) % ALIGNMENT;
                         try!(w.write_all(buf));
                         if buf.len() % ALIGNMENT != 0 {
                             // Write enough zeros to get to the next multiple of ALIGNMENT
@@ -1303,7 +1302,7 @@ fn flatten_value(x: &extra::Value, f: &mut Flat) -> FlatExtra {
     }
 }
 
-fn flatten_array<'a, I>(mut i: I, f: &mut Flat) -> FlatExtra
+fn flatten_array<'a, I>(i: I, f: &mut Flat) -> FlatExtra
         where I: Iterator<Item=extra::View<'a>> {
     let mut items = Vec::with_capacity(i.size_hint().0);
     for x in i {
@@ -1314,7 +1313,7 @@ fn flatten_array<'a, I>(mut i: I, f: &mut Flat) -> FlatExtra
     FlatExtra::from_off_len(Tag::Array, flat_items.off, flat_items.len)
 }
 
-fn flatten_hash<'a, I>(mut i: I, f: &mut Flat) -> FlatExtra
+fn flatten_hash<'a, I>(i: I, f: &mut Flat) -> FlatExtra
         where I: Iterator<Item=(&'a str, extra::View<'a>)> {
     let mut items = Vec::with_capacity(i.size_hint().0);
     for (k, v) in i {

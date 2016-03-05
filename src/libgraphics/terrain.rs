@@ -1,9 +1,8 @@
 use core::prelude::*;
 use core::ptr;
 
-use physics::v3::{V3, V2, Vn, scalar, Region, RegionPoints};
+use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
-use physics::Shape;
 use ATLAS_SIZE;
 use LOCAL_SIZE;
 

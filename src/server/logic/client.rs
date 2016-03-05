@@ -1,10 +1,6 @@
-use std::borrow::ToOwned;
-
 use types::*;
-use util::SmallVec;
 
 use chunks;
-use engine::glue::*;
 use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
@@ -19,7 +15,7 @@ use vision::{self, vision_region};
 const DAY_NIGHT_CYCLE_TICKS: u32 = 24_000;
 const DAY_NIGHT_CYCLE_MS: u32 = 24 * 60 * 1000;
 
-pub fn register(mut eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
+pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
     let mut b = Builder::new(eng.data());
 
     b.client()

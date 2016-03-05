@@ -6,9 +6,8 @@ use types::*;
 
 use data::Data;
 use world::extra::Extra;
-use world::flags::{TerrainChunkFlags, StructureFlags};
 use world::types::{Motion, Item};
-use world::types::{EntityAttachment, InventoryAttachment, StructureAttachment};
+use world::types::{EntityAttachment, InventoryAttachment};
 
 use super::types::*;
 

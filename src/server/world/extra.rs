@@ -1,13 +1,9 @@
 use std::collections::HashMap;
 use std::collections::hash_map;
-use std::io;
-use std::ptr;
 use std::slice;
 
 use types::*;
-use util::Convert;
 
-use world::fragment::Fragment;
 use world::bundle::export::{Export, Exporter};
 use world::bundle::import::{Import, Importer};
 

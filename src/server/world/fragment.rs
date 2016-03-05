@@ -66,8 +66,9 @@ pub trait Fragment<'d>: Sized {
                                       pos: V3,
                                       tid: TemplateId)
                                       -> OpResult<ObjectRefMut<'a, 'd, Structure, Self>> {
-        // Check validity of `pid`.
+        // Check validity of `pid` and `tid`.
         unwrap!(self.world().get_plane(pid));
+        unwrap!(self.world().data.structure_templates.get_template(tid));
         let stable_pid = self.world_mut().planes.pin(pid);
 
         let sid = ops::structure::create_unchecked(self);
@@ -79,7 +80,7 @@ pub trait Fragment<'d>: Sized {
             s.pos = pos;
             s.template = tid;
         }
-        try!(ops::structure::post_init(self, sid));
+        ops::structure::post_init(self, sid);
         self.with_hooks(|h| h.on_structure_create(sid));
         Ok(ObjectRefMut::new(self, sid))
     }

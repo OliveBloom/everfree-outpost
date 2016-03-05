@@ -1,11 +1,8 @@
-use std::collections::HashMap;
-
 use msg::{SimpleArg, ExtraArg};
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 
 use super::{Pack, Unpack};
-use super::util;
 
 
 impl<'a> Unpack<'a> for SimpleArg {

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::hash::Hash;
 use std::iter::FromIterator;
 use std::ptr;
 
@@ -290,8 +288,10 @@ impl<'d> Importer<'d> {
             let mut eng = unsafe { ptr::read(f as *mut F as *mut ::engine::split::EngineRef) };
             for i in 0 .. b.structures.len() {
                 if b.structures[i].flags.contains(w::flags::S_HAS_IMPORT_HOOK) {
-                    eng.script_hooks().call_structure_import_hook(eng.as_world_fragment(),
-                                                                  self.structure_id_map[i]);
+                    // Not much we can do if this goes wrong
+                    warn_on_err!(eng.script_hooks()
+                                    .call_structure_import_hook(eng.as_world_fragment(),
+                                                                self.structure_id_map[i]));
                 }
             }
         }
@@ -424,7 +424,7 @@ impl Import for EntityAttachment {
 }
 
 impl Import for StructureAttachment {
-    fn import_from(&self, i: &Importer) -> StructureAttachment {
+    fn import_from(&self, _i: &Importer) -> StructureAttachment {
         match *self {
             StructureAttachment::Plane => StructureAttachment::Plane,
             StructureAttachment::Chunk => StructureAttachment::Chunk,

@@ -4,7 +4,6 @@
 
 #![feature(
     box_str,
-    convert,    // OsStr::to_cstring
     core,
     filling_drop,
     fnbox,
@@ -12,7 +11,6 @@
     nonzero,
     num_bits_bytes,
     plugin,
-    raw,
     scoped,
     trace_macros,
     unboxed_closures,

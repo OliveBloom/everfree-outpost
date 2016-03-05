@@ -1,6 +1,5 @@
 use types::*;
 
-use python as py;
 use python::{PyBox, PyRef, PyResult};
 use script::{Pack, Unpack};
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};

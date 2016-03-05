@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::mem;
 use std::num::wrapping::OverflowingOps;
 use std::ptr;
@@ -16,7 +15,6 @@ use msg::ExtraArg;
 use python as py;
 use python::{PyBox, PyRef, PyResult};
 use timer;
-use world;
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
 use world::Fragment as World_Fragment;
@@ -509,7 +507,7 @@ define_python_class! {
         fn world_plane_create(eng: glue::WorldFragment,
                               name: String) -> PyResult<PlaneId> {
             let mut eng = eng;
-            let mut p = try!(eng.create_plane(name));
+            let p = try!(eng.create_plane(name));
             Ok(p.id())
         }
 
@@ -751,10 +749,10 @@ impl Pack for Value {
             Value::StableTerrainChunkId(tcid) => Pack::pack(tcid),
             Value::StableStructureId(sid) => Pack::pack(sid),
 
-            Value::V2(v2) => pyraise!(type_error, "V2 is not supported"),
+            Value::V2(_v2) => pyraise!(type_error, "V2 is not supported"),
             Value::V3(v3) => Pack::pack(v3),
-            Value::Region2(region2) => pyraise!(type_error, "Region2 is not supported"),
-            Value::Region3(region3) => pyraise!(type_error, "Region3 is not supported"),
+            Value::Region2(_region2) => pyraise!(type_error, "Region2 is not supported"),
+            Value::Region3(_region3) => pyraise!(type_error, "Region3 is not supported"),
         }
     }
 }
@@ -907,8 +905,8 @@ macro_rules! extra_hash_ref_func_with_ref {
 unsafe fn pack_view(this_ref: PyRef, view: ViewMut) -> PyResult<PyBox> {
     match view {
         ViewMut::Value(v) => Pack::pack(v),
-        ViewMut::Array(a) => unsafe { derive_extra_array_ref(a, this_ref) },
-        ViewMut::Hash(h) => unsafe { derive_extra_hash_ref(h, this_ref) },
+        ViewMut::Array(a) => derive_extra_array_ref(a, this_ref),
+        ViewMut::Hash(h) => derive_extra_hash_ref(h, this_ref),
     }
 }
 

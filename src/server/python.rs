@@ -731,7 +731,6 @@ pub mod tuple {
 }
 
 pub mod iter {
-    use std::ffi::{CString, CStr};
     use python3_sys::*;
     use super::{PyBox, PyRef, PyResult};
 

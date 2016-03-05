@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-
 use types::*;
 
 use data::Data;
@@ -432,7 +429,7 @@ impl Export for EntityAttachment {
 }
 
 impl Export for StructureAttachment {
-    fn export_to(&self, e: &mut Exporter) -> StructureAttachment {
+    fn export_to(&self, _e: &mut Exporter) -> StructureAttachment {
         match *self {
             StructureAttachment::Plane => StructureAttachment::Plane,
             StructureAttachment::Chunk => StructureAttachment::Chunk,

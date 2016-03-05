@@ -1,5 +1,5 @@
 use python as py;
-use python::{PyBox, PyRef, PyResult};
+use python::{PyRef, PyResult};
 
 use super::{Pack, Unpack};
 

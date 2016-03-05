@@ -64,31 +64,29 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
 }
 
 pub fn post_init<'d, F>(f: &mut F,
-                        sid: StructureId) -> OpResult<()>
+                        sid: StructureId)
         where F: Fragment<'d> {
     let (pid, bounds) = {
-        let s = unwrap!(f.world().structures.get(sid));
-        let t = unwrap!(f.world().data.structure_templates.get_template(s.template));
+        let s = &f.world().structures[sid];
+        let t = f.world().data.structure_templates.template(s.template);
 
         (s.plane, Region::new(s.pos, s.pos + t.size))
     };
 
     add_to_lookup(&mut f.world_mut().structures_by_chunk, sid, pid, bounds);
-    Ok(())
 }
 
 pub fn pre_fini<'d, F>(f: &mut F,
-                       sid: StructureId) -> OpResult<()>
+                       sid: StructureId)
         where F: Fragment<'d> {
     let (pid, bounds) = {
-        let s = unwrap!(f.world().structures.get(sid));
-        let t = unwrap!(f.world().data.structure_templates.get_template(s.template));
+        let s = &f.world().structures[sid];
+        let t = f.world().data.structure_templates.template(s.template);
 
         (s.plane, Region::new(s.pos, s.pos + t.size))
     };
 
     remove_from_lookup(&mut f.world_mut().structures_by_chunk, sid, pid, bounds);
-    Ok(())
 }
 
 pub fn destroy<'d, F>(f: &mut F,
