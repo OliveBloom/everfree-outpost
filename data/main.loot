@@ -42,17 +42,16 @@
 
 [multi_item dungeon/chest/small]
 *dungeon/chest/small/loot
-(2%) *random_blueprint
+(10%) *dungeon/chest/large
 
 [choose_item dungeon/chest/small/loot]
-(3) 8-12 book
-(7) fountain
+(4) 8-12 book
+(6) fountain
 
 [choose_item dungeon/chest/large]
-(1) hat
-(1) 25-40 book
+(2) hat
 (1) trophy
-(1) *random_blueprint
+(2) *random_blueprint
 
 
 [choose_item random_blueprint]
