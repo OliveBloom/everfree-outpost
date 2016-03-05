@@ -240,11 +240,18 @@ EVAL_GLOBALS = _build_eval_globals()
 @chat.su_command('/eval <code>: Evaluate a Python expression or statement', name='eval')
 def eval_(client, args):
     eng = client.engine
+    c = client
+    e = client.pawn()
+    p = e.plane()
+    s = util.hit_structure(e)
+    b = p.get_block(util.hit_tile(e))
     dct = {
             'eng': eng,
-            'c': FunctionObject(client, lambda n: eng.client_by_name(n)),
-            'e': FunctionObject(client.pawn(), lambda n: eng.client_by_name(n).pawn()),
-            's': util.hit_structure(client.pawn()),
+            'c': FunctionObject(c, lambda n: eng.client_by_name(n)),
+            'e': FunctionObject(e, lambda n: eng.client_by_name(n).pawn()),
+            'p': p,
+            's': s,
+            'b': b,
             }
 
     try:

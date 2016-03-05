@@ -106,6 +106,10 @@ class BlockProxy(DefProxy):
     def name(self):
         return _DATA.block_name(self.id)
 
+    @property
+    def shape(self):
+        return _DATA.block_shape(self.id)
+
 class ItemProxy(DefProxy):
     @property
     def name(self):

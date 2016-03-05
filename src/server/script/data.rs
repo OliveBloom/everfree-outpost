@@ -35,6 +35,23 @@ define_python_class! {
             this.block_data.get_name(id).map(|s| Pack::pack(s))
         }
 
+        fn block_shape(&this, id: BlockId) -> Option<&'static str> {
+            if (id as usize) < this.block_data.len() {
+                let desc = match this.block_data.shape(id) {
+                    Shape::Empty => "empty",
+                    Shape::Floor => "floor",
+                    Shape::Solid => "solid",
+                    Shape::RampE => "ramp_e",
+                    Shape::RampW => "ramp_w",
+                    Shape::RampS => "ramp_s",
+                    Shape::RampN => "ramp_n",
+                };
+                Some(desc)
+            } else {
+                None
+            }
+        }
+
 
         fn item_count(&this) -> usize {
             this.item_data.len()

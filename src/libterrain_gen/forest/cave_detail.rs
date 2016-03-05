@@ -101,7 +101,7 @@ pub fn generate(ctx: &mut Context,
                 grid.set_fixed(p - grid_bounds_global.min, false);
             }
         } else if r.layer + 1 == layer {
-            let open_bounds = Region::new(r.pos + V2::new(0, 1),
+            let open_bounds = Region::new(r.pos + V2::new(0, 0),
                                           r.pos + V2::new(2, 3)).expand(scalar(1));
             for p in open_bounds.intersect(grid_bounds_global).points() {
                 grid.set_fixed(p - grid_bounds_global.min, false);
