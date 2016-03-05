@@ -163,16 +163,19 @@ impl<'a> Context<'a> {
     }
 
     fn gen_terrain(&mut self) {
-        let floor_type = "dirt";
         let layer_z = self.layer_z();
 
         for pos in self.bounds().points() {
             let cave_key = self.get_cave_key(pos);
+            let mut cave_key_str = String::new();
+            for &c in &cave_key {
+                cave_key_str.push_str(&format!("{}", c));
+            }
 
             self.gc.set_block(pos.extend(layer_z + 0),
-                              block_id!(self, "cave/{}/z0/{}", cave_key, floor_type));
+                              block_id!(self, "terrain/cccc/c{}", cave_key_str));
             self.gc.set_block(pos.extend(layer_z + 1),
-                              block_id!(self, "cave/{}/z1", cave_key));
+                              block_id!(self, "cave_z1/c{}", cave_key_str));
         }
 
         let bounds = self.global_bounds();
@@ -260,13 +263,12 @@ impl<'a> Context<'a> {
         }
     }
 
-    fn get_cave_key(&self, pos: V2) -> u8 {
-        let mut acc_cave = 0;
-        for &(dx, dy) in &[(0, 1), (1, 1), (1, 0), (0, 0)] {
-            let val = self.get_vertex_key(pos + V2::new(dx, dy));
-            acc_cave = acc_cave * 3 + val;
+    fn get_cave_key(&self, pos: V2) -> [u8; 4] {
+        let mut acc = [0; 4];
+        for (i, &(dx, dy)) in [(0, 0), (1, 0), (1, 1), (0, 1)].iter().enumerate() {
+            acc[i] = self.get_vertex_key(pos + V2::new(dx, dy));
         }
-        acc_cave
+        acc
     }
 
     fn check_placement(&self, pos: V2, size: V2) -> bool {

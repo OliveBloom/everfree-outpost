@@ -643,7 +643,7 @@ def init():
 
         clear = name in ('1111', '2222')
         BLOCK.new('cave_z1/c%s' % name) \
-                .shape('floor' if clear else 'solid') \
+                .shape('empty' if clear else 'solid') \
                 .top(top).front(front)
 
     do_cave_ramps(tiles)

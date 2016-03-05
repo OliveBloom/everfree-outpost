@@ -209,19 +209,17 @@ impl Vault for Door {
         let tile_bounds = bounds.extend(0, CHUNK_SIZE);
 
         if bounds.contains(left) {
-            let key = 1*3 + 2*3*3 + 2*3*3*3;
             terrain[tile_bounds.index(left.extend(layer_z))] =
-                data.block_data.get_id(&format!("cave/{}/z0/dirt", key));
+                data.block_data.get_id("terrain/cccc/c0122");
             terrain[tile_bounds.index(left.extend(layer_z + 1))] =
-                data.block_data.get_id(&format!("cave/{}/z1", key));
+                data.block_data.get_id("cave_z1/c0122");
         }
 
         if bounds.contains(right) {
-            let key = 1 + 2*3*3 + 2*3*3*3;
             terrain[tile_bounds.index(right.extend(layer_z))] =
-                data.block_data.get_id(&format!("cave/{}/z0/dirt", key));
+                data.block_data.get_id("terrain/cccc/c1022");
             terrain[tile_bounds.index(right.extend(layer_z + 1))] =
-                data.block_data.get_id(&format!("cave/{}/z1", key));
+                data.block_data.get_id("cave_z1/c1022");
         }
     }
 
