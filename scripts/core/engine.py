@@ -264,7 +264,7 @@ class PlaneProxy(ObjectProxy):
 
     def clear_farmland(self, pos):
         # TODO: strange design relative to other APIs, kind of a hack
-        self._eng.logic_clear_interior(self.id, pos, 'farmland', 'grass/center/v0')
+        self._eng.logic_clear_interior(self.id, pos, 'farmland', 'terrain/gggg/v0')
 
 
 class StructureProxy(ObjectProxy):
