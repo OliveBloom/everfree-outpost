@@ -30,7 +30,7 @@ pub fn generate(ctx: &mut Context,
     for p in bounds.points() {
         let h = bilinear(p, CHUNK_SIZE, |p| height_points[height_bounds.index(p)]);
         chunk.data[bounds.index(p)] =
-            if h < -192 {
+            if h < -128 {
                 -1
             } else if h < 0 {
                 0

@@ -20,24 +20,32 @@ pub fn generate(ctx: &mut Context,
                 pid: Stable<PlaneId>,
                 pos: V2) {
     let seed = ctx.globals(pid).heightmap_seed;
-    let coarse_params = perlin::Params {
-        resolution: 64,
-        offset: scalar(2),
-        magnitude: 256,
-        seed: seed,
-    };
-    let fine_params = perlin::Params {
-        resolution: 4,
-        offset: scalar(0),
-        magnitude: 768,
-        seed: seed,
-    };
+    let params = [
+        perlin::Params {
+            resolution: 128,
+            offset: scalar(8),
+            magnitude: 256,
+            seed: seed,
+        },
+        perlin::Params {
+            resolution: 16,
+            offset: scalar(0),
+            magnitude: 256,
+            seed: seed,
+        },
+        perlin::Params {
+            resolution: 4,
+            offset: scalar(2),
+            magnitude: 128,
+            seed: seed,
+        },
+    ];
 
     let size = scalar(HEIGHTMAP_SIZE as i32);
     let bounds = Region::new(scalar(0), size);
     for offset in bounds.points() {
         let p = pos * size + offset;
-        let val = perlin::sample(&coarse_params, p) + perlin::sample(&fine_params, p);
-        chunk.data[bounds.index(offset)] = val;
+        let val: i32 = params.iter().map(|params| perlin::sample(&params, p)).sum();
+        chunk.data[bounds.index(offset)] = val - 32;
     }
 }
