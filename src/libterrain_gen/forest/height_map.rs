@@ -7,7 +7,7 @@ use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::perlin;
 
 use cache::Summary;
-use forest2::context::Context;
+use forest::context::Context;
 
 
 pub const HEIGHTMAP_SIZE: usize = 64;

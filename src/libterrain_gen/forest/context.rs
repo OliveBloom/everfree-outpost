@@ -9,15 +9,15 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::{Cache, Summary};
-use forest2::common::{self, GenPass, GridLike, PointsLike, HasPos};
+use forest::common::{self, GenPass, GridLike, PointsLike, HasPos};
 
-use forest2::height_map::{self, HeightMap};
-use forest2::height_detail::{self, HeightDetail};
-use forest2::cave_ramps::{self, RampPositions, CaveRamps};
-use forest2::cave_detail::{self, CaveDetail};
-use forest2::cave_junk::{self, CaveJunk};
-use forest2::trees::{self, TreePositions, Trees};
-use forest2::terrain_grid::{self, TerrainGrid};
+use forest::height_map::{self, HeightMap};
+use forest::height_detail::{self, HeightDetail};
+use forest::cave_ramps::{self, RampPositions, CaveRamps};
+use forest::cave_detail::{self, CaveDetail};
+use forest::cave_junk::{self, CaveJunk};
+use forest::trees::{self, TreePositions, Trees};
+use forest::terrain_grid::{self, TerrainGrid};
 
 
 macro_rules! define_gen_pass {

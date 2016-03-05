@@ -10,9 +10,9 @@ use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::cellular::CellularGrid;
 
 use cache::Summary;
-use forest2::common;
-use forest2::context::{Context, CaveDetailPass, CaveRampsPass};
-use forest2::cave_ramps;
+use forest::common;
+use forest::context::{Context, CaveDetailPass, CaveRampsPass};
+use forest::cave_ramps;
 
 
 pub const LAYER_SIZE: usize = ((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)) as usize;

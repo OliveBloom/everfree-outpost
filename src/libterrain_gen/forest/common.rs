@@ -3,7 +3,7 @@ use std::iter;
 use libserver_types::*;
 
 use cache::{self, Cache};
-use forest2::context::Context;
+use forest::context::Context;
 
 
 pub trait GridLike {
@@ -47,14 +47,14 @@ macro_rules! define_grid {
             }
         }
 
-        impl ::forest2::common::GridLike for $Grid {
+        impl ::forest::common::GridLike for $Grid {
             type Elem = $T;
 
             fn spacing() -> i32 { $SPACING as i32 }
             fn size() -> i32 { $SIZE as i32 }
 
             fn get(&self, offset: V2) -> $T {
-                use forest2::common::GridLike;
+                use forest::common::GridLike;
                 self.data[Self::bounds().index(offset)]
             }
         }
@@ -118,7 +118,7 @@ macro_rules! define_points {
             }
         }
 
-        impl ::forest2::common::PointsLike for $Points {
+        impl ::forest::common::PointsLike for $Points {
             type Elem = $T;
 
             fn spacing() -> i32 { $SPACING as i32 }

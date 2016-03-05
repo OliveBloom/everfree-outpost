@@ -8,7 +8,7 @@ use libserver_config::Storage;
 
 use GenChunk;
 use StdRng;
-use forest2::Provider as ForestProvider;
+use forest::Provider as ForestProvider;
 use dungeon::Provider as DungeonProvider;
 
 

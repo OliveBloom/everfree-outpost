@@ -9,9 +9,9 @@ use libserver_util::bytes::Bytes;
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::common::HasPos;
-use forest2::context::{Context, HeightDetailPass, TreePositionsPass};
-use forest2::height_detail;
+use forest::common::HasPos;
+use forest::context::{Context, HeightDetailPass, TreePositionsPass};
+use forest::height_detail;
 
 
 const GRID_SIZE: i32 = 64;

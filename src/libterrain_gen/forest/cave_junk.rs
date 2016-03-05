@@ -9,8 +9,8 @@ use libserver_util::bytes::{Bytes, ReadBytes, WriteBytes};
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use cache::Summary;
-use forest2::context::{Context, HeightMapPass, CaveJunkPass};
-use forest2::height_map;
+use forest::context::{Context, HeightMapPass, CaveJunkPass};
+use forest::height_map;
 
 
 define_points!(CaveJunk: V2; CHUNK_SIZE as usize);

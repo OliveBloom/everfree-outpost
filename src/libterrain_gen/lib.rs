@@ -29,7 +29,7 @@ pub mod worker;
 mod prop;
 mod cache;
 
-mod forest2;
+mod forest;
 mod dungeon;
 
 

@@ -8,8 +8,8 @@ use libserver_types::*;
 use libserver_util::bytes::{ReadBytes, WriteBytes};
 
 use cache::Summary;
-use forest2::context::{Context, HeightDetailPass, CaveDetailPass, CaveRampsPass};
-use forest2::cave_ramps;
+use forest::context::{Context, HeightDetailPass, CaveDetailPass, CaveRampsPass};
+use forest::cave_ramps;
 
 
 bitflags! {

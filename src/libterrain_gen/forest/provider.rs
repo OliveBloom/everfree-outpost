@@ -6,11 +6,11 @@ use libserver_config::{Data, Storage};
 use libserver_types::*;
 
 use {GenChunk, GenStructure};
-use forest2::context::{Context, TerrainGridPass, CaveRampsPass, CaveJunkPass, TreesPass};
-use forest2::terrain_grid::{self, Cell, FloorType};
-use forest2::cave_ramps;
-use forest2::cave_junk;
-use forest2::trees;
+use forest::context::{Context, TerrainGridPass, CaveRampsPass, CaveJunkPass, TreesPass};
+use forest::terrain_grid::{self, Cell, FloorType};
+use forest::cave_ramps;
+use forest::cave_junk;
+use forest::trees;
 
 pub struct Provider<'d> {
     data: &'d Data,

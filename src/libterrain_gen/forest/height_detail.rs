@@ -8,8 +8,8 @@ use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::bilinear;
 
 use cache::Summary;
-use forest2::context::{Context, HeightMapPass};
-use forest2::height_map;
+use forest::context::{Context, HeightMapPass};
+use forest::height_map;
 
 
 define_grid!(HeightDetail: i8; CHUNK_SIZE as usize; +1);
