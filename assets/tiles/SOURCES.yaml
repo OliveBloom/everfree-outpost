@@ -7,6 +7,11 @@ lpc-watergrass-cross.png: *lpc-base
 lpc-cave-top-cross.png: *lpc-base
 lpc-cave-top.png: *lpc-base
 lpc-cave-inside.png: *lpc-base
+lpc-grassalt-with-variants.png: *lpc-base
+
+lpc-cave-top2*.png:
+    derived-from: lpc-base-tiles
+    attribution: LPC cave top, recolored to match dirt2.png (cave interior)
 
 farmland-interior-parts.png:
     title: LPC Farmland - Interior Tiles
@@ -22,3 +27,15 @@ outdoor-ramps.png:
     author: Anonymous
     derived-from: lpc-base-tiles
 
+cave-top-grass.png: &cave-top-grass
+    tile: LPC Grass Hill Top
+    author: Anonymous
+    derived-from: lpc-base-tiles
+cave-top-grass-cross.png: *cave-top-grass
+
+cave-stair*.png:
+    title: Cave Stair / Natural Ramp
+    author: Anonymous
+    derived-from: lpc-base-tiles
+    attribution: >
+        This is "outdoor ramps" with some tweaks and repacking.

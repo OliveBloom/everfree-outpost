@@ -30,25 +30,25 @@ pub trait LocalProperty {
 
     /// Generate a chunk summary into the named cache.
     fn generate_into(&mut self,
-                     cache: &mut Cache<Self::Summary>,
+                     cache: &mut Cache<(Stable<PlaneId>, V2), Self::Summary>,
                      pid: Stable<PlaneId>,
                      cpos: V2) -> Self::Result {
         let mut tmp = {
             let summ =
-                if let Ok(_) = cache.load(pid, cpos) {
-                    cache.get(pid, cpos)
+                if let Ok(_) = cache.load((pid, cpos)) {
+                    cache.get((pid, cpos))
                 } else {
-                    &*cache.create(pid, cpos)
+                    &*cache.create((pid, cpos))
                 };
             self.init(summ)
         };
 
         for &dir in &DIRS {
-            match cache.load(pid, cpos + dir) {
+            match cache.load((pid, cpos + dir)) {
                 Ok(_) => {},
                 Err(_) => continue,
             }
-            let summ = cache.get(pid, cpos + dir);
+            let summ = cache.get((pid, cpos + dir));
             self.load(&mut tmp, dir, summ);
         }
 
@@ -56,7 +56,7 @@ pub trait LocalProperty {
 
         // Summary was previously loaded.  We assume it's still around (requires cache size of at
         // least 9).
-        self.save(tmp, cache.get_mut(pid, cpos))
+        self.save(tmp, cache.get_mut((pid, cpos)))
     }
 }
 
@@ -92,21 +92,21 @@ pub trait GlobalProperty {
 
     /// Generate a chunk summary into the named cache.
     fn generate_into(&mut self,
-                     cache: &mut Cache<Self::Summary>,
+                     cache: &mut Cache<(Stable<PlaneId>, V2), Self::Summary>,
                      pid: Stable<PlaneId>,
                      cpos: V2) -> Self::Result {
         let mut tmp = {
             let summ =
-                if let Ok(_) = cache.load(pid, cpos) {
-                    cache.get(pid, cpos)
+                if let Ok(_) = cache.load((pid, cpos)) {
+                    cache.get((pid, cpos))
                 } else {
-                    &*cache.create(pid, cpos)
+                    &*cache.create((pid, cpos))
                 };
             self.init(summ)
         };
 
         self.generate(&mut tmp);
 
-        self.save(tmp, cache.get_mut(pid, cpos))
+        self.save(tmp, cache.get_mut((pid, cpos)))
     }
 }

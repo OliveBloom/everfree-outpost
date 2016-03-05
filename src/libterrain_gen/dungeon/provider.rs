@@ -14,7 +14,6 @@ use prop::{LocalProperty, GlobalProperty};
 use super::summary::ChunkSummary;
 use super::summary::PlaneSummary;
 
-use super::ENTRANCE_POS;
 use super::plan::Plan;
 use super::vault::Vault;
 use super::caves::Caves;
@@ -23,8 +22,8 @@ use super::caves::Caves;
 pub struct Provider<'d> {
     data: &'d Data,
     rng: StdRng,
-    cache: Cache<'d, ChunkSummary>,
-    plane_cache: Cache<'d, PlaneSummary>,
+    cache: Cache<'d, (Stable<PlaneId>, V2), ChunkSummary>,
+    plane_cache: Cache<'d, (Stable<PlaneId>, V2), PlaneSummary>,
 }
 
 impl<'d> Provider<'d> {
@@ -39,7 +38,7 @@ impl<'d> Provider<'d> {
 
     fn load_plane_summary(&mut self,
                           pid: Stable<PlaneId>) {
-        if let Err(_) = self.plane_cache.load(pid, scalar(0)) {
+        if let Err(_) = self.plane_cache.load((pid, scalar(0))) {
             Plan::new(self.rng.gen(), self.data)
                 .generate_into(&mut self.plane_cache, pid, scalar(0));
         }
@@ -49,7 +48,7 @@ impl<'d> Provider<'d> {
                         pid: Stable<PlaneId>,
                         cpos: V2) {
         self.load_plane_summary(pid);
-        let plane_summ = self.plane_cache.get(pid, scalar(0));
+        let plane_summ = self.plane_cache.get((pid, scalar(0)));
 
         let base = cpos * scalar(CHUNK_SIZE) - scalar(CHUNK_SIZE);
         let bounds = Region::new(scalar(0), scalar(3 * CHUNK_SIZE)) + base;
@@ -72,8 +71,8 @@ impl<'d> Provider<'d> {
             let mut ctx = Context {
                 rng: &mut self.rng,
                 gc: &mut gc,
-                summ: self.cache.get(pid, cpos),
-                plane_summ: self.plane_cache.get(pid, scalar(0)),
+                summ: self.cache.get((pid, cpos)),
+                plane_summ: self.plane_cache.get((pid, scalar(0))),
                 cpos: cpos,
                 data: &self.data,
                 block_data: &self.data.block_data,
@@ -239,10 +238,6 @@ impl<'a> Context<'a> {
                                            template_id!(self, "bookshelf/{}", book_count));
                 self.gc.structures.push(gs);
             }
-        }
-
-        for off in Region::new(scalar(0), V2::new(w, h)).points() {
-            let off = V2::new(off.x, 2 * off.y);
         }
     }
 

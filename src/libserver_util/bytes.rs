@@ -66,6 +66,7 @@ unsafe impl Bytes for V3 { }
 
 pub trait WriteBytes {
     fn write_bytes<T: Bytes>(&mut self, x: T) -> io::Result<()>;
+    fn write_bytes_slice<T: Bytes>(&mut self, x: &[T]) -> io::Result<()>;
 }
 
 impl<W: io::Write> WriteBytes for W {
@@ -78,10 +79,21 @@ impl<W: io::Write> WriteBytes for W {
         };
         self.write_all(slice)
     }
+
+    fn write_bytes_slice<T: Bytes>(&mut self, x: &[T]) -> io::Result<()> {
+        let slice = unsafe {
+            mem::transmute(raw::Slice {
+                data: x.as_ptr() as *const u8,
+                len: x.len() * mem::size_of::<T>(),
+            })
+        };
+        self.write_all(slice)
+    }
 }
 
 pub trait ReadBytes {
     fn read_bytes<T: Bytes>(&mut self) -> io::Result<T>;
+    fn read_bytes_slice<T: Bytes>(&mut self, x: &mut [T]) -> io::Result<()>;
 }
 
 impl<R: io::Read> ReadBytes for R {
@@ -95,5 +107,16 @@ impl<R: io::Read> ReadBytes for R {
         };
         try!(self.read_exact(slice));
         Ok(x)
+    }
+
+    fn read_bytes_slice<T: Bytes>(&mut self, x: &mut [T]) -> io::Result<()> {
+        let slice = unsafe {
+            mem::transmute(raw::Slice {
+                data: x.as_mut_ptr() as *mut u8,
+                len: x.len() * mem::size_of::<T>(),
+            })
+        };
+        try!(self.read_exact(slice));
+        Ok(())
     }
 }

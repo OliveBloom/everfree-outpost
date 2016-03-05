@@ -1,12 +1,10 @@
 use std::fs::File;
-use std::io::{self, Write};
+use std::io;
 use rand::{self, Rng};
 
 use libserver_types::*;
 use libserver_config::Data;
 use libphysics::CHUNK_SIZE;
-use libserver_util::{Convert, ReadExact};
-use libserver_util::{transmute_slice, transmute_slice_mut};
 use libserver_util::{write_array, read_array};
 use libserver_util::{write_vec, read_vec};
 use libserver_util::bytes::*;
@@ -26,20 +24,20 @@ pub trait Vault {
     fn connection_points(&self) -> &[V2];
 
     fn gen_cave_grid(&self,
-                     grid: &mut CellularGrid,
-                     bounds: Region<V2>) {}
+                     _grid: &mut CellularGrid,
+                     _bounds: Region<V2>) {}
 
     fn gen_terrain(&self,
-                   data: &Data,
-                   terrain: &mut [BlockId],
-                   bounds: Region<V2>,
-                   layer: u8) {}
+                   _data: &Data,
+                   _terrain: &mut [BlockId],
+                   _bounds: Region<V2>,
+                   _layer: u8) {}
 
     fn gen_structures(&self,
-                      data: &Data,
-                      structures: &mut Vec<GenStructure>,
-                      bounds: Region<V2>,
-                      layer: u8) {}
+                      _data: &Data,
+                      _structures: &mut Vec<GenStructure>,
+                      _bounds: Region<V2>,
+                      _layer: u8) {}
 
     fn write_to(&self, f: &mut File) -> io::Result<()>;
 }

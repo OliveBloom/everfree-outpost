@@ -1,264 +1,209 @@
-use rand::Rng;
+use std::cmp;
+use rand::{Rng, XorShiftRng};
 
-use libserver_types::*;
 use libphysics::CHUNK_SIZE;
-use libserver_config::Data;
-use libserver_config::Storage;
+use libserver_config::{Data, Storage};
+use libserver_types::*;
 
 use {GenChunk, GenStructure};
-use StdRng;
-use cache::Cache;
-use prop::LocalProperty;
-
-use super::summary::ChunkSummary;
-use super::summary::{SuperchunkSummary, SUPERCHUNK_SIZE};
-
-use super::super_heightmap::SuperHeightmap;
-use super::heightmap::Heightmap;
-use super::caves::Caves;
-use super::trees::Trees;
-use super::treasure::Treasure;
-use super::cliff_vaults::CliffVaults;
-
+use forest::context::{Context, TerrainGridPass, CaveRampsPass, CaveJunkPass, TreesPass};
+use forest::terrain_grid::{self, Cell, FloorType};
+use forest::cave_ramps;
+use forest::cave_junk;
+use forest::trees;
 
 pub struct Provider<'d> {
     data: &'d Data,
-    rng: StdRng,
-    cache: Cache<'d, ChunkSummary>,
-    super_cache: Cache<'d, SuperchunkSummary>,
+    ctx: Context<'d>,
 }
 
 impl<'d> Provider<'d> {
-    pub fn new(data: &'d Data, storage: &'d Storage, rng: StdRng) -> Provider<'d> {
+    pub fn new(data: &'d Data, storage: &'d Storage, rng: XorShiftRng) -> Provider<'d> {
         Provider {
             data: data,
-            rng: rng,
-            cache: Cache::new(storage, "chunk"),
-            super_cache: Cache::new(storage, "superchunk"),
+            ctx: Context::new(storage, rng),
         }
     }
 
-    fn get_super_heightmap(&mut self,
-                           pid: Stable<PlaneId>,
-                           scpos: V2) -> &[u8] {
-        if let Err(_) = self.super_cache.load(pid, scpos) {
-            SuperHeightmap::new(scpos, self.rng.gen())
-                .generate_into(&mut self.super_cache, pid, scpos);
-        }
-        &self.super_cache.get(pid, scpos).ds_levels
-    }
-
-    fn super_height(&mut self,
-                    pid: Stable<PlaneId>,
-                    cpos: V2) -> u8 {
-        if cpos == scalar(0){
-            return 98;
-        }
-
-        let scpos = cpos.div_floor(scalar(SUPERCHUNK_SIZE));
-        let base = scpos * scalar(SUPERCHUNK_SIZE);
-        let bounds = Region::new(base, base + scalar(SUPERCHUNK_SIZE + 1));
-        let heightmap = self.get_super_heightmap(pid, scpos);
-        heightmap[bounds.index(cpos)]
-    }
-
-    fn generate_summary(&mut self,
-                        pid: Stable<PlaneId>,
-                        cpos: V2) {
-        let height_grid = Heightmap::new(cpos, self.rng.gen(),
-                                         |cpos| self.super_height(pid, cpos))
-                              .generate_into(&mut self.cache, pid, cpos);
-
-        Trees::new(self.rng.gen(), &height_grid)
-            .generate_into(&mut self.cache, pid, cpos);
-
-        CliffVaults::new(self.rng.gen(), &height_grid)
-            .generate_into(&mut self.cache, pid, cpos);
-
-        for layer in 0 .. CHUNK_SIZE as u8 / 2 {
-            let layer_cutoff = layer * 2 + 100;
-
-            let cave_grid = Caves::new(self.rng.gen(),
-                                       layer,
-                                       layer_cutoff,
-                                       &height_grid)
-                                .generate_into(&mut self.cache, pid, cpos);
-
-            Treasure::new(self.rng.gen(),
-                          layer,
-                          &cave_grid)
-                .generate_into(&mut self.cache, pid, cpos);
-        }
-    }
-
-
-    pub fn generate(&mut self,
-                    pid: Stable<PlaneId>,
-                    cpos: V2) -> GenChunk {
-        self.generate_summary(pid, cpos);
-
-
+    pub fn generate(&mut self, pid: Stable<PlaneId>, cpos: V2) -> GenChunk {
         let mut gc = GenChunk::new();
-        let summ = self.cache.get(pid, cpos);
-        // Bounds of the heightmap and cave grids, which assign a value to every vertex.
-        let grid_bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));
-        // Bounds of the actual chunk, which assigns a block to every cell.
+        let mut rng = self.ctx.get_rng(pid);
+
         let bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE));
+        let base = cpos * scalar(CHUNK_SIZE);
+        let grid_bounds = Region::<V2>::new(scalar(0), scalar(CHUNK_SIZE + 1));
 
-        let block_data = &self.data.block_data;
-        macro_rules! block_id {
-            ($($t:tt)*) => (block_data.get_id(&format!($($t)*)))
-        };
-
-        let structure_templates = &self.data.structure_templates;
-        macro_rules! template_id {
-            ($($t:tt)*) => (structure_templates.get_id(&format!($($t)*)))
-        };
-
-        let loot_tables = &self.data.loot_tables;
-        let item_data = &self.data.item_data;
-
-        // Grass layer
-        let grass_ids = [
-            block_id!("grass/center/v0"),
-            block_id!("grass/center/v1"),
-            block_id!("grass/center/v2"),
-            block_id!("grass/center/v3"),
-        ];
-        for pos in bounds.points() {
-            gc.set_block(pos.extend(0), *self.rng.choose(&grass_ids).unwrap());
-        }
-
-        // Cave/hill layers
-        for layer in 0 .. CHUNK_SIZE as u8 / 2 {
-            let floor_type = if layer == 0 { "grass" } else { "dirt" };
-
-            for pos in bounds.points() {
-                let (cave_key, top_key) = get_cell_keys(summ, pos, layer);
-                if cave_key == OUTSIDE_KEY {
-                    continue;
+        macro_rules! get_id {
+            ($name:expr) => {
+                match self.data.block_data.find_id($name) {
+                    Some(x) => x,
+                    None => { /*warn!("no such block: {}", $name);*/ 0 }
                 }
+            };
+        }
 
-                let layer_z = layer as i32 * 2;
-                gc.set_block(pos.extend(layer_z + 0),
-                             block_id!("cave/{}/z0/{}", cave_key, floor_type));
-                gc.set_block(pos.extend(layer_z + 1),
-                             block_id!("cave/{}/z1", cave_key));
-                if layer_z + 2 < CHUNK_SIZE {
-                    gc.set_block(pos.extend(layer_z + 2),
-                                 block_id!("cave_top/{}", top_key));
+        // TODO: move specs to its own TileSpecsPass
+        let mut specs = Box::new(
+            [[TileSpec::empty(); CHUNK_SIZE as usize * CHUNK_SIZE as usize]; 8]);
+
+        {
+            let t = self.ctx.result::<TerrainGridPass>((pid, cpos));
+
+            // Apply terrain grid
+            for layer in 0 .. CHUNK_SIZE / 2 {
+                let z = layer * 2;
+                let tl = &t.data[layer as usize];
+                for pos in bounds.points() {
+                    let nw = tl[grid_bounds.index(pos + V2::new(0, 0))];
+                    let ne = tl[grid_bounds.index(pos + V2::new(1, 0))];
+                    let sw = tl[grid_bounds.index(pos + V2::new(0, 1))];
+                    let se = tl[grid_bounds.index(pos + V2::new(1, 1))];
+                    let spec = TileSpec::from_corners([nw, ne, se, sw]);
+                    specs[layer as usize][bounds.index(pos)] = spec;
+
+                    let name = spec.name();
+                    let z0_id =
+                        if !spec.has_variants() {
+                            get_id!(&name)
+                        } else {
+                            let rate = spec.variant_zero_rate();
+                            // Give 1/rate chance of choosing any nonzero variant.
+                            let v = rng.gen_range(0, 3 * rate);
+                            // 1, 2, 3 map to themselves (variants).  Everything else maps to 0.
+                            let v = if v >= 4 { 0 } else { v };
+                            get_id!(&format!("{}/v{}", name, v))
+                        };
+                    gc.set_block(pos.extend(z + 0), z0_id);
+                    if spec.has_cave() {
+                        let z1_name = spec.cave_z1_name();
+                        gc.set_block(pos.extend(z + 1), get_id!(&z1_name));
+                    }
                 }
             }
         }
 
-        // Cave entrances
-        for &pos in &summ.cave_entrances {
-            info!("placing entrance at {:?}", pos);
-            let base = pos.reduce() - V2::new(3, 1);
-            let layer = pos.z as u8 / 2;
-            let floor_type = if layer == 0 { "grass" } else { "dirt" };
+        // Apply ramps
+        let rel_bounds = Region::new(V2::new(-1, -1), V2::new(2, 2));
+        let collect_bounds = Region::new(base + bounds.min - rel_bounds.max + scalar(1),
+                                         base + bounds.max - rel_bounds.min);
+        for r in &self.ctx.collect_points::<CaveRampsPass>(pid, collect_bounds) {
+            let ramp_pos = r.pos - base;
+            let z = r.layer as i32 * 2;
 
-            for (i, &side) in ["left", "center", "right"].iter().enumerate() {
-                let side_pos = base + V2::new(i as i32, 0);
-                let (cave_key, _) = get_cell_keys(summ, side_pos, layer);
-                gc.set_block(side_pos.extend(pos.z + 0),
-                             block_id!("cave/entrance/{}/{}/z0/{}", side, cave_key, floor_type));
-                gc.set_block(side_pos.extend(pos.z + 1),
-                             block_id!("cave/entrance/{}/{}/z1", side, cave_key));
-            }
-        }
-
-        // Natural ramps
-        for &pos in &summ.natural_ramps {
-            info!("placing ramp at {:?}", pos);
-            let base = pos.reduce() - V2::new(3, 3);
-            let layer = pos.z as u8 / 2;
-            let floor_type = if layer == 0 { "grass" } else { "dirt" };
-            for offset in Region::new(scalar(0), scalar(3)).points() {
-                let (cave_key, _) = get_cell_keys(summ, base + offset, layer);
-                info!("  {:?} => {}", offset, cave_key);
-            }
-
-            // Ramp
-            gc.set_block((base + V2::new(1, 1)).extend(pos.z + 1),
-                         block_id!("natural_ramp/ramp/z1"));
-            gc.set_block((base + V2::new(1, 2)).extend(pos.z + 0),
-                         block_id!("natural_ramp/ramp/z0/{}", floor_type));
-
-            // Back of ramp
-            let back_pos = base + V2::new(1, 0);
-            let (cave_key, _) = get_cell_keys(summ, back_pos, layer);
-            gc.set_block(back_pos.extend(pos.z + 1),
-                         block_id!("natural_ramp/back/{}", cave_key));
-            if pos.z + 2 < CHUNK_SIZE {
-                gc.set_block(back_pos.extend(pos.z + 2),
-                             block_id!("natural_ramp/top"));
-            }
-
-            const SIDE_BASE_KEY: u8 = 1*3*3 + 1*3*3*3;
-
-            // Left side
-            let left_pos = base + V2::new(0, 1);
-            let (cave_key, _) = get_cell_keys(summ, left_pos, layer);
-            gc.set_block(left_pos.extend(pos.z + 1),
-                         block_id!("natural_ramp/left/{}/z1", cave_key));
-            gc.set_block(left_pos.extend(pos.z + 0),
-                         block_id!("cave/{}/z0/{}", SIDE_BASE_KEY, floor_type));
-
-            // Right side
-            let right_pos = base + V2::new(2, 1);
-            let (cave_key, _) = get_cell_keys(summ, right_pos, layer);
-            gc.set_block(right_pos.extend(pos.z + 1),
-                         block_id!("natural_ramp/right/{}/z1", cave_key));
-            gc.set_block(right_pos.extend(pos.z + 0),
-                         block_id!("cave/{}/z0/{}", SIDE_BASE_KEY, floor_type));
-        }
-
-
-        // Trees/rocks
-        for &pos in &self.cache.get(pid, cpos).tree_offsets {
-            // Make sure the area near spawn is clear of structures.
-            let abs_pos = pos + cpos * scalar(CHUNK_SIZE);
-            if abs_pos.dot(abs_pos) < 5 * 5 {
-                continue;
-            }
-
-            let height = summ.heightmap[grid_bounds.index(pos)];
-            let layer = if height < 100 { 0 } else { (height - 100) / 2 + 1 };
-            let z = layer as i32 * 2;
-
-            let opt_id = if layer == 0 {
-                loot_tables.eval_structure_table(&mut self.rng, "forest/floor")
-            } else {
-                loot_tables.eval_structure_table(&mut self.rng, "forest/hill")
+            let check = |x,y| {
+                let p = ramp_pos + V2::new(x, y);
+                if bounds.contains(p) {
+                    Some(p)
+                } else {
+                    None
+                }
             };
 
-            if let Some(id) = opt_id {
-                // TODO: filter trees/rocks during generation
-                let gs = GenStructure::new(pos.extend(z), id);
-                gc.structures.push(gs);
+            if let Some(p) = check( -1, -1) {
+                // Back left
+                let spec = specs[r.layer as usize][bounds.index(p)];
+                let name = spec.ramp_z1_name(0, 0);
+                gc.set_block(p.extend(z + 1), get_id!(&name));
+                let name = spec.ramp_z0_name(0, 0);
+                gc.set_block(p.extend(z), get_id!(&name));
+            }
+
+            if let Some(p) = check(  1, -1) {
+                // Back right
+                let spec = specs[r.layer as usize][bounds.index(p)];
+                let name = spec.ramp_z1_name(2, 0);
+                gc.set_block(p.extend(z + 1), get_id!(&name));
+                let name = spec.ramp_z0_name(2, 0);
+                gc.set_block(p.extend(z), get_id!(&name));
+            }
+
+            if let Some(p) = check( -1,  0) {
+                // Front left
+                let spec = specs[r.layer as usize][bounds.index(p)];
+                let name = spec.ramp_z1_name(0, 1);
+                gc.set_block(p.extend(z + 1), get_id!(&name));
+                let name = spec.ramp_z0_name(0, 1);
+                gc.set_block(p.extend(z), get_id!(&name));
+            }
+
+            if let Some(p) = check(  1,  0) {
+                // Front right
+                let spec = specs[r.layer as usize][bounds.index(p)];
+                let name = spec.ramp_z1_name(2, 1);
+                gc.set_block(p.extend(z + 1), get_id!(&name));
+                let name = spec.ramp_z0_name(2, 1);
+                gc.set_block(p.extend(z), get_id!(&name));
+            }
+
+            if let Some(p) = check( 0, -1) {
+                // Back center
+                let spec = specs[r.layer as usize][bounds.index(p)];
+                let name = spec.ramp_z1_name(1, 0);
+                gc.set_block(p.extend(z + 1), get_id!(&name));
+                let name = spec.ramp_z0_name(1, 0);
+                gc.set_block(p.extend(z), get_id!(&name));
+
+                let top_spec = specs[r.layer as usize + 1][bounds.index(p)];
+                let terrain = match top_spec.terrain[3] {
+                    'g' => "grass",
+                    'c' => "dirt2",
+                    _ => "dirt",
+                };
+                let name = format!("ramp/{}/cap0", terrain);
+                gc.set_block(p.extend(z + 2), get_id!(&name));
+            }
+
+            if let Some(p) = check( 0,  0) {
+                // Front center
+                gc.set_block(p.extend(z + 1), get_id!("ramp/dirt2/z1"));
+
+                let top_spec = specs[r.layer as usize + 1][bounds.index(p)];
+                let terrain = match top_spec.terrain[0] {
+                    'g' => "grass",
+                    'c' => "dirt2",
+                    _ => "dirt",
+                };
+                let name = format!("ramp/{}/cap1", terrain);
+                gc.set_block(p.extend(z + 2), get_id!(&name));
+            }
+
+            if let Some(p) = check( 0,  1) {
+                // Ramp bottom
+                gc.set_block(p.extend(z + 0), get_id!("ramp/dirt2/z0"));
             }
         }
 
-        // Treasure
-        let chest_id = template_id!("chest");
+        macro_rules! template_id {
+            ($name:expr) => (self.data.structure_templates.get_id($name))
+        };
+
+        // Apply cave junk
         for layer in 0 .. CHUNK_SIZE as u8 / 2 {
-            let layer_z = layer as i32 * 2;
-            for &pos in &self.cache.get(pid, cpos).treasure_offsets[layer as usize] {
-                let opt_id = loot_tables.eval_structure_table(&mut self.rng, "cave/floor");
+            let points = self.ctx.collect_points_layer::<CaveJunkPass>(pid, bounds + base, layer);
+            for &pos in &points {
+                let pos = pos - base;
+                let spec = specs[layer as usize][bounds.index(pos)];
+                if !spec.is_cave_floor() {
+                    continue;
+                }
+                let pos = pos.extend(layer as i32 * 2);
+
+                let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
                 if let Some(id) = opt_id {
-                    let mut gs = GenStructure::new(pos.extend(layer_z), id);
-                    if id == chest_id {
-                        let contents = loot_tables.eval_item_table(&mut self.rng, "cave/chest");
-                        let mut s = String::new();
-                        for (item_id, count) in contents {
-                            s.push_str(&format!("{}:{},", item_data.name(item_id), count));
-                        }
-                        info!("generated chest, loot = {}", s);
-                        gs.extra.insert("loot".to_owned(), s);
-                    }
+                    let gs = GenStructure::new(pos, id);
                     gc.structures.push(gs);
                 }
+            }
+        }
+
+        // Apply trees
+        for t in &self.ctx.collect_points::<TreesPass>(pid, bounds + base) {
+            let pos = (t.pos - base).extend(t.layer as i32 * 2);
+
+            let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "forest/floor");
+            if let Some(id) = opt_id {
+                let gs = GenStructure::new(pos, id);
+                gc.structures.push(gs);
             }
         }
 
@@ -272,33 +217,137 @@ impl<'d> Provider<'d> {
     }
 }
 
-pub fn cutoff(layer: u8) -> u8 {
-    layer * 2 + 100
+#[derive(Clone, Copy, Debug)]
+struct TileSpec {
+    terrain: [char; 4],
+    empty: [bool; 4],
+    cave: [u8; 4],
 }
 
-fn get_vertex_key(summ: &ChunkSummary, pos: V2, layer: u8) -> u8 {
-    let bounds = Region::new(scalar(0), scalar(CHUNK_SIZE + 1));
-    if summ.heightmap[bounds.index(pos)] < cutoff(layer) {
-        // Outside the raised area
-        1
-    } else if !summ.cave_wall_layer(layer).get(bounds.index(pos)) {
-        // Inside the raised area, and not a cave wall
-        2
-    } else {
-        0
+impl TileSpec {
+    fn empty() -> TileSpec {
+        TileSpec {
+            terrain: ['g'; 4],
+            empty: [true; 4],
+            cave: [1; 4],
+        }
+    }
+
+    fn from_corners(corners: [Cell; 4]) -> TileSpec {
+        let mut s = TileSpec::empty();
+
+        for i in 0..4 {
+            let c = &corners[i];
+
+            s.terrain[i] = match c.floor_type {
+                FloorType::Grass => 'g',
+                FloorType::Cave => 'c',
+                FloorType::Mountain => 'm',
+                FloorType::Snow => 's',
+                FloorType::Ash => 'a',
+                FloorType::Water => 'w',
+                FloorType::Lava => 'l',
+                FloorType::Pit => 'p',
+            };
+
+            s.empty[i] = !c.flags.contains(terrain_grid::T_FLOOR);
+
+            s.cave[i] =
+                if c.flags.contains(terrain_grid::T_CAVE_INSIDE) { 2 }
+                else if c.flags.contains(terrain_grid::T_CAVE) { 0 }
+                else { 1 };
+        }
+
+        s
+    }
+
+    fn has_variants(&self) -> bool {
+        !self.has_empty() &&
+        !self.has_cave() &&
+        self.terrain.iter().all(|&x| x == self.terrain[0])
+    }
+
+    fn variant_zero_rate(&self) -> i32 {
+        match self.terrain[0] {
+            'w' | 'l' => 100,
+            _ => 10,
+        }
+    }
+
+    fn has_empty(&self) -> bool {
+        self.empty != [false; 4]
+    }
+
+    fn has_cave(&self) -> bool {
+        self.cave != [1; 4] &&
+        self.cave != [2; 4]
+    }
+
+    fn is_cave_floor(&self) -> bool {
+        self.empty != [true; 4] &&
+        self.cave == [2; 4]
+    }
+
+    fn push_terrain_code(&self, s: &mut String) {
+        for i in 0 .. 4 {
+            s.push(self.terrain[i]);
+        }
+    }
+
+    fn push_empty_code(&self, s: &mut String) {
+        for i in 0 .. 4 {
+            s.push(if self.empty[i] { '1' } else { '0' });
+        }
+    }
+
+    fn push_cave_code(&self, s: &mut String) {
+        for i in 0 .. 4 {
+            s.push(match self.cave[i] {
+               0 => '0',
+               1 => '1',
+               2 => '2',
+               _ => unreachable!(),
+            });
+        }
+    }
+
+    fn name(&self) -> String {
+        let mut s = String::new();
+        s.push_str("terrain/");
+
+        self.push_terrain_code(&mut s);
+
+        if self.has_empty() {
+            s.push_str("/e");
+            self.push_empty_code(&mut s);
+        }
+
+        if self.has_cave() {
+            s.push_str("/c");
+            self.push_cave_code(&mut s);
+        }
+
+        s
+    }
+
+    fn cave_z1_name(&self) -> String {
+        let mut s = String::new();
+        s.push_str("cave_z1/");
+        self.push_cave_code(&mut s);
+        s
+    }
+
+    fn ramp_z0_name(&self, x: i32, y: i32) -> String {
+        let mut s = format!("ramp/xy{}{}/z0/", x, y);
+        self.push_terrain_code(&mut s);
+        s.push_str("/c");
+        self.push_cave_code(&mut s);
+        s
+    }
+
+    fn ramp_z1_name(&self, x: i32, y: i32) -> String {
+        let mut s = format!("ramp/xy{}{}/z1/c", x, y);
+        self.push_cave_code(&mut s);
+        s
     }
 }
-
-fn get_cell_keys(summ: &ChunkSummary, pos: V2, layer: u8) -> (u8, u8) {
-    let mut acc_cave = 0;
-    let mut acc_top = 0;
-    for &(dx, dy) in &[(0, 1), (1, 1), (1, 0), (0, 0)] {
-        let val = get_vertex_key(summ, pos + V2::new(dx, dy), layer);
-        acc_cave = acc_cave * 3 + val;
-        acc_top = acc_top * 2 + (val != 1) as u8;
-    }
-    (acc_cave, acc_top)
-}
-
-const OUTSIDE_KEY: u8 = 1 + 1*3 + 1*3*3 + 1*3*3*3;
-const CAVE_KEY: u8 = 2 + 2*3 + 2*3*3 + 2*3*3*3;

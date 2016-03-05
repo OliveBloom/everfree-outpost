@@ -81,25 +81,54 @@ def mk_block_data(pack, data_dir):
 
     return blocks
 
-TemplateDef = namedtuple('TemplateDef',
-        ('id', 'layer', 'size', 'display_size', 'sheet_idx', 'offset'))
+TemplateDef = namedtuple('TemplateDef', ('id', 'layer', 'size', 'image'))
+
+def part_bounds(part, verts):
+    min_x = 1024
+    max_x = 0
+    min_y = 1024
+    max_y = 0
+    for i in range(part['vert_idx'], part['vert_idx'] + part['vert_count']):
+        x, y, z = verts[i * 3 : (i + 1) * 3]
+        min_x = min(min_x, x)
+        max_x = max(max_x, x)
+        min_y = min(min_y, y - z)
+        max_y = max(max_y, y - z)
+    return (min_x, max_x, min_y, max_y)
+
 
 def mk_template_data(pack, data_dir):
     templates = {}
     server = data_dir.get('structures.json')
     client = pack.get('template_defs')
+    parts = pack.get('template_part_defs')
+    verts = pack.get('template_vert_defs')
+    sheet = pack.get('structures0')
 
     assert len(server) == len(client), \
             'mismatch between server and client template data'
 
     for i in range(len(server)):
-        name = server[i]['name']
-        layer = client[i]['layer']
-        size = tuple(client[i]['size'])
-        disp_size = tuple(client[i]['display_size'])
-        sheet_idx = client[i]['sheet']
-        offset = tuple(client[i]['offset'])
-        templates[name] = TemplateDef(i, layer, size, disp_size, sheet_idx, offset)
+        s = server[i]
+        c = client[i]
+        name = s['name']
+        layer = c['layer']
+        size = tuple(c['size'])
+
+        # TODO: update for multipart structures
+        #disp_size = tuple(client[i]['display_size'])
+        #sheet_idx = client[i]['sheet']
+        #offset = tuple(client[i]['offset'])
+        sx, sy, sz = size
+        img = Image.new('RGBA', (sx * TILE_SIZE, (sy + sz) * TILE_SIZE))
+        for j in range(c['part_idx'], c['part_idx'] + c['part_count']):
+            p = parts[j]
+            x0, x1, y0, y1 = part_bounds(p, verts)
+            ox, oy = p['offset']
+            p_img = sheet.crop((ox + x0, oy + y0, ox + x1, oy + y1))
+            img.paste(p_img, (x0, y0 + sz * TILE_SIZE))
+
+        templates[name] = TemplateDef(i, layer, size, img)
 
     return templates
 
@@ -156,10 +185,9 @@ def slice_block(data, x, y, z, name):
 
 def slice_structure(data, structure):
     info = data.templates[structure.template]
-    sheet = data.client.get('structures%d' % info.sheet_idx)
+    img = info.image
 
-    ox, oy = info.offset
-    dx, dy = info.display_size
+    dx, dy = img.size
     assert dx % TILE_SIZE == 0 and dy % TILE_SIZE == 0, \
             "can't handle structures that take up a non-whole number of tiles"
 
@@ -173,15 +201,15 @@ def slice_structure(data, structure):
         slices.append(Slice(x, y + z, y - z + adj, info.layer, img))
 
     for i in range(dy // TILE_SIZE):
-        src_y = oy + dy - (i + 1) * TILE_SIZE
-        img = sheet.crop((ox, src_y, ox + dx, src_y + TILE_SIZE))
+        src_y = dy - (i + 1) * TILE_SIZE
+        slice_img = img.crop((0, src_y, dx, src_y + TILE_SIZE))
         if i < sz:
             # Front face of the structure
-            add(pos.x, pos.y + sy - 1, pos.z + i, 0, img)
+            add(pos.x, pos.y + sy - 1, pos.z + i, 0, slice_img)
         else:
             # Top face of the structure
             j = i - sz
-            add(pos.x, pos.y + sy - (j + 1) , pos.z + sz - 1, -1, img)
+            add(pos.x, pos.y + sy - (j + 1) , pos.z + sz - 1, -1, slice_img)
 
     return slices
 

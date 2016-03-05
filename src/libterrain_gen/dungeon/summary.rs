@@ -1,12 +1,10 @@
 use std::fs::File;
 use std::io::{self, Write};
 use std::mem;
-use std::ptr;
 
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
 use libserver_util::{BitSlice, Convert, ReadExact};
-use libserver_util::{transmute_slice, transmute_slice_mut};
 use libserver_util::{write_vec, read_vec};
 use libserver_util::bytes::*;
 
@@ -89,7 +87,7 @@ impl Summary for PlaneSummary {
 
         try!(f.write_bytes(self.vaults.len().to_u32().unwrap()));
         for v in &self.vaults {
-            v.write_to(&mut f);
+            try!(v.write_to(&mut f));
         }
 
         Ok(())
