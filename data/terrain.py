@@ -603,13 +603,17 @@ def init():
     grass_top = chop_terrain(tiles('cave-top-grass.png'), tiles('cave-top-grass-cross.png'))
     for code in iter_codes(2):
         d = describe(tuple(x == 0 for x in code))
-        floor_bb.new('gggg/e%s' % ''.join(str(x) for x in code)).bottom(grass_top[d])
+        blk = floor_bb.new('gggg/e%s' % ''.join(str(x) for x in code)).bottom(grass_top[d])
+        if code == (1, 1, 1, 1):
+            blk.shape('empty')
 
     # Cave top (for ramp tops inside caves)
     cave_top = chop_terrain(tiles('lpc-cave-top2.png'), tiles('lpc-cave-top2-cross.png'))
     for code in iter_codes(2):
         d = describe(tuple(x == 0 for x in code))
-        floor_bb.new('cccc/e%s' % ''.join(str(x) for x in code)).bottom(cave_top[d])
+        blk = floor_bb.new('cccc/e%s' % ''.join(str(x) for x in code)).bottom(cave_top[d])
+        if code == (1, 1, 1, 1):
+            blk.shape('empty')
 
     # Terrain with cave walls
     for floor in iter_terrain_floor(collect_layers('gc')):
@@ -638,7 +642,7 @@ def init():
             ))
 
         clear = name in ('1111', '2222')
-        BLOCK.new('cave_z1/%s' % name) \
+        BLOCK.new('cave_z1/c%s' % name) \
                 .shape('floor' if clear else 'solid') \
                 .top(top).front(front)
 

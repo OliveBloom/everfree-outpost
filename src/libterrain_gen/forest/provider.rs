@@ -278,6 +278,7 @@ impl TileSpec {
     fn variant_zero_rate(&self) -> i32 {
         match self.terrain[0] {
             'w' | 'l' => 100,
+            'g' => 2,
             _ => 10,
         }
     }
@@ -340,7 +341,7 @@ impl TileSpec {
 
     fn cave_z1_name(&self) -> String {
         let mut s = String::new();
-        s.push_str("cave_z1/");
+        s.push_str("cave_z1/c");
         self.push_cave_code(&mut s);
         s
     }

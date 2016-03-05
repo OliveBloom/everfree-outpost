@@ -233,9 +233,14 @@ pub fn set_cave<'d, F>(wf: &mut F,
                        pid: PlaneId,
                        center: V3) -> world::OpResult<bool>
         where F: world::Fragment<'d> {
+    if !is_plain_cave(&unwrap!(wf.world().get_plane(pid)), center) {
+        return Ok(false);
+    }
+
     let mut mined = false;
     {
         let mut p = unwrap!(wf.get_plane_mut(pid));
+
         let (T, F) = (true, false);
         mined |= try!(set_cave_single(&mut p, center + V3::new( 0,  0, 0), [T,T,T,T]));
 
@@ -260,57 +265,73 @@ pub fn set_cave<'d, F>(wf: &mut F,
     Ok(mined)
 }
 
+fn is_plain_cave(p: &ObjectRef<world::Plane>,
+                 pos: V3) -> bool {
+    let block_data = &p.world().data().block_data;
+    let tc = unwrap_or!(p.get_terrain_chunk(pos.reduce().div_floor(scalar(CHUNK_SIZE))),
+                        return false);
+    let idx = tc.bounds().index(pos);
+    let name = block_data.name(tc.blocks()[idx]);
+    info!("checking for cave-ness: {}", name);
+
+    let mut iter = name.split("/");
+
+    if unwrap_or!(iter.next(), return false) != "terrain" {
+        return false;
+    }
+    if unwrap_or!(iter.next(), return false) != "cccc" {
+        return false;
+    }
+
+    let last = unwrap_or!(iter.next(), return false);
+    if last.len() != 5 || !last.starts_with("c") {
+        return false;
+    }
+
+    if iter.next().is_some() {
+        return false;
+    }
+
+    true
+}
+
 pub fn set_cave_single<'a, 'd, F>(p: &mut ObjectRefMut<'a, 'd, world::Plane, F>,
                                   pos: V3,
                                   set_corners: [bool; 4]) -> world::OpResult<bool>
         where F: world::Fragment<'d> {
     let block_data = &p.world().data().block_data;
     let mut tc = unwrap!(p.get_terrain_chunk_mut(pos.reduce().div_floor(scalar(CHUNK_SIZE))));
-    let idx = tc.bounds().index(pos);
-    let old_name = block_data.name(tc.blocks()[idx]);
 
-    let cave_key_str;
-    let floor_type;
-    {
-        // Match against the pattern: cave/<key>/z0/<floor_type>
-        // We `return Ok(false)` if this fails anywhere, since that just means the player is trying
-        // to mine the wrong type of block.
-        let mut iter = old_name.split("/");
-        const BAIL: world::OpResult<bool> = Ok(false);
-        if unwrap_or!(iter.next(), return BAIL) != "cave" {
-            return BAIL;
+    // z0 part
+    for z in 0 .. 2 {
+        let idx = tc.bounds().index(pos + V3::new(0, 0, z));
+        let name = block_data.name(tc.blocks()[idx]);
+        let mut new_name = String::new();
+        for part in name.split("/") {
+            if new_name.len() > 0 {
+                new_name.push('/')
+            }
+            if part.len() == 5 && part.starts_with("c") {
+                info!("    found cave code part: {}", part);
+                new_name.push('c');
+                for (c, &set) in part[1..].chars().zip(set_corners.iter()) {
+                    let new_c = if set && c == '0' { '2' } else { c };
+                    new_name.push(new_c);
+                }
+            } else {
+                new_name.push_str(part);
+            }
         }
-        cave_key_str = unwrap_or!(iter.next(), return BAIL);
-        if unwrap_or!(iter.next(), return BAIL) != "z0" {
-            return BAIL;
+        info!("  replace {} with {}", name, new_name);
+        if name == &new_name {
+            return Ok(false);
         }
-        floor_type = unwrap_or!(iter.next(), return BAIL);
-        if iter.next().is_some() {
-            return BAIL;
+        if let Some(block_id) = block_data.find_id(&new_name) {
+            tc.blocks_mut()[idx] = block_id;
+        } else {
+            warn!("no such block: {:?} (replacing {:?})", new_name, name);
         }
     }
-    // After this, we use `unwrap!` because the only blocks matching the pattern should be ones
-    // with a properly constructed name.
 
-    let old_key: u8 = unwrap!(FromStr::from_str(cave_key_str).ok());
-    let mut mul = 1;
-    let mut new_key = 0;
-    for &set in &set_corners {
-        let old_val = old_key / mul % 3;
-        let new_val = if set && old_val == 0 { 2 } else { old_val };
-        new_key += new_val * mul;
-        mul *= 3;
-    }
-
-    if new_key == old_key {
-        return Ok(false);
-    }
-
-    let z0_idx = idx;
-    let z1_idx = tc.bounds().index(pos + V3::new(0, 0, 1));
-    tc.blocks_mut()[z0_idx] = unwrap!(block_data.find_id(
-            &format!("cave/{}/z0/{}", new_key, floor_type)));
-    tc.blocks_mut()[z1_idx] = unwrap!(block_data.find_id(
-            &format!("cave/{}/z1", new_key)));
     Ok(true)
 }
