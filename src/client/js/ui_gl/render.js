@@ -1,6 +1,7 @@
 var ItemDef = require('data/items').ItemDef;
 var G = require('graphics/glutil');
 var SB = require('graphics/shaderbuilder');
+var TILE_SIZE = require('data/chunk').TILE_SIZE;
 
 /** @constructor */
 function UIRenderContext(gl, assets) {
@@ -34,7 +35,7 @@ function makeUIShaders(gl, assets) {
     s.blit = ctx.start('ui_blit.vert', 'ui_blit.frag')
         .uniformVec2('screenSize')
         .uniformVec2('sheetSize')
-        .attributes(new Attributes(8)
+        .attributes(new SB.Attributes(8)
                 .field(0, gl.SHORT, 2, 'source')
                 .field(4, gl.SHORT, 2, 'dest'))
         .texture('sheet', null)
@@ -104,7 +105,7 @@ UIRenderContext.prototype.render = function(root, size, fb) {
 };
 
 
-/** UIRenderBuffers */
+/** @constructor */
 function UIRenderBuffers() {
     this.ui_atlas = new UIBuffer();
     this.items = new UIBuffer();
