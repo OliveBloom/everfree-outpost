@@ -1,5 +1,3 @@
-var Config = require('config').Config;
-var ItemDef = require('data/items').ItemDef;
 var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
 

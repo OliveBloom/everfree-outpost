@@ -2,7 +2,7 @@ var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
 
 var Hotbar = require('ui_gl/hotbar').Hotbar;
-var TestWidget = require('ui_gl/dialog').DialogGL;
+var TestWidget = require('ui_gl/inventory').ItemSlotGL;
 
 
 /** @constructor */
@@ -15,8 +15,9 @@ function GameUI() {
     this.addChild(this.fps);
 
     this.test = new TestWidget();
-    this.test.setContent(new Hotbar());
-    this.test.setTitle('hello');
+    this.test.setItem(1);
+    this.test.setQuantity(2);
+    this.test.setActive(2);
     this.addChild(this.test);
 }
 GameUI.prototype = Object.create(W.Widget.prototype);
