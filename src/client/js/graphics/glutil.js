@@ -10,18 +10,34 @@ function hasExtension(gl, name) {
 exports.hasExtension = hasExtension;
 
 
-function compile_shader(gl, type, src) {
+/** @constructor */
+function File(name, src) {
+    this.name = name;
+    this.src = src;
+}
+exports.File = File;
+
+function assetFile(assets, name) {
+    return new File(name, assets[name]);
+}
+exports.assetFile = assetFile;
+
+function compile_shader(gl, type, file) {
     var shader = gl.createShader(type);
 
-    gl.shaderSource(shader, src);
+    gl.shaderSource(shader, file.src);
     gl.compileShader(shader);
     //var hlsl = gl.getExtension('WEBGL_debug_shaders').getTranslatedShaderSource(shader);
     //console.log(hlsl);
 
     var info = gl.getShaderInfoLog(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        var lines = info.split('\n');
+        for (var i = 0; i < lines.length; ++i) {
+            window.onerror(lines[i], file.name, 0, 0, null);
+        }
         console.log('SHADER ERRORS:\n' + info)
-        console.log('SOURCE:\n' + src);
+        console.log('SOURCE:\n' + file.src);
         return null;
     } else if (info != '') {
         console.log('Shader warnings:\n' + info);
@@ -31,9 +47,9 @@ function compile_shader(gl, type, src) {
 }
 
 /** @constructor */
-function Program(gl, vert_src, frag_src) {
-    var vert = compile_shader(gl, gl.VERTEX_SHADER, vert_src);
-    var frag = compile_shader(gl, gl.FRAGMENT_SHADER, frag_src);
+function Program(gl, vert_file, frag_file) {
+    var vert = compile_shader(gl, gl.VERTEX_SHADER, vert_file);
+    var frag = compile_shader(gl, gl.FRAGMENT_SHADER, frag_file);
 
     this.gl = gl;
 
@@ -42,7 +58,12 @@ function Program(gl, vert_src, frag_src) {
     gl.attachShader(this.program, frag);
     gl.linkProgram(this.program);
     if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
-        console.log('program error', gl.getProgramInfoLog(this.program));
+        var info = gl.getProgramInfoLog(this.program);
+        var lines = info.split('\n');
+        for (var i = 0; i < lines.length; ++i) {
+            window.onerror(lines[i], vert_file.name + '+' + frag_file.name, 0, 0, null);
+        }
+        console.log('program error', info);
         return null;
     }
 
@@ -116,7 +137,7 @@ Program.prototype.setUniform = function(name, type, vs) {
 };
 
 
-function buildPrograms(gl, assets, vert_src, frag_src, output_buffers, def_map) {
+function buildPrograms(gl, assets, vert_file, frag_file, output_buffers, def_map) {
     var defs = '';
 
     var debug_def_map = Config.debug_shader_defs.get();
@@ -131,22 +152,26 @@ function buildPrograms(gl, assets, vert_src, frag_src, output_buffers, def_map) 
     }
 
 
-    vert_src = vert_src.replace(/^#include "(.*)"$/m, function(_, file) {
+    vert_src = vert_file.src.replace(/^#include "(.*)"$/m, function(_, file) {
         return assets[file];
     });
-    frag_src = frag_src.replace(/^#include "(.*)"$/m, function(_, file) {
+    frag_src = frag_file.src.replace(/^#include "(.*)"$/m, function(_, file) {
         return assets[file];
     });
 
 
     if (hasExtension(gl, 'WEBGL_draw_buffers')) {
-        return [new Program(gl, defs + vert_src, defs + frag_src)];
+        vert_file = new File(vert_file.name, defs + vert_src);
+        frag_file = new File(frag_file.name, defs + frag_src);
+        return [new Program(gl, vert_file, frag_file)];
     } else {
         var programs = new Array(output_buffers);
         for (var i = 0; i < output_buffers; ++i) {
             var define = '#define OUTPUT_IDX ' + i + '\n';
             var prefix = defs + define;
-            programs[i] = new Program(gl, prefix + vert_src, prefix + frag_src);
+            vert_file = new File(vert_file.name + '[' + i + ']', prefix + vert_src);
+            frag_file = new File(frag_file.name + '[' + i + ']', prefix + frag_src);
+            programs[i] = new Program(gl, vert_file, frag_file);
         }
         return programs;
     }

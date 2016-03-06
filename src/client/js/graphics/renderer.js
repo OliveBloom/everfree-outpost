@@ -9,7 +9,6 @@ var TemplateDef = require('data/templates').TemplateDef;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
 var TILE_SIZE = require('data/chunk').TILE_SIZE;
 var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
-var buildPrograms = require('graphics/glutil').buildPrograms;
 var Texture = require('graphics/glutil').Texture;
 var Buffer = require('graphics/glutil').Buffer;
 var Framebuffer = require('graphics/glutil').Framebuffer;

@@ -1,3 +1,4 @@
+var assetFile = require('graphics/glutil').assetFile;
 var Program = require('graphics/glutil').Program;
 var Buffer = require('graphics/glutil').Buffer;
 
@@ -12,8 +13,8 @@ var TILE_SIZE = require('data/chunk').TILE_SIZE;
 function Cursor(gl, assets, radius) {
     this.gl = gl;
 
-    var vert = assets['cursor.vert'];
-    var frag = assets['cursor.frag'];
+    var vert = assetFile(assets, 'cursor.vert');
+    var frag = assetFile(assets, 'cursor.frag');
     var program = new Program(gl, vert, frag);
 
     var buffer = new Buffer(gl);
