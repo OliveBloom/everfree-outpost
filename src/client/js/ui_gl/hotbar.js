@@ -4,6 +4,8 @@ var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
 
 
+var ITEM_BOX_COLORS = ['yellow', 'green', 'blue', 'red'];
+
 /** @constructor */
 function ItemBox() {
     W.Widget.call(this);
@@ -58,7 +60,7 @@ function makeQuantityString(x) {
 }
 
 ItemBox.prototype.render = function(buf, x, y) {
-    buf.drawUI(14 + 24 * this.color, 0, 24, 24, x, y);
+    buf.drawUI('hotbar-box-' + ITEM_BOX_COLORS[this.color], x, y);
     if (this.item_id != -1) {
         buf.drawItem(this.item_id, x + 4, y + 4);
     }
@@ -264,11 +266,11 @@ Hotbar.prototype.attachItems = function(inv) {
 };
 
 Hotbar.prototype.render = function(buf, x, y) {
-    buf.drawUI(0, 0, 14, 7, 
+    buf.drawUI('hotbar-cap-top',
             x + ((this._width - 14) / 2)|0, y);
-    buf.drawUI(0, 8, 14, 7, 
+    buf.drawUI('hotbar-cap-bottom',
             x + ((this._width - 14) / 2)|0, y + this._height - 7);
-    buf.drawUI(1, 7, 12, 1,
+    buf.drawUI('hotbar-bar',
             x + ((this._width - 12) / 2)|0,
             y + 7,
             12,

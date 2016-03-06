@@ -275,6 +275,7 @@ if __name__ == '__main__':
         data.font_stack('$b_data/fonts', ('name', 'hotbar')),
         data.day_night('$b_data/day_night.json', '$root/assets/misc/day_night_pixels.png'),
         data.server_json('$b_data/server.json'),
+        data.ui_atlas('$b_data', '$root/assets/ui_gl/png'),
         data.process(),
         data.pack(),
         data.credits('$b_data/credits.html'),

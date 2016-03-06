@@ -23,6 +23,11 @@ def rules(i):
             command = $python3 $root/src/gen/gen_day_night.py $in >$out
             description = GEN $out
 
+        rule gen_ui_atlas
+            command = $python3 $root/src/gen/gen_ui_atlas.py $in_dir $out_dir
+            description = GEN $out_dir/ui_atlas.png
+            depfile = $out_dir/ui_atlas.d
+
         rule gen_server_json
             command = $python3 $root/src/gen/gen_server_json.py >$out
             description = GEN $out
@@ -70,6 +75,14 @@ def day_night(out_json, src_img):
             | $root/src/gen/gen_day_night.py
     ''', **locals())
 
+def ui_atlas(out_dir, src_dir):
+    return template('''
+        build %out_dir/ui_atlas.png %out_dir/ui_atlas.json: gen_ui_atlas $
+            | $root/src/gen/gen_day_night.py %src_dir
+            in_dir = %src_dir
+            out_dir = %out_dir
+    ''', **locals())
+
 def process():
     data_files = ['%s_%s.json' % (f,s)
             for s in ('server', 'client')
@@ -92,6 +105,12 @@ def process():
     ''', **locals())
 
 def pack():
+    extra_data = (
+            'fonts.png', 'fonts_metrics.json',
+            'day_night.json',
+            'ui_atlas.png', 'ui_atlas.json',
+            )
+
     return template('''
         rule build_pack
             command = $python3 $root/mk/misc/make_pack.py $root $b_data $b_data/outpost.pack
@@ -100,7 +119,10 @@ def pack():
 
         build $b_data/outpost.pack: build_pack $
             | $root/mk/misc/make_pack.py $
-            || $b_data/stamp $b_data/fonts.png $b_data/day_night.json
+                %for name in extra_data
+                    $b_data/%{name} $
+                %end
+            || $b_data/stamp
     ''', **locals())
 
 def credits(out_path):

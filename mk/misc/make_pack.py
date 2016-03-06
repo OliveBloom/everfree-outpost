@@ -29,7 +29,7 @@ def main(src_dir, build_dir, out_file):
     add('image', 'fonts',       build('fonts.png'))
     add('url',   'items',       build('items.png'))
     add('image', 'items_img',   build('items.png'))
-    add('image', 'ui_atlas',    src('assets/ui/atlas.png'))
+    add('image', 'ui_atlas',    build('ui_atlas.png'))
 
     add('json', 'block_defs',           build('blocks_client.json'))
     add('json', 'item_defs',            build('items_client.json'))
@@ -42,6 +42,7 @@ def main(src_dir, build_dir, out_file):
     add('json', 'extra_defs',           build('extras_client.json'))
     add('json', 'fonts_metrics',        build('fonts_metrics.json'))
     add('json', 'day_night',            build('day_night.json'))
+    add('json', 'ui_atlas_parts',       build('ui_atlas.json'))
 
     add('text', 'sprite.vert',          src('assets/shaders/sprite.vert'))
     add('text', 'sprite.frag',          src('assets/shaders/sprite.frag'))

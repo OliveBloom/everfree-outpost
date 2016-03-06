@@ -9,7 +9,7 @@ function UIRenderContext(gl, assets) {
     this.assets = assets;
     this.shaders = makeUIShaders(gl, assets);
     this.textures = makeUITextures(gl, assets);
-    this.buffers = new UIRenderBuffers();
+    this.buffers = new UIRenderBuffers(assets['ui_atlas_parts']);
 }
 exports.UIRenderContext = UIRenderContext;
 
@@ -106,10 +106,12 @@ UIRenderContext.prototype.render = function(root, size, fb) {
 
 
 /** @constructor */
-function UIRenderBuffers() {
+function UIRenderBuffers(ui_parts) {
     this.ui_atlas = new UIBuffer();
     this.items = new UIBuffer();
     this.text = new UIBuffer();
+
+    this.ui_parts = ui_parts;
 }
 
 UIRenderBuffers.prototype.reset = function() {
@@ -128,7 +130,13 @@ function addQuad(buf, sx, sy, sw, sh, dx, dy, dw, dh) {
     buf.push(sx + sw, sy + sh, dx + dw, dy + dh);
 }
 
-UIRenderBuffers.prototype.drawUI = function(sx, sy, sw, sh, dx, dy, dw, dh) {
+UIRenderBuffers.prototype.drawUI = function(key, dx, dy, dw, dh) {
+    var part = this.ui_parts[key];
+    var sx = part['x'];
+    var sy = part['y'];
+    var sw = part['w'];
+    var sh = part['h'];
+
     if (dw == null) {
         dw = sw;
     }
