@@ -98,6 +98,31 @@ ColumnLayout.prototype.runLayout = function(owner, children) {
 
 
 /** @constructor */
+function PaddedPaneLayout(t, b, l, r) {
+    this.t = t;
+    this.b = b;
+    this.l = l;
+    this.r = r;
+}
+exports.PaddedPaneLayout = PaddedPaneLayout;
+
+PaddedPaneLayout.prototype.runLayout = function(owner, children) {
+    console.assert(children.length < 2, "PaddedPaneLayout requires exactly 0 or 1 children");
+
+    if (children.length == 1) {
+        var c = children[0];
+        c._x = this.l;
+        c._y = this.t;
+        owner._width = c._width + this.l + this.r;
+        owner._height = c._height + this.t + this.b;
+    } else {
+        owner._width = this.l + this.r;
+        owner._height = this.t + this.b;
+    }
+}
+
+
+/** @constructor */
 function Spacer(w, h) {
     Widget.call(this);
     this.layout = new FixedSizeLayout(w, h);

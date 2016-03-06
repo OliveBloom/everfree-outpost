@@ -41,6 +41,17 @@ function makeUIShaders(gl, assets) {
         .texture('sheet', null)
         .finish();
 
+    s.blit_tiled = ctx.start('ui_blit_tiled.vert', 'ui_blit_tiled.frag')
+        .uniformVec2('screenSize')
+        .uniformVec2('sheetSize')
+        .attributes(new SB.Attributes(16)
+                .field(0, gl.UNSIGNED_SHORT, 2, 'srcPos')
+                .field(4, gl.UNSIGNED_SHORT, 2, 'srcSize')
+                .field(8, gl.SHORT, 2, 'srcStepPx')
+                .field(12, gl.SHORT, 2, 'dest'))
+        .texture('sheet', null)
+        .finish();
+
     return s;
 }
 
@@ -72,8 +83,8 @@ UIRenderContext.prototype.render = function(root, size, fb) {
 
     var this_ = this;
     fb.use(function(fb_idx) {
-        this_.shaders.blit.draw(fb_idx,
-                0, this_.buffers.ui_atlas.length / 4,
+        this_.shaders.blit_tiled.draw(fb_idx,
+                0, this_.buffers.ui_atlas.length / 8,
                 {
                     'screenSize': size,
                     'sheetSize': [256, 256],
@@ -143,9 +154,15 @@ UIRenderBuffers.prototype.drawUI = function(key, dx, dy, dw, dh) {
     if (dh == null) {
         dh = sh;
     }
-    addQuad(this.ui_atlas,
-            sx, sy, sw, sh,
-            dx, dy, dw, dh);
+
+    // Provide additional vertex data to allow for tiling.
+    this.ui_atlas.push(sx, sy, sw, sh,  0,  0,  dx + 0,  dy + 0);
+    this.ui_atlas.push(sx, sy, sw, sh,  0,  dh, dx + 0,  dy + dh);
+    this.ui_atlas.push(sx, sy, sw, sh,  dw, 0,  dx + dw, dy + 0);
+
+    this.ui_atlas.push(sx, sy, sw, sh,  dw, 0,  dx + dw, dy + 0);
+    this.ui_atlas.push(sx, sy, sw, sh,  0,  dh, dx + 0,  dy + dh);
+    this.ui_atlas.push(sx, sy, sw, sh,  dw, dh, dx + dw, dy + dh);
 };
 
 UIRenderBuffers.prototype.drawItem = function(id, dx, dy) {

@@ -271,9 +271,9 @@ Hotbar.prototype.render = function(buf, x, y) {
     buf.drawUI('hotbar-cap-bottom',
             x + ((this._width - 14) / 2)|0, y + this._height - 7);
     buf.drawUI('hotbar-bar',
-            x + ((this._width - 12) / 2)|0,
+            x + ((this._width - 10) / 2)|0,
             y + 7,
-            12,
+            10,
             this._height - 7 * 2);
 
 };
