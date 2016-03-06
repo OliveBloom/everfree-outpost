@@ -152,10 +152,10 @@ function buildPrograms(gl, assets, vert_file, frag_file, output_buffers, def_map
     }
 
 
-    vert_src = vert_file.src.replace(/^#include "(.*)"$/m, function(_, file) {
+    var vert_src = vert_file.src.replace(/^#include "(.*)"$/m, function(_, file) {
         return assets[file];
     });
-    frag_src = frag_file.src.replace(/^#include "(.*)"$/m, function(_, file) {
+    var frag_src = frag_file.src.replace(/^#include "(.*)"$/m, function(_, file) {
         return assets[file];
     });
 
