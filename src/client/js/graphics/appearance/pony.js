@@ -2,7 +2,7 @@ var Config = require('config').Config;
 var Sprite = require('graphics/sprite').Sprite;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
 var glutil = require('graphics/glutil');
-var named = require('graphics/draw/named');
+var nametag = require('graphics/nametag');
 var sb = require('graphics/shaderbuilder');
 
 var AttachSlotDef = require('data/attachments').AttachSlotDef;
@@ -16,7 +16,7 @@ var COLOR_RAMP = [0x44, 0x88, 0xcc, 0xff];
 /** @constructor */
 function PonyAppearanceClass(gl, assets, shader_defs) {
     this._name_tex = new glutil.Texture(gl);
-    this._name_buf = new named.NameBuffer(assets);
+    this._name_buf = new nametag.NameBuffer(assets);
 
     var shaders = makePonyShaders(gl, assets, this._name_tex, shader_defs);
     this._obj = shaders.pony;
@@ -95,7 +95,7 @@ function makePonyShaders(gl, assets, name_tex, shader_defs) {
         .texture('cavernTex')
         .finish();
     shaders.name.setUniformValue('sheetSize',
-            [named.NAME_BUFFER_WIDTH, named.NAME_BUFFER_HEIGHT]);
+            [nametag.NAME_BUFFER_WIDTH, nametag.NAME_BUFFER_HEIGHT]);
 
     return shaders;
 }
@@ -146,8 +146,8 @@ PonyAppearanceClass.prototype.draw3D = function(fb_idx, data, sprite) {
             // center the name at a reasonable height.
             'pos': [sprite.ref_x, sprite.ref_y, sprite.ref_z + 90 - 22],
             'base': [off.x, off.y],
-            'size': [named.NAME_WIDTH, named.NAME_HEIGHT],
-            'anchor': [named.NAME_WIDTH / 2, named.NAME_HEIGHT],
+            'size': [nametag.NAME_WIDTH, nametag.NAME_HEIGHT],
+            'anchor': [nametag.NAME_WIDTH / 2, nametag.NAME_HEIGHT],
         };
         this._name_obj.draw(fb_idx, 0, 6, uniforms, {}, {
             'cavernTex': data.cavern_map.getTexture(),

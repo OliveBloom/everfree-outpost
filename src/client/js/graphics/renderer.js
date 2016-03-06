@@ -21,10 +21,6 @@ var GlObject = require('graphics/glutil').GlObject;
 var uniform = require('graphics/glutil').uniform;
 var attribute = require('graphics/glutil').attribute;
 
-//var Simple3D = require('graphics/draw/simple').Simple3D;
-//var Layered3D = require('graphics/draw/layered').Layered3D;
-//var Named3D = require('graphics/draw/named').Named3D;
-//var PonyOutline3D = require('graphics/draw/ponyoutline').PonyOutline3D;
 var PonyAppearanceClass = require('graphics/appearance/pony').PonyAppearanceClass;
 
 var TimeSeries = require('util/timeseries').TimeSeries;
