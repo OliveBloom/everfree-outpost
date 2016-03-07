@@ -8,6 +8,8 @@ function Widget() {
     this._width = null;
     this._height = null;
     this._damaged = false;
+    this._layoutDamaged = false;
+    this._listeners = {};
 }
 exports.Widget = Widget;
 
@@ -17,7 +19,7 @@ Widget.prototype.addChild = function(w) {
     }
     w.owner = this;
     this.children.push(w);
-    this.damage();
+    this.damageLayout();
 };
 
 Widget.prototype.removeChild = function(w) {
@@ -28,7 +30,47 @@ Widget.prototype.removeChild = function(w) {
     var index = this.children.indexOf(w);
     console.assert(index != -1, "child widget not found in this.children");
     this.children.splice(index, 1);
-    this.damage();
+    this.damageLayout();
+};
+
+Widget.prototype.addListener = function(name, func) {
+    var l = this._listeners[name];
+    if (l == null) {
+        this._listeners[name] = [func];
+    } else {
+        // Avoid duplicate listeners, like the real addEventListener does
+        if (l.indexOf(func) != -1) {
+            l.append(func);
+        }
+    }
+};
+
+Widget.prototype.removeListener = function(name, func) {
+    var l = this._listeners[name];
+    if (l == null) {
+        return;
+    }
+
+    var index = l.indexOf(func);
+    if (index == -1) {
+        return;
+    }
+    l.splice(index, 1);
+    if (l.length == 0) {
+        this._listeners[name] = null;
+    }
+};
+
+Widget.prototype._dispatch = function(name /* varargs */) {
+    var l = this._listeners[name];
+    if (l == null) {
+        return;
+    }
+
+    var args = Array.prototype.slice.call(arguments, 1);
+    for (var i = 0; i < l.length; ++i) {
+        l[i].apply(this, args);
+    }
 };
 
 Widget.prototype.runLayout = function() {
@@ -47,11 +89,24 @@ Widget.prototype.damage = function() {
     }
 };
 
+Widget.prototype.damageLayout = function() {
+    if (!this._layoutDamaged) {
+        this._layoutDamaged = true;
+        if (this.owner != null) {
+            this.owner.damageLayout();
+        }
+    }
+};
+
 Widget.prototype.render = function(buffers) {
 };
 
 Widget.prototype.calcSize = function(w, h) {
     // TODO: not sure what a reasonable default is here
+};
+
+Widget.prototype.onKey = function(evt) {
+    return false;
 };
 
 

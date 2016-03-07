@@ -27,6 +27,10 @@ DialogBody.prototype.setContent = function(content) {
     }
 };
 
+DialogBody.prototype.hasContent = function() {
+    return this.content != null;
+};
+
 var DIALOG_BORDER_IMG_SIZE = {
     t: 8,
     b: 8,
@@ -63,6 +67,12 @@ DialogBody.prototype.render = function(buf, x, y) {
             x + w - B.r, y + h - B.b,       B.r, B.b);
     buf.drawUI('dialog-body-sw',
             x, y + h - B.b,                 B.l, B.b);
+};
+
+DialogBody.prototype.onKey = function(evt) {
+    if (this.content != null) {
+        return this.content.onKey(evt);
+    }
 };
 
 
@@ -135,9 +145,12 @@ DialogGL.prototype.setTitle = function(text) {
     this.title.setText(text);
 };
 
+DialogGL.prototype.hasContent = function() {
+    return this.body.hasContent();
+};
+
 DialogGL.prototype.runLayout = function() {
     this.body.runLayout();
-    this.body._width += 60; // HACK
     this.title.calcSize(this.body._width, 0);
     this.title.runLayout();
 
@@ -161,4 +174,8 @@ DialogGL.prototype.render = function(buf, x, y) {
     buf.drawUI('dialog-spacer',
             x + spacer_x, y + this.title._height - 2,
             spacer_width, null);
+};
+
+DialogGL.prototype.onKey = function(evt) {
+    return this.body.onKey(evt);
 };

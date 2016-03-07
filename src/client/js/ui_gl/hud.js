@@ -1,24 +1,25 @@
 var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
+var old_widget = require('ui/widget');
 
 var Hotbar = require('ui_gl/hotbar').Hotbar;
-var TestWidget = require('ui_gl/inventory').ItemSlotGL;
+var DialogGL = require('ui_gl/dialog').DialogGL;
+var TestWidget = require('ui_gl/inventory').InventoryGrid;
 
 
 /** @constructor */
-function GameUI() {
+function GameUI(keyboard) {
     W.Widget.call(this);
+
+    this.keyboard = keyboard;
+
     this.hotbar = new Hotbar();
     this.fps = new FPSDisplay();
+    this.dialog = new DialogGL();
 
     this.addChild(this.hotbar);
     this.addChild(this.fps);
-
-    this.test = new TestWidget();
-    this.test.setItem(1);
-    this.test.setQuantity(2);
-    this.test.setActive(2);
-    this.addChild(this.test);
+    // dialog is added/removed depending on visibility
 }
 GameUI.prototype = Object.create(W.Widget.prototype);
 GameUI.prototype.constructor = GameUI;
@@ -30,6 +31,34 @@ GameUI.prototype.calcSize = function(w, h) {
         this._height = h;
         this.runLayout();
     }
+};
+
+GameUI.prototype.showDialog = function(content) {
+    if (this.dialog.hasContent()) {
+        this.hideDialog();
+    }
+    this.dialog.setContent(content);
+    this.addChild(this.dialog);
+
+    var this_ = this;
+    this.keyboard.pushHandler(function(down, evt) {
+        var widget_evt = new old_widget.WidgetKeyEvent(down, evt);
+        if (down) {
+            var handled = this_.dialog.onKey(widget_evt);
+            return handled && !widget_evt.useDefault;
+        } else {
+            return true;
+        }
+    });
+};
+
+GameUI.prototype.hideDialog = function() {
+    if (this.dialog.hasContent()) {
+        this.dialog.setContent(null);
+        this.removeChild(this.dialog);
+    }
+
+    this.keyboard.popHandler();
 };
 
 GameUI.prototype.runLayout = function() {
@@ -44,9 +73,11 @@ GameUI.prototype.runLayout = function() {
     this.fps._x = this._width - 1;
     this.fps._y = 1;
 
-    this.test.runLayout();
-    this.test._x = 100;
-    this.test._y = 50;
+    if (this.dialog.hasContent()) {
+        this.dialog.runLayout();
+        this.dialog._x = ((this._width - this.dialog._width) / 2)|0;
+        this.dialog._y = ((this._height - this.dialog._height) / 2)|0;
+    }
 };
 
 

@@ -56,10 +56,21 @@ function makeUIShaders(gl, assets) {
 }
 
 UIRenderContext.prototype.updateBuffers = function(root) {
+    if (root._layoutDamaged) {
+        root.runLayout();
+        this._walkUpdateLayout(root);
+    }
     if (root._damaged) {
         this.buffers.reset();
         this._walkUpdateBuffers(root, 0, 0);
     }
+};
+
+UIRenderContext.prototype._walkUpdateLayout = function(w) {
+    // Don't need to runLayout() for each widget since the root runLayout()
+    // operates recursively.
+    w._layoutDamaged = false;
+    w.damage();
 };
 
 UIRenderContext.prototype._walkUpdateBuffers = function(w, x, y) {
