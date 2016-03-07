@@ -226,9 +226,10 @@ Hotbar.prototype.attachItems = function(inv) {
     }
     this.item_inv = inv;
 
+    this._updateItems();
+
     var this_ = this;
     inv.onUpdate(function(idx, old_item, new_item) {
-        // TODO: might be slow (O(N^2)) at startup time
         this_._updateItems();
     });
     // TODO: gray out items when quantity is zero.
