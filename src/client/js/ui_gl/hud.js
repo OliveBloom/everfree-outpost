@@ -33,11 +33,12 @@ GameUI.prototype.calcSize = function(w, h) {
     }
 };
 
-GameUI.prototype.showDialog = function(content) {
+GameUI.prototype.showDialog = function(content, title) {
     if (this.dialog.hasContent()) {
         this.hideDialog();
     }
     this.dialog.setContent(content);
+    this.dialog.setTitle(title || '');
     this.addChild(this.dialog);
 
     var this_ = this;

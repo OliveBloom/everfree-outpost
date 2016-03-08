@@ -107,10 +107,10 @@ DialogTitle.prototype.render = function(buf, x, y) {
             x + DIALOG_TITLE_SIDE_WIDTH, y,
             this._width - 2 * DIALOG_TITLE_SIDE_WIDTH, null);
 
-    var fm = FontMetrics.by_name['name'];
+    var fm = FontMetrics.by_name['title'];
     var text_width = fm.measureWidth(this.text);
     var out_x = x + Math.floor((this._width - text_width) / 2);
-    var out_y = y + Math.floor((this._height - fm.height) / 2);
+    var out_y = y + 1 + Math.floor((this._height - fm.height) / 2);
     fm.drawString(this.text, function(sx, sy, w, h, dx, dy) {
         buf.drawChar(sx, sy, w, h, out_x + dx, out_y + dy);
     });

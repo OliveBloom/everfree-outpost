@@ -635,7 +635,7 @@ function setupKeyHandler() {
                     }
                     var inv = item_inv.clone();
                     var ui = new InventoryUIGL(inv);
-                    ui_gl.showDialog(ui);
+                    ui_gl.showDialog(ui, 'Inventory');
                     /*
                     ui.ontransfer = function(from_inv, from_slot, to_inv, to_slot, amount) {
                         conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
