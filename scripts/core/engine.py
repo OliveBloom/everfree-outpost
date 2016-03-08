@@ -191,6 +191,14 @@ class EntityProxy(ObjectProxy):
         check_type(stable_pid, StablePlaneId)
         self._eng.world_entity_teleport_stable_plane(self.id, stable_pid, pos)
 
+    def set_anim(self, anim_id):
+        # NB: uninterruptible activities are not fully supported yet.  The
+        # client doesn't get notified that inputs are disabled, and misbehaves.
+        self._eng.world_entity_set_activity_special(self.id, anim_id, True)
+
+    def clear_anim(self, anim_id):
+        self._eng.world_entity_set_activity_move(self.id)
+
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))
 

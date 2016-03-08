@@ -13,6 +13,7 @@ pub use self::types::{
     EntityAttachment,
     StructureAttachment,
     InventoryAttachment,
+    Activity,
     Motion,
 };
 pub use self::world::{EntitiesById, StructuresById, InventoriesById};
@@ -95,6 +96,7 @@ pub struct Entity {
     /// `plane` is `PLANE_LIMBO` and the plane with stable ID `stable_plane` is not loaded.
     plane: PlaneId,
 
+    activity: Activity,
     motion: Motion,
     anim: AnimId,
     facing: V3,
