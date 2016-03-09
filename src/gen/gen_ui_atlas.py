@@ -126,7 +126,6 @@ def main(src_dir, dest_dir):
     dep_str = ' \\\n    '.join(sorted(p.path for p in parts))
     with open(path('d'), 'w') as f:
         f.write('%s: \\\n    %s\n' % (path('png'), dep_str))
-        f.write('%s: \\\n    %s\n' % (path('json'), dep_str))
 
 if __name__ == '__main__':
     src_dir, dest_dir = sys.argv[1:]
