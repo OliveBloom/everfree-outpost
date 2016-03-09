@@ -39,7 +39,7 @@ class Image(object):
     def raw(self):
         return self._img
 
-    def modify(self, f, size=None, unit=None):
+    def modify(self, f, size=None, unit=None, desc=None):
         unit = t2(unit) if unit else self.unit
 
         if size is None:
@@ -50,7 +50,21 @@ class Image(object):
             px_y = size[1] * unit[1]
             px_size = (px_x, px_y)
 
-        new_img = self.raw().modify(f, size=px_size)
+        new_img = self.raw().modify(f, size=px_size, desc=desc)
+        return Image(img=new_img, unit=unit)
+
+    def fold(self, imgs, f, size=None, unit=None, desc=None):
+        unit = t2(unit) if unit else self.unit
+
+        if size is None:
+            px_size = self.raw().size
+        else:
+            size = t2(size)
+            px_x = size[0] * unit[0]
+            px_y = size[1] * unit[1]
+            px_size = (px_x, px_y)
+
+        new_img = self.raw().fold(tuple(i.raw() for i in imgs), f, size=px_size, desc=desc)
         return Image(img=new_img, unit=unit)
 
     def with_unit(self, unit):
@@ -174,12 +188,11 @@ class Anim(object):
         return self._frames[0].raw()
 
     def flatten(self):
-        w,h = self.px_size
-        out_w = w * self.length
-        layers = []
-        for i, img in enumerate(self._frames):
-            layers.append(img.pad((out_w, h), offset=(i * w, 0)))
-        return stack(layers)
+        w, h = self.px_size
+        new_img = CachedImage.sheet(
+                [(self._frames[i].raw(), (i * w, 0)) for i in range(self.length)],
+                (self.length * w, h))
+        return Image(img=new_img, unit=self.unit)
 
     def modify(self, *args, **kwargs):
         return self._map_frames('modify', args, kwargs)

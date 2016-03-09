@@ -84,6 +84,7 @@ def mk_hair_sheets(img, depth):
 
 
 def init():
+    return
     sprites = loader('sprites')
 
     group = pony_sprites.get_anim_group()

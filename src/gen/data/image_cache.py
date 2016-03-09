@@ -89,6 +89,11 @@ class CachedImage(object):
             desc = '%s.%s' % (f.__module__, f.__qualname__)
         return ModifiedImage(self, f, size or self.size, desc)
 
+    def fold(self, imgs, f, size=None, desc=None):
+        if desc is None:
+            desc = '%s.%s' % (f.__module__, f.__qualname__)
+        return FoldedImage(self, imgs, f, size or self.size, desc)
+
     def crop(self, bounds):
         return CroppedImage(self, bounds)
 
@@ -100,6 +105,17 @@ class CachedImage(object):
 
     def pad(self, size, offset):
         return PaddedImage(self, size, offset)
+
+    @staticmethod
+    def sheet(img_offsets, size=None):
+        if size is None:
+            w, h = 0, 0
+            for i, o in img_offsets:
+                w = max(w, i.size[0] + o[0])
+                h = max(h, i.size[1] + o[1])
+            size = (w, h)
+
+        return SheetImage(img_offsets, size)
 
     def get_bounds(self):
         b = self.compute(lambda i: i.getbbox())
@@ -146,6 +162,22 @@ class ModifiedImage(CachedImage):
     def _realize(self):
         img = self.orig.raw().copy()
         return self.f(img) or img
+
+class FoldedImage(CachedImage):
+    def __init__(self, base_img, imgs, f, size, desc):
+        code_file = sys.modules[f.__module__].__file__
+        code_time = _cached_mtime(code_file)
+
+        imgs = tuple(imgs)
+        super(FoldedImage, self).__init__(size, (desc, size, code_time), (base_img,) + imgs)
+        self.base_orig = base_img
+        self.origs = imgs
+        self.f = f
+
+    def _realize(self):
+        base = self.base_orig.raw().copy()
+        imgs = [o.raw().copy() for o in self.origs]
+        return self.f(base, *imgs) or base
 
 class CroppedImage(CachedImage):
     def __init__(self, img, bounds):
@@ -197,6 +229,21 @@ class PaddedImage(CachedImage):
         img = PIL.Image.new(orig_img.mode, self.size)
         img.paste(orig_img, self.offset, orig_img)
         return img
+
+class SheetImage(CachedImage):
+    def __init__(self, img_offsets, size):
+        imgs = tuple(i for i,o in img_offsets)
+        offsets = tuple(o for i,o in img_offsets)
+        super(SheetImage, self).__init__(size, (offsets,), imgs)
+
+        self.imgs = imgs
+        self.offsets = offsets
+
+    def _realize(self):
+        acc = PIL.Image.new('RGBA', self.size)
+        for i, o in zip(self.imgs, self.offsets):
+            acc.paste(i.raw(), o)
+        return acc
 
 
 WORKAROUND_0X0 = 'workaround-0x0-bug'
