@@ -72,7 +72,7 @@ impl<'d> Importer<'d> {
         i.import_from(self)
     }
 
-    pub fn import_iter<'a, I, It, R>(&self, it: It) -> R
+    pub fn import_iter<'a, I: 'a, It, R>(&self, it: It) -> R
             where I: Import,
                   It: Iterator<Item=&'a I>,
                   R: FromIterator<I> {
@@ -128,7 +128,7 @@ impl<'d> Importer<'d> {
         w.clients.set_stable_id(id, b.stable_id).unwrap();
         let c = &mut w.clients[id];
 
-        c.name = b.name.to_owned();
+        c.name = b.name.to_string();
         let pawn = self.import(&b.pawn);
         c.pawn = if pawn != Some(BAD_ENTITY_ID) { pawn } else { None };
 
@@ -171,7 +171,7 @@ impl<'d> Importer<'d> {
         w.planes.set_stable_id(id, b.stable_id).unwrap();
         let p = &mut w.planes[id];
 
-        p.name = b.name.to_owned();
+        p.name = b.name.to_string();
 
         p.saved_chunks = b.saved_chunks.iter()
                           .map(|&(k, v)| (k, v))

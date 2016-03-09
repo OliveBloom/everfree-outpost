@@ -6,8 +6,6 @@ use super::{Shape, ShapeSource};
 use super::{TILE_SIZE, CHUNK_SIZE};
 use super::StepCallback;
 
-use self::collision::*;
-
 
 pub struct GroundStep {
     size: V3,
@@ -55,57 +53,52 @@ impl StepCallback for GroundStep {
 }
 
 
-// Need to wrap Collision in a module so that the `allow(dead_code)` will get applied to the actual
-// methods.
-mod collision {
-    #![allow(dead_code)]
-    bitflags! {
-        flags Collision: u32 {
-            // Blocked by a physical obstacle.
-            const BLOCKED_X         = 1 <<  0,
-            const BLOCKED_Y         = 1 <<  1,
-            const BLOCKED_Z         = 1 <<  2,
-            const BLOCKED_MID       = 1 <<  3,
+bitflags! {
+    flags Collision: u32 {
+        // Blocked by a physical obstacle.
+        const BLOCKED_X         = 1 <<  0,
+        const BLOCKED_Y         = 1 <<  1,
+        const BLOCKED_Z         = 1 <<  2,
+        const BLOCKED_MID       = 1 <<  3,
 
-            // Blocked because there's no floor to stand on.
-            const NO_FLOOR_X        = 1 <<  4,
-            const NO_FLOOR_Y        = 1 <<  5,
-            const NO_FLOOR_MID      = 1 <<  7,
+        // Blocked because there's no floor to stand on.
+        const NO_FLOOR_X        = 1 <<  4,
+        const NO_FLOOR_Y        = 1 <<  5,
+        const NO_FLOOR_MID      = 1 <<  7,
 
-            // Blocked by a ramp discontinuity.
-            const DISCONT_X         = 1 <<  8,
-            const DISCONT_Y         = 1 <<  9,
-            const DISCONT_MID       = 1 << 11,
+        // Blocked by a ramp discontinuity.
+        const DISCONT_X         = 1 <<  8,
+        const DISCONT_Y         = 1 <<  9,
+        const DISCONT_MID       = 1 << 11,
 
-            // All blocking obstacles have Ramp shapes.
-            const BLOCKED_BY_RAMP   = 1 << 12,
-            // Position is at the top of a ramp.
-            const ON_RAMP           = 1 << 13,
-            // Position is 1 px above a ramp.
-            const ABOVE_RAMP        = 1 << 14,
-            // Position is 1 px above a floor.
-            const ABOVE_FLOOR       = 1 << 15,
+        // All blocking obstacles have Ramp shapes.
+        const BLOCKED_BY_RAMP   = 1 << 12,
+        // Position is at the top of a ramp.
+        const ON_RAMP           = 1 << 13,
+        // Position is 1 px above a ramp.
+        const ABOVE_RAMP        = 1 << 14,
+        // Position is 1 px above a floor.
+        const ABOVE_FLOOR       = 1 << 15,
 
-            const BLOCKED_AXIS      = BLOCKED_X.bits
-                                    | BLOCKED_Y.bits
-                                    | BLOCKED_Z.bits,
-            const BLOCKED           = BLOCKED_AXIS.bits
-                                    | BLOCKED_MID.bits,
+        const BLOCKED_AXIS      = BLOCKED_X.bits
+                                | BLOCKED_Y.bits
+                                | BLOCKED_Z.bits,
+        const BLOCKED           = BLOCKED_AXIS.bits
+                                | BLOCKED_MID.bits,
 
-            const NO_FLOOR_AXIS     = NO_FLOOR_X.bits
-                                    | NO_FLOOR_Y.bits,
-            const NO_FLOOR          = NO_FLOOR_AXIS.bits
-                                    | NO_FLOOR_MID.bits,
+        const NO_FLOOR_AXIS     = NO_FLOOR_X.bits
+                                | NO_FLOOR_Y.bits,
+        const NO_FLOOR          = NO_FLOOR_AXIS.bits
+                                | NO_FLOOR_MID.bits,
 
-            const DISCONT_AXIS      = DISCONT_X.bits
-                                    | DISCONT_Y.bits,
-            const DISCONT           = DISCONT_AXIS.bits
-                                    | DISCONT_MID.bits,
+        const DISCONT_AXIS      = DISCONT_X.bits
+                                | DISCONT_Y.bits,
+        const DISCONT           = DISCONT_AXIS.bits
+                                | DISCONT_MID.bits,
 
-            const COLLIDED          = BLOCKED.bits
-                                    | NO_FLOOR.bits
-                                    | DISCONT.bits,
-        }
+        const COLLIDED          = BLOCKED.bits
+                                | NO_FLOOR.bits
+                                | DISCONT.bits,
     }
 }
 

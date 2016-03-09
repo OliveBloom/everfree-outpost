@@ -2,7 +2,7 @@ use cache::TerrainCache;
 use chunks::{self, Chunks};
 use engine::split::{EngineRef, Open, Part};
 use physics::{self, Physics};
-use terrain_gen::{self, TerrainGen};
+use terrain_gen;
 use vision::{self, Vision};
 use world::{self, World};
 
@@ -101,7 +101,7 @@ impl_slice! {
 parts!(TerrainGenFragment);
 
 impl<'a, 'd> terrain_gen::Fragment<'d> for TerrainGenFragment<'a, 'd> {
-    fn terrain_gen_mut(&mut self) -> &mut terrain_gen::TerrainGen<'d> {
+    fn terrain_gen_mut(&mut self) -> &mut terrain_gen::TerrainGen {
         (**self).terrain_gen_mut()
     }
 

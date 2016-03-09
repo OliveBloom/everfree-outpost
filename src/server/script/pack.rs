@@ -6,7 +6,7 @@ use python::{PyBox, PyRef, PyResult};
 
 
 /// Types that can be converted from Python objects.
-pub trait Unpack<'a> {
+pub trait Unpack<'a>: Sized {
     fn unpack(obj: PyRef<'a>) -> PyResult<Self>;
 }
 

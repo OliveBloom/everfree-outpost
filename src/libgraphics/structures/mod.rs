@@ -1,4 +1,3 @@
-use core::prelude::*;
 use core::ops::{Deref, DerefMut};
 use core::ptr;
 

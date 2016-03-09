@@ -840,10 +840,10 @@ impl Temporary {
                 // Check that the triangles above and below are open.
                 let opt_above = self.base.edge_triangles(v, n)
                                     .filter(|&c| self.base.vert(c).area == 0)
-                                    .min_by(|&c| self.base.vert(c).pos.y);
+                                    .min_by_key(|&c| self.base.vert(c).pos.y);
                 let opt_below = self.base.edge_triangles(v, n)
                                     .filter(|&c| self.base.vert(c).area == 0)
-                                    .max_by(|&c| self.base.vert(c).pos.y);
+                                    .max_by_key(|&c| self.base.vert(c).pos.y);
                 let (above, below) = match (opt_above, opt_below) {
                     (Some(x), Some(y)) => (x, y),
                     _ => continue,

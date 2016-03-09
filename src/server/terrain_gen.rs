@@ -11,8 +11,9 @@
 //! `chunks::Provider`, which is responsible for loading or generating new chunks.  It also
 //! interfaces with the main `Enigne` loop so that "terrain gen finished" messages can be handled
 //! immediately.
+use std::mem;
 use std::sync::mpsc::{self, Sender, Receiver};
-use std::thread::{self, JoinGuard};
+use std::thread::{self, JoinHandle};
 
 use libphysics::CHUNK_SIZE;
 use libterrain_gen::worker;
@@ -30,25 +31,47 @@ use world::object::*;
 
 pub type TerrainGenEvent = worker::Response;
 
-pub struct TerrainGen<'d> {
+pub struct TerrainGen {
     send: Sender<worker::Command>,
     recv: Receiver<worker::Response>,
-    guard: JoinGuard<'d, ()>,
+    thread: JoinHandle<()>,
 }
 
-impl<'d> TerrainGen<'d> {
+impl Drop for TerrainGen {
+    fn drop(&mut self) {
+        // Drop the command sender so the worker thread will shut down.
+        unsafe {
+            mem::replace(&mut self.send, mem::dropped());
+        }
+
+        let thread = unsafe { mem::replace(&mut self.thread, mem::dropped()) };
+        match thread.join() {
+            Ok(()) => {},
+            Err(_) => {
+                error!("failed to join terrain_gen thread on shutdown");
+            },
+        }
+    }
+}
+
+impl TerrainGen {
     #[allow(deprecated)]    // for thread::scoped
-    pub fn new(data: &'d Data, storage: &'d Storage) -> TerrainGen<'d> {
+    pub fn new(data: &Data, storage: &Storage) -> TerrainGen {
         let (send_cmd, recv_cmd) = mpsc::channel();
         let (send_result, recv_result) = mpsc::channel();
-        let guard = thread::scoped(move || {
-            worker::run(data, storage, recv_cmd, send_result);
-        });
+
+        let thread = unsafe {
+            let ctx = mem::transmute((data, storage));
+            thread::spawn(move || {
+                let (data, storage) = ctx;
+                worker::run(data, storage, recv_cmd, send_result);
+            })
+        };
 
         TerrainGen {
             send: send_cmd,
             recv: recv_result,
-            guard: guard,
+            thread: thread,
         }
     }
 
@@ -58,7 +81,7 @@ impl<'d> TerrainGen<'d> {
 }
 
 pub trait Fragment<'d> {
-    fn terrain_gen_mut(&mut self) -> &mut TerrainGen<'d>;
+    fn terrain_gen_mut(&mut self) -> &mut TerrainGen;
 
     type WF: World_Fragment<'d>;
     fn with_world<F, R>(&mut self, f: F) -> R

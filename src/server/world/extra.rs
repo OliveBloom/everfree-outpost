@@ -463,7 +463,7 @@ impl Extra {
     }
 }
 
-struct ExtraIter<'a> {
+pub struct ExtraIter<'a> {
     inner: Option<HashViewIter<'a>>,
 }
 
@@ -479,7 +479,7 @@ impl<'a> Iterator for ExtraIter<'a> {
     }
 }
 
-struct ExtraIterMut<'a> {
+pub struct ExtraIterMut<'a> {
     inner: Option<HashViewIterMut<'a>>,
 }
 

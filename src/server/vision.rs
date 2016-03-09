@@ -13,10 +13,11 @@
 //! In the overall server architecture, the vision system acts as a sort of filter between world
 //! updates and client messages, ensuring that each client receives updates only for objects it can
 //! actually see.
-use std::collections::{HashMap, HashSet, VecMap};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::mem;
+use vec_map::VecMap;
 
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
@@ -377,7 +378,7 @@ impl Vision {
             h.on_inventory_disappear(cid, iid);
         }
 
-        self.viewers.remove(&raw_cid);
+        self.viewers.remove(raw_cid);
     }
 
     pub fn set_client_area<H>(&mut self,
@@ -387,7 +388,7 @@ impl Vision {
                               h: &mut H)
             where H: Hooks {
         let raw_cid = cid.unwrap() as usize;
-        let viewer = unwrap_or!(self.viewers.get_mut(&raw_cid));
+        let viewer = unwrap_or!(self.viewers.get_mut(raw_cid));
         let old_plane = mem::replace(&mut viewer.plane, new_plane);
         let old_area = mem::replace(&mut viewer.area, new_area);
         let plane_change = old_plane != new_plane;
@@ -418,11 +419,11 @@ impl Vision {
     }
 
     pub fn client_view_plane(&self, cid: ClientId) -> Option<PlaneId> {
-        self.viewers.get(&(cid.unwrap() as usize)).map(|c| c.plane)
+        self.viewers.get(cid.unwrap() as usize).map(|c| c.plane)
     }
 
     pub fn client_view_area(&self, cid: ClientId) -> Option<Region<V2>> {
-        self.viewers.get(&(cid.unwrap() as usize)).map(|c| c.area)
+        self.viewers.get(cid.unwrap() as usize).map(|c| c.area)
     }
 
 
@@ -444,7 +445,7 @@ impl Vision {
             where T: Tag, H: Hooks {
         trace!("remove {:?}", id);
         self.set_viewable_area::<T, H>(id, PLANE_LIMBO, SmallSet::new(), h);
-        T::viewable_map_mut(&mut self.maps).objs.remove(&(T::raw_id(id) as usize));
+        T::viewable_map_mut(&mut self.maps).objs.remove(T::raw_id(id) as usize);
     }
 
     fn set_viewable_area<T, H>(&mut self,
@@ -607,7 +608,7 @@ impl Vision {
                                   iid: InventoryId,
                                   h: &mut H)
             where H: Hooks {
-        let viewer = unwrap_or!(self.viewers.get_mut(&(cid.unwrap() as usize)));
+        let viewer = unwrap_or!(self.viewers.get_mut(cid.unwrap() as usize));
         let inventory_viewers = &mut self.inventory_viewers;
 
         viewer.visible_inventories.retain(iid, || {
@@ -621,7 +622,7 @@ impl Vision {
                                     iid: InventoryId,
                                     h: &mut H)
             where H: Hooks {
-        let viewer = unwrap_or!(self.viewers.get_mut(&(cid.unwrap() as usize)));
+        let viewer = unwrap_or!(self.viewers.get_mut(cid.unwrap() as usize));
         let inventory_viewers = &mut self.inventory_viewers;
 
         if viewer.visible_inventories.get(&iid).is_none() {

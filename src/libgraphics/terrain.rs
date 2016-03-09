@@ -1,4 +1,3 @@
-use core::prelude::*;
 use core::ptr;
 
 use physics::v3::{V3, V2, scalar, Region, RegionPoints};

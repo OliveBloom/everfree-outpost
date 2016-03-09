@@ -1,4 +1,3 @@
-use core::prelude::*;
 use core::cmp::{min, max};
 use core::fmt;
 use core::ops::{Add, Sub, Mul, Div, Rem, Neg, Shl, Shr, BitAnd, BitOr, BitXor, Not};

@@ -1,16 +1,10 @@
 #![crate_name = "graphics"]
 #![no_std]
 
-#![feature(no_std)]
-#![feature(core, core_prelude, core_slice_ext)]
-
-#[macro_use] extern crate core;
 #[macro_use] extern crate bitflags;
 #[cfg(asmjs)] #[macro_use] extern crate asmrt;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
 extern crate physics;
-
-use core::prelude::*;
 
 
 #[cfg(asmjs)]

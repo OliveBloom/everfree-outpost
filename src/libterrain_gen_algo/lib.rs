@@ -1,7 +1,6 @@
 #![crate_name = "terrain_gen_algo"]
 #![allow(dead_code)]
 #![feature(
-    iter_cmp,
     zero_one,
 )]
 

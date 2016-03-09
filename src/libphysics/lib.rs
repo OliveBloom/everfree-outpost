@@ -1,17 +1,10 @@
 #![crate_name = "physics"]
 #![no_std]
 
-#![feature(no_std)]
-#![feature(core, core_prelude)]
-#![cfg_attr(asmjs, feature(core_slice_ext))]
-
-#[macro_use] extern crate core;
 #[macro_use] extern crate bitflags;
 #[cfg(asmjs)] #[macro_use] extern crate asmrt;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
 #[cfg(not(asmjs))] #[macro_use] extern crate log;
-
-use core::prelude::*;
 
 use v3::{Vn, V3, scalar};
 
@@ -174,7 +167,7 @@ fn stop_fill<S: ShapeSource>(chunk: &S, pos: V3) -> bool {
 
 pub mod fill_flags {
     bitflags! {
-        flags Flags: u8 {
+        pub flags Flags: u8 {
             /// The cell has already been enqueued.  There's no separate flag for cells that have
             /// been fully processed, since each cell will be enqueued at most once.
             const ENQUEUED =    1 << 0,

@@ -11,7 +11,7 @@ use forest::context::{Context, HeightDetailPass, CaveDetailPass, CaveRampsPass};
 
 
 bitflags! {
-    flags TerrainFlags: u8 {
+    pub flags TerrainFlags: u8 {
         const T_FLOOR       = 0x01,
         const T_CAVE        = 0x02,
         const T_CAVE_INSIDE = 0x04,

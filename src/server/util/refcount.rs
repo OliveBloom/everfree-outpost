@@ -102,7 +102,7 @@ impl<K: Eq+Hash, V> RefcountedMap<K, V> {
     }
 }
 
-struct Iter<'a, K: 'a, V: 'a> {
+pub struct Iter<'a, K: 'a, V: 'a> {
     inner: hash_map::Iter<'a, K, Refcounted<V>>,
 }
 

@@ -2,13 +2,9 @@
 #![crate_type = "lib"]
 #![no_std]
 
-#![feature(no_std)]
-#![feature(core, core_prelude, core_intrinsics, core_str_ext, core_slice_ext)]
+#![feature(core_intrinsics)]
 #![feature(lang_items)]
 
-#[macro_use] extern crate core;
-
-use core::prelude::*;
 use core::fmt;
 
 

@@ -26,6 +26,7 @@ macro_rules! EnginePart_decl {
             $( pub $field: &'a mut $tv, )*
         }
 
+        // Suppress some spurious(?) warnings about SplitOffRHS::RHS being private.
         impl<'a, 'd, $($tv),*> EnginePart<'a, 'd, $($tv),*> {
             unsafe fn from_raw(e: *mut Engine<'d>) -> EnginePart<'a, 'd, $($tv,)*> {
                 EnginePart {
@@ -185,18 +186,18 @@ EnginePart_decl! {
     Au Au2 Au3 (auth, auth_mut, ::auth::Auth),
     Ch Ch2 Ch3 (chunks, chunks_mut, ::chunks::Chunks<'d>),
     Ca Ca2 Ca3 (cache, cache_mut, ::cache::TerrainCache),
-    Tg Tg2 Tg3 (terrain_gen, terrain_gen_mut, ::terrain_gen::TerrainGen<'d>),
+    Tg Tg2 Tg3 (terrain_gen, terrain_gen_mut, ::terrain_gen::TerrainGen),
 }
 
 
-unsafe trait Subpart<E> {}
+pub unsafe trait Subpart<E> {}
 
-unsafe trait Subitem<A> {}
+pub unsafe trait Subitem<A> {}
 unsafe impl Subitem<()> for () {}
 
-unsafe trait Subpart2<E> {}
+pub unsafe trait Subpart2<E> {}
 
-unsafe trait Subitem2<A> {}
+pub unsafe trait Subitem2<A> {}
 unsafe impl Subitem2<()> for ((), ()) {}
 
 pub unsafe trait PartFlags {
@@ -212,7 +213,7 @@ unsafe impl ItemFlags for () {
 }
 
 
-trait SplitOffRHS<'a, LHS> {
+pub trait SplitOffRHS<'a, LHS> {
     type RHS: 'a;
 }
 

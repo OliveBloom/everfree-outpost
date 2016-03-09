@@ -100,7 +100,7 @@ pub trait Section<'a> {
     }
 }
 
-impl<'a, T: Clone> Section<'a> for Vec<T> {
+impl<'a, T: Clone + 'a> Section<'a> for Vec<T> {
     type Ref = &'a [T];
 
     fn len(&self) -> usize { self.len() }
@@ -140,7 +140,7 @@ impl<'a> Section<'a> for String {
     }
 }
 
-impl<'a, T: Clone> Section<'a> for Option<Box<T>> {
+impl<'a, T: Clone + 'a> Section<'a> for Option<Box<T>> {
     type Ref = Option<&'a T>;
 
     fn len(&self) -> usize { if self.is_some() { 1 } else { 0 } }
@@ -187,16 +187,6 @@ macro_rules! filter_sections {
     (file_header, $e:expr) => { () };
     (section_headers, $e:expr) => { () };
     ($name:ident, $e:expr) => { $e };
-}
-
-macro_rules! safe_slice {
-    ($arr:expr [ $range:expr ]) => {
-        if $range.start > $range.end || $range.end > $arr.len() {
-            fail!(concat!("slice out of bounds: ", stringify!($arr[$range])))
-        } else {
-            $arr[$range]
-        }
-    };
 }
 
 unsafe fn extract_section<'a, S: Section<'a>>(buf: &'a [u8],
@@ -1085,7 +1075,7 @@ impl<'a> UnflattenPart<'a> for String {
 impl<'a> UnflattenPart<'a> for Box<str> {
     type Part = FlatStr;
     fn unflatten_part(obj: &FlatStr, f: &FlatView<'a>) -> Box<str> {
-        f.unflatten_part::<String>(obj).into_boxed_slice()
+        f.unflatten_part::<String>(obj).into_boxed_str()
     }
 }
 

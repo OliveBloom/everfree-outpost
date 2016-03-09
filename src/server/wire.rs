@@ -135,7 +135,7 @@ impl<W: Write> WireWriter<W> {
 
 
 
-pub trait ReadFrom {
+pub trait ReadFrom: Sized {
     fn read_from<R: Read>(r: &mut WireReader<R>) -> io::Result<Self>;
 }
 

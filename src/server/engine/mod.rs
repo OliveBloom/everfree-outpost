@@ -47,7 +47,7 @@ pub struct Engine<'d> {
     pub auth: Auth,
     pub chunks: Chunks<'d>,
     pub cache: TerrainCache,
-    pub terrain_gen: TerrainGen<'d>,
+    pub terrain_gen: TerrainGen,
 }
 
 #[must_use]

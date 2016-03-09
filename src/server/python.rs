@@ -13,7 +13,6 @@ use python3_sys::*;
 use util::StrError;
 
 #[unsafe_no_drop_flag]
-#[allow(raw_pointer_derive)]
 #[derive(PartialEq, Eq, Debug)]
 pub struct PyBox {
     ptr: NonZero<*mut PyObject>,
@@ -82,7 +81,6 @@ impl Clone for PyBox {
 }
 
 
-#[allow(raw_pointer_derive)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct PyRef<'a> {
     ptr: NonZero<*mut PyObject>,

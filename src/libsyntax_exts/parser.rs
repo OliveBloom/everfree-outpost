@@ -79,15 +79,15 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub fn take_ident(&mut self) -> Result<(&'a str, Span)> {
+    pub fn take_ident(&mut self) -> Result<(String, Span)> {
         if self.eof() {
             return self.expected("ident");
         }
 
-        match *self.peek() {
-            TokenTree::TtToken(sp, Token::Ident(ref id, _style)) => {
+        match self.peek() {
+            &TokenTree::Token(sp, Token::Ident(ref id, _style)) => {
                 try!(self.take());
-                Ok((&id.name.as_str(), sp))
+                Ok(((&id.name.as_str() as &str).to_owned(), sp))
             },
             _ => { return self.expected("ident"); },
         }
@@ -99,7 +99,7 @@ impl<'a> Parser<'a> {
         }
 
         match *self.peek() {
-            TokenTree::TtToken(_, Token::Ident(ref id, _style))
+            TokenTree::Token(_, Token::Ident(ref id, _style))
                     if id.name.as_str() == word => {
                 try!(self.take());
                 Ok(())
@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
         }
 
         match *self.peek() {
-            TokenTree::TtToken(_, ref t) if t == &token => {
+            TokenTree::Token(_, ref t) if t == &token => {
                 try!(self.take());
                 Ok(())
             },
@@ -128,7 +128,7 @@ impl<'a> Parser<'a> {
         }
 
         match *self.peek() {
-            TokenTree::TtDelimited(sp, ref t) if t.delim == delim => {
+            TokenTree::Delimited(sp, ref t) if t.delim == delim => {
                 try!(self.take());
                 Ok(Parser::new(sp, &t.tts))
             },

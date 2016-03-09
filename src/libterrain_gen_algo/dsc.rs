@@ -597,7 +597,7 @@ impl DscGrid {
         }
 
         ranges.iter()
-              .max_by(|e| e.count)
+              .max_by_key(|e| e.count)
               .map(|e| (e.min, e.max))
     }
 

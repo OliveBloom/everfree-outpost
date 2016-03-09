@@ -1,5 +1,4 @@
 use std::mem;
-use std::num::wrapping::OverflowingOps;
 use std::ptr;
 use python3_sys::*;
 

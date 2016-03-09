@@ -81,7 +81,7 @@ impl<'d> Exporter<'d> {
         e.export_to(self)
     }
 
-    pub fn export_iter<'a, E: Export, I: Iterator<Item=&'a E>>(&mut self, i: I) -> Box<[E]> {
+    pub fn export_iter<'a, E: Export + 'a, I: Iterator<Item=&'a E>>(&mut self, i: I) -> Box<[E]> {
         i.map(|e| self.export(e)).collect::<Vec<_>>().into_boxed_slice()
     }
 
@@ -249,7 +249,7 @@ impl<'d> Exporter<'d> {
     fn add_client_raw(&mut self, id: ClientId, c: &w::Client) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Client {
-            name: c.name.clone().into_boxed_slice(),
+            name: c.name.clone().into_boxed_str(),
             pawn: self.export(&c.pawn),
 
             extra: self.export(&c.extra),
@@ -294,7 +294,7 @@ impl<'d> Exporter<'d> {
     fn add_plane_raw(&mut self, id: PlaneId, p: &w::Plane) {
         let idx = self.export(&id).unwrap() as usize;
         let b = b::Plane {
-            name: p.name.clone().into_boxed_slice(),
+            name: p.name.clone().into_boxed_str(),
 
             saved_chunks: p.saved_chunks.iter()
                            .map(|(&k, &v)| (k, v))
@@ -346,7 +346,7 @@ impl<'d> Exporter<'d> {
 
 
 fn convert_str_vec(v: &Vec<&str>) -> Box<[Box<str>]> {
-    v.iter().map(|s| (*s).to_owned().into_boxed_slice())
+    v.iter().map(|s| (*s).to_owned().into_boxed_str())
      .collect::<Vec<_>>().into_boxed_slice()
 }
 

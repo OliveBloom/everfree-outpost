@@ -51,7 +51,7 @@ struct MemberDef {
 trait ParserExt<'a> {
     fn p(&mut self) -> &mut Parser<'a>;
 
-    fn parse_word(&mut self, word: &str) -> PResult<()> {
+    fn parse_word(&mut self, word: &str) -> PResult<'a, ()> {
         let p = self.p();
         let id = try!(p.parse_ident());
         if &*id.name.as_str() == word {
@@ -62,7 +62,7 @@ trait ParserExt<'a> {
         }
     }
 
-    fn parse_ident_span(&mut self) -> PResult<SpannedIdent> {
+    fn parse_ident_span(&mut self) -> PResult<'a, SpannedIdent> {
         let p = self.p();
         let id = try!(p.parse_ident());
         Ok(Spanned {
@@ -71,10 +71,10 @@ trait ParserExt<'a> {
         })
     }
 
-    fn parse_ret_ty2(&mut self) -> PResult<P<Ty>> {
+    fn parse_ret_ty2(&mut self) -> PResult<'a, P<Ty>> {
         let p = self.p();
-        if try!(p.eat(&Token::RArrow)) {
-            p.parse_ty_nopanic()
+        if p.eat(&Token::RArrow) {
+            p.parse_ty()
         } else {
             Ok(P(Ty {
                 id: DUMMY_NODE_ID,
@@ -95,12 +95,12 @@ enum Mode {
     Member,
 }
 
-fn parse_python_class(mut p: Parser) -> PResult<ClassDef> {
+fn parse_python_class<'a>(mut p: Parser<'a>) -> PResult<'a, ClassDef> {
     // Header
     try!(p.parse_word("class"));
     let name = try!(p.parse_ident_span());
     try!(p.expect(&Token::Colon));
-    let ty = try!(p.parse_ty_nopanic());
+    let ty = try!(p.parse_ty());
     try!(p.expect(&Token::OpenDelim(token::Brace)));
 
     // Important names
@@ -130,19 +130,19 @@ fn parse_python_class(mut p: Parser) -> PResult<ClassDef> {
         // Try to parse an item of the current type.
         match mode {
             Mode::Method => {
-                if try!(p.eat_keyword(keywords::Fn)) {
+                if p.eat_keyword(keywords::Fn) {
                     methods.push(try!(parse_method(&mut p)));
                     continue;
                 }
             },
             Mode::Slot => {
-                if try!(p.eat_keyword(keywords::Fn)) {
+                if p.eat_keyword(keywords::Fn) {
                     slots.push(try!(parse_slot(&mut p)));
                     continue;
                 }
             },
             Mode::Member => {
-                if try!(p.eat_keyword(keywords::Let)) {
+                if p.eat_keyword(keywords::Let) {
                     members.push(try!(parse_member(&mut p)));
                     continue;
                 }
@@ -185,9 +185,9 @@ fn parse_python_class(mut p: Parser) -> PResult<ClassDef> {
     })
 }
 
-fn parse_method(p: &mut Parser) -> PResult<MethodDef> {
+fn parse_method<'a>(p: &mut Parser<'a>) -> PResult<'a, MethodDef> {
     let mac;
-    if try!(p.eat(&Token::OpenDelim(token::Paren))) {
+    if p.eat(&Token::OpenDelim(token::Paren)) {
         mac = Some(try!(p.parse_ident_span()));
         try!(p.expect(&Token::Not));
         try!(p.expect(&Token::CloseDelim(token::Paren)));
@@ -199,7 +199,7 @@ fn parse_method(p: &mut Parser) -> PResult<MethodDef> {
     let args = try!(p.parse_token_tree());
     let ret_ty = try!(p.parse_ret_ty2());
     let lo = p.span.lo;
-    let body = try!(p.parse_block_expr(lo, DefaultBlock));
+    let body = try!(p.parse_block_expr(lo, DefaultBlock, None));
 
     Ok(MethodDef {
         mac: mac,
@@ -210,7 +210,7 @@ fn parse_method(p: &mut Parser) -> PResult<MethodDef> {
     })
 }
 
-fn parse_slot(p: &mut Parser) -> PResult<SlotDef> {
+fn parse_slot<'a>(p: &mut Parser<'a>) -> PResult<'a, SlotDef> {
     try!(p.expect(&Token::OpenDelim(token::Paren)));
     let mac = try!(p.parse_ident_span());
     try!(p.expect(&Token::Not));
@@ -220,7 +220,7 @@ fn parse_slot(p: &mut Parser) -> PResult<SlotDef> {
     let args = try!(p.parse_token_tree());
     let ret_ty = try!(p.parse_ret_ty2());
     let lo = p.span.lo;
-    let body = try!(p.parse_block_expr(lo, DefaultBlock));
+    let body = try!(p.parse_block_expr(lo, DefaultBlock, None));
 
     Ok(SlotDef {
         mac: mac,
@@ -231,14 +231,14 @@ fn parse_slot(p: &mut Parser) -> PResult<SlotDef> {
     })
 }
 
-fn parse_member(p: &mut Parser) -> PResult<MemberDef> {
+fn parse_member<'a>(p: &mut Parser<'a>) -> PResult<'a, MemberDef> {
     let name = try!(p.parse_ident_span());
     try!(p.expect(&Token::Colon));
     try!(p.expect(&Token::Eq));
 
     let mut parts = Vec::new();
     parts.push(try!(p.parse_ident_span()));
-    while try!(p.eat(&Token::Dot)) {
+    while p.eat(&Token::Dot) {
         parts.push(try!(p.parse_ident_span()));
     }
     try!(p.expect(&Token::Semi));
@@ -266,7 +266,7 @@ impl Builder {
     }
 
     fn token(&mut self, token: Token, sp: Option<Span>) {
-        self.emit(TokenTree::TtToken(sp.unwrap_or(DUMMY_SP), token));
+        self.emit(TokenTree::Token(sp.unwrap_or(DUMMY_SP), token));
     }
 
     fn delimited(&mut self, child: Builder, delim: DelimToken) {
@@ -276,7 +276,7 @@ impl Builder {
             tts: child.tts,
             close_span: DUMMY_SP,
         });
-        self.emit(TokenTree::TtDelimited(DUMMY_SP, d));
+        self.emit(TokenTree::Delimited(DUMMY_SP, d));
     }
 
     fn ident(&mut self, id: SpannedIdent) {
@@ -398,7 +398,11 @@ pub fn define_python_class(cx: &mut ExtCtxt,
 
     let ident = cx.ident_of("define_python_class_impl");
     let path = cx.path_ident(DUMMY_SP, ident);
-    let mac_ = Mac_::MacInvocTT(path, builder.tts, name.node.ctxt);
+    let mac_ = Mac_ {
+        path: path,
+        tts: builder.tts,
+        ctxt: name.node.ctxt
+    };
     let mac = Spanned {
         node: mac_,
         span: sp,

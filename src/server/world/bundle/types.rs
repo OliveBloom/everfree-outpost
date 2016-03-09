@@ -130,7 +130,7 @@ impl Clone for World {
 impl Clone for Client {
     fn clone(&self) -> Client {
         Client {
-            name: self.name.to_owned().into_boxed_slice(),
+            name: self.name.to_owned(),
             pawn: self.pawn,
 
             extra: self.extra.clone(),
@@ -175,7 +175,7 @@ impl Clone for Inventory {
 impl Clone for Plane {
     fn clone(&self) -> Plane {
         Plane {
-            name: self.name.to_owned().into_boxed_slice(),
+            name: self.name.to_owned(),
 
             saved_chunks: clone_slice(&self.saved_chunks),
 

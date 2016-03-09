@@ -146,10 +146,10 @@ impl<'d> Builder<'d> {
         self.cleanup();
 
         Bundle {
-            anims: convert_vec(self.anims.vals, |s| s.to_owned().into_boxed_slice()),
-            items: convert_vec(self.items.vals, |s| s.to_owned().into_boxed_slice()),
-            blocks: convert_vec(self.blocks.vals, |s| s.to_owned().into_boxed_slice()),
-            templates: convert_vec(self.templates.vals, |s| s.to_owned().into_boxed_slice()),
+            anims: convert_vec(self.anims.vals, |s| s.to_owned().into_boxed_str()),
+            items: convert_vec(self.items.vals, |s| s.to_owned().into_boxed_str()),
+            blocks: convert_vec(self.blocks.vals, |s| s.to_owned().into_boxed_str()),
+            templates: convert_vec(self.templates.vals, |s| s.to_owned().into_boxed_str()),
 
             world: None,
             clients: convert_vec(self.clients, |c| c.finish()),
@@ -192,7 +192,7 @@ impl ClientBits {
 
     fn finish(self) -> Client {
         Client {
-            name: self.name.into_boxed_slice(),
+            name: self.name.into_boxed_str(),
             pawn: self.pawn,
 
             extra: self.extra,

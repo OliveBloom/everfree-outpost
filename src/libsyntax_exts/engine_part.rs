@@ -19,7 +19,7 @@ mod parts {
         ($flags_name:ident :
                 $(($idx:expr) $name:ident = $ty:ty;)*) => {
             bitflags! {
-                flags $flags_name: u32 {
+                pub flags $flags_name: u32 {
                     $(
                         const $name = 1 << $idx,
                     )*
@@ -43,7 +43,7 @@ mod parts {
             (6) AUTH =          ::auth::Auth;
             (7) CHUNKS =        ::chunks::Chunks<'d>;
             (8) CACHE =         ::cache::TerrainCache;
-            (9) TERRAIN_GEN =   ::terrain_gen::TerrainGen<'d>;
+            (9) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
     }
 }
 
@@ -101,7 +101,7 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
 
 fn parse_engine_part_typedef<'a>(table: &HashMap<&'static str, EngineParts>,
                                  mut p: Parser<'a>)
-                                 -> parser::Result<(bool, &'a str, EngineParts)> {
+                                 -> parser::Result<(bool, String, EngineParts)> {
     let is_pub = p.take_word("pub").is_ok();
     let (name, name_sp) = try!(p.take_ident());
 
@@ -113,7 +113,7 @@ fn parse_engine_part_typedef<'a>(table: &HashMap<&'static str, EngineParts>,
             if !p.eof() {
                 return p.expected("open paren or end of input");
             }
-            if let Some(&flags) = table.get(name) {
+            if let Some(&flags) = table.get(&name as &str) {
                 return Ok((is_pub, name, flags));
             } else {
                 fail!(name_sp, "struct name {:?} is not a valid engine part name", name);
@@ -132,7 +132,7 @@ fn parse_engine_part_typedef<'a>(table: &HashMap<&'static str, EngineParts>,
         ready = false;
 
         let (part_name, part_name_sp) = try!(body.take_ident());
-        if let Some(&part_flags) = table.get(part_name) {
+        if let Some(&part_flags) = table.get(&part_name as &str) {
             flags = flags | part_flags;
         } else {
             fail!(part_name_sp, "expected engine part name, but saw {:?}", part_name);

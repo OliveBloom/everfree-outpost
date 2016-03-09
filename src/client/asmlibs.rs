@@ -1,16 +1,12 @@
 #![crate_name = "asmlibs"]
 #![no_std]
 
-#![feature(no_std)]
-#![feature(core, core_prelude, core_slice_ext)]
 #![feature(raw)]
 
-extern crate core;
 extern crate physics;
 extern crate graphics;
 #[macro_use] extern crate asmrt;
 
-use core::prelude::*;
 use core::mem;
 use core::raw;
 use core::slice;

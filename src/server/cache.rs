@@ -17,7 +17,7 @@ pub struct TerrainCache {
     cache: HashMap<(PlaneId, V2), CacheEntry>,
 }
 
-struct CacheEntry {
+pub struct CacheEntry {
     pub shape: [Shape; 1 << (3 * CHUNK_BITS)],
     pub layer_mask: [u8; 1 << (3 * CHUNK_BITS)],
 }

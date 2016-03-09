@@ -2,7 +2,7 @@ use std::mem;
 use std::ptr;
 use std::sync::mpsc::{channel, Sender, Receiver, TryRecvError};
 use std::thread;
-use std::u64;
+use std::time::Duration;
 
 use types::Time;
 use util::now;
@@ -77,7 +77,7 @@ impl Wheel {
     pub fn new(now: Time) -> Wheel {
         // Can't set the size of the array using `size_of`, so hardcode the value and then check at
         // runtime that it's right.
-        assert!(mem::size_of::<SmallVec<WakeSoon>>() == 4 * u64::BYTES as usize);
+        assert!(mem::size_of::<SmallVec<WakeSoon>>() == 4 * mem::size_of::<u64>());
         let fake_smallvec = [0_u64; 4];
         let mut soon = Box::new([fake_smallvec; WHEEL_BUCKETS]);
         unsafe {
@@ -214,7 +214,7 @@ fn timer_worker(recv: Receiver<Command>, send: Sender<Cookie>) {
         loop {
             let delay = wheel.next_tick() - now();
             if delay > 0 {
-                thread::sleep_ms(delay as u32);
+                thread::sleep(Duration::from_millis(delay as u64));
             } else {
                 break;
             }

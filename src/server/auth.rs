@@ -5,20 +5,20 @@ use std::path::Path;
 use std::result;
 use rand;
 
-use rusqlite::{SqliteConnection, SqliteError};
+use rusqlite::{self, Connection};
 use rusqlite::types::ToSql;
-use rusqlite_ffi::SQLITE_CONSTRAINT;
+use rusqlite_ffi::ErrorCode;
 
 use util::StrError;
 
 
 pub struct Auth {
-    conn: SqliteConnection,
+    conn: Connection,
 }
 
 impl Auth {
     pub fn new<P: AsRef<Path>>(db_path: &P) -> Result<Auth> {
-        let conn = try!(SqliteConnection::open(db_path));
+        let conn = try!(Connection::open(db_path));
         try!(conn.execute("CREATE TABLE IF NOT EXISTS auth (
                            name      TEXT NOT NULL UNIQUE,
                            secret    TEXT NOT NULL
@@ -37,7 +37,8 @@ impl Auth {
         match result {
             Ok(_) => Ok(true),
             // Constraint violation means the username is already registered.
-            Err(ref e) if e.code == SQLITE_CONSTRAINT => Ok(false),
+            Err(rusqlite::Error::SqliteFailure(ref e, _))
+                if e.code == ErrorCode::ConstraintViolation => Ok(false),
             Err(e) => Err(Error::Sqlite(e)),
         }
     }
@@ -121,7 +122,7 @@ fn check_secret(s: &Secret, hash: &str) -> SecretMatch {
 #[derive(Debug)]
 pub enum Error {
     Str(StrError),
-    Sqlite(SqliteError),
+    Sqlite(rusqlite::Error),
 }
 
 impl fmt::Display for Error {
@@ -137,7 +138,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::Str(ref e) => e.description(),
-            Error::Sqlite(ref e) => &*e.message,
+            Error::Sqlite(ref e) => e.description(),
         }
     }
 
@@ -145,7 +146,7 @@ impl error::Error for Error {
         match *self {
             Error::Str(ref e) => Some(e as &error::Error),
             // SqliteError doesn't implement Error.
-            Error::Sqlite(_) => None,
+            Error::Sqlite(ref e) => Some(e as &error::Error),
         }
     }
 }
@@ -156,8 +157,8 @@ impl From<StrError> for Error {
     }
 }
 
-impl From<SqliteError> for Error {
-    fn from(e: SqliteError) -> Error {
+impl From<rusqlite::Error> for Error {
+    fn from(e: rusqlite::Error) -> Error {
         Error::Sqlite(e)
     }
 }

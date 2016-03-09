@@ -9,7 +9,7 @@ use world::Motion;
 use world::bundle::{self, Builder};
 use world::extra;
 use world::object::*;
-use vision::{self, vision_region};
+use vision;
 
 
 const DAY_NIGHT_CYCLE_TICKS: u32 = 24_000;

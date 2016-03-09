@@ -40,7 +40,7 @@ pub type LocalChunks = [BlockChunk; 1 << (2 * LOCAL_BITS)];
 
 
 bitflags! {
-    flags TemplateFlags: u8 {
+    pub flags TemplateFlags: u8 {
         const HAS_SHADOW =      0x01,
         const HAS_ANIM =        0x02,
         const HAS_LIGHT =       0x04,

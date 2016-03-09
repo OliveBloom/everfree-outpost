@@ -13,9 +13,9 @@ def rules(i):
     compile_base = join('$rustc $in',
             '--out-dir $b_asmjs',
             '--cfg asmjs',
+            '--cfg \'feature="no_std"\'',
             '--target=i686-unknown-linux-gnu',
             '-L $b_asmjs -L $b_native',
-            maybe('-L %s', i.rust_extra_libdir),
             # -C opt-level=3 is mandatory because it eliminates some constructs that cause problems
             # for emscripten-fastcomp.
             '-C opt-level=3',
@@ -32,7 +32,8 @@ def rules(i):
 
 
         rule asm_compile_rlib
-            command = %compile_base --emit=link,dep-info --crate-type=rlib
+            command = %compile_base --emit=link,dep-info $
+                --crate-type=rlib --crate-name=$crate_name
             depfile = $b_asmjs/$crate_name.d
             description = RUSTC $out
 

@@ -3,7 +3,7 @@ use types::*;
 
 
 bitflags! {
-    flags InputBits: u16 {
+    pub flags InputBits: u16 {
         const INPUT_LEFT =      0x0001,
         const INPUT_RIGHT =     0x0002,
         const INPUT_UP =        0x0004,

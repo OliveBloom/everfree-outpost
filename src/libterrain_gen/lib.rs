@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 #![feature(
     iter_arith,
-    iter_cmp,
 )]
 
 #[macro_use] extern crate bitflags;
