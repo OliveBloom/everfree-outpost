@@ -53,10 +53,12 @@ class CachedImage(object):
         NEW_IMAGE_CACHE[self._desc] = img
         return img
 
-    def compute(self, f):
+    def compute(self, f, desc=None):
         code_file = sys.modules[f.__module__].__file__
         code_time = _cached_mtime(code_file)
-        k = (self._desc, f.__module__, f.__qualname__, code_file, code_time)
+        if desc is None:
+            desc = (f.__module__, f.__qualname__)
+        k = (self._desc, desc, code_file, code_time)
 
         if k in COMPUTE_CACHE:
             result = COMPUTE_CACHE[k]
@@ -227,7 +229,7 @@ class PaddedImage(CachedImage):
     def _realize(self):
         orig_img = self.orig.raw()
         img = PIL.Image.new(orig_img.mode, self.size)
-        img.paste(orig_img, self.offset, orig_img)
+        img.paste(orig_img, self.offset)
         return img
 
 class SheetImage(CachedImage):

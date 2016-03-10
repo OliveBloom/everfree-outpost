@@ -214,7 +214,7 @@ def build_sheets_one(sprite):
 
     # Generate additional graphics for derived layers
     for l in sprite.derived_layers.values():
-        base_l = s.base_layer(l.base_name, reason=l.name)
+        base_l = sprite.base_layer(l.base_name, reason=l.name)
 
         for k,v in base_l.graphics.items():
             if k not in l.graphics:

@@ -99,9 +99,53 @@ def standard_anims():
             yield m, i, '%s-%d' % (m.name, INV_DIRS[i])
 
 
+HAT_SIZE = 64
+
+def get_hat_box_pos(img):
+    def f(raw):
+        w, h = raw.size
+        x = w // 2
+        y = h // 2
+
+        alpha = raw.split()[3]
+        if alpha.getpixel((x, y)) == 0:
+            return None
+
+        while y < h - 1 and alpha.getpixel((x, y + 1)) != 0:
+            y += 1
+        while x > 0 and alpha.getpixel((x - 1, y)) != 0:
+            x -= 1
+        return (x, y + 1 - HAT_SIZE)
+
+    return img.raw().compute(f)
+
+_ANIM_FACING_TABLE = {}
+
+def register_anim_facing(name, facing):
+    _ANIM_FACING_TABLE[name] = facing
+
+def get_anim_facing(name):
+    _, _, last = name.rpartition('-')
+    if last.isdigit():
+        return DIRS[int(last)].idx
+    else:
+        return _ANIM_FACING_TABLE.get(name, 4)
+
+def add_hat_layer(sprite, name, hat_name, sheet):
+    sheet = sheet.with_unit(HAT_SIZE)
+    def f(anim, img):
+        idx = get_anim_facing(anim)
+        hat = sheet.extract((idx, 0))
+        hat_pos = get_hat_box_pos(img)
+        return hat.pad(SPRITE_SIZE, offset=hat_pos)
+
+    sprite.derived_layer(name, hat_name, f)
+
+
 def init():
     pony = SPRITE.new('pony')
     load = loader('sprites', unit=SPRITE_SIZE)
+    load1 = loader('sprites')
 
     # Define animations
     for m in MOTIONS:
@@ -110,11 +154,6 @@ def init():
                 pony.anim('%s-%d' % (m.name, i), m.len, m.fps)
             else:
                 pony.mirror_anim('%s-%d' % (m.name, i), '%s-%d' % (m.name, d.mirror))
-
-    # Define layers
-    for sex in ('f', 'm'):
-        for tribe in BASES.keys():
-            pony.layer('%s/base/%s' % (sex, tribe), SPRITE_SIZE)
 
     # Add graphics
     for sex, ms in (('f', 'mare'), ('m', 'stallion')):
@@ -146,6 +185,18 @@ def init():
                     anim = row.sheet_to_anim((1, 1), m.fps)
                     pony.add_graphics('%s/%s%d' % (sex, kind, idx), anim_name, anim)
 
+        # Hat box
+        pony.layer('%s/hat_box' % sex, SPRITE_SIZE)
+        hat_box_dct = {i: load('base/%s/%s-%d-hat-box.png' % (ms, ms, i))
+                for i in range(5)}
+        for m, i, anim_name in standard_anims():
+            row = hat_box_dct[i].extract((m.base_col, m.row), size=(m.len, 1))
+            anim = row.sheet_to_anim((1, 1), m.fps)
+            pony.add_graphics('%s/hat_box' % sex, anim_name, anim)
+
+        # Eyes
+        eye_sheet = load1('parts/%s/eyes1.png' % ms)
+        add_hat_layer(pony, '%s/eyes1' % sex, '%s/hat_box' % sex, eye_sheet)
 
 
 
