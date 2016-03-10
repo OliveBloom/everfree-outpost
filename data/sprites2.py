@@ -196,7 +196,13 @@ def init():
 
         # Eyes
         eye_sheet = load1('parts/%s/eyes1.png' % ms)
+        eye_sheet = set_depth(eye_sheet, 110)
         add_hat_layer(pony, '%s/eyes1' % sex, '%s/hat_box' % sex, eye_sheet)
+
+        for hat_type in ('witch', 'santa', 'party'):
+            sheet = load1('equipment/%s-hat-%s.png' % (hat_type, sex))
+            sheet = set_depth(sheet, 130)
+            add_hat_layer(pony, '%s/hat/%s' % (sex, hat_type), '%s/hat_box' % sex, sheet)
 
 
 
