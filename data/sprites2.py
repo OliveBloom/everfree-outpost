@@ -53,6 +53,7 @@ LAYER_DEPTHS = {
         'backwing': 50,
         }
 
+
 def _set_depth(img, depth):
     old_alpha = img.split()[3]
     mask = PIL.Image.new('L', img.size, depth)
@@ -63,30 +64,39 @@ def set_depth(img, depth):
     return img.modify(f=lambda raw: _set_depth(raw, depth),
             desc=('sprites2.set_depth', depth))
 
-def _depth_stack(base, layer, depth):
-    # Original alpha channel of `layer` is a mask indicating which parts are
-    # covered by `layer`.
-    mask = layer.split()[3].copy()
-    # Replace alpha channel with constant depth
-    layer.putalpha(PIL.Image.new('L', layer.size, depth))
-    # Overwrite `base` with relevant parts of `layer`, including the new depth.
-    base.paste(layer, (0, 0), mask)
-    return base
+def depth_stack(img_depths):
+    imgs = tuple(i for i, d in img_depths)
+    depths = tuple(d for i, d in img_depths)
+    assert len(imgs) > 0
 
-def depth_stack(base, layer, depth):
-    return base.fold((layer,),
-            f=lambda b, l: _depth_stack(b, l, depth),
-            desc=('sprites2.depth_stack', depth))
+    def f(*args):
+        acc = PIL.Image.new('RGBA', args[0].size)
+        for img, depth in zip(args, depths):
+            # Extract original alpha channel
+            mask = img.split()[3].copy()
+            # Set alpha to depth, uniformly
+            img.putalpha(PIL.Image.new('L', img.size, depth))
+            # Overwrite `acc` with `img` (including alpha), filtered by `mask`
+            acc.paste(img, (0, 0), mask)
+        return acc
 
-def make_base_sheet(load, ms, i, layers):
-    acc = None
-    for l in layers:
-        img = load('base/%s/%s-%d-%s.png' % (ms, ms, i, l))
-        if acc is None:
-            acc = set_depth(img, LAYER_DEPTHS[l])
-        else:
-            acc = depth_stack(acc, img, LAYER_DEPTHS[l])
-    return acc
+    return imgs[0].fold(imgs[1:], f=f, desc=('sprites2.depth_stack', depths))
+
+
+def make_tribe_sheets(layer_imgs):
+    if callable(layer_imgs):
+        layer_imgs = {k: layer_imgs(k) for k in LAYER_DEPTHS.keys()}
+
+    result = {}
+    for tribe, layer_names in BASES.items():
+        sheet = depth_stack([(layer_imgs[l], LAYER_DEPTHS[l]) for l in layer_names])
+        result[tribe] = sheet
+    return result
+
+def standard_anims():
+    for m in MOTIONS:
+        for i in range(5):
+            yield m, i, '%s-%d' % (m.name, INV_DIRS[i])
 
 
 def init():
@@ -102,16 +112,39 @@ def init():
                 pony.mirror_anim('%s-%d' % (m.name, i), '%s-%d' % (m.name, d.mirror))
 
     # Define layers
+    for sex in ('f', 'm'):
+        for tribe in BASES.keys():
+            pony.layer('%s/base/%s' % (sex, tribe), SPRITE_SIZE)
+
+    # Add graphics
     for sex, ms in (('f', 'mare'), ('m', 'stallion')):
-        pony.layer('%s/base' % sex, SPRITE_SIZE)
+        # Base layer
+        for tribe in BASES.keys():
+            pony.layer('%s/base/%s' % (sex, tribe), SPRITE_SIZE)
 
-        for i in range(5):
-            sheet = make_base_sheet(load, ms, i, BASES['A'])
+        tribe_sheet_dct = {i: make_tribe_sheets(
+            lambda l: load('base/%s/%s-%d-%s.png' % (ms, ms, i, l)))
+            for i in range(5)}
 
-            for m in MOTIONS:
+        for m, i, anim_name in standard_anims():
+            for tribe, sheet in tribe_sheet_dct[i].items():
                 row = sheet.extract((m.base_col, m.row), size=(m.len, 1))
                 anim = row.sheet_to_anim((1, 1), m.fps)
-                pony.add_graphics('%s/base' % sex, '%s-%d' % (m.name, INV_DIRS[i]), anim)
+                pony.add_graphics('%s/base/%s' % (sex, tribe), anim_name, anim)
+
+        # Mane/tail layers
+        for kind in ('mane', 'tail'):
+            for idx in (1, 2, 3):
+                pony.layer('%s/%s%d' % (sex, kind, idx), SPRITE_SIZE)
+                sheet = load('parts/%s/%s%d.png' % (ms, kind, idx))
+                sheet = set_depth(sheet, 120)
+
+                for m, i, anim_name in standard_anims():
+                    x = (m.base_col * 5 + i) * m.len
+                    y = m.row
+                    row = sheet.extract((x, y), size=(m.len, 1))
+                    anim = row.sheet_to_anim((1, 1), m.fps)
+                    pony.add_graphics('%s/%s%d' % (sex, kind, idx), anim_name, anim)
 
 
 

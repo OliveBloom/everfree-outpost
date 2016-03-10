@@ -201,7 +201,7 @@ def build_sheets_one(sprite):
     for (l_name, a_name), img in sprite.graphics.items():
         # NB: It *is* legal to define graphics for derived layers.  Graphics
         # defined this way will override the auto-generated version.
-        assert l_name in sprite.layers or l.name in sprite.derived_layers, \
+        assert l_name in sprite.layers or l_name in sprite.derived_layers, \
                 'sprite %r contains graphics for nonexistent layer %r' % \
                 (sprite.name, l_name)
         assert a_name in sprite.anims, \
