@@ -3,7 +3,7 @@ import json
 import os
 
 
-from . import builder, builder2, files, loader, util
+from . import builder2, files, loader, util
 from . import structure, block, item, recipe, sprite, attachment, loot_table, extra
 from outpost_data.core.loader import TimeIt
 
@@ -26,7 +26,7 @@ IdMaps = namedtuple('IdMaps', (
     'sprites',
 ))
 
-def collect_defs(b):
+def collect_defs():
     return Defs(
             builder2.BLOCK.all(),
             builder2.STRUCTURE.all(),
@@ -160,8 +160,7 @@ def time(msg, f, *args):
         f(*args)
 
 def generate(output_dir):
-    b = builder.INSTANCE
-    defs = collect_defs(b)
+    defs = collect_defs()
     postprocess(defs)
 
     print('Generating:')
