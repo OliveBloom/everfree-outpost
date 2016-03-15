@@ -4,7 +4,7 @@ import os
 
 
 from . import builder2, files, loader, util
-from . import structure, block, item, recipe, sprite, attachment, loot_table, extra
+from . import structure, block, item, recipe, sprite, loot_table, extra
 from outpost_data.core.loader import TimeIt
 
 
@@ -139,13 +139,6 @@ def emit_sprites(output_dir, sprites):
         img.save(os.path.join(output_dir, 'sprites', name))
 
     write_json(output_dir, 'sprites_list.json', sprite_list)
-
-def emit_attach_slots(output_dir, attach_slots):
-    write_json(output_dir, 'attach_slots_server.json',
-            attachment.build_server_json(attach_slots))
-
-    write_json(output_dir, 'attach_slots_client.json',
-            attachment.build_client_json(attach_slots))
 
 def emit_loot_tables(output_dir, loot_tables):
     write_json(output_dir, 'loot_tables_server.json',
