@@ -300,8 +300,6 @@ def build_anim_server_json(anims):
 def build_part_client_json(parts):
     def convert(p):
         variants = [None] * (len(p.variants) + (1 if p.optional else 0))
-        print('%s: %d variants, opt=%s, out=%d' %
-                (p.full_name, len(p.variants), p.optional, len(variants)))
         for v in p.iter_variants():
             variants[v.local_id] = v.id
         return {
