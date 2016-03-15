@@ -1,8 +1,8 @@
 from collections import namedtuple
 
 from outpost_data.core import image2
-from outpost_data.core.consts import *
 from outpost_data.core.builder2 import *
+from outpost_data.core.consts import *
 from outpost_data.core.image2 import loader, Anim
 from outpost_data.core import structure
 from outpost_data.outpost.lib import meshes
@@ -98,6 +98,11 @@ def standard_anims():
         for i in range(5):
             yield m, i, '%s-%d' % (m.name, INV_DIRS[i])
 
+def standard_manes_tails():
+    for kind in ('mane', 'tail'):
+        for i in (1, 2, 3):
+            yield (kind, i)
+
 
 HAT_SIZE = 64
 
@@ -124,14 +129,14 @@ _ANIM_FACING_TABLE = {}
 def register_anim_facing(name, facing):
     _ANIM_FACING_TABLE[name] = facing
 
-def get_anim_facing(name):
-    _, _, last = name.rpartition('-')
+def get_anim_facing(anim):
+    _, _, last = anim.name.rpartition('-')
     if last.isdigit():
         return DIRS[int(last)].idx
     else:
-        return _ANIM_FACING_TABLE.get(name, 4)
+        return _ANIM_FACING_TABLE.get(full_name, 4)
 
-def add_hat_layer(sprite, name, hat_name, sheet):
+def add_hat_layer0(sprite, name, hat_name, sheet):
     sheet = sheet.with_unit(HAT_SIZE)
     def f(anim, img):
         idx = get_anim_facing(anim)
@@ -142,67 +147,101 @@ def add_hat_layer(sprite, name, hat_name, sheet):
     sprite.derived_layer(name, hat_name, f)
 
 
+def get_pony_sprite():
+    return SPRITE.get('pony')
+
+def get_pony_hat_box(sex):
+    pony = get_pony_sprite()
+    part = pony.get_part('%s/_dummy' % sex)
+    variant = part.get_variant('hat_box')
+    return variant
+
+def add_hat_layer(part, name, sex, sheet):
+    sheet = sheet.with_unit(HAT_SIZE)
+    def f(_variant, anim, _frame_idx, img):
+        idx = get_anim_facing(anim)
+        hat = sheet.extract((idx, 0))
+        hat_pos = get_hat_box_pos(img)
+        return hat.pad(SPRITE_SIZE, offset=hat_pos)
+
+    return part.add_derived_variant(name, get_pony_hat_box(sex), f)
+
+
+
 def init():
-    pony = SPRITE.new('pony')
+    pony = SPRITE.new('pony', SPRITE_SIZE)
     load = loader('sprites', unit=SPRITE_SIZE)
     load1 = loader('sprites')
 
     # Define animations
     for m in MOTIONS:
+        dct = {}
         for i, d in enumerate(DIRS):
             if d.mirror is None:
-                pony.anim('%s-%d' % (m.name, i), m.len, m.fps)
-            else:
-                pony.mirror_anim('%s-%d' % (m.name, i), '%s-%d' % (m.name, d.mirror))
+                dct[i] = pony.add_anim('%s-%d' % (m.name, i), m.len, m.fps)
+        for i, d in enumerate(DIRS):
+            if d.mirror is not None:
+                pony.add_mirror_anim('%s-%d' % (m.name, i), dct[d.mirror])
 
-    # Add graphics
+
     for sex, ms in (('f', 'mare'), ('m', 'stallion')):
+        # Define parts
+        base_part = pony.add_part('%s/base' % sex)
+        mane_part = pony.add_part('%s/mane' % sex)
+        tail_part = pony.add_part('%s/tail' % sex)
+        eyes_part = pony.add_part('%s/eyes' % sex)
+        equip0_part = pony.add_part('%s/equip0' % sex, optional=True)
+        equip1_part = pony.add_part('%s/equip1' % sex, optional=True)
+        equip2_part = pony.add_part('%s/equip2' % sex, optional=True)
+        dummy_part = pony.add_part('%s/_dummy' % sex)
+
         # Base layer
-        for tribe in BASES.keys():
-            pony.layer('%s/base/%s' % (sex, tribe), SPRITE_SIZE)
+        base_variants = {tribe: base_part.add_variant(tribe)
+                for tribe in BASES}
 
         tribe_sheet_dct = {i: make_tribe_sheets(
             lambda l: load('base/%s/%s-%d-%s.png' % (ms, ms, i, l)))
             for i in range(5)}
-
         for m, i, anim_name in standard_anims():
             for tribe, sheet in tribe_sheet_dct[i].items():
                 row = sheet.extract((m.base_col, m.row), size=(m.len, 1))
                 anim = row.sheet_to_anim((1, 1), m.fps)
-                pony.add_graphics('%s/base/%s' % (sex, tribe), anim_name, anim)
+                base_variants[tribe].add_graphics(anim_name, anim)
 
         # Mane/tail layers
-        for kind in ('mane', 'tail'):
-            for idx in (1, 2, 3):
-                pony.layer('%s/%s%d' % (sex, kind, idx), SPRITE_SIZE)
-                sheet = load('parts/%s/%s%d.png' % (ms, kind, idx))
-                sheet = set_depth(sheet, 120)
+        for kind, idx in standard_manes_tails():
+            part = mane_part if kind == 'mane' else tail_part
+            variant = part.add_variant('%d' % idx)
 
-                for m, i, anim_name in standard_anims():
-                    x = (m.base_col * 5 + i) * m.len
-                    y = m.row
-                    row = sheet.extract((x, y), size=(m.len, 1))
-                    anim = row.sheet_to_anim((1, 1), m.fps)
-                    pony.add_graphics('%s/%s%d' % (sex, kind, idx), anim_name, anim)
+            sheet = load('parts/%s/%s%d.png' % (ms, kind, idx))
+            sheet = set_depth(sheet, 120)
+            for m, i, anim_name in standard_anims():
+                x = (m.base_col * 5 + i) * m.len
+                y = m.row
+                row = sheet.extract((x, y), size=(m.len, 1))
+                anim = row.sheet_to_anim((1, 1), m.fps)
+                variant.add_graphics(anim_name, anim)
 
         # Hat box
-        pony.layer('%s/hat_box' % sex, SPRITE_SIZE)
+        variant = dummy_part.add_variant('hat_box')
+
         hat_box_dct = {i: load('base/%s/%s-%d-hat-box.png' % (ms, ms, i))
                 for i in range(5)}
         for m, i, anim_name in standard_anims():
             row = hat_box_dct[i].extract((m.base_col, m.row), size=(m.len, 1))
             anim = row.sheet_to_anim((1, 1), m.fps)
-            pony.add_graphics('%s/hat_box' % sex, anim_name, anim)
+            variant.add_graphics(anim_name, anim)
 
         # Eyes
-        eye_sheet = load1('parts/%s/eyes1.png' % ms)
-        eye_sheet = set_depth(eye_sheet, 110)
-        add_hat_layer(pony, '%s/eyes1' % sex, '%s/hat_box' % sex, eye_sheet)
+        sheet = load1('parts/%s/eyes1.png' % ms)
+        sheet = set_depth(sheet, 110)
+        add_hat_layer(eyes_part, 'eyes1', sex, sheet)
 
+        # Hats
         for hat_type in ('witch', 'santa', 'party'):
             sheet = load1('equipment/%s-hat-%s.png' % (hat_type, sex))
             sheet = set_depth(sheet, 130)
-            add_hat_layer(pony, '%s/hat/%s' % (sex, hat_type), '%s/hat_box' % sex, sheet)
+            add_hat_layer(equip0_part, 'hat/%s' % hat_type, sex, sheet)
 
 
 

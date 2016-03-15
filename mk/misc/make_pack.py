@@ -68,14 +68,14 @@ def main(src_dir, build_dir, out_file):
 
 
     with open(build('structures_list.json')) as f:
-        sprites_list = json.load(f)
-    for s in sprites_list:
+        structures_list = json.load(f)
+    for s in structures_list:
         add('image', s, build(s + '.png'))
 
     with open(build('sprites_list.json')) as f:
         sprites_list = json.load(f)
-    for s in sprites_list:
-        add('image', s, build(os.path.join('sprites', s + '.png')))
+    for i, f in enumerate(sprites_list):
+        add('image', 'sprite_%d' % i , build(os.path.join('sprites', f)))
 
 
     # Generate the pack containing the files added above.
