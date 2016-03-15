@@ -2,7 +2,7 @@ from outpost_data.core import structure
 from outpost_data.core.consts import *
 from outpost_data.core.builder2 import STRUCTURE
 from outpost_data.core.image2 import loader
-from outpost_data.outpost.lib import terrain2, models
+from outpost_data.outpost.lib import terrain, models
 
 TREE_SHAPE = structure.Shape(3, 3, 4, [
         'empty', 'empty', 'empty',
@@ -31,7 +31,7 @@ STUMP_SHAPE = structure.Shape(3, 3, 1, [
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
 
-    terrain2.interior_blocks('farmland', tiles('farmland-interior-parts.png'), shape='floor')
+    terrain.interior_blocks('farmland', tiles('farmland-interior-parts.png'), shape='floor')
 
     structures = loader('structures', unit=TILE_SIZE)
     s = STRUCTURE.prefixed('tree') \
