@@ -1,4 +1,5 @@
 from outpost_data.core.builder2 import EXTRA
+from outpost_data.outpost.lib import pony_sprite
 
 
 def pony(maps):
@@ -25,10 +26,8 @@ def gen_physics_anim_table(maps):
 
 def gen_anim_dir_table(maps):
     dct = {}
-    for speed in ('stand', 'run', 'walk'):
-        for dir_ in range(8):
-            anim_id = pony(maps).get_anim('%s-%d' % (speed, dir_)).id
-            dct[anim_id] = dir_
+    for anim in pony(maps).iter_anims():
+        dct[anim.id] = pony_sprite.get_anim_facing(anim)
     return dct
 
 def gen_pony_slot_table(maps):

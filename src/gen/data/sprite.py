@@ -36,6 +36,10 @@ class DerivedAnimDef:
         self.base = base
         self.func = func
 
+        # TODO: figure out whether this is a good idea
+        # We do need some way to set self.length to support the check in add_graphics
+        self.length = base.length
+
         self.id = None
 
     @property

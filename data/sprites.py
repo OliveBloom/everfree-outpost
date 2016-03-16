@@ -6,11 +6,6 @@ from outpost_data.outpost.lib.pony_sprite import *
 from outpost_data.outpost.lib.sprite_util import *
 
 
-def standard_manes_tails():
-    for kind in ('mane', 'tail'):
-        for i in (1, 2, 3):
-            yield (kind, i)
-
 def init():
     pony = SPRITE.new('pony', SPRITE_SIZE)
     load = loader('sprites', unit=SPRITE_SIZE)

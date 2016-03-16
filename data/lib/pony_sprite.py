@@ -51,6 +51,17 @@ LAYER_DEPTHS = {
         'backwing': 50,
         }
 
+LAYER_NAMES = ('base', 'horn', 'frontwing', 'backwing')
+
+def make_anim_dirs(sprite, base_name, length, rate):
+    anims = {}
+    for i, d in enumerate(DIRS):
+        if d.mirror is None:
+            anims[i] = sprite.add_anim('%s-%d' % (base_name, i), length, rate)
+    for i, d in enumerate(DIRS):
+        if d.mirror is not None:
+            sprite.add_mirror_anim('%s-%d' % (base_name, i), anims[d.mirror])
+
 def make_tribe_sheets(layer_imgs):
     '''Produce a combined sheet for each tribe, using a dict or function to
     obtain the four individual components base/horn/frontwing/backwing.'''
@@ -119,10 +130,10 @@ def add_hat_layer(part, name, sex, sheet):
 
 _ANIM_FACING_TABLE = {}
 
-def register_anim_facing(name, facing):
+def register_anim_facing(anim, facing):
     '''Register the direction of the named special animation.  `facing` should
     be a number 0..7 indicating the direction of the pony's head.'''
-    _ANIM_FACING_TABLE[name] = facing
+    _ANIM_FACING_TABLE[anim.full_name] = facing
 
 def get_anim_facing(anim):
     '''Get the direction of the pony's head in a particular animation.'''
@@ -130,5 +141,12 @@ def get_anim_facing(anim):
     if last.isdigit():
         return DIRS[int(last)].idx
     else:
-        return _ANIM_FACING_TABLE.get(full_name, 4)
+        return _ANIM_FACING_TABLE.get(anim.full_name, 4)
 
+
+# Misc
+
+def standard_manes_tails():
+    for kind in ('mane', 'tail'):
+        for i in (1, 2, 3):
+            yield (kind, i)
