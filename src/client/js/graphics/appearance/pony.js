@@ -243,7 +243,6 @@ function PonyAppearance(assets, bits, name) {
         var part = SpritePartDef.by_id[part_idx];
         var variant_id = part.variants[local_variant_id];
         console.assert(sheet_index == 0, 'multisheet sprites are not supported');
-        console.log(part, local_variant_id, variant_id, assets['sprite_' + variant_id]);
         return variant_id != null ? assets['sprite_' + variant_id] : null;
     }
 

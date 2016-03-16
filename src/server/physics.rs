@@ -160,7 +160,7 @@ pub trait Fragment<'d> {
                     static SPEED_NAME_MAP: [&'static str; 4] = ["stand", "walk", "", "run"];
                     let idx = (3 * (facing.x + 1) + (facing.y + 1)) as usize;
                     let anim_dir = [5, 4, 3, 6, 0, 2, 7, 0, 1][idx];
-                    let anim_name = format!("pony/{}-{}",
+                    let anim_name = format!("pony//{}-{}",
                                             SPEED_NAME_MAP[speed as usize],
                                             anim_dir);
                     data.animations.get_id(&anim_name)
