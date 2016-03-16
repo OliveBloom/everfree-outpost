@@ -302,7 +302,5 @@ def build_part_client_json(parts):
         variants = [None] * (len(p.variants) + (1 if p.optional else 0))
         for v in p.iter_variants():
             variants[v.local_id] = v.id
-        return {
-                'variants': variants
-                }
+        return variants
     return list(convert(p) for p in parts)

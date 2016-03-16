@@ -38,7 +38,7 @@ def main(src_dir, build_dir, out_file):
     add('json', 'template_part_defs',   build('structure_parts_client.json'))
     add('json', 'template_vert_defs',   build('structure_verts_client.json'))
     add('json', 'animation_defs',       build('animations_client.json'))
-    add('json', 'attach_slot_defs',     build('attach_slots_client.json'))
+    add('json', 'sprite_part_defs',     build('sprite_parts_client.json'))
     add('json', 'extra_defs',           build('extras_client.json'))
     add('json', 'fonts_metrics',        build('fonts_metrics.json'))
     add('json', 'day_night',            build('day_night.json'))

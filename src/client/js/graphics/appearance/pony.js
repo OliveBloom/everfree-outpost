@@ -5,7 +5,7 @@ var glutil = require('graphics/glutil');
 var nametag = require('graphics/nametag');
 var sb = require('graphics/shaderbuilder');
 
-var AttachSlotDef = require('data/attachments').AttachSlotDef;
+var SpritePartDef = require('data/sprites').SpritePartDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
 
 
@@ -238,11 +238,13 @@ function PonyAppearance(assets, bits, name) {
     // TODO: use a SpriteSheet object that contains all the sheet images
     var base_idx = ExtraDefs.pony_bases_table[base];
 
-    function get_image(slot_key, attachment_id, sheet_index) {
-        var slot_idx = ExtraDefs.pony_slot_table[stallion][slot_key];
-        var slot = AttachSlotDef.by_id[slot_idx];
-        var file_name = slot.sprite_files[attachment_id];
-        return file_name ? assets[file_name + '-' + sheet_index] : null;
+    function get_image(part_key, local_variant_id, sheet_index) {
+        var part_idx = ExtraDefs.pony_slot_table[stallion][part_key];
+        var part = SpritePartDef.by_id[part_idx];
+        var variant_id = part.variants[local_variant_id];
+        console.assert(sheet_index == 0, 'multisheet sprites are not supported');
+        console.log(part, local_variant_id, variant_id, assets['sprite_' + variant_id]);
+        return variant_id != null ? assets['sprite_' + variant_id] : null;
     }
 
     this.base_img = get_image('base', base_idx, 0);

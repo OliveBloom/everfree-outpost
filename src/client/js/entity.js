@@ -1,6 +1,6 @@
 var Sprite = require('graphics/sprite').Sprite;
 var Deque = require('util/misc').Deque;
-var AnimationDef = require('data/animations').AnimationDef;
+var AnimationDef = require('data/sprites').AnimationDef;
 
 
 /** @constructor */

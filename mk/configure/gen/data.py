@@ -86,7 +86,8 @@ def ui_atlas(out_dir, src_dir):
 def process():
     data_files = ['%s_%s.json' % (f,s)
             for s in ('server', 'client')
-            for f in ('structures', 'blocks', 'items', 'recipes', 'animations', 'attach_slots')]
+            for f in ('structures', 'blocks', 'items', 'recipes', 'animations')]
+    data_files.append('sprite_parts_client.json')
     data_files.append('loot_tables_server.json')
     data_files.append('extras_client.json')
     return template('''

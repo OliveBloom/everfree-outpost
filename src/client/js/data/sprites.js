@@ -1,4 +1,28 @@
 /** @constructor */
+function SpritePartDef_(id, info) {
+    this.id = id;
+    this.variants = info;
+}
+
+var SpritePartDef = {}
+exports.SpritePartDef = SpritePartDef;
+
+SpritePartDef.by_id = [];
+
+SpritePartDef.register = function(id, info) {
+    if (info == null) {
+        return;
+    }
+
+    var item = new SpritePartDef_(id, info);
+    while (SpritePartDef.by_id.length <= item.id) {
+        SpritePartDef.by_id.push(null);
+    }
+    SpritePartDef.by_id[item.id] = item;
+};
+
+
+/** @constructor */
 function AnimationDef_(id, info) {
     this.id = id;
     this.offset_x = info['offset'][0];

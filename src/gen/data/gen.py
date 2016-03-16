@@ -127,7 +127,7 @@ def emit_sprites(output_dir, sprites):
     write_json(output_dir, 'animations_client.json',
             sprite.build_anim_client_json(anims))
 
-    write_json(output_dir, 'attach_slots_client.json',
+    write_json(output_dir, 'sprite_parts_client.json',
             sprite.build_part_client_json(parts))
 
 
