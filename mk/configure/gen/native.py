@@ -28,23 +28,29 @@ def rules(i):
         #rustflags_lto = %if not i.debug%  -C lto  %end%
         rustflags_lto =
 
+        # The `sed` invocations below are hacks to handle nondeterministic
+        # depfile line order from rustc.
         rule rustc_native_bin
-            command = %rustc_base --crate-type=bin $rustflags_lto $rustflags
+            command = %rustc_base --crate-type=bin $rustflags_lto $rustflags $
+                && sed -i -e '\\:^$out:p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
         rule rustc_native_lib
-            command = %rustc_base --crate-type=lib $rustflags
+            command = %rustc_base --crate-type=lib $rustflags $
+                && sed -i -e '\\:^$out:p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
         rule rustc_native_dylib
-            command = %rustc_base --crate-type=dylib $rustflags
+            command = %rustc_base --crate-type=dylib $rustflags $
+                && sed -i -e '\\:^$out:p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
         rule rustc_native_staticlib
-            command = %rustc_base --crate-type=staticlib $rustflags_lto $rustflags
+            command = %rustc_base --crate-type=staticlib $rustflags_lto $rustflags $
+                && sed -i -e '\\:^$out:p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
