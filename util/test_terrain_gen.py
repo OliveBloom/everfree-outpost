@@ -7,7 +7,7 @@ import time
 
 import tornado.autoreload
 import tornado.web
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from outpost_savegame import V2, V3
 try:
@@ -71,6 +71,18 @@ class SliceCache(object):
 
         return render_map.slice_chunk(self.data, chunk)
 
+def render_test_drawing(generator, pid, cpos):
+    w, h, height_map, points, lines = generator.test(pid, cpos.x, cpos.y)
+    img = Image.new('L', (w, h))
+    img.putdata(height_map)
+    img = img.convert('RGBA')
+    d = ImageDraw.Draw(img)
+    for x, y, color in points:
+        d.rectangle((x - 1, y - 1, x + 1, y + 1), fill=color)
+    for x0, y0, x1, y1, color in lines:
+        d.line((x0, y0, x1, y1), fill=color)
+    return img
+
 
 def mk_map_handler():
     with open(os.path.join(os.path.dirname(sys.argv[0]), 'map.tmpl.html'), 'r') as f:
@@ -93,12 +105,11 @@ def mk_tile_handler(args):
     offset = V2(*args.origin) - V2(CENTER_TILE, CENTER_TILE)
 
     data = render_map.load_data(args.dist_dir)
-    worker = tg.Worker(args.dist_dir)
+    generator = tg.Generator(args.dist_dir)
 
     wrap_chunk = mk_wrap(data)
     def get_chunk(cpos):
-        worker.request(args.plane_id, cpos.x, cpos.y)
-        _, _, _, chunk = worker.get_response()
+        chunk = generator.generate_chunk(args.plane_id, cpos.x, cpos.y)
         return wrap_chunk(chunk)
     slice_cache = SliceCache(data, get_chunk)
 
@@ -107,7 +118,8 @@ def mk_tile_handler(args):
         print('generate %d, %d, %d' % (tile_pos.x, tile_pos.y, z))
         if z == ZOOM:
             cpos = tile_pos + offset
-            img = render_map.render_chunk(slice_cache, cpos)
+            #img = render_map.render_chunk(slice_cache, cpos)
+            img = render_test_drawing(generator, args.plane_id, cpos)
             return img.resize((256, 256))
         else:
             parts = [(x, y, generate_image(tile_pos * 2 + V2(x, y), z + 1))

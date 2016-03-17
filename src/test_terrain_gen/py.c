@@ -21,36 +21,36 @@ static PyObject* Chunk_create(tg_chunk* chunk);
 static PyObject* Structure_create(const tg_structure* structure);
 
 
-typedef struct _Worker {
+typedef struct _Generator {
     PyObject_HEAD
 
-    tg_worker* ptr;
-} Worker;
+    tg_generator* ptr;
+} Generator;
 
-static PyTypeObject WorkerType = {
+static PyTypeObject GeneratorType = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "outpost_terrain_gen.Worker",
-    sizeof(Worker),
+    "outpost_terrain_gen.Generator",
+    sizeof(Generator),
 };
 
-static void Worker_dealloc(Worker* self) {
+static void Generator_dealloc(Generator* self) {
     if (self->ptr) {
-        worker_destroy(self->ptr);
+        generator_destroy(self->ptr);
     }
 }
 
-static int Worker_init(Worker* self, PyObject* args, PyObject* kwds) {
+static int Generator_init(Generator* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {"path", NULL};
     const char* path;
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist, &path)) {
         return -1;
     }
 
-    self->ptr = worker_create(path);
+    self->ptr = generator_create(path);
     return 0;
 }
 
-static PyObject* Worker_request(Worker* self, PyObject* args, PyObject* kwds) {
+static PyObject* Generator_generate_chunk(Generator* self, PyObject* args, PyObject* kwds) {
     static char* kwlist[] = {"plane_id", "x", "y", NULL};
     uint64_t pid;
     int32_t x;
@@ -59,16 +59,7 @@ static PyObject* Worker_request(Worker* self, PyObject* args, PyObject* kwds) {
         return NULL;
     }
 
-    worker_request(self->ptr, pid, x, y);
-    Py_INCREF(Py_None);
-    return Py_None;
-}
-
-static PyObject* Worker_get_response(Worker* self) {
-    uint64_t pid;
-    int32_t x;
-    int32_t y;
-    tg_chunk* chunk = worker_get_response(self->ptr, &pid, &x, &y);
+    tg_chunk* chunk = generator_generate_chunk(self->ptr, pid, x, y);
 
     PyObject* py_chunk = Chunk_create(chunk);
     if (!py_chunk) {
@@ -76,29 +67,135 @@ static PyObject* Worker_get_response(Worker* self) {
         return NULL;
     }
 
-    PyObject* result = Py_BuildValue("KiiO", pid, x, y, py_chunk);
-    Py_DECREF(py_chunk);
-    return result;
+    return py_chunk;
 }
 
-static PyMethodDef Worker_methods[] = {
-    {"request", (PyCFunction)Worker_request, METH_VARARGS | METH_KEYWORDS},
-    {"get_response", (PyCFunction)Worker_get_response, METH_NOARGS},
-    {NULL}
-};
-
-PyObject* Worker_get_type() {
-    WorkerType.tp_flags = Py_TPFLAGS_DEFAULT;
-    WorkerType.tp_new = PyType_GenericNew;
-    WorkerType.tp_dealloc = (destructor)Worker_dealloc;
-    WorkerType.tp_init = (initproc)Worker_init;
-    WorkerType.tp_methods = Worker_methods;
-
-    if (PyType_Ready(&WorkerType) < 0) {
+static PyObject* Generator_test(Generator* self, PyObject* args, PyObject* kwds) {
+    static char* kwlist[] = {"plane_id", "x", "y", NULL};
+    uint64_t pid;
+    int32_t x;
+    int32_t y;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "Kii", kwlist, &pid, &x, &y)) {
         return NULL;
     }
 
-    return (PyObject*)&WorkerType;
+    PyObject* height_map = NULL;
+    PyObject* points = NULL;
+    PyObject* lines = NULL;
+    PyObject* item = NULL;
+    PyObject* color = NULL;
+    PyObject* result = NULL;
+    tg_drawing* drawing = NULL;
+
+    // Get drawing
+    drawing = generator_test(self->ptr, pid, x, y);
+    // generator_test never returns null
+
+    // Build height map
+    uint32_t w;
+    uint32_t h;
+    drawing_get_size(drawing, &w, &h);
+
+    height_map = PyBytes_FromStringAndSize(
+            drawing_get_height_map(drawing),
+            (Py_ssize_t)w * (Py_ssize_t)h);
+    FAIL_IF(height_map == NULL);
+
+    // Build points list
+    size_t num_points = drawing_get_point_count(drawing);
+    points = PyList_New(num_points);
+    FAIL_IF(points == NULL);
+
+    for (size_t i = 0; i < num_points; ++i) {
+        int32_t px;
+        int32_t py;
+        const char* color_str;
+        size_t color_len;
+        drawing_get_point(drawing, i, &px, &py, &color_str, &color_len);
+
+        color = PyUnicode_FromStringAndSize(color_str, color_len);
+        FAIL_IF(color == NULL);
+
+        item = Py_BuildValue("iiO", px, py, color);
+        FAIL_IF(item == NULL);
+
+        PyList_SET_ITEM(points, i, item);   // Steals reference to item
+
+        Py_CLEAR(color);
+        item = NULL;    // Became a borrowed ref when SET_ITEM stole it
+    }
+
+    // Build lines list
+    size_t num_lines = drawing_get_line_count(drawing);
+    lines = PyList_New(num_lines);
+    FAIL_IF(lines == NULL);
+
+    for (size_t i = 0; i < num_lines; ++i) {
+        int32_t px0;
+        int32_t py0;
+        int32_t px1;
+        int32_t py1;
+        const char* color_str;
+        size_t color_len;
+        drawing_get_line(drawing, i,
+                &px0, &py0, &px1, &py1,
+                &color_str, &color_len);
+
+        color = PyUnicode_FromStringAndSize(color_str, color_len);
+        FAIL_IF(color == NULL);
+
+        item = Py_BuildValue("iiiiO", px0, py0, px1, py1, color);
+        FAIL_IF(item == NULL);
+
+        PyList_SET_ITEM(lines, i, item);   // Steals reference to item
+
+        Py_CLEAR(color);
+        item = NULL;    // Became a borrowed ref when SET_ITEM stole it
+    }
+
+    // Build result
+    result = Py_BuildValue("IIOOO", w, h, height_map, points, lines);
+    FAIL_IF(result == NULL);
+    Py_CLEAR(height_map);
+    Py_CLEAR(points);
+    Py_CLEAR(lines);
+
+    drawing_free(drawing);
+    drawing = NULL;
+
+    return result;
+
+fail:
+    Py_XDECREF(height_map);
+    Py_XDECREF(points);
+    Py_XDECREF(lines);
+    Py_XDECREF(item);
+    Py_XDECREF(color);
+    if (drawing != NULL) {
+        drawing_free(drawing);
+    }
+
+    return NULL;
+}
+
+static PyMethodDef Generator_methods[] = {
+    {"generate_chunk", (PyCFunction)Generator_generate_chunk, METH_VARARGS | METH_KEYWORDS},
+    {"test", (PyCFunction)Generator_test, METH_VARARGS | METH_KEYWORDS},
+    {NULL}
+};
+
+PyObject* Generator_get_type() {
+    GeneratorType.tp_flags = Py_TPFLAGS_DEFAULT;
+    GeneratorType.tp_new = PyType_GenericNew;
+    GeneratorType.tp_dealloc = (destructor)Generator_dealloc;
+    GeneratorType.tp_init = (initproc)Generator_init;
+    GeneratorType.tp_methods = Generator_methods;
+
+    if (PyType_Ready(&GeneratorType) < 0) {
+        return NULL;
+    }
+
+    return (PyObject*)&GeneratorType;
 }
 
 
@@ -323,7 +420,7 @@ PyMODINIT_FUNC PyInit_outpost_terrain_gen() {
         PyModule_AddObject(m, name, typ); \
     } while(0)
 
-    ADD("Worker", Worker_get_type());
+    ADD("Generator", Generator_get_type());
     ADD("Chunk", Chunk_get_type());
     ADD("Structure", Structure_get_type());
 

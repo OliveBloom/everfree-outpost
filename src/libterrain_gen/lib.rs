@@ -28,8 +28,8 @@ pub mod worker;
 mod prop;
 mod cache;
 
-mod forest;
-mod dungeon;
+pub mod forest;
+pub mod dungeon;
 
 
 pub type StdRng = XorShiftRng;

@@ -1,40 +1,38 @@
 #![crate_name = "terrain_gen_ffi"]
 #![crate_type = "staticlib"]
-#![feature(
-    box_raw,
-    cstr_to_str,
-    scoped,
-)]
 
 extern crate env_logger;
 extern crate libc;
+extern crate rand;
 extern crate rustc_serialize;
 extern crate terrain_gen as libterrain_gen;
 extern crate server_config as libserver_config;
 extern crate server_types as libserver_types;
 
+use std::cmp;
 use std::collections::hash_map;
 use std::fs::File;
 use std::ffi::CStr;
 use std::io::Read;
+use std::iter;
 use std::mem;
-use std::sync::mpsc::{self, Sender, Receiver};
-use std::thread::{self, JoinGuard};
 use libc::{c_char, size_t};
+use rand::{Rng, XorShiftRng, SeedableRng};
 use rustc_serialize::json;
 
 use libserver_config::{Data, Storage};
 use libserver_types::*;
 use libterrain_gen::{GenChunk, GenStructure};
-use libterrain_gen::worker::{self, Command, Response};
+
+use libterrain_gen::forest::Provider as ForestProvider;
+use libterrain_gen::dungeon::Provider as DungeonProvider;
 
 #[allow(dead_code)]
-pub struct Worker {
-    send: Sender<Command>,
-    recv: Receiver<Response>,
+pub struct TerrainGen {
     data: Box<Data>,
     storage: Box<Storage>,
-    guard: JoinGuard<'static, ()>,
+    forest: ForestProvider<'static>,
+    dungeon: DungeonProvider<'static>,
 }
 
 fn read_json(mut file: File) -> json::Json {
@@ -43,8 +41,8 @@ fn read_json(mut file: File) -> json::Json {
     json::Json::from_str(&content).unwrap()
 }
 
-impl Worker {
-    fn new(path: &str) -> Worker {
+impl TerrainGen {
+    fn new(path: &str) -> TerrainGen {
         let storage = Box::new(Storage::new(&path.to_owned()));
 
         let block_json = read_json(storage.open_block_data());
@@ -60,26 +58,21 @@ impl Worker {
                                             animation_json,
                                             loot_table_json).unwrap());
 
-        let (send_cmd, recv_cmd) = mpsc::channel();
-        let (send_result, recv_result) = mpsc::channel();
-        // Make sure the closure only looks at the heap-allocated storage, not the stack-allocated
-        // boxes themselves.
-        let guard = {
-            let storage_ref: &Storage = &*storage;
-            let data_ref: &Data = &*data;
-            let guard = thread::scoped(move || {
-                worker::run(data_ref, storage_ref, recv_cmd, send_result);
-            });
-            // Cast away the lifetimes so we can move `data` and `storage` into the struct.
-            unsafe { mem::transmute(guard) }
-        };
+        let mut rng: XorShiftRng = SeedableRng::from_seed([0xe0e0e0e0,
+                                                           0x00012345,
+                                                           0xe0e0e0e0,
+                                                           0x00012345]);
+        // Cast away lifetimes so we can move `data`/`storage` into the struct later.
+        let data_ref: &'static Data = unsafe { mem::transmute(&*data) };
+        let storage_ref: &'static Storage = unsafe { mem::transmute(&*storage) };
+        let forest = ForestProvider::new(data_ref, storage_ref, rng.gen());
+        let dungeon = DungeonProvider::new(data_ref, storage_ref, rng.gen());
 
-        Worker {
-            send: send_cmd,
-            recv: recv_result,
+        TerrainGen {
             data: data,
             storage: storage,
-            guard: guard,
+            forest: forest,
+            dungeon: dungeon,
         }
     }
 }
@@ -97,36 +90,145 @@ fn init_logger() {
 }
 
 
+pub struct Drawing {
+    size: V2,
+    height_map: Box<[u8]>,
+    points: Vec<(V2, &'static str)>,
+    lines: Vec<(V2, V2, &'static str)>,
+}
+
+impl Drawing {
+    pub fn new(size: V2) -> Drawing {
+        let len = size.x as usize * size.y as usize;
+        let height_map = iter::repeat(0).take(len).collect::<Vec<_>>().into_boxed_slice();
+        Drawing {
+            size: size,
+            height_map: height_map,
+            points: Vec::new(),
+            lines: Vec::new(),
+        }
+    }
+
+    pub fn bounds(&self) -> Region<V2> {
+        Region::new(scalar(0), self.size)
+    }
+
+    pub fn get_height(&self, pos: V2) -> u8 {
+        self.height_map[self.bounds().index(pos)]
+    }
+
+    pub fn set_height(&mut self, pos: V2, val: u8) {
+        self.height_map[self.bounds().index(pos)] = val;
+    }
+
+    pub fn add_point(&mut self, pos: V2, color: &'static str) {
+        self.points.push((pos, color));
+    }
+
+    pub fn add_line(&mut self, pos0: V2, pos1: V2, color: &'static str) {
+        self.lines.push((pos0, pos1, color));
+    }
+}
+
+
 #[no_mangle]
-pub unsafe extern "C" fn worker_create(path: *const c_char) -> *mut Worker {
+pub unsafe extern "C" fn generator_create(path: *const c_char) -> *mut TerrainGen {
     init_logger();
     let c_str = CStr::from_ptr(path);
     let s = c_str.to_str().unwrap();
-    let ptr = Box::new(Worker::new(s));
+    let ptr = Box::new(TerrainGen::new(s));
     Box::into_raw(ptr)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn worker_destroy(ptr: *mut Worker) {
+pub unsafe extern "C" fn generator_destroy(ptr: *mut TerrainGen) {
     drop(Box::from_raw(ptr));
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn worker_request(ptr: *mut Worker, pid: u64, x: i32, y: i32) {
-    let cmd = Command::Generate(Stable::new(pid), V2::new(x, y));
-    (*ptr).send.send(cmd).unwrap();
+pub unsafe extern "C" fn generator_generate_chunk(ptr: *mut TerrainGen,
+                                                  pid: u64,
+                                                  x: i32,
+                                                  y: i32) -> *mut GenChunk {
+    let pid = Stable::new(pid);
+    let cpos = V2::new(x, y);
+    let chunk =
+        if pid == STABLE_PLANE_FOREST {
+            Box::new((*ptr).forest.generate(pid, cpos))
+        } else {
+            Box::new((*ptr).dungeon.generate(pid, cpos))
+        };
+    Box::into_raw(chunk)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn worker_get_response(ptr: *mut Worker,
-                                             pid_p: *mut u64,
-                                             x_p: *mut i32,
-                                             y_p: *mut i32) -> *mut GenChunk {
-    let (pid, pos, gc) = (*ptr).recv.recv().unwrap();
-    *pid_p = pid.unwrap();
-    *x_p = pos.x;
-    *y_p = pos.y;
-    Box::into_raw(Box::new(gc))
+pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
+                                        pid: u64,
+                                        x: i32,
+                                        y: i32) -> *mut Drawing {
+    use libterrain_gen::forest::height_map;
+    use libterrain_gen::forest::context::*;
+
+    let pixel_size = 16;    // Number of tiles covered by each pixel
+    let zoom = 2;
+    let size = scalar(256 / zoom);
+    let mut drawing = Box::new(Drawing::new(size));
+
+    let pid = Stable::new(pid);
+    let cpos = V2::new(x, y);
+    let bounds = drawing.bounds() + cpos * size;
+
+    (*ptr).forest.context_mut().grid_fold::<HeightMapPass, _, _>(
+        pid, bounds, (), |(), pos, val| {
+            //let val = cmp::max(0, cmp::min(255, val / 2 + 128)) as u8;
+            let val =
+                if val < -128 {
+                    -1
+                } else if val < 0 {
+                    0
+                } else if val < 256 {
+                    (val / 32) as i8
+                } else {
+                    7
+                };
+            let val = (val + 1) as u8 * 31;
+            drawing.height_map[bounds.index(pos)] = val;
+        });
+
+    /*
+    (*ptr).forest.context_mut().grid_fold::<HeightDetailPass, _, _>(
+        pid, bounds, (), |(), pos, val| {
+            //let val = cmp::max(0, cmp::min(255, val / 2 + 128)) as u8;
+            drawing.height_map[bounds.index(pos)] = (val + 1) as u8 * 31;
+        });
+        */
+
+    /*
+    (*ptr).forest.context_mut().points_fold::<CaveRampsPass, _, _>(
+        pid, bounds, (), |(), pos, r| {
+            let h = drawing.height_map[bounds.index(pos)];
+            if r.layer + 2 == h / 31 {
+                drawing.add_point(pos - bounds.min, "blue");
+            }
+        });
+        */
+
+    {
+        let mut do_line = |x, y, color| {
+            let x1 = x / pixel_size;
+            let line_bounds = Region::new(V2::new(0, y), V2::new(x1, y + 1));
+            if line_bounds.overlaps(bounds) {
+                drawing.add_line(V2::new(0, y) - bounds.min,
+                                 V2::new(x1, y) - bounds.min,
+                                 color);
+            }
+        };
+
+        do_line(8 * 16, 0, "red");
+        do_line(160 * 16, 1, "green");
+    }
+
+    Box::into_raw(drawing)
 }
 
 
@@ -206,5 +308,67 @@ pub unsafe extern "C" fn extra_iter_next(ptr: *mut ExtraIter,
             true
         },
     }
+}
+
+
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_free(ptr: *mut Drawing) {
+    drop(Box::from_raw(ptr))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_get_size(ptr: *mut Drawing,
+                                          width_p: *mut u32,
+                                          height_p: *mut u32) {
+    *width_p = (*ptr).size.x as u32;
+    *height_p = (*ptr).size.y as u32;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_get_height_map(ptr: *mut Drawing) -> *const u8 {
+    (*ptr).height_map.as_ptr()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_get_point_count(ptr: *mut Drawing) -> size_t {
+    (*ptr).points.len()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_get_point(ptr: *mut Drawing,
+                                           i: size_t,
+                                           x_p: *mut i32,
+                                           y_p: *mut i32,
+                                           color_p: *mut *const c_char,
+                                           color_len_p: *mut size_t) {
+    let &(pos, color) = &(*ptr).points[i];
+    *x_p = pos.x;
+    *y_p = pos.y;
+    *color_p = color.as_ptr() as *const c_char;
+    *color_len_p = color.len();
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_get_line_count(ptr: *mut Drawing) -> size_t {
+    (*ptr).lines.len()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn drawing_get_line(ptr: *mut Drawing,
+                                          i: size_t,
+                                          x0_p: *mut i32,
+                                          y0_p: *mut i32,
+                                          x1_p: *mut i32,
+                                          y1_p: *mut i32,
+                                          color_p: *mut *const c_char,
+                                          color_len_p: *mut size_t) {
+    let &(pos0, pos1, color) = &(*ptr).lines[i];
+    *x0_p = pos0.x;
+    *y0_p = pos0.y;
+    *x1_p = pos1.x;
+    *y1_p = pos1.y;
+    *color_p = color.as_ptr() as *const c_char;
+    *color_len_p = color.len();
 }
 

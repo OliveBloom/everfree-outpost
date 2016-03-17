@@ -21,6 +21,10 @@ impl<'d> Provider<'d> {
         }
     }
 
+    pub fn context_mut(&mut self) -> &mut Context<'d> {
+        &mut self.ctx
+    }
+
     pub fn generate(&mut self, pid: Stable<PlaneId>, cpos: V2) -> GenChunk {
         let mut gc = GenChunk::new();
         let mut rng = self.ctx.get_rng(pid);
