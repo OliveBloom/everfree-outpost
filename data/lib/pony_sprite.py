@@ -118,7 +118,7 @@ def add_hat_layer(part, name, sex, sheet):
     on `sex`.'''
     sheet = sheet.with_unit(HAT_SIZE)
     def f(_variant, anim, _frame_idx, img):
-        idx = get_anim_facing(anim)
+        idx = DIRS[get_anim_facing(anim)].idx
         hat = sheet.extract((idx, 0))
         hat_pos = get_hat_box_pos(img)
         return hat.pad(SPRITE_SIZE, offset=hat_pos)
@@ -139,9 +139,9 @@ def get_anim_facing(anim):
     '''Get the direction of the pony's head in a particular animation.'''
     _, _, last = anim.name.rpartition('-')
     if last.isdigit():
-        return DIRS[int(last)].idx
+        return int(last)
     else:
-        return _ANIM_FACING_TABLE.get(anim.full_name, 4)
+        return _ANIM_FACING_TABLE.get(anim.full_name, 2)
 
 
 # Misc
