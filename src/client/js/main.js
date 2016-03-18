@@ -42,11 +42,14 @@ var KeybindingEditor = require('ui/keybinding').KeybindingEditor;
 var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
 var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
+var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
+var DNDState = require('ui/dnd').DNDState;
+
 var GameUI = require('ui_gl/hud').GameUI;
 var UIRenderContext = require('ui_gl/render').UIRenderContext;
 var InventoryUIGL = require('ui_gl/inventory').InventoryUIGL;
-var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
-var DNDState = require('ui/dnd').DNDState;
+var Input = require('input').Input;
+var UIInput = require('ui_gl/input').UIInput;
 
 var BlockDef = require('data/chunk').BlockDef;
 var ItemDef = require('data/items').ItemDef;
@@ -125,7 +128,9 @@ var chat;
 var error_list;
 var inv_update_list;
 var music_test;
+
 var ui_gl;
+var input;
 
 var main_menu;
 var debug_menu;
@@ -190,8 +195,11 @@ function init() {
     chat = new ChatWindow();
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
+
     ui_gl = new GameUI(keyboard);
     ui_gl.calcSize(0, 0);
+    input = new Input();
+    input.handlers.push(new UIInput(ui_gl));
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -408,6 +416,7 @@ function maybeRegister(info, next) {
 
 function buildUI() {
     keyboard.attach(document);
+    input.attach(document);
     setupKeyHandler();
 
     function doResize() {
