@@ -581,6 +581,7 @@ def init():
 
     # Base terrain
     floor_bb = BLOCK.prefixed('terrain').shape('floor')
+    empty_bb = BLOCK.prefixed('terrain').shape('empty')
     seen = set()
     for letters in ('gc', 'gw'):
         for name, img in iter_terrain_floor(collect_layers(letters)):
@@ -589,7 +590,8 @@ def init():
                 continue
             seen.add(name)
 
-            floor_bb.new(name).bottom(img)
+            bb = floor_bb if 'w' not in letters else empty_bb
+            bb.new(name).bottom(img)
     
     # Variants
     for layer in layer_dct.values():
