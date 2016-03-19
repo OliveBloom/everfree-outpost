@@ -98,6 +98,10 @@ ItemSlotGL.prototype.render = function(buf, x, y) {
             x, y);
 };
 
+ItemSlotGL.prototype.handleMouseOver = function(evt, input) {
+    this._dispatch('mouseover');
+};
+
 
 /** @constructor */
 function InventoryGrid(w, h, count) {
@@ -109,8 +113,14 @@ function InventoryGrid(w, h, count) {
     this.grid_h = h;
     this.count = count;
     this.slots = new Array(count);
+    var this_ = this;
     for (var i = 0; i < count; ++i) {
         this.slots[i] = new ItemSlotGL();
+        (function(i) {
+            this_.slots[i].addListener('mouseover', function() {
+                this_._setSel(i);
+            });
+        })(i);
         this.addChild(this.slots[i]);
     }
 
@@ -149,14 +159,7 @@ InventoryGrid.prototype.selectedItem = function() {
     return this.slots[this.sel_idx].item.item_id;
 };
 
-InventoryGrid.prototype._moveSel = function(dx, dy, mag) {
-    var x = this.sel_idx % this.grid_w;
-    var y = (this.sel_idx / this.grid_w)|0;
-
-    var new_x = Math.max(0, Math.min(this.grid_w - 1, x + dx * mag));
-    var new_y = Math.max(0, Math.min(this.grid_h - 1, y + dy * mag));
-    var new_idx = Math.min(this.count - 1, new_x + new_y * this.grid_w);
-
+InventoryGrid.prototype._setSel = function(new_idx) {
     if (this.sel_idx != new_idx) {
         this.slots[this.sel_idx].setActive(0);
         this.sel_idx = new_idx;
@@ -166,6 +169,17 @@ InventoryGrid.prototype._moveSel = function(dx, dy, mag) {
     } else {
         return false;
     }
+};
+
+InventoryGrid.prototype._moveSel = function(dx, dy, mag) {
+    var x = this.sel_idx % this.grid_w;
+    var y = (this.sel_idx / this.grid_w)|0;
+
+    var new_x = Math.max(0, Math.min(this.grid_w - 1, x + dx * mag));
+    var new_y = Math.max(0, Math.min(this.grid_h - 1, y + dy * mag));
+    var new_idx = Math.min(this.count - 1, new_x + new_y * this.grid_w);
+
+    return this._setSel(new_idx);
 };
 
 InventoryGrid.prototype.onKey = function(evt) {

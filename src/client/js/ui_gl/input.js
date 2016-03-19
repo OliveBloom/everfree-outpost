@@ -23,13 +23,13 @@ exports.UIInput = UIInput;
 
 UIInput.prototype.handleKeyDown = function(evt) {
     if (this.root.handleKeyDown) {
-        return this.root.handleKeyDown(evt);
+        return this.root.handleKeyDown(evt, this);
     }
 };
 
 UIInput.prototype.handleKeyUp = function(evt) {
     if (this.root.handleKeyUp) {
-        return this.root.handleKeyUp(evt);
+        return this.root.handleKeyUp(evt, this);
     }
 };
 
@@ -56,7 +56,7 @@ UIInput.prototype.handleMouseDown = function(evt) {
     var s = this.mouse_stack;
     for (var i = s.length - 1; i >= 0; --i) {
         if (s[i].widget.handleMouseDown) {
-            return s[i].widget.handleMouseDown(evt);
+            return s[i].widget.handleMouseDown(evt, this);
         }
     }
 };
@@ -69,7 +69,7 @@ UIInput.prototype.handleMouseUp = function(evt) {
     var s = this.mouse_stack;
     for (var i = s.length - 1; i >= 0; --i) {
         if (s[i].widget.handleMouseUp) {
-            return s[i].widget.handleMouseUp(evt);
+            return s[i].widget.handleMouseUp(evt, this);
         }
     }
 };
@@ -80,9 +80,8 @@ UIInput.prototype._updateMouseStack = function(x, y, evt) {
     // Pop elements that have been exited
     while (s.length > 0 && !s[s.length - 1].contains(x, y)) {
         var entry = s.pop();
-        console.log('exit', entry.widget.constructor.name);
         if (entry.widget.handleMouseOut) {
-            entry.widget.handleMouseOut(evt);
+            entry.widget.handleMouseOut(evt, this);
         }
     }
 
@@ -97,9 +96,8 @@ UIInput.prototype._updateMouseStack = function(x, y, evt) {
         ax = this.root._x;
         ay = this.root._y;
         if (hitTest(x - ax, y - ay, this.root)) {
-            console.log('enter', this.root.constructor.name);
             if (this.root.handleMouseOver) {
-                this.root.handleMouseOver(evt);
+                this.root.handleMouseOver(evt, this);
             }
             s.push(new MouseStackEntry(this.root, this.root._x, this.root._y));
         } else {
@@ -120,9 +118,8 @@ UIInput.prototype._updateMouseStack = function(x, y, evt) {
         for (var i = 0; i < p.children.length; ++i) {
             var c = p.children[i];
             if (hitTest(x - (ax + c._x), y - (ay + c._y), c)) {
-                console.log('enter', c.constructor.name);
                 if (c.handleMouseOver) {
-                    c.handleMouseOver(evt);
+                    c.handleMouseOver(evt, this);
                 }
                 ax += c._x;
                 ay += c._y;
