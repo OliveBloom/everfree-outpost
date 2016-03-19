@@ -70,6 +70,10 @@ MouseEvent.prototype.constructor = MouseEvent;
 
 
 function alwaysStopKey(evt) {
+    // TODO: do this for now until <input type=text> handling is figured out
+    // The old keyboard.js "always stop" code is smarter anyhow.
+    return false;
+
     // Allow Ctrl + anything
     if (evt.ctrlKey) {
         return false;
