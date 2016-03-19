@@ -23,11 +23,19 @@ ItemDisplay.prototype.setItem = function(item_id) {
     }
 };
 
+ItemDisplay.prototype.getItem = function() {
+    return this.item_id;
+};
+
 ItemDisplay.prototype.setQuantity = function(qty) {
     if (this.qty != qty) {
         this.qty = qty;
         this.damage();
     }
+};
+
+ItemDisplay.prototype.getQuantity = function() {
+    return this.qty;
 };
 
 function makeQuantityString(x) {
@@ -82,9 +90,17 @@ ItemSlotGL.prototype.setItem = function(item_id) {
     this.item.setItem(item_id);
 }
 
+ItemSlotGL.prototype.getItem = function() {
+    return this.item.getItem();
+};
+
 ItemSlotGL.prototype.setQuantity = function(qty) {
     this.item.setQuantity(qty);
 }
+
+ItemSlotGL.prototype.getQuantity = function() {
+    return this.item.getQuantity();
+};
 
 ItemSlotGL.prototype.setActive = function(active) {
     if (this.active != active) {
@@ -96,10 +112,6 @@ ItemSlotGL.prototype.setActive = function(active) {
 ItemSlotGL.prototype.render = function(buf, x, y) {
     buf.drawUI('item-slot-square-' + ITEM_SLOT_ACTIVITY_LEVELS[this.active],
             x, y);
-};
-
-ItemSlotGL.prototype.handleMouseOver = function(evt, input) {
-    this._dispatch('mouseover');
 };
 
 
@@ -116,14 +128,46 @@ function InventoryGrid(w, h, count) {
     var this_ = this;
     for (var i = 0; i < count; ++i) {
         this.slots[i] = new ItemSlotGL();
+
         (function(i) {
-            this_.slots[i].addListener('mouseover', function() {
+            var slot = this_.slots[i];
+            slot.addListener('mouseover', function() {
                 this_._setSel(i);
             });
+
+            slot.addListener('mousedown', function(evt, input) {
+                if (this_.inventory_id != -1) {
+                    input.startDrag(slot, evt, 'inv_items', {
+                        inv_id: this_.inventory_id,
+                        index: i,
+                        item_id: slot.getItem(),
+                        quantity: slot.getQuantity(),
+                    });
+                    slot.setItem(-1);
+                }
+            });
+
+            slot.addListener('dropcheck', function(type) {
+                return type == 'inv_items';
+            });
+
+            slot.addListener('dragcancel', function(type, data) {
+                console.assert(type == 'inv_items');
+                slot.setItem(data.item_id);
+            });
+
+            slot.addListener('drop', function(type, data) {
+                console.assert(type == 'inv_items');
+                // TODO: remove this, and instead do a real inventory move
+                slot.setItem(data.item_id);
+                slot.setQuantity(data.quantity);
+            });
         })(i);
+
         this.addChild(this.slots[i]);
     }
 
+    this.inventory_id = -1;
     this.active = false;
     this.sel_idx = 0;
     this.slots[this.sel_idx].setActive(1);
@@ -153,6 +197,8 @@ InventoryGrid.prototype.attach = function(inv) {
         this_.slots[idx].setItem(new_item.item_id);
         this_.slots[idx].setQuantity(new_item.count);
     });
+
+    this.inventory_id = inv.getId();
 };
 
 InventoryGrid.prototype.selectedItem = function() {

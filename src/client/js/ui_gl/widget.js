@@ -61,17 +61,28 @@ Widget.prototype.removeListener = function(name, func) {
     }
 };
 
-Widget.prototype._dispatch = function(name /* varargs */) {
+Widget.prototype.hasListener = function(name) {
+    return this._listeners[name] != null;
+}
+
+Widget.prototype.dispatch = function(name /* varargs */) {
     var l = this._listeners[name];
     if (l == null) {
         return;
     }
 
     var args = Array.prototype.slice.call(arguments, 1);
+    var result = undefined;
     for (var i = 0; i < l.length; ++i) {
-        l[i].apply(this, args);
+        result = l[i].apply(this, args);
     }
+    return result;
 };
+
+Widget.prototype._dispatch = function() {
+    console.error('deprecated: Widget.prototype._dispatch');
+    this.dispatch.apply(this, arguments);
+}
 
 Widget.prototype.runLayout = function() {
     for (var i = 0; i < this.children.length; ++i) {
