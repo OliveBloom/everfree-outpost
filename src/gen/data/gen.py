@@ -131,12 +131,16 @@ def emit_sprites(output_dir, sprites):
             sprite.build_part_client_json(parts))
 
 
+    sprite_dir = os.path.join(output_dir, 'sprites')
+    if not os.path.isdir(sprite_dir):
+        os.mkdir(sprite_dir)
+
     sheets = sprite.build_sheets(sprites)
     sprite_list = [None] * len(sheets)
     for v, img in sheets:
         name = v.full_name.replace('/', '_') + '.png'
         sprite_list[v.id] = name
-        img.save(os.path.join(output_dir, 'sprites', name))
+        img.save(os.path.join(sprite_dir, name))
 
     write_json(output_dir, 'sprites_list.json', sprite_list)
 
