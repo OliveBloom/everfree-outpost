@@ -19,7 +19,9 @@ function GameUI(keyboard) {
 
     this.addChild(this.hotbar);
     this.addChild(this.fps);
-    // dialog is added/removed depending on visibility
+    this.addChild(this.dialog);
+
+    this.dialog.setHidden(true);
 }
 GameUI.prototype = Object.create(W.Widget.prototype);
 GameUI.prototype.constructor = GameUI;
@@ -39,7 +41,7 @@ GameUI.prototype.showDialog = function(content, title) {
     }
     this.dialog.setContent(content);
     this.dialog.setTitle(title || '');
-    this.addChild(this.dialog);
+    this.dialog.setHidden(false);
 
     var this_ = this;
     this.keyboard.pushHandler(function(down, evt) {
@@ -56,7 +58,7 @@ GameUI.prototype.showDialog = function(content, title) {
 GameUI.prototype.hideDialog = function() {
     if (this.dialog.hasContent()) {
         this.dialog.setContent(null);
-        this.removeChild(this.dialog);
+        this.dialog.setHidden(true);
     }
 
     this.keyboard.popHandler();
@@ -74,11 +76,9 @@ GameUI.prototype.runLayout = function() {
     this.fps._x = this._width - 1;
     this.fps._y = 1;
 
-    if (this.dialog.hasContent()) {
-        this.dialog.runLayout();
-        this.dialog._x = ((this._width - this.dialog._width) / 2)|0;
-        this.dialog._y = ((this._height - this.dialog._height) / 2)|0;
-    }
+    this.dialog.runLayout();
+    this.dialog._x = ((this._width - this.dialog._width) / 2)|0;
+    this.dialog._y = ((this._height - this.dialog._height) / 2)|0;
 };
 
 

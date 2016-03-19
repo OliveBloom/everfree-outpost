@@ -4,6 +4,7 @@ var FLAG_STATIC_CHILD_DAMAGED =     0x0002;
 var FLAG_DYNAMIC_CHILD_DAMAGED =    0x0004;
 var FLAG_DYNAMIC =                  0x0008
 var FLAG_LAYOUT_DAMAGED =           0x0010;
+var FLAG_HIDDEN =                   0x0020;
 
 var MASK_ANY_DAMAGED =
     FLAG_DAMAGED |
@@ -15,6 +16,7 @@ exports.FLAG_STATIC_CHILD_DAMAGED = FLAG_STATIC_CHILD_DAMAGED;
 exports.FLAG_DYNAMIC_CHILD_DAMAGED = FLAG_DYNAMIC_CHILD_DAMAGED;
 exports.FLAG_DYNAMIC = FLAG_DYNAMIC;
 exports.FLAG_LAYOUT_DAMAGED = FLAG_LAYOUT_DAMAGED;
+exports.FLAG_HIDDEN = FLAG_HIDDEN;
 exports.MASK_ANY_DAMAGED = MASK_ANY_DAMAGED;
 
 /** @constructor */
@@ -60,12 +62,26 @@ Widget.prototype.setDynamic = function(set) {
     if (set) {
         this._flags |= FLAG_DYNAMIC;
     } else {
-        this._flags &= FLAG_DYNAMIC;
+        this._flags &= ~FLAG_DYNAMIC;
     }
     // Force rebuilding of *both* buffers.  Otherwise we may get multiple
     // copies of the same widget, one static and one dynamic.
     this._damageRecursive(FLAG_STATIC_CHILD_DAMAGED);
     this._damageRecursive(FLAG_DYNAMIC_CHILD_DAMAGED);
+};
+
+Widget.prototype.setHidden = function(set) {
+    var cur = !!(this._flags & FLAG_HIDDEN);
+    if (cur == set) {
+        return;
+    }
+
+    if (set) {
+        this._flags |= FLAG_HIDDEN;
+    } else {
+        this._flags &= ~FLAG_HIDDEN;
+    }
+    this.damage();
 };
 
 Widget.prototype.addListener = function(name, func) {

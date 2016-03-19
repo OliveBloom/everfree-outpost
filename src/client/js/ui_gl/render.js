@@ -63,18 +63,18 @@ var UPDATE_DYNAMIC = 2;
 
 UIRenderContext.prototype.updateBuffers = function(root) {
     if (root._flags & W.FLAG_LAYOUT_DAMAGED) {
+        console.log('update layout');
         root.runLayout();
+        root._flags |= W.FLAG_STATIC_CHILD_DAMAGED | W.FLAG_DYNAMIC_CHILD_DAMAGED;
         this._walkUpdateLayout(root);
     }
 
     var update_static = !!(root._flags & W.FLAG_STATIC_CHILD_DAMAGED);
     var update_dynamic = !!(root._flags & W.FLAG_DYNAMIC_CHILD_DAMAGED);
-    //console.log('  new root flags:', root._flags.toString(16), update_static, update_dynamic,
-            //W.FLAG_STATIC_CHILD_DAMAGED);
     if (update_static || update_dynamic) {
         var flags = 0;
         if (update_static) {
-            console.log('reset static!!');
+            console.log('update static geom');
             this.buffers.reset();
             flags |= UPDATE_STATIC;
         }
@@ -82,7 +82,6 @@ UIRenderContext.prototype.updateBuffers = function(root) {
             this.dyn_buffers.reset();
             flags |= UPDATE_DYNAMIC;
         }
-        //console.log('running update', flags);
         this._walkUpdateBuffers(root, 0, 0, flags);
     }
 };
@@ -91,23 +90,28 @@ UIRenderContext.prototype._walkUpdateLayout = function(w) {
     // Don't need to runLayout() for each widget since the root runLayout()
     // operates recursively.
     w._flags &= ~W.FLAG_LAYOUT_DAMAGED;
-    w.damage();
+    for (var i = 0; i < w.children.length; ++i) {
+        var c = w.children[i];
+        this._walkUpdateLayout(c);
+    }
 };
 
 UIRenderContext.prototype._walkUpdateBuffers = function(w, x, y, flags) {
+    if (w._flags & W.FLAG_HIDDEN) {
+        // Render neither static nor dynamic content from this subtree.
+        flags = 0;
+    }
+
     if (w._flags & W.FLAG_DYNAMIC) {
         if (flags & UPDATE_DYNAMIC) {
-            //console.log('  render dynamic');
             w.render(this.dyn_buffers, x, y);
         }
     } else {
         if (flags & UPDATE_STATIC) {
-            //console.log('  render static');
             w.render(this.buffers, x, y);
         }
     }
     w._flags &= ~W.MASK_ANY_DAMAGED;
-    //console.log('reset flags for', w.constructor.name, 'to', w._flags);
 
     for (var i = 0; i < w.children.length; ++i) {
         var c = w.children[i];

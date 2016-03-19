@@ -18,6 +18,9 @@ DialogBody.prototype.setContent = function(content) {
         return;
     }
 
+    console.log('dialog status?', this._flags.toString(16),
+            this.owner._flags.toString(16),
+            this.owner.owner._flags.toString(16));
     if (this.content != null) {
         this.removeChild(this.content);
     }
@@ -25,6 +28,9 @@ DialogBody.prototype.setContent = function(content) {
     if (this.content != null) {
         this.addChild(this.content);
     }
+    console.log('dialog status?', this._flags.toString(16),
+            this.owner._flags.toString(16),
+            this.owner.owner._flags.toString(16));
 };
 
 DialogBody.prototype.hasContent = function() {
