@@ -1,11 +1,15 @@
 from outpost_data.core.builder2 import EXTRA
+from outpost_data.outpost.lib import pony_sprite
 
+
+def pony(maps):
+    return maps.sprites['pony']
 
 def gen_default_anim(maps):
-    return maps.animations['pony/stand-0']
+    return pony(maps).get_anim('stand-0').id
 
 def gen_editor_anim(maps):
-    return maps.animations['pony/stand-4']
+    return pony(maps).get_anim('stand-4').id
 
 def gen_physics_anim_table(maps):
     SPEED_NAMES = ('stand', 'walk', None, 'run')
@@ -15,17 +19,15 @@ def gen_physics_anim_table(maps):
             table.append(None)
             continue
 
-        table.append([maps.animations['pony/%s-%d' % (speed, dir_)]
+        table.append([pony(maps).get_anim('%s-%d' % (speed, dir_)).id
             for dir_ in range(8)])
 
     return table
 
 def gen_anim_dir_table(maps):
     dct = {}
-    for speed in ('stand', 'run', 'walk'):
-        for dir_ in range(8):
-            anim_id = maps.animations['pony/%s-%d' % (speed, dir_)]
-            dct[anim_id] = dir_
+    for anim in pony(maps).iter_anims():
+        dct[anim.id] = pony_sprite.get_anim_facing(anim)
     return dct
 
 def gen_pony_slot_table(maps):
@@ -33,8 +35,7 @@ def gen_pony_slot_table(maps):
     for sex in ('f', 'm'):
         parts = {}
         for part in ('base', 'mane', 'tail', 'eyes', 'equip0', 'equip1', 'equip2'):
-            # TODO: replace .get() with []
-            parts[part] = maps.attach_slots.get('pony/%s/%s' % (sex, part))
+            parts[part] = pony(maps).get_part('%s/%s' % (sex, part)).id
         result.append(parts)
     return result
 
@@ -47,8 +48,7 @@ def gen_pony_bases_table(maps):
         stallion_bit = (bits >> 2) & 1
         sex = ('f', 'm')[stallion_bit]
 
-        # TODO: replace .get() with []
-        result.append(maps.attachments_by_slot.get('pony/%s/base' % sex, {}).get(tribe))
+        result.append(pony(maps).get_part('%s/base' % sex).get_variant(tribe).id)
     return result
 
 def init():

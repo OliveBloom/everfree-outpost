@@ -10,7 +10,7 @@ use util::StrResult;
 use cache::TerrainCache;
 use data::Data;
 use world::{self, World};
-use world::Motion;
+use world::{Motion, Activity};
 use world::object::*;
 
 
@@ -64,12 +64,20 @@ pub trait Fragment<'d> {
 
     fn set_velocity(&mut self, now: Time, eid: EntityId, target: V3) -> StrResult<()> {
         use world::Fragment;
-        try!(self.with_world(|wf| -> StrResult<()> {
+        let changed = try!(self.with_world(|wf| -> StrResult<_> {
             let mut e = unwrap!(wf.get_entity_mut(eid));
-            e.set_target_velocity(target);
-            Ok(())
+            if e.activity().interruptible() {
+                e.set_target_velocity(target);
+                e.set_activity(Activity::Move);
+                Ok(true)
+            } else {
+                Ok(false)
+            }
         }));
-        self.update(now, eid)
+        if changed {
+            try!(self.update(now, eid));
+        }
+        Ok(())
     }
 
     fn update(&mut self, now: Time, eid: EntityId) -> StrResult<()> {
@@ -77,6 +85,19 @@ pub trait Fragment<'d> {
 
         let motion = try!(self.with_cache(|_sys, cache, world| -> StrResult<_> {
             let e = unwrap!(world.get_entity(eid));
+
+            match e.activity() {
+                Activity::Move => {},   // Fall through to physics calculation
+                Activity::Special(_, _) => {
+                    let pos = e.pos(now);
+                    return Ok(Motion {
+                        start_time: now,
+                        duration: DURATION_MAX,
+                        start_pos: pos,
+                        end_pos: pos,
+                    });
+                },
+            }
 
             // Run the physics calculation
 
@@ -133,14 +154,19 @@ pub trait Fragment<'d> {
                     e.facing()
                 };
 
-            const ANIM_DIR_COUNT: AnimId = 8;
-            static SPEED_NAME_MAP: [&'static str; 4] = ["stand", "walk", "", "run"];
-            let idx = (3 * (facing.x + 1) + (facing.y + 1)) as usize;
-            let anim_dir = [5, 4, 3, 6, 0, 2, 7, 0, 1][idx];
-            let anim_name = format!("pony/{}-{}",
-                                    SPEED_NAME_MAP[speed as usize],
-                                    anim_dir);
-            let anim = data.animations.get_id(&anim_name);
+            let anim = match e.activity() {
+                Activity::Move => {
+                    const ANIM_DIR_COUNT: AnimId = 8;
+                    static SPEED_NAME_MAP: [&'static str; 4] = ["stand", "walk", "", "run"];
+                    let idx = (3 * (facing.x + 1) + (facing.y + 1)) as usize;
+                    let anim_dir = [5, 4, 3, 6, 0, 2, 7, 0, 1][idx];
+                    let anim_name = format!("pony//{}-{}",
+                                            SPEED_NAME_MAP[speed as usize],
+                                            anim_dir);
+                    data.animations.get_id(&anim_name)
+                },
+                Activity::Special(anim, _) => anim,
+            };
 
             e.set_anim(anim);
             e.set_facing(facing);

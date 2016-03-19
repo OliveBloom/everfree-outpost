@@ -31,6 +31,24 @@ pub enum InventoryAttachment {
     Structure(StructureId),
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Activity {
+    /// Walking/running/standing/flying.  The motion and animation are determined by physics.
+    Move,
+    /// Playing the indicated animation, and otherwise stationary.  The boolean flag indicates
+    /// whether the activity is interruptible by user input.
+    Special(AnimId, bool),
+}
+
+impl Activity {
+    pub fn interruptible(&self) -> bool {
+        match *self {
+            Activity::Move => true,
+            Activity::Special(_, interrupt) => interrupt,
+        }
+    }
+}
+
 
 impl super::Client {
     pub fn name(&self) -> &str {
@@ -65,6 +83,10 @@ impl super::Entity {
 
     pub fn stable_plane_id(&self) -> Stable<PlaneId> {
         self.stable_plane
+    }
+
+    pub fn activity(&self) -> Activity {
+        self.activity
     }
 
     pub fn motion(&self) -> &Motion {

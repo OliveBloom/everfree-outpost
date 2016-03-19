@@ -15,6 +15,7 @@ use python as py;
 use python::{PyBox, PyRef, PyResult};
 use timer;
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
+use world::Activity;
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
 use world::Fragment as World_Fragment;
 use world::object::*;
@@ -445,6 +446,26 @@ define_python_class! {
                                               stable_pid: Stable<PlaneId>,
                                               pos: V3) -> PyResult<()> {
             try!(logic::world::teleport_entity_stable_plane(eng, eid, stable_pid, pos));
+            Ok(())
+        }
+
+        fn world_entity_set_activity_move(eng: glue::WorldFragment,
+                                          eid: EntityId) -> PyResult<()> {
+            let mut eng = eng;
+            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+                                  runtime_error, "no entity with that ID");
+            e.set_activity(Activity::Move);
+            Ok(())
+        }
+
+        fn world_entity_set_activity_special(eng: glue::WorldFragment,
+                                             eid: EntityId,
+                                             anim: AnimId,
+                                             interruptible: bool) -> PyResult<()> {
+            let mut eng = eng;
+            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+                                  runtime_error, "no entity with that ID");
+            e.set_activity(Activity::Special(anim, interruptible));
             Ok(())
         }
 

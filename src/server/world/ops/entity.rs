@@ -4,7 +4,7 @@ use std::mem::replace;
 use types::*;
 use util::{multimap_insert, multimap_remove};
 
-use world::{Entity, EntityAttachment, Motion};
+use world::{Entity, EntityAttachment, Motion, Activity};
 use world::{Fragment, Hooks};
 use world::extra::Extra;
 use world::ops::{self, OpResult};
@@ -21,6 +21,7 @@ pub fn create<'d, F>(f: &mut F,
         // Initialization of `plane` is handled in `post_init`.
         plane: PLANE_LIMBO,
 
+        activity: Activity::Move,
         motion: Motion::fixed(pos),
         anim: anim,
         facing: V3::new(1, 0, 0),
@@ -45,6 +46,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> EntityId
         stable_plane: Stable::none(),
         plane: PLANE_LIMBO,
 
+        activity: Activity::Move,
         motion: Motion::fixed(scalar(0)),
         anim: 0,
         facing: scalar(0),

@@ -3,8 +3,8 @@ import json
 import os
 
 
-from . import builder, builder2, files, loader, util
-from . import structure, block, item, recipe, animation, attachment, loot_table, extra
+from . import builder2, files, loader, util
+from . import structure, block, item, recipe, sprite, loot_table, extra
 from outpost_data.core.loader import TimeIt
 
 
@@ -13,9 +13,7 @@ Defs = namedtuple('Defs', (
     'structures',
     'items',
     'recipes',
-    'animations',
     'sprites',
-    'attach_slots',
     'loot_tables',
     'extras',
 ))
@@ -25,20 +23,16 @@ IdMaps = namedtuple('IdMaps', (
     'blocks',
     'items',
     'recipes',
-    'animations',
-    'attach_slots',
-    'attachments_by_slot',
+    'sprites',
 ))
 
-def collect_defs(b):
+def collect_defs():
     return Defs(
             builder2.BLOCK.all(),
             builder2.STRUCTURE.all(),
             builder2.ITEM.all(),
             builder2.RECIPE.all(),
-            b.animations,
-            b.sprites,
-            b.attach_slots,
+            builder2.SPRITE.all(),
             builder2.LOOT_TABLE.all(),
             builder2.EXTRA.all(),
             )
@@ -49,15 +43,16 @@ def postprocess(defs):
         util.assign_ids(defs.blocks, ['empty', 'placeholder']),
         util.assign_ids(defs.items, ['none']),
         util.assign_ids(defs.recipes),
-        util.assign_ids(defs.animations),
-        util.assign_ids(defs.attach_slots),
-        dict((s.name, util.assign_ids(s.variants, ['none'])) for s in defs.attach_slots),
+        util.assign_ids(defs.sprites),
     )
 
     recipe.resolve_item_ids(defs.recipes, id_maps.items)
     recipe.resolve_structure_ids(defs.recipes, id_maps.structures)
+    sprite.assign_sub_ids(defs.sprites)
     loot_table.resolve_object_ids(defs.loot_tables, id_maps)
-    extra.resolve_all(defs.extras, id_maps)
+
+    def_dicts = Defs(*({obj.name: obj for obj in x} for x in defs))
+    extra.resolve_all(defs.extras, def_dicts)
 
 def write_json(output_dir, basename, j):
     with open(os.path.join(output_dir, basename), 'w') as f:
@@ -122,34 +117,35 @@ def emit_recipes(output_dir, recipes):
     write_json(output_dir, 'recipes_client.json',
             recipe.build_client_json(recipes))
 
-def emit_animations(output_dir, animations):
+def emit_sprites(output_dir, sprites):
+    anims = sprite.process_anims(sprites)
+    parts = sprite.process_parts(sprites)
+
     write_json(output_dir, 'animations_server.json',
-            animation.build_server_json(animations))
+            sprite.build_anim_server_json(anims))
 
     write_json(output_dir, 'animations_client.json',
-            animation.build_client_json(animations))
+            sprite.build_anim_client_json(anims))
 
-def emit_sprites(output_dir, sprites):
-    os.makedirs(os.path.join(output_dir, 'sprites'), exist_ok=True)
+    write_json(output_dir, 'sprite_parts_client.json',
+            sprite.build_part_client_json(parts))
 
-    sprite_names = set()
-    for s in sprites:
-        if s.name in sprite_names:
-            util.err('duplicate sprite definition: %r' % s.name)
+    write_json(output_dir, 'sprite_parts_server.json',
+            sprite.build_part_server_json(parts))
 
-        for i, img in enumerate(s.images):
-            basename = '%s-%d' % (s.name.replace('/', '_'), i)
-            sprite_names.add(basename)
-            img.save(os.path.join(output_dir, 'sprites', basename + '.png'))
 
-    write_json(output_dir, 'sprites_list.json', sorted(sprite_names))
+    sprite_dir = os.path.join(output_dir, 'sprites')
+    if not os.path.isdir(sprite_dir):
+        os.mkdir(sprite_dir)
 
-def emit_attach_slots(output_dir, attach_slots):
-    write_json(output_dir, 'attach_slots_server.json',
-            attachment.build_server_json(attach_slots))
+    sheets = sprite.build_sheets(sprites)
+    sprite_list = [None] * len(sheets)
+    for v, img in sheets:
+        name = v.full_name.replace('/', '_') + '.png'
+        sprite_list[v.id] = name
+        img.save(os.path.join(sprite_dir, name))
 
-    write_json(output_dir, 'attach_slots_client.json',
-            attachment.build_client_json(attach_slots))
+    write_json(output_dir, 'sprites_list.json', sprite_list)
 
 def emit_loot_tables(output_dir, loot_tables):
     write_json(output_dir, 'loot_tables_server.json',
@@ -164,8 +160,7 @@ def time(msg, f, *args):
         f(*args)
 
 def generate(output_dir):
-    b = builder.INSTANCE
-    defs = collect_defs(b)
+    defs = collect_defs()
     postprocess(defs)
 
     print('Generating:')
@@ -173,17 +168,14 @@ def generate(output_dir):
     time('blocks', emit_blocks, output_dir, defs.blocks)
     time('items', emit_items, output_dir, defs.items)
     time('recipes', emit_recipes, output_dir, defs.recipes)
-    time('animations', emit_animations, output_dir, defs.animations)
     time('sprites', emit_sprites, output_dir, defs.sprites)
-    time('attach_slots', emit_attach_slots, output_dir, defs.attach_slots)
     time('loot_tables', emit_loot_tables, output_dir, defs.loot_tables)
     time('extras', emit_extras, output_dir, defs.extras)
 
     print('%d structures, %d blocks, %d items, %d recipes' %
             (len(defs.structures), len(defs.blocks), len(defs.items), len(defs.recipes)))
-    print('%d animations, %d sprites, %d attach_slots, %d loot tables, %d extras' %
-            (len(defs.animations), len(defs.sprites), len(defs.attach_slots),
-                len(defs.loot_tables), len(defs.extras)))
+    print('%d sprites, %d loot tables, %d extras' %
+            (len(defs.sprites), len(defs.loot_tables), len(defs.extras)))
 
     with open(os.path.join(output_dir, 'stamp'), 'w') as f:
         pass

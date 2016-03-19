@@ -11,7 +11,7 @@ use world::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
 use world::{EntitiesById, StructuresById, InventoriesById};
 use world::{EntityAttachment, StructureAttachment, InventoryAttachment};
 use world::{TerrainChunkFlags, StructureFlags};
-use world::Motion;
+use world::{Activity, Motion};
 use world::Item;
 use world::fragment::Fragment;
 use world::hooks::Hooks;
@@ -287,6 +287,12 @@ pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
     fn set_stable_plane_id(&mut self, stable_pid: Stable<PlaneId>) -> OpResult<()> {
         let eid = self.id();
         ops::entity::set_stable_plane(self.fragment_mut(), eid, stable_pid)
+    }
+
+    fn set_activity(&mut self, activity: Activity) {
+        let eid = self.id();
+        self.obj_mut().activity = activity;
+        self.fragment_mut().with_hooks(|h| h.on_entity_activity_change(eid));
     }
 
     fn set_motion(&mut self, motion: Motion) {

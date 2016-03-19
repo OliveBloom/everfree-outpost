@@ -25,7 +25,7 @@ pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<(
         let mut ability_inv = None;
         e.stable_plane(STABLE_PLANE_FOREST)
          .motion(Motion::stationary(V3::new(32, 32, 0), eng.now()))
-         .anim("pony/stand-0")
+         .anim("pony//stand-0")
          .appearance(appearance)
          .inventory(|i| {
             main_inv = Some(i.id());

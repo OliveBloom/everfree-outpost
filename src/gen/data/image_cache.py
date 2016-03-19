@@ -1,21 +1,16 @@
+import base64
 import functools
 import hashlib
 import pickle
 import os
 import sys
+from weakref import WeakValueDictionary
 
 import PIL
 
 
-IMAGE_CACHE = {}
-NEW_IMAGE_CACHE = {}
-# TODO: The current cache management scheme drops intermediate images after the
-# first run.  That is, the first run adds all the intermediate images to the
-# cache, but the second run, seeing that only the final products are used,
-# drops the intermediate images.  I think this is suboptimal, but I'm not sure...
-
-COMPUTE_CACHE = {}
-NEW_COMPUTE_CACHE = {}
+IMAGE_CACHE = None
+COMPUTE_CACHE = None
 
 @functools.lru_cache(128)
 def _cached_mtime(path):
@@ -33,7 +28,6 @@ class CachedImage(object):
         raise RuntimeError('CachedImage subclass must implement _realize()')
 
     def raw(self):
-        global IMAGE_CACHE, NEW_IMAGE_CACHE
         img = self._raw
         if img is not None:
             return img
@@ -42,30 +36,31 @@ class CachedImage(object):
         if img is not None:
             assert img.size == self.size, 'cache contained an image of the wrong size'
             self._raw = img
-            NEW_IMAGE_CACHE[self._desc] = img
             return img
 
         img = self._realize()
         assert img is not None, '_realize() must return a PIL.Image, not None'
         assert img.size == self.size, '_realize() returned an image of the wrong size'
         self._raw = img
-        IMAGE_CACHE[self._desc] = img
-        NEW_IMAGE_CACHE[self._desc] = img
+        if type(img) is not PIL.Image.Image:
+            # It's a lazy crop object, or something similar.  Force it.
+            img = img.copy()
+        IMAGE_CACHE.add(self._desc, img)
         return img
 
-    def compute(self, f):
+    def compute(self, f, desc=None):
         code_file = sys.modules[f.__module__].__file__
         code_time = _cached_mtime(code_file)
-        k = (self._desc, f.__module__, f.__qualname__, code_file, code_time)
+        if desc is None:
+            desc = (f.__module__, f.__qualname__)
+        k = ('compute', self._desc, desc, code_file, code_time)
 
-        if k in COMPUTE_CACHE:
-            result = COMPUTE_CACHE[k]
+        # Avoid .get because a compute result may legitimately be `None`
+        if COMPUTE_CACHE.contains(k):
+            result = COMPUTE_CACHE.get(k)
         else:
             result = f(self.raw())
-            COMPUTE_CACHE[k] = result
-
-        if k not in NEW_COMPUTE_CACHE:
-            NEW_COMPUTE_CACHE[k] = result
+            COMPUTE_CACHE.add(k, result)
 
         return result
 
@@ -89,6 +84,11 @@ class CachedImage(object):
             desc = '%s.%s' % (f.__module__, f.__qualname__)
         return ModifiedImage(self, f, size or self.size, desc)
 
+    def fold(self, imgs, f, size=None, desc=None):
+        if desc is None:
+            desc = '%s.%s' % (f.__module__, f.__qualname__)
+        return FoldedImage(self, imgs, f, size or self.size, desc)
+
     def crop(self, bounds):
         return CroppedImage(self, bounds)
 
@@ -100,6 +100,17 @@ class CachedImage(object):
 
     def pad(self, size, offset):
         return PaddedImage(self, size, offset)
+
+    @staticmethod
+    def sheet(img_offsets, size=None):
+        if size is None:
+            w, h = 0, 0
+            for i, o in img_offsets:
+                w = max(w, i.size[0] + o[0])
+                h = max(h, i.size[1] + o[1])
+            size = (w, h)
+
+        return SheetImage(img_offsets, size)
 
     def get_bounds(self):
         b = self.compute(lambda i: i.getbbox())
@@ -146,6 +157,22 @@ class ModifiedImage(CachedImage):
     def _realize(self):
         img = self.orig.raw().copy()
         return self.f(img) or img
+
+class FoldedImage(CachedImage):
+    def __init__(self, base_img, imgs, f, size, desc):
+        code_file = sys.modules[f.__module__].__file__
+        code_time = _cached_mtime(code_file)
+
+        imgs = tuple(imgs)
+        super(FoldedImage, self).__init__(size, (desc, size, code_time), (base_img,) + imgs)
+        self.base_orig = base_img
+        self.origs = imgs
+        self.f = f
+
+    def _realize(self):
+        base = self.base_orig.raw().copy()
+        imgs = [o.raw().copy() for o in self.origs]
+        return self.f(base, *imgs) or base
 
 class CroppedImage(CachedImage):
     def __init__(self, img, bounds):
@@ -195,24 +222,186 @@ class PaddedImage(CachedImage):
     def _realize(self):
         orig_img = self.orig.raw()
         img = PIL.Image.new(orig_img.mode, self.size)
-        img.paste(orig_img, self.offset, orig_img)
+        img.paste(orig_img, self.offset)
         return img
+
+class SheetImage(CachedImage):
+    def __init__(self, img_offsets, size):
+        imgs = tuple(i for i,o in img_offsets)
+        offsets = tuple(o for i,o in img_offsets)
+        super(SheetImage, self).__init__(size, (offsets,), imgs)
+
+        self.imgs = imgs
+        self.offsets = offsets
+
+    def _realize(self):
+        acc = PIL.Image.new('RGBA', self.size)
+        for i, o in zip(self.imgs, self.offsets):
+            acc.paste(i.raw(), o)
+        return acc
 
 
 WORKAROUND_0X0 = 'workaround-0x0-bug'
 
-def load_cache(f):
+def _safe_dump(value, f):
+    if isinstance(value, PIL.Image.Image) and value.size == (0, 0):
+        # Pickling a 0x0 image seems to cause a crash ("tile cannot extend
+        # outside image").  Store this dummy value instead.
+        pickle.dump(WORKAROUND_0X0, f)
+    else:
+        pickle.dump(value, f)
+
+def _safe_load(f):
+    value = pickle.load(f)
+    if value == WORKAROUND_0X0:
+        return PIL.Image.new('RGBA', (0, 0))
+    else:
+        return value
+
+CACHE_PAGE = 4096
+
+class LargeCache:
+    '''File-backed cache for large objects (particularly images).  Uses a
+    WeakValueDictionary for in-memory storage, and a page-based format for
+    on-disk.'''
+    def __init__(self, data_file, index_file):
+        # Dict storing currently loaded values
+        self.cache = WeakValueDictionary()
+
+        # Data file, and index mapping key to data offset
+        self.data_file = data_file
+        self.data_total = os.fstat(data_file.fileno()).st_size
+
+        self.index_file = index_file
+        self.index = {}
+
+        self.used = set()
+
+        # Read index data into dict
+        self.index_file.seek(0)
+        for line in self.index_file.readlines():
+            parts = line.strip().split()
+            if len(parts) != 2:
+                continue
+            offset_str, key_str = parts
+            offset = int(offset_str)
+            key = pickle.loads(base64.decodebytes(key_str.encode('ascii')))
+            self.index[key] = offset
+
+        # Seek both to EOF
+        self.data_file.seek(0, os.SEEK_END)
+        self.index_file.seek(0, os.SEEK_END)
+
+    def contains(self, key):
+        return key in self.cache or key in self.index
+
+    def get(self, key):
+        # Record the key use here, regardless of the outcome.  This assumes the
+        # caller runs `add` only on keys for which it first ran `get`.
+        self.used.add(key)
+
+        # Try to fetch from in-memory cache
+        value = self.cache.get(key)
+        if value is not None:
+            return value
+
+        # Try to load from file
+        if key in self.index:
+            offset = self.index[key]
+            self.data_file.seek(offset)
+            value = _safe_load(self.data_file)
+            self.cache[key] = value
+            return value
+
+        # No cached copy of this image
+        return None
+
+    def add(self, key, value):
+        # Add to in-memory cache
+        self.cache[key] = value
+
+        # Write pickled value to next available page
+        page = CACHE_PAGE
+        offset = (self.data_total + page - 1) & ~(page - 1)
+        self.data_file.seek(offset)
+        _safe_dump(value, self.data_file)
+        self.data_total = self.data_file.tell()
+
+        # Write index line
+        self.index[key] = offset
+        key_str = base64.encodebytes(pickle.dumps(key)).decode('ascii')
+        self.index_file.write('%d %s\n' % (offset, key_str.replace('\n', '')))
+
+    def size(self):
+        return len(self.index)
+
+    def save(self):
+        pass
+
+class SmallCache:
+    '''File-backed cache for small objects.  Uses a standard dict for in-memory
+    storage and a single pickle file on disk.'''
+    def __init__(self, data_file):
+        self.data_file = data_file
+
+        self.data_file.seek(0)
+        try:
+            self.dct = pickle.load(self.data_file)
+        except:
+            self.dct = {}
+
+    def contains(self, key):
+        return key in self.dct
+
+    def get(self, key):
+        return self.dct.get(key)
+
+    def add(self, key, value):
+        self.dct[key] = value
+
+    def size(self):
+        return len(self.dct)
+
+    def save(self):
+        self.data_file.seek(0)
+        self.data_file.truncate(0)
+        pickle.dump(self.dct, self.data_file)
+
+
+def load_cache(cache_dir):
     global IMAGE_CACHE, COMPUTE_CACHE
-    i, c = pickle.load(f)
 
-    for k,v in i.items():
-        if v == WORKAROUND_0X0:
-            i[k] = PIL.Image.new('RGBA', (0, 0))
+    def open2(name, binary=False):
+        b = 'b' if binary else ''
+        try:
+            # Open without truncating
+            return open(os.path.join(cache_dir, name), 'r+' + b)
+        except OSError:
+            # Doesn't exist, so create it
+            return open(os.path.join(cache_dir, name), 'w+' + b)
 
-    IMAGE_CACHE.update(i)
-    COMPUTE_CACHE.update(c)
+    IMAGE_CACHE = LargeCache(
+            open2('image_cache.dat', binary=True),
+            open2('image_cache.idx'))
+    COMPUTE_CACHE = SmallCache(
+            open2('compute_cache.dat', binary=True))
 
-def dump_cache(f):
+def new_cache(cache_dir):
+    def rm(name):
+        path = os.path.join(cache_dir, name)
+        if os.path.exists(path):
+            os.unlink(path)
+
+    rm('image_cache.dat')
+    rm('image_cache.idx')
+    rm('compute_cache.dat')
+    load_cache(cache_dir)
+
+def save_cache():
+    IMAGE_CACHE.save()
+    COMPUTE_CACHE.save()
+
+def _old_dump_cache(f):
     global NEW_IMAGE_CACHE, NEW_COMPUTE_CACHE
     for k, v in NEW_IMAGE_CACHE.items():
         new_v = v

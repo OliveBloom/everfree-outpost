@@ -8,9 +8,9 @@ class ExtraDef(object):
     def resolve(self, id_maps):
         self.value = self.func(id_maps)
 
-def resolve_all(extras, id_maps):
+def resolve_all(extras, defs):
     for e in extras:
-        e.resolve(id_maps)
+        e.resolve(defs)
 
 
 # JSON output

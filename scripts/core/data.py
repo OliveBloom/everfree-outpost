@@ -74,6 +74,7 @@ class DataProxy:
         _define_methods(cls, ItemProxy, 'item')
         _define_methods(cls, RecipeProxy, 'recipe')
         _define_methods(cls, TemplateProxy, 'template')
+        _define_methods(cls, AnimationProxy, 'animation')
 
 DATA = DataProxy()
 
@@ -144,6 +145,19 @@ class TemplateProxy(DefProxy):
     def layer(self):
         return _DATA.template_layer(self.id)
 
+class AnimationProxy(DefProxy):
+    @property
+    def name(self):
+        return _DATA.animation_name(self.id)
+
+    @property
+    def framerate(self):
+        return _DATA.animation_framerate(self.id)
+
+    @property
+    def length(self):
+        return _DATA.animation_length(self.id)
+
 
 def init(data):
     global _DATA
@@ -153,5 +167,6 @@ def init(data):
     ItemProxy.INSTANCES = [None] * data.item_count()
     RecipeProxy.INSTANCES = [None] * data.recipe_count()
     TemplateProxy.INSTANCES = [None] * data.template_count()
+    AnimationProxy.INSTANCES = [None] * data.animation_count()
 
     DataProxy._init()

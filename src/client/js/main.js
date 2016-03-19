@@ -56,8 +56,8 @@ var ItemDef = require('data/items').ItemDef;
 var RecipeDef = require('data/recipes').RecipeDef;
 var TemplateDef = require('data/templates').TemplateDef;
 var TemplatePart = require('data/templates').TemplatePart;
-var AnimationDef = require('data/animations').AnimationDef;
-var AttachSlotDef = require('data/attachments').AttachSlotDef;
+var AnimationDef = require('data/sprites').AnimationDef;
+var SpritePartDef = require('data/sprites').SpritePartDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
 var FontMetrics = require('data/fontmetrics').FontMetrics;
 
@@ -309,9 +309,9 @@ function loadAssets(next) {
                 AnimationDef.register(i, animations[i]);
             }
 
-            var attach_slots = assets['attach_slot_defs'];
-            for (var i = 0; i < attach_slots.length; ++i) {
-                AttachSlotDef.register(i, attach_slots[i]);
+            var sprite_parts = assets['sprite_part_defs'];
+            for (var i = 0; i < sprite_parts.length; ++i) {
+                SpritePartDef.register(i, sprite_parts[i]);
             }
 
             ExtraDefs.init(assets['extra_defs']);
@@ -554,13 +554,25 @@ function drawPony(ctx, app_info) {
 }
 
 function preloadTextures() {
-    var textures = ['tiles',
-                    'pony_f_base_E-0',
-                    'pony_f_base_P-0',
-                    'pony_f_base_U-0',
-                    'pony_f_eyes_0-0',
-                    'pony_f_mane_0-0',
-                    'pony_f_tail_0-0'];
+    var textures = ['tiles'];
+    for (var i = 0; i < 2; ++i) {
+        var parts = ExtraDefs.pony_slot_table[i];
+        var part_names = Object.getOwnPropertyNames(parts);
+        for (var j = 0; j < part_names.length; ++j) {
+            var part_name = part_names[j];
+            var part_id = parts[part_name]
+            var part = SpritePartDef.by_id[part_id];
+
+            if (part.variants.length == 0) {
+                continue;
+            }
+            var variant_id = part.variants[0];
+            if (variant_id != null) {
+                textures.push('sprite_' + variant_id);
+            }
+        }
+    }
+
     for (var i = 0; i < textures.length; ++i) {
         (function(key) {
             runner.subjob(key, function() {

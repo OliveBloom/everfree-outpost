@@ -457,6 +457,10 @@ impl AnimationData {
         })
     }
 
+    pub fn len(&self) -> usize {
+        self.animations.len()
+    }
+
     pub fn animation(&self, id: AnimId) -> &Animation {
         self.get_animation(id).unwrap()
     }

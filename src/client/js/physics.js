@@ -53,6 +53,11 @@ Physics.prototype.computeForecast = function(now, entity, target_velocity) {
     // TODO: hardcoded constant based on entity size
     var size = new Vec(32, 32, 64);
 
+    // TODO: gross hacks to support custom anims.  These need to go away once
+    // new physics/motion/anim code is in.
+    var old_motion = entity._cur_motion;
+    var old_stationary = vecs_equal(old_motion.start_pos, old_motion.end_pos);
+
     var result = this._asm.collide(start_pos, size, target_velocity);
     var end_pos = new Vec(result.x, result.y, result.z);
     var dur = result.t;
@@ -70,6 +75,14 @@ Physics.prototype.computeForecast = function(now, entity, target_velocity) {
     motion.end_pos = end_pos;
     motion.start_time = now;
     motion.end_time = now + dur;
+
+    // TODO: more gross hacks to handle custom anims.  Basically, if this is
+    // just the 65-second refresh of a stationary motion, reuse the old anim.
+    var stationary = vecs_equal(motion.start_pos, motion.end_pos);
+    if (old_stationary && stationary) {
+        motion.anim_id = entity.animId(now);
+        return motion;
+    }
 
     // TODO: player speed handling shouldn't be here
     var speed = target_velocity.abs().max() / 50;

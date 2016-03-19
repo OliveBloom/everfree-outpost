@@ -1,46 +1,40 @@
-from ...core.builder import *
-from ...core.consts import *
-from ...core.util import chop_terrain, chop_image_named
-
-from PIL import Image
+from outpost_data.core.consts import *
+from outpost_data.core.builder2 import *
+from outpost_data.core import image2
 
 
-def mk_floor_from_dict(basename, dct, shape='empty', base_img=None):
-    b = block_builder()
-    for part_name, part_img in dct.items():
-        if base_img is not None:
-            img = base_img.copy()
-            img.paste(part_img, (0, 0), part_img)
-        else:
-            img = part_img
+def _dict_blocks(dct, basename, img, shape='empty', base_img=None):
+    parts = img.chop(dct)
+    if base_img is not None:
+        parts = {k: base_img.stack((v,)) for k,v in parts.items()}
 
-        b.create('%s/%s' % (basename, part_name), shape, {'bottom': img})
+    b = BLOCK.prefixed(basename)
+    b.new(parts.keys()) \
+            .bottom(parts) \
+            .shape(shape)
     return b
 
-def mk_floor_blocks(img, basename, **kwargs):
-    dct = chop_terrain(img)
-    dct['center'] = dct['center/v0']
-    return mk_floor_from_dict(basename, dct, **kwargs)
+def terrain_blocks(basename, img, **kwargs):
+    return _dict_blocks(TERRAIN_PARTS2, basename, img, **kwargs)
 
-def mk_floor_cross(img, basename, **kwargs):
-    dct = {
-            'cross/nw': img.crop((0, 0, TILE_SIZE, TILE_SIZE)),
-            'cross/ne': img.crop((0, TILE_SIZE, TILE_SIZE, 2 * TILE_SIZE)),
-            }
-    return mk_floor_from_dict(basename, dct, **kwargs)
+def terrain_cross_blocks(basename, img, **kwargs):
+    return _dict_blocks(TERRAIN_CROSS_PARTS2, basename, img, **kwargs)
 
 
-def mk_terrain_interior(img, basename, **kwargs):
-    PART_NAMES_HALF = (
-            ('nw/full',     'ne/full',      None,           None),
-            ('sw/full',     'se/full',      None,           None),
-            ('nw/outer',    'ne/horiz',     'nw/horiz',     'ne/outer'),
-            ('sw/vert',     'se/inner',     'sw/inner',     'se/vert'),
-            ('nw/vert',     'ne/inner',     'nw/inner',     'ne/vert'),
-            ('sw/outer',    'se/horiz',     'sw/horiz',     'se/outer'),
-            )
+INTERIOR_PART_NAMES = (
+        ('nw/full',     'ne/full',      None,           None),
+        ('sw/full',     'se/full',      None,           None),
+        ('nw/outer',    'ne/horiz',     'nw/horiz',     'ne/outer'),
+        ('sw/vert',     'se/inner',     'sw/inner',     'se/vert'),
+        ('nw/vert',     'ne/inner',     'nw/inner',     'ne/vert'),
+        ('sw/outer',    'se/horiz',     'sw/horiz',     'se/outer'),
+        )
+INTERIOR_PARTS = {n: (x, y)
+        for y, ns in enumerate(INTERIOR_PART_NAMES)
+        for x, n in enumerate(ns)}
 
-    parts_half = chop_image_named(img, PART_NAMES_HALF, (TILE_SIZE // 2, TILE_SIZE // 2))
+def interior_blocks(basename, img, shape='empty'):
+    parts = img.chop(INTERIOR_PARTS, unit=TILE_SIZE // 2)
 
     def variations(k, vs):
         f = lambda x: (('0', 'inner'), ('1', 'full')) if x == '*' else (('', x),)
@@ -53,14 +47,11 @@ def mk_terrain_interior(img, basename, **kwargs):
                         local_k = k + '/' + extra_k if extra_k else k
                         yield (local_k, (av, bv, cv, dv))
 
-
     # Build up the map that describes how to build each tile from parts.
     PART_MAP_FULL = {}
-    PART_ORDER = []
     def add(base, parts_str):
         for k, v in variations(base, parts_str.split()):
             PART_MAP_FULL[k] = v
-            PART_ORDER.append(k)
 
     # Naming convention: <edges>/<corners>
     #
@@ -95,22 +86,18 @@ def mk_terrain_interior(img, basename, **kwargs):
 
     add('nswe',     '*     *     *     *    ')
 
-
-    img = Image.new('RGBA', (TILE_SIZE, len(PART_MAP_FULL) * TILE_SIZE))
+    full_parts = {}
     HALF = TILE_SIZE // 2
-    for i, k in enumerate(PART_ORDER):
-        (nw, sw, se, ne) = PART_MAP_FULL[k]
-        x = 0
-        y = i * TILE_SIZE
-        img.paste(parts_half['nw/' + nw], (x, y))
-        img.paste(parts_half['sw/' + sw], (x, y + HALF))
-        img.paste(parts_half['se/' + se], (x + HALF, y + HALF))
-        img.paste(parts_half['ne/' + ne], (x + HALF, y))
+    for k, (nw, sw, se, ne) in PART_MAP_FULL.items():
+        full_parts[k] = image2.stack((
+                parts['nw/' + nw].pad(TILE_SIZE, offset=(0, 0)),
+                parts['sw/' + sw].pad(TILE_SIZE, offset=(0, HALF)),
+                parts['se/' + se].pad(TILE_SIZE, offset=(HALF, HALF)),
+                parts['ne/' + ne].pad(TILE_SIZE, offset=(HALF, 0)),
+                )).with_unit(TILE_SIZE)
 
-    parts = {}
-    for i, k in enumerate(PART_ORDER):
-        x = 0
-        y = i * TILE_SIZE
-        parts[k] = img.crop((x, y, x + TILE_SIZE, y + TILE_SIZE))
-
-    mk_floor_from_dict(basename, parts, **kwargs)
+    b = BLOCK.prefixed(basename) \
+            .shape(shape)
+    b.new(full_parts.keys()) \
+            .bottom(full_parts)
+    return b

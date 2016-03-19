@@ -254,12 +254,12 @@ def main(args):
     from outpost_data.core import image_cache
     with TimeIt('Loaded cache'):
         try:
-            with open(os.path.join(ns.output_dir, 'image_cache.pickle'), 'rb') as f:
-                image_cache.load_cache(f)
-        except Exception:
-            pass
+            image_cache.load_cache(ns.output_dir)
+        except Exception as e:
+            print('EXCEPTION loading cache: %s' % (e,))
+            image_cache.new_cache(ns.output_dir)
         print('  Cache: %d images, %d compute' %
-                (len(image_cache.IMAGE_CACHE), len(image_cache.COMPUTE_CACHE)))
+                (image_cache.IMAGE_CACHE.size(), image_cache.COMPUTE_CACHE.size()))
 
     # Run `init()` for every mod.
     print('Processing mods:')
@@ -272,11 +272,10 @@ def main(args):
     generate(ns.output_dir)
 
     with TimeIt('Saved cache'):
-        with open(os.path.join(ns.output_dir, 'image_cache.pickle'), 'wb') as f:
-            image_cache.dump_cache(f)
+        image_cache.save_cache()
         print('  Cache: %d images, %d compute' %
-                (len(image_cache.NEW_IMAGE_CACHE), len(image_cache.NEW_COMPUTE_CACHE)))
-    
+                (image_cache.IMAGE_CACHE.size(), image_cache.COMPUTE_CACHE.size()))
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])

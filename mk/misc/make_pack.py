@@ -38,7 +38,7 @@ def main(src_dir, build_dir, out_file):
     add('json', 'template_part_defs',   build('structure_parts_client.json'))
     add('json', 'template_vert_defs',   build('structure_verts_client.json'))
     add('json', 'animation_defs',       build('animations_client.json'))
-    add('json', 'attach_slot_defs',     build('attach_slots_client.json'))
+    add('json', 'sprite_part_defs',     build('sprite_parts_client.json'))
     add('json', 'extra_defs',           build('extras_client.json'))
     add('json', 'fonts_metrics',        build('fonts_metrics.json'))
     add('json', 'day_night',            build('day_night.json'))
@@ -70,14 +70,14 @@ def main(src_dir, build_dir, out_file):
 
 
     with open(build('structures_list.json')) as f:
-        sprites_list = json.load(f)
-    for s in sprites_list:
+        structures_list = json.load(f)
+    for s in structures_list:
         add('image', s, build(s + '.png'))
 
     with open(build('sprites_list.json')) as f:
         sprites_list = json.load(f)
-    for s in sprites_list:
-        add('image', s, build(os.path.join('sprites', s + '.png')))
+    for i, f in enumerate(sprites_list):
+        add('image', 'sprite_%d' % i , build(os.path.join('sprites', f)))
 
 
     # Generate the pack containing the files added above.

@@ -84,6 +84,12 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
         vision::Fragment::remove_entity(&mut self.$as_vision_fragment(), eid);
     }
 
+    fn on_entity_activity_change(&mut self, eid: EntityId) {
+        trace!("entity {:?} activity changed", eid);
+        let now = self.now();
+        self.schedule_physics_update(eid, now);
+    }
+
     fn on_entity_motion_change(&mut self, eid: EntityId) {
         let (plane, area, end_time) = {
             let e = self.world().entity(eid);

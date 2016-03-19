@@ -256,6 +256,6 @@ def eval_(client, args):
 
     try:
         result = eval_or_exec(args, EVAL_GLOBALS, dct)
-        client.send_message('Result: %r' % result)
+        client.send_message('Result: %r' % (result,))
     except Exception as e:
-        client.send_message('Error: %r' % e)
+        client.send_message('Error: %r' % (e,))

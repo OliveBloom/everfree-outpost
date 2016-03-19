@@ -35,7 +35,15 @@ FIND_CACHE = {}
 
 def _find_file_in_dir(dir_path, path):
     full_path = os.path.join(dir_path, path)
-    DEPENDENCIES.add(os.path.dirname(full_path))
+
+    parent_dir = os.path.dirname(full_path)
+    while not os.path.exists(parent_dir):
+        new_dir = os.path.dirname(parent_dir)
+        assert parent_dir != new_dir, \
+                'impossible: reached root without finding an existing dir'
+        parent_dir = new_dir
+    DEPENDENCIES.add(parent_dir)
+
     if os.path.exists(full_path):
         DEPENDENCIES.add(full_path)
         return full_path

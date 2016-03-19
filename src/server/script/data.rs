@@ -129,6 +129,38 @@ define_python_class! {
                               runtime_error, "no template with that ID");
             Ok(t.layer)
         }
+
+
+        fn animation_count(&this) -> usize {
+            this.animations.len()
+        }
+
+        fn animation_by_name(&this, name: String) -> PyResult<AnimId> {
+            Ok(pyunwrap!(this.animations.find_id(&name),
+                         key_error, "no such animation: {:?}", name))
+        }
+
+        fn get_animation_by_name(&this, name: String) -> Option<AnimId> {
+            this.animations.find_id(&name)
+        }
+
+        fn animation_name(&this, id: AnimId) -> PyResult<PyBox> {
+            let a = pyunwrap!(this.animations.get_animation(id),
+                              runtime_error, "no animation with that ID");
+            Pack::pack(&a.name as &str)
+        }
+
+        fn animation_framerate(&this, id: AnimId) -> PyResult<u32> {
+            let a = pyunwrap!(this.animations.get_animation(id),
+                              runtime_error, "no animation with that ID");
+            Ok(a.framerate)
+        }
+
+        fn animation_length(&this, id: AnimId) -> PyResult<u32> {
+            let a = pyunwrap!(this.animations.get_animation(id),
+                              runtime_error, "no animation with that ID");
+            Ok(a.length)
+        }
     }
 }
 
