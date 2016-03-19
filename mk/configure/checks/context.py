@@ -15,10 +15,26 @@ else:
 
 class Info:
     def __init__(self):
-        pass
+        super(Info, self).__setattr__('_values', {})
+        super(Info, self).__setattr__('_descs', {})
+
+    def add(self, key, desc):
+        self._values[key] = None
+        self._descs[key] = desc
 
     def __getattr__(self, k):
-        return None
+        if k in self._values:
+            return self._values[k]
+        else:
+            raise AttributeError(k)
+
+    def __setattr__(self, k, v):
+        if k in self._values:
+            self._values[k] = v
+        elif k.startswith('_'):
+            super(Info, self).__setattr__(k, v)
+        else:
+            raise AttributeError(k)
 
 class ConfigError(Exception):
     pass
@@ -67,8 +83,11 @@ class Context:
         self.log(msg, level=level)
         print(msg, end='')
 
-    def out_skip(self, what, why, level='MSG'):
-        self.out('Skipping check for %s because %s is missing' % (what, why), level=level)
+    def warn_skip(self, what, why, level='WARN'):
+        what_desc = self.info._descs[what]
+        why_desc = self.info._descs[why]
+        self.out('Skipping check for %s because %s is missing' %
+                (what_desc, why_desc), level=level)
 
     # Command running
     def run(self, prog, args=[], expect_ret=0):
@@ -117,34 +136,72 @@ class Context:
             return (val,)
 
     # Run check
-    def check_present(self, desc, x, chk):
-        self.out_part('Checking for %s %r: ' % (desc, x))
-        try:
-            ok = chk(self, x)
-            if ok:
-                self.out('ok')
-                return True
-            else:
-                raise ConfigError('error')
-        except ConfigError as e:
-            self.out(str(e))
-            return False
 
-    def check_all(self, desc, candidates, chk):
+    def detect(self, key, desc, candidates, chk, deps=()):
+        self.info.add(key, desc)
+        self.detect_(key, candidates, chk, deps=deps)
+
+    def detect_(self, key, candidates, chk, deps=()):
+        desc = self.info._descs[key]
+
+        for d in deps:
+            if getattr(self.info, d) is None:
+                self.warn_skip(key, d)
+                return
+
+        arg = getattr(self.args, key, None)
+        if arg is not None:
+            candidates = (arg,)
+
         if len(candidates) == 0:
-            self.out('Checking %s: (no candidates to check)' % desc, level='WARN')
-            return None
+            self.out('Cannot detect %s automatically; --%s was not provided' %
+                    (desc, key.replace('_', '-')), level='WARN')
+            return
 
+        result = None
         for c in candidates:
-            self.out_part('Checking %s %r: ' % (desc, c))
+            self.out_part('Checking for %s %r: ' % (desc, c))
             try:
                 ok = chk(self, c)
+                if not ok:
+                    raise ConfigError('error')
+                self.out('ok')
+                result = c
+                break
+            except ConfigError as e:
+                self.out(str(e))
+
+        setattr(self.info, key, result)
+
+    if False:
+        def check_present(self, desc, x, chk):
+            self.out_part('Checking for %s %r: ' % (desc, x))
+            try:
+                ok = chk(self, x)
                 if ok:
                     self.out('ok')
-                    return c
+                    return True
                 else:
                     raise ConfigError('error')
             except ConfigError as e:
                 self.out(str(e))
+                return False
 
-        return None
+        def check_all(self, desc, candidates, chk):
+            if len(candidates) == 0:
+                self.out('Checking %s: (no candidates to check)' % desc, level='WARN')
+                return None
+
+            for c in candidates:
+                self.out_part('Checking %s %r: ' % (desc, c))
+                try:
+                    ok = chk(self, c)
+                    if ok:
+                        self.out('ok')
+                        return c
+                    else:
+                        raise ConfigError('error')
+                except ConfigError as e:
+                    self.out(str(e))
+
+            return None

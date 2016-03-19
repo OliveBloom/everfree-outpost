@@ -1,4 +1,11 @@
+import platform
 import tempfile
+
+def basic_configure(ctx):
+    p = platform.system()
+    ctx.out('Checking platform: %s' % p)
+    ctx.info.add('win32', 'platform is win32')
+    ctx.info.win32 = (p == 'Windows')
 
 def run(args, log_file):
     from . import context, cc, rustc, python
@@ -6,16 +13,12 @@ def run(args, log_file):
     with tempfile.TemporaryDirectory() as temp_dir:
         ctx = context.Context(args, temp_dir, log_file)
 
-        cc.find_cc(ctx)
-        cc.find_cxx(ctx)
-        rustc.find_rustc(ctx)
-        python.find_python3(ctx)
-        python.find_python3_config(ctx)
-        python.check_python3_lib(ctx, 'image library', 'pil', ('PIL.Image',))
-        python.check_python3_lib(ctx, 'YAML library', 'yaml', ('yaml',))
-        python.check_python3_lib(ctx, 'JSON library', 'json', ('simplejson', 'json',))
+        basic_configure(ctx)
+        cc.configure(ctx)
+        rustc.configure(ctx)
+        python.configure(ctx)
 
         print('')
         print('Configuration settings:')
-        for k,v in sorted(ctx.info.__dict__.items()):
+        for k,v in sorted(ctx.info._values.items()):
             print('  %-20s %s' % (k + ':', v))
