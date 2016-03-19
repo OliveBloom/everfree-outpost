@@ -1,5 +1,9 @@
+var W = require('ui_gl/widget');
 
 function hitTest(rx, ry, w) {
+    if (w._flags & W.FLAG_HIDDEN) {
+        return false;
+    }
     return (rx >= 0 && rx < w._width && ry >= 0 && ry < w._height);
 }
 
@@ -39,7 +43,8 @@ UIInput.prototype.startDrag = function(source, evt, type, data) {
 
     this.drag_x = evt.x;
     this.drag_y = evt.y;
-    this.root.dispatch('drag', this.drag_x, this.drag_y, this);
+    this.root.dispatch('dragstart', this.drag_type, this.drag_data,
+            this.drag_x, this.drag_y, this);
 
     this._updateDragCursor();
 };
@@ -89,6 +94,8 @@ UIInput.prototype._endDrag = function() {
     this.drag_active = false;
 
     document.body.style.cursor = 'auto';
+
+    this.root.dispatch('dragend', this);
 };
 
 UIInput.prototype._dragging = function() {

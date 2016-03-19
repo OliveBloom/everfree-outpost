@@ -16,12 +16,39 @@ function GameUI(keyboard) {
     this.hotbar = new Hotbar();
     this.fps = new FPSDisplay();
     this.dialog = new DialogGL();
+    this.drag_icon = new ItemDisplay()
 
     this.addChild(this.hotbar);
     this.addChild(this.fps);
     this.addChild(this.dialog);
+    this.addChild(this.drag_icon);
 
     this.dialog.setHidden(true);
+    this.drag_icon.setHidden(true);
+    this.drag_icon.setDynamic(true);
+
+    this.drag_active = false;
+
+    var this_ = this;
+
+    this.addListener('dragstart', function(type, data, x, y) {
+        if (type == 'inv_items') {
+            this_._dragStart(data, x, y);
+        }
+    });
+
+    this.addListener('drag', function(x, y) {
+        if (this_.drag_active) {
+            this_._dragMove(x, y);
+        }
+    });
+
+    this.addListener('dragend', function() {
+        if (this_.drag_active) {
+            this_._dragEnd();
+        }
+    });
+
 }
 GameUI.prototype = Object.create(W.Widget.prototype);
 GameUI.prototype.constructor = GameUI;
@@ -63,6 +90,29 @@ GameUI.prototype.hideDialog = function() {
 
     this.keyboard.popHandler();
 };
+
+GameUI.prototype._dragStart = function(data, x, y) {
+    var icon = this.drag_icon;
+    icon.setItem(data.item_id);
+    icon.setQuantity(data.quantity);
+    icon.setHidden(false);
+    this.drag_active = true;
+    this._dragMove(x, y);
+};
+
+GameUI.prototype._dragMove = function(x, y) {
+    var icon = this.drag_icon;
+    icon._x = x;
+    icon._y = y;
+    icon.damage();
+};
+
+GameUI.prototype._dragEnd = function() {
+    var icon = this.drag_icon;
+    icon.setHidden(true);
+    this.drag_active = false;
+};
+
 
 GameUI.prototype.runLayout = function() {
     this._x = 0;
