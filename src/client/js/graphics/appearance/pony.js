@@ -236,7 +236,7 @@ function PonyAppearance(assets, bits, name) {
     var equip2 = (bits >> 26) & 15;
 
     // TODO: use a SpriteSheet object that contains all the sheet images
-    var base_idx = ExtraDefs.pony_bases_table[base];
+    var base_idx = ExtraDefs.pony_bases_table[stallion][base];
 
     function get_image(part_key, local_variant_id, sheet_index) {
         var part_idx = ExtraDefs.pony_slot_table[stallion][part_key];

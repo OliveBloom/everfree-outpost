@@ -49,14 +49,15 @@ def gen_pony_slot_table(maps):
 
 def gen_pony_bases_table(maps):
     result = []
-    for bits in range(8):
-        # This mimics the logic in client/js/graphics/appearance/pony.js
-        tribe_idx = bits & 3
-        tribe = ('E', 'P', 'U', 'A')[tribe_idx]
-        stallion_bit = (bits >> 2) & 1
-        sex = ('f', 'm')[stallion_bit]
+    for stallion_bit in range(2):
+        row = []
+        for tribe_idx in range(4):
+            # This mimics the logic in client/js/graphics/appearance/pony.js
+            tribe = ('E', 'P', 'U', 'A')[tribe_idx]
+            sex = ('f', 'm')[stallion_bit]
 
-        result.append(pony(maps).get_part('%s/base' % sex).get_variant(tribe).id)
+            row.append(pony(maps).get_part('%s/base' % sex).get_variant(tribe).local_id)
+        result.append(row)
     return result
 
 def init():
