@@ -8,7 +8,7 @@ def basic_configure(ctx):
     ctx.info.win32 = (p == 'Windows')
 
 def run(args, log_file):
-    from . import context, cc, rustc, python
+    from . import context, cc, rustc, python, emscripten, js
 
     with tempfile.TemporaryDirectory() as temp_dir:
         ctx = context.Context(args, temp_dir, log_file)
@@ -17,6 +17,8 @@ def run(args, log_file):
         cc.configure(ctx)
         rustc.configure(ctx)
         python.configure(ctx)
+        emscripten.configure(ctx)
+        js.configure(ctx)
 
         print('')
         print('Configuration settings:')
