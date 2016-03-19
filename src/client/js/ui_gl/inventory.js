@@ -135,7 +135,7 @@ function InventoryGrid(w, h, count) {
             slot.addListener('mouseover', function() {
                 this_._setSel(i);
             });
-        })();
+        })(i);
 
         this.addChild(this.slots[i]);
     }

@@ -76,7 +76,7 @@ Physics.prototype.computeForecast = function(now, entity, target_velocity) {
     var facing = target_velocity.sign();
     var idx = (3 * (facing.x + 1) + (facing.y + 1));
     var old_dir = ExtraDefs.anim_dir_table[entity.animId(now)];
-    if (old_dir != null) {
+    if (old_dir != null || !vecs_equal(motion.start_pos, motion.end_pos)) {
         var anim_dir = [5, 4, 3, 6, old_dir, 2, 7, 0, 1][idx];
         motion.anim_id = ExtraDefs.physics_anim_table[speed][anim_dir];
     } else {
