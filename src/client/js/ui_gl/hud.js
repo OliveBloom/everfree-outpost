@@ -86,6 +86,8 @@ GameUI.prototype.runLayout = function() {
 function FPSDisplay() {
     W.Widget.call(this);
     this.layout = new W.FixedSizeLayout(0, 0);
+    this.setDynamic(true);
+
     this.visible = false;
     this.timer = null;
 }
@@ -109,7 +111,7 @@ FPSDisplay.prototype.show = function() {
         return;
     }
     var this_ = this;
-    this.timer = window.setInterval(function() { this_.damage(); }, 1000);
+    this.timer = window.setInterval(function() { this_.damage(); }, 100);
     this.visible = true;
     this.damage();
 };

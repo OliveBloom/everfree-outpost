@@ -1,3 +1,22 @@
+
+var FLAG_DAMAGED =                  0x0001;
+var FLAG_STATIC_CHILD_DAMAGED =     0x0002;
+var FLAG_DYNAMIC_CHILD_DAMAGED =    0x0004;
+var FLAG_DYNAMIC =                  0x0008
+var FLAG_LAYOUT_DAMAGED =           0x0010;
+
+var MASK_ANY_DAMAGED =
+    FLAG_DAMAGED |
+    FLAG_STATIC_CHILD_DAMAGED |
+    FLAG_DYNAMIC_CHILD_DAMAGED;
+
+exports.FLAG_DAMAGED = FLAG_DAMAGED;
+exports.FLAG_STATIC_CHILD_DAMAGED = FLAG_STATIC_CHILD_DAMAGED;
+exports.FLAG_DYNAMIC_CHILD_DAMAGED = FLAG_DYNAMIC_CHILD_DAMAGED;
+exports.FLAG_DYNAMIC = FLAG_DYNAMIC;
+exports.FLAG_LAYOUT_DAMAGED = FLAG_LAYOUT_DAMAGED;
+exports.MASK_ANY_DAMAGED = MASK_ANY_DAMAGED;
+
 /** @constructor */
 function Widget() {
     this.owner = null;
@@ -7,8 +26,7 @@ function Widget() {
     this._y = null;
     this._width = null;
     this._height = null;
-    this._damaged = false;
-    this._layoutDamaged = false;
+    this._flags = 0;
     this._listeners = {};
 }
 exports.Widget = Widget;
@@ -31,6 +49,23 @@ Widget.prototype.removeChild = function(w) {
     console.assert(index != -1, "child widget not found in this.children");
     this.children.splice(index, 1);
     this.damageLayout();
+};
+
+Widget.prototype.setDynamic = function(set) {
+    var cur = !!(this._flags & FLAG_DYNAMIC);
+    if (cur == set) {
+        return;
+    }
+
+    if (set) {
+        this._flags |= FLAG_DYNAMIC;
+    } else {
+        this._flags &= FLAG_DYNAMIC;
+    }
+    // Force rebuilding of *both* buffers.  Otherwise we may get multiple
+    // copies of the same widget, one static and one dynamic.
+    this._damageRecursive(FLAG_STATIC_CHILD_DAMAGED);
+    this._damageRecursive(FLAG_DYNAMIC_CHILD_DAMAGED);
 };
 
 Widget.prototype.addListener = function(name, func) {
@@ -87,21 +122,27 @@ Widget.prototype.runLayout = function() {
 };
 
 Widget.prototype.damage = function() {
-    if (!this._damaged) {
-        this._damaged = true;
+    if (!(this._flags & FLAG_DAMAGED)) {
+        this._flags |= FLAG_DAMAGED;
+        if (this._flags & FLAG_DYNAMIC) {
+            this._damageRecursive(FLAG_DYNAMIC_CHILD_DAMAGED);
+        } else {
+            this._damageRecursive(FLAG_STATIC_CHILD_DAMAGED);
+        }
+    }
+};
+
+Widget.prototype._damageRecursive = function(flag) {
+    if (!(this._flags & flag)) {
+        this._flags |= flag;
         if (this.owner != null) {
-            this.owner.damage();
+            this.owner._damageRecursive(flag);
         }
     }
 };
 
 Widget.prototype.damageLayout = function() {
-    if (!this._layoutDamaged) {
-        this._layoutDamaged = true;
-        if (this.owner != null) {
-            this.owner.damageLayout();
-        }
-    }
+    this._damageRecursive(FLAG_LAYOUT_DAMAGED);
 };
 
 Widget.prototype.render = function(buffers) {
