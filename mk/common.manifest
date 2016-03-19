@@ -8,6 +8,7 @@ data/recipes.json: $b_data/recipes_server.json
 data/structures.json: $b_data/structures_server.json
 data/animations.json: $b_data/animations_server.json
 data/loot_tables.json: $b_data/loot_tables_server.json
+data/sprite_parts.json: $b_data/sprite_parts_server.json
 
 scripts/: $b_scripts/gen/
 

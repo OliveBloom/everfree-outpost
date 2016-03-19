@@ -308,3 +308,21 @@ def build_part_client_json(parts):
             variants[v.local_id] = v.id
         return variants
     return list(convert(p) for p in parts)
+
+def build_part_server_json(parts):
+    def convert_variant(v):
+        if v is None:
+            return None
+        return {
+                'name': v.name,
+                'global_id': v.id,
+                }
+    def convert(p):
+        variants = [None] * (len(p.variants) + (1 if p.optional else 0))
+        for v in p.iter_variants():
+            variants[v.local_id] = convert_variant(v)
+        return {
+                'name': p.full_name,
+                'variants': variants,
+                }
+    return list(convert(p) for p in parts)

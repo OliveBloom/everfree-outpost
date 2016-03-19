@@ -130,6 +130,9 @@ def emit_sprites(output_dir, sprites):
     write_json(output_dir, 'sprite_parts_client.json',
             sprite.build_part_client_json(parts))
 
+    write_json(output_dir, 'sprite_parts_server.json',
+            sprite.build_part_server_json(parts))
+
 
     sprite_dir = os.path.join(output_dir, 'sprites')
     if not os.path.isdir(sprite_dir):
