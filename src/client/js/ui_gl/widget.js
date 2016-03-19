@@ -79,11 +79,6 @@ Widget.prototype.dispatch = function(name /* varargs */) {
     return result;
 };
 
-Widget.prototype._dispatch = function() {
-    console.error('deprecated: Widget.prototype._dispatch');
-    this.dispatch.apply(this, arguments);
-}
-
 Widget.prototype.runLayout = function() {
     for (var i = 0; i < this.children.length; ++i) {
         this.children[i].runLayout();

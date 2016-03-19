@@ -269,7 +269,7 @@ InventoryUIGL.prototype.constructor = InventoryUIGL;
 exports.InventoryUIGL = InventoryUIGL;
 
 InventoryUIGL.prototype._setHotbar = function(hotbar_index) {
-    this._dispatch('set_hotbar', hotbar_index - 1, this.grid.selectedItem());
+    this.dispatch('set_hotbar', hotbar_index - 1, this.grid.selectedItem());
 };
 
 InventoryUIGL.prototype.onKey = function(evt) {
@@ -280,7 +280,7 @@ InventoryUIGL.prototype.onKey = function(evt) {
     switch (evt.uiKeyName()) {
         case 'cancel':
         case 'select':
-            this._dispatch('cancel');
+            this.dispatch('cancel');
             return true;
 
         case 'set_hotbar_1': this._setHotbar(1); return true;
