@@ -645,11 +645,11 @@ function setupKeyHandler() {
                     var inv = item_inv.clone();
                     var ui = new InventoryUIGL(inv);
                     ui_gl.showDialog(ui, 'Inventory');
-                    /*
-                    ui.ontransfer = function(from_inv, from_slot, to_inv, to_slot, amount) {
-                        conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
-                    };
-                    */
+
+                    ui.addListener('transfer',
+                        function(from_inv, from_slot, to_inv, to_slot, amount) {
+                            conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
+                        });
 
                     ui.addListener('set_hotbar', function(idx, item_id) {
                         ui_gl.hotbar.setSlot(idx, item_id, true);

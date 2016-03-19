@@ -134,49 +134,12 @@ function InventoryGrid(w, h, count) {
             slot.addListener('mouseover', function() {
                 this_._setSel(i);
             });
-
-            slot.addListener('mousedown', function(evt, input) {
-                if (this_.inventory_id != -1) {
-                    var total = slot.getQuantity()
-                    var to_move = total;
-                    if (evt.button == 2 && total != -1) {
-                        to_move = ((to_move + 1) / 2)|0;
-                    }
-                    input.startDrag(slot, evt, 'inv_items', {
-                        inv_id: this_.inventory_id,
-                        index: i,
-                        item_id: slot.getItem(),
-                        quantity: to_move,
-                    });
-                    if (to_move >= total || total == -1) {
-                        slot.setItem(-1);
-                    } else {
-                        slot.setQuantity(total - to_move);
-                    }
-                }
-            });
-
-            slot.addListener('dropcheck', function(type) {
-                return type == 'inv_items';
-            });
-
-            slot.addListener('dragcancel', function(type, data) {
-                console.assert(type == 'inv_items');
-                slot.setItem(data.item_id);
-            });
-
-            slot.addListener('drop', function(type, data) {
-                console.assert(type == 'inv_items');
-                // TODO: remove this, and instead do a real inventory move
-                slot.setItem(data.item_id);
-                slot.setQuantity(data.quantity);
-            });
-        })(i);
+        });
 
         this.addChild(this.slots[i]);
     }
 
-    this.inventory_id = -1;
+    this.inv = null;
     this.active = false;
     this.sel_idx = 0;
     this.slots[this.sel_idx].setActive(1);
@@ -207,7 +170,66 @@ InventoryGrid.prototype.attach = function(inv) {
         this_.slots[idx].setQuantity(new_item.count);
     });
 
-    this.inventory_id = inv.getId();
+    this.inv = inv;
+};
+
+InventoryGrid.prototype.resetSlot = function(idx) {
+    var s = this.inv.getSlot(idx);
+    this.slots[idx].setItem(s.item_id);
+    this.slots[idx].setQuantity(s.count);
+};
+
+InventoryGrid.prototype.enableTransfer = function(event_target) {
+    var this_ = this;
+    for (var i = 0; i < this.count; ++i) {
+        (function(i) {
+            var slot = this_.slots[i];
+            slot.addListener('mouseover', function() {
+                this_._setSel(i);
+            });
+
+            slot.addListener('mousedown', function(evt, input) {
+                var inv_id = this_.inv.getId();
+                if (inv_id == -1) {
+                    return;
+                }
+
+                var total = slot.getQuantity()
+                var to_move = total;
+                if (evt.button == 2 && total != -1) {
+                    to_move = ((to_move + 1) / 2)|0;
+                }
+                input.startDrag(slot, evt, 'inv_items', {
+                    inv_id: inv_id,
+                    slot: i,
+                    item_id: slot.getItem(),
+                    quantity: to_move,
+                });
+                if (to_move >= total || total == -1) {
+                    slot.setItem(-1);
+                } else {
+                    slot.setQuantity(total - to_move);
+                }
+            });
+
+            slot.addListener('dropcheck', function(type) {
+                return type == 'inv_items';
+            });
+
+            slot.addListener('dragcancel', function(type, data) {
+                console.assert(type == 'inv_items');
+                slot.setItem(data.item_id);
+            });
+
+            slot.addListener('drop', function(type, data) {
+                console.assert(type == 'inv_items');
+                event_target.dispatch('transfer',
+                    data.inv_id, data.slot,
+                    this_.inv.getId(), i,
+                    data.quantity);
+            });
+        })(i);
+    }
 };
 
 InventoryGrid.prototype.selectedItem = function() {
@@ -270,6 +292,7 @@ function InventoryUIGL(inv) {
     var h = Math.ceil(inv.size() / w);
     this.grid = new InventoryGrid(w, h, inv.size());
     this.grid.attach(inv);
+    this.grid.enableTransfer(this);
     this.grid.setActive(1);
     this.addChild(this.grid);
 }
