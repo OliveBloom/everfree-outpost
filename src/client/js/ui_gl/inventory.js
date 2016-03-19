@@ -137,13 +137,22 @@ function InventoryGrid(w, h, count) {
 
             slot.addListener('mousedown', function(evt, input) {
                 if (this_.inventory_id != -1) {
+                    var total = slot.getQuantity()
+                    var to_move = total;
+                    if (evt.button == 2 && total != -1) {
+                        to_move = ((to_move + 1) / 2)|0;
+                    }
                     input.startDrag(slot, evt, 'inv_items', {
                         inv_id: this_.inventory_id,
                         index: i,
                         item_id: slot.getItem(),
-                        quantity: slot.getQuantity(),
+                        quantity: to_move,
                     });
-                    slot.setItem(-1);
+                    if (to_move >= total || total == -1) {
+                        slot.setItem(-1);
+                    } else {
+                        slot.setQuantity(total - to_move);
+                    }
                 }
             });
 

@@ -58,6 +58,7 @@ KeyEvent.prototype.uiKeyName = function() {
 /** @constructor */
 function MouseEvent(evt, x, y) {
     this.raw = evt;
+    this.button = evt.button;
     this.shift = evt.shiftKey;
 
     var scale = +document.body.dataset['worldScale'];
@@ -119,6 +120,10 @@ Input.prototype.attach = function(doc) {
     });
     doc.addEventListener('mouseup', function(evt) {
         this_.handleMouseUp(evt);
+    });
+
+    doc.addEventListener('contextmenu', function(evt) {
+        evt.preventDefault();
     });
 };
 
