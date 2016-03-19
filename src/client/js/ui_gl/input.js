@@ -50,7 +50,6 @@ UIInput.prototype.startDrag = function(source, evt, type, data) {
 };
 
 UIInput.prototype.dragcancel = function() {
-    console.log('cancelling drag');
     if (this.drag_source) {
         this.drag_source.dispatch('dragcancel', this.drag_type, this.drag_data, this);
     }
@@ -68,7 +67,6 @@ UIInput.prototype._finishDrag = function() {
             if (w.hasListener('drop') && 
                     w.dispatch('dropcheck', this.drag_type, this.drag_data, this)) {
                 found_target = true;
-                console.log('found drop target:', w.constructor.name);
                 w.dispatch('drop', this.drag_type, this.drag_data, this);
             }
             break;

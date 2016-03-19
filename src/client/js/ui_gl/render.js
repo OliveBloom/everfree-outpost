@@ -63,7 +63,6 @@ var UPDATE_DYNAMIC = 2;
 
 UIRenderContext.prototype.updateBuffers = function(root) {
     if (root._flags & W.FLAG_LAYOUT_DAMAGED) {
-        console.log('update layout');
         root.runLayout();
         root._flags |= W.FLAG_STATIC_CHILD_DAMAGED | W.FLAG_DYNAMIC_CHILD_DAMAGED;
         this._walkUpdateLayout(root);
@@ -74,7 +73,6 @@ UIRenderContext.prototype.updateBuffers = function(root) {
     if (update_static || update_dynamic) {
         var flags = 0;
         if (update_static) {
-            console.log('update static geom');
             this.buffers.reset();
             flags |= UPDATE_STATIC;
         }

@@ -242,7 +242,6 @@ Input.prototype.handleMouseUp = function(raw) {
     var ret = false;
     for (var i = this.handlers.length - 1; i >= 0; --i) {
         var h = this.handlers[i];
-        console.log(this.handlers, i, h);
         if (h.handleMouseUp != null) {
             ret = h.handleMouseUp(evt);
             if (!evt._forward) {
