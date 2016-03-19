@@ -7,6 +7,7 @@ function hitTest(rx, ry, w) {
     return (rx >= 0 && rx < w._width && ry >= 0 && ry < w._height);
 }
 
+/** @constructor */
 function MouseStackEntry(widget, x, y) {
     this.widget = widget;
     this.abs_x = x;
@@ -18,6 +19,7 @@ MouseStackEntry.prototype.contains = function(x, y) {
 };
 
 
+/** @constructor */
 function UIInput(root) {
     this.root = root;
 
@@ -33,7 +35,6 @@ function UIInput(root) {
     this.drag_active = false;
 }
 exports.UIInput = UIInput;
-
 
 UIInput.prototype.startDrag = function(source, evt, type, data) {
     this.drag_source = source;

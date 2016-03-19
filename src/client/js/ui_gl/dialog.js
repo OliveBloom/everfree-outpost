@@ -5,7 +5,7 @@ var W = require('ui_gl/widget');
 /** @constructor */
 function DialogBody() {
     W.Widget.call(this);
-    this.layout = new PaddedPaneLayout(6, 6, 6, 6);
+    this.layout = new W.PaddedPaneLayout(6, 6, 6, 6);
 
     this.content = null;
 }
@@ -82,7 +82,7 @@ var DIALOG_TITLE_SIDE_WIDTH = 17;
 /** @constructor */
 function DialogTitle() {
     W.Widget.call(this);
-    this.layout = new FixedSizeLayout(0, DIALOG_TITLE_HEIGHT);
+    this.layout = new W.FixedSizeLayout(0, DIALOG_TITLE_HEIGHT);
 
     this.text = '';
 }

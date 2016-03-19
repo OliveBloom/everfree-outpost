@@ -1,4 +1,5 @@
 var ItemDef = require('data/items').ItemDef;
+var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
 
 
@@ -7,7 +8,7 @@ var ITEM_DISPLAY_SIZE = 16;
 /** @constructor */
 function ItemDisplay() {
     W.Widget.call(this);
-    this.layout = new FixedSizeLayout(ITEM_DISPLAY_SIZE, ITEM_DISPLAY_SIZE);
+    this.layout = new W.FixedSizeLayout(ITEM_DISPLAY_SIZE, ITEM_DISPLAY_SIZE);
 
     this.item_id = -1;
     this.qty = -1;
@@ -76,7 +77,7 @@ var ITEM_SLOT_ACTIVITY_LEVELS = ['inactive', 'semiactive', 'active'];
 /** @constructor */
 function ItemSlotGL() {
     W.Widget.call(this);
-    this.layout = new PaddedPaneLayout(2, 2, 2, 2);
+    this.layout = new W.PaddedPaneLayout(2, 2, 2, 2);
 
     this.item = new ItemDisplay();
     this.active = 0;
@@ -134,7 +135,7 @@ function InventoryGrid(w, h, count) {
             slot.addListener('mouseover', function() {
                 this_._setSel(i);
             });
-        });
+        })();
 
         this.addChild(this.slots[i]);
     }
@@ -184,9 +185,6 @@ InventoryGrid.prototype.enableTransfer = function(event_target) {
     for (var i = 0; i < this.count; ++i) {
         (function(i) {
             var slot = this_.slots[i];
-            slot.addListener('mouseover', function() {
-                this_._setSel(i);
-            });
 
             slot.addListener('mousedown', function(evt, input) {
                 var inv_id = this_.inv.getId();
@@ -286,7 +284,7 @@ InventoryGrid.prototype.runLayout = function() {
 /** @constructor */
 function InventoryUIGL(inv) {
     W.Widget.call(this);
-    this.layout = new PaddedPaneLayout(1, 1, 1, 1);
+    this.layout = new W.PaddedPaneLayout(1, 1, 1, 1);
 
     var w = 6;
     var h = Math.ceil(inv.size() / w);

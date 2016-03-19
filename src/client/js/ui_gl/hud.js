@@ -4,7 +4,7 @@ var old_widget = require('ui/widget');
 
 var Hotbar = require('ui_gl/hotbar').Hotbar;
 var DialogGL = require('ui_gl/dialog').DialogGL;
-var TestWidget = require('ui_gl/inventory').InventoryGrid;
+var ItemDisplay = require('ui_gl/inventory').ItemDisplay;
 
 
 /** @constructor */

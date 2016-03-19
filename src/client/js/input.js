@@ -74,6 +74,7 @@ function alwaysStopKey(evt) {
     // The old keyboard.js "always stop" code is smarter anyhow.
     return false;
 
+    /*
     // Allow Ctrl + anything
     if (evt.ctrlKey) {
         return false;
@@ -85,6 +86,7 @@ function alwaysStopKey(evt) {
 
     // Stop all other events.
     return true;
+    */
 }
 
 function alwaysStopMouse(evt) {
