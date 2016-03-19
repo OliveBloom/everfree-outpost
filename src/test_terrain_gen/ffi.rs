@@ -169,8 +169,8 @@ pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
     use libterrain_gen::forest::height_map;
     use libterrain_gen::forest::context::*;
 
-    let pixel_size = 16;    // Number of tiles covered by each pixel
-    let zoom = 2;
+    let pixel_size = 1;    // Number of tiles covered by each pixel
+    let zoom = 1;
     let size = scalar(256 / zoom);
     let mut drawing = Box::new(Drawing::new(size));
 
@@ -178,11 +178,12 @@ pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
     let cpos = V2::new(x, y);
     let bounds = drawing.bounds() + cpos * size;
 
+    /*
     (*ptr).forest.context_mut().grid_fold::<HeightMapPass, _, _>(
         pid, bounds, (), |(), pos, val| {
             //let val = cmp::max(0, cmp::min(255, val / 2 + 128)) as u8;
             let val =
-                if val < -128 {
+                if val < -96 {
                     -1
                 } else if val < 0 {
                     0
@@ -194,16 +195,15 @@ pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
             let val = (val + 1) as u8 * 31;
             drawing.height_map[bounds.index(pos)] = val;
         });
+        // */
 
-    /*
     (*ptr).forest.context_mut().grid_fold::<HeightDetailPass, _, _>(
         pid, bounds, (), |(), pos, val| {
             //let val = cmp::max(0, cmp::min(255, val / 2 + 128)) as u8;
             drawing.height_map[bounds.index(pos)] = (val + 1) as u8 * 31;
         });
-        */
+        // */
 
-    /*
     (*ptr).forest.context_mut().points_fold::<CaveRampsPass, _, _>(
         pid, bounds, (), |(), pos, r| {
             let h = drawing.height_map[bounds.index(pos)];
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
                 drawing.add_point(pos - bounds.min, "blue");
             }
         });
-        */
+        // */
 
     {
         let mut do_line = |x, y, color| {

@@ -14,24 +14,29 @@ pub fn generate(ctx: &mut Context,
                 pos: V2) {
     let seed = ctx.globals(pid).heightmap_seed;
     let params = [
+        // Primary hill/lake feature generation.  Produces hills up to height 3 (almost 4), with
+        // feature spacing of about 90 seconds' run = 24 chunks.
         perlin::Params {
-            resolution: 128,
-            offset: scalar(8),
-            magnitude: 256,
-            seed: seed,
-        },
-        perlin::Params {
-            resolution: 16,
+            resolution: 20,
             offset: scalar(0),
             magnitude: 256,
             seed: seed,
         },
+        // Small-scale detail adjustment.  Adds a little noise to make hill/lake edges less smooth.
+        perlin::Params {
+            resolution: 4,
+            offset: scalar(2),
+            magnitude: 16,
+            seed: seed,
+        },
+        /*
         perlin::Params {
             resolution: 4,
             offset: scalar(2),
             magnitude: 128,
             seed: seed,
         },
+        */
     ];
 
     let size = scalar(HEIGHTMAP_SIZE as i32);
@@ -39,6 +44,6 @@ pub fn generate(ctx: &mut Context,
     for offset in bounds.points() {
         let p = pos * size + offset;
         let val: i32 = params.iter().map(|params| perlin::sample(&params, p)).sum();
-        chunk.data[bounds.index(offset)] = val - 32;
+        chunk.data[bounds.index(offset)] = val;
     }
 }
