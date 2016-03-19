@@ -26,8 +26,16 @@ def gen_physics_anim_table(maps):
 
 def gen_anim_dir_table(maps):
     dct = {}
-    for anim in pony(maps).iter_anims():
-        dct[anim.id] = pony_sprite.get_anim_facing(anim)
+    #for anim in pony(maps).iter_anims():
+        #dct[anim.id] = pony_sprite.get_anim_facing(anim)
+
+    # TODO: There's no good reason to restrict this to physics anims, except
+    # that's how the current hack in client/js/physics.js distinguishes physics
+    # anims from special ones.
+    for motion in ('stand', 'walk', 'run'):
+        for dir_ in range(8):
+            anim = pony(maps).get_anim('%s-%d' % (motion, dir_))
+            dct[anim.id] = dir_
     return dct
 
 def gen_pony_slot_table(maps):
