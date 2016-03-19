@@ -161,7 +161,7 @@ FPSDisplay.prototype.show = function() {
         return;
     }
     var this_ = this;
-    this.timer = window.setInterval(function() { this_.damage(); }, 100);
+    this.timer = window.setInterval(function() { this_.damage(); }, 1000);
     this.visible = true;
     this.damage();
 };
