@@ -1,4 +1,5 @@
 var ItemDef = require('data/items').ItemDef;
+var W = require('ui_gl/widget');
 var G = require('graphics/glutil');
 var SB = require('graphics/shaderbuilder');
 var TILE_SIZE = require('data/chunk').TILE_SIZE;
@@ -9,7 +10,9 @@ function UIRenderContext(gl, assets) {
     this.assets = assets;
     this.shaders = makeUIShaders(gl, assets);
     this.textures = makeUITextures(gl, assets);
+
     this.buffers = new UIRenderBuffers(assets['ui_atlas_parts']);
+    this.dyn_buffers = new UIRenderBuffers(assets['ui_atlas_parts']);
 }
 exports.UIRenderContext = UIRenderContext;
 
@@ -41,23 +44,107 @@ function makeUIShaders(gl, assets) {
         .texture('sheet', null)
         .finish();
 
+    s.blit_tiled = ctx.start('ui_blit_tiled.vert', 'ui_blit_tiled.frag')
+        .uniformVec2('screenSize')
+        .uniformVec2('sheetSize')
+        .attributes(new SB.Attributes(16)
+                .field(0, gl.UNSIGNED_SHORT, 2, 'srcPos')
+                .field(4, gl.UNSIGNED_SHORT, 2, 'srcSize')
+                .field(8, gl.SHORT, 2, 'srcStepPx')
+                .field(12, gl.SHORT, 2, 'dest'))
+        .texture('sheet', null)
+        .finish();
+
     return s;
 }
 
+var UPDATE_STATIC = 1;
+var UPDATE_DYNAMIC = 2;
+
 UIRenderContext.prototype.updateBuffers = function(root) {
-    if (root._damaged) {
-        this.buffers.reset();
-        this._walkUpdateBuffers(root, 0, 0);
+    if (root._flags & W.FLAG_LAYOUT_DAMAGED) {
+        root.runLayout();
+        root._flags |= W.FLAG_STATIC_CHILD_DAMAGED | W.FLAG_DYNAMIC_CHILD_DAMAGED;
+        this._walkUpdateLayout(root);
+    }
+
+    var update_static = !!(root._flags & W.FLAG_STATIC_CHILD_DAMAGED);
+    var update_dynamic = !!(root._flags & W.FLAG_DYNAMIC_CHILD_DAMAGED);
+    if (update_static || update_dynamic) {
+        var flags = 0;
+        if (update_static) {
+            this.buffers.reset();
+            flags |= UPDATE_STATIC;
+        }
+        if (update_dynamic) {
+            this.dyn_buffers.reset();
+            flags |= UPDATE_DYNAMIC;
+        }
+        this._walkUpdateBuffers(root, 0, 0, flags);
     }
 };
 
-UIRenderContext.prototype._walkUpdateBuffers = function(w, x, y) {
-    w.render(this.buffers, x, y);
-    w._damaged = false;
+UIRenderContext.prototype._walkUpdateLayout = function(w) {
+    // Don't need to runLayout() for each widget since the root runLayout()
+    // operates recursively.
+    w._flags &= ~W.FLAG_LAYOUT_DAMAGED;
     for (var i = 0; i < w.children.length; ++i) {
         var c = w.children[i];
-        this._walkUpdateBuffers(c, x + c._x, y + c._y);
+        this._walkUpdateLayout(c);
     }
+};
+
+UIRenderContext.prototype._walkUpdateBuffers = function(w, x, y, flags) {
+    if (w._flags & W.FLAG_HIDDEN) {
+        // Render neither static nor dynamic content from this subtree.
+        flags = 0;
+    }
+
+    if (w._flags & W.FLAG_DYNAMIC) {
+        if (flags & UPDATE_DYNAMIC) {
+            w.render(this.dyn_buffers, x, y);
+        }
+    } else {
+        if (flags & UPDATE_STATIC) {
+            w.render(this.buffers, x, y);
+        }
+    }
+    w._flags &= ~W.MASK_ANY_DAMAGED;
+
+    for (var i = 0; i < w.children.length; ++i) {
+        var c = w.children[i];
+        this._walkUpdateBuffers(c, x + c._x, y + c._y, flags);
+    }
+};
+
+UIRenderContext.prototype._renderBuffer = function(gl, fb_idx, buffers, size) {
+    this.shaders.blit_tiled.draw(fb_idx,
+            0, buffers.ui_atlas.length / 8,
+            {
+                'screenSize': size,
+                'sheetSize': [256, 256],
+            },
+            { '*': buffers.ui_atlas.getGlBuffer(gl) },
+            { 'sheet': this.textures.ui_atlas });
+
+    this.shaders.blit.draw(fb_idx,
+            0, buffers.items.length / 4,
+            {
+                'screenSize': size,
+                'sheetSize': [1024, 1024],
+            },
+            { '*': buffers.items.getGlBuffer(gl) },
+            { 'sheet': this.textures.items });
+
+    var font_tex = this.textures.font;
+    this.shaders.blit.draw(fb_idx,
+            0, buffers.text.length / 4,
+            {
+                'screenSize': size,
+                'sheetSize': [font_tex.width, font_tex.height],
+            },
+            { '*': buffers.text.getGlBuffer(gl) },
+            { 'sheet': font_tex });
 };
 
 UIRenderContext.prototype.render = function(root, size, fb) {
@@ -72,33 +159,8 @@ UIRenderContext.prototype.render = function(root, size, fb) {
 
     var this_ = this;
     fb.use(function(fb_idx) {
-        this_.shaders.blit.draw(fb_idx,
-                0, this_.buffers.ui_atlas.length / 4,
-                {
-                    'screenSize': size,
-                    'sheetSize': [256, 256],
-                },
-                { '*': this_.buffers.ui_atlas.getGlBuffer(gl) },
-                { 'sheet': this_.textures.ui_atlas });
-
-        this_.shaders.blit.draw(fb_idx,
-                0, this_.buffers.items.length / 4,
-                {
-                    'screenSize': size,
-                    'sheetSize': [1024, 1024],
-                },
-                { '*': this_.buffers.items.getGlBuffer(gl) },
-                { 'sheet': this_.textures.items });
-
-        var font_tex = this_.textures.font;
-        this_.shaders.blit.draw(fb_idx,
-                0, this_.buffers.text.length / 4,
-                {
-                    'screenSize': size,
-                    'sheetSize': [font_tex.width, font_tex.height],
-                },
-                { '*': this_.buffers.text.getGlBuffer(gl) },
-                { 'sheet': font_tex });
+        this_._renderBuffer(gl, fb_idx, this_.buffers, size);
+        this_._renderBuffer(gl, fb_idx, this_.dyn_buffers, size);
     });
 
     gl.disable(gl.DEPTH_TEST);
@@ -143,9 +205,15 @@ UIRenderBuffers.prototype.drawUI = function(key, dx, dy, dw, dh) {
     if (dh == null) {
         dh = sh;
     }
-    addQuad(this.ui_atlas,
-            sx, sy, sw, sh,
-            dx, dy, dw, dh);
+
+    // Provide additional vertex data to allow for tiling.
+    this.ui_atlas.push(sx, sy, sw, sh,  0,  0,  dx + 0,  dy + 0);
+    this.ui_atlas.push(sx, sy, sw, sh,  0,  dh, dx + 0,  dy + dh);
+    this.ui_atlas.push(sx, sy, sw, sh,  dw, 0,  dx + dw, dy + 0);
+
+    this.ui_atlas.push(sx, sy, sw, sh,  dw, 0,  dx + dw, dy + 0);
+    this.ui_atlas.push(sx, sy, sw, sh,  0,  dh, dx + 0,  dy + dh);
+    this.ui_atlas.push(sx, sy, sw, sh,  dw, dh, dx + dw, dy + dh);
 };
 
 UIRenderBuffers.prototype.drawItem = function(id, dx, dy) {

@@ -2,6 +2,7 @@ var Config = require('config').Config;
 var ItemDef = require('data/items').ItemDef;
 var FontMetrics = require('data/fontmetrics').FontMetrics;
 var W = require('ui_gl/widget');
+var ItemDisplay = require('ui_gl/inventory').ItemDisplay;
 
 
 var ITEM_BOX_COLORS = ['yellow', 'green', 'blue', 'red'];
@@ -9,28 +10,21 @@ var ITEM_BOX_COLORS = ['yellow', 'green', 'blue', 'red'];
 /** @constructor */
 function ItemBox() {
     W.Widget.call(this);
-    this.layout = new W.FixedSizeLayout(16 + 2*4, 16 + 2*4);
 
-    this.item_id = -1;
-    this.qty = -1;
+    this.slot = new ItemDisplay();
     this.color = 0;
-    this.disabled = false;
+
+    this.addChild(this.slot);
 }
 ItemBox.prototype = Object.create(W.Widget.prototype);
 ItemBox.prototype.constructor = ItemBox;
 
 ItemBox.prototype.setItem = function(item_id) {
-    if (this.item_id != item_id) {
-        this.item_id = item_id;
-        this.damage();
-    }
+    this.slot.setItem(item_id);
 };
 
 ItemBox.prototype.setQuantity = function(qty) {
-    if (this.qty != qty) {
-        this.qty = qty;
-        this.damage();
-    }
+    this.slot.setQuantity(qty);
 };
 
 ItemBox.prototype.setColor = function(color) {
@@ -40,41 +34,16 @@ ItemBox.prototype.setColor = function(color) {
     }
 };
 
-ItemBox.prototype.setDisabled = function(disabled) {
-    this.disabled = disabled;
-    this.damage();
+ItemBox.prototype.runLayout = function() {
+    this.slot.runLayout();
+    this.slot._x = 4;
+    this.slot._y = 4;
+    this._width = this.slot._width + 2 * 4;
+    this._height = this.slot._height + 2 * 4;
 };
-
-function makeQuantityString(x) {
-    if (x < 1000) {
-        return '' + x;
-    } else if (x < 10000) {
-        var h = (x / 100)|0;
-        var whole = (h / 10)|0;
-        var frac = (h % 10);
-        return whole + '.' + frac + 'k';
-    } else {
-        var k = (x / 1000)|0;
-        return k + 'k';
-    }
-}
 
 ItemBox.prototype.render = function(buf, x, y) {
     buf.drawUI('hotbar-box-' + ITEM_BOX_COLORS[this.color], x, y);
-    if (this.item_id != -1) {
-        buf.drawItem(this.item_id, x + 4, y + 4);
-    }
-
-    if (this.qty != -1) {
-        var s = makeQuantityString(this.qty);
-        var fm = FontMetrics.by_name['hotbar'];
-        var w = fm.measureWidth(s);
-        var qx = x + 20 - w + 1;
-        var qy = y + 20 - fm.height + 1;
-        fm.drawString(s, function(sx, sy, w, h, dx, dy) {
-            buf.drawChar(sx, sy, w, h, qx + dx, qy + dy);
-        });
-    }
 };
 
 
@@ -257,9 +226,10 @@ Hotbar.prototype.attachItems = function(inv) {
     }
     this.item_inv = inv;
 
+    this._updateItems();
+
     var this_ = this;
     inv.onUpdate(function(idx, old_item, new_item) {
-        // TODO: might be slow (O(N^2)) at startup time
         this_._updateItems();
     });
     // TODO: gray out items when quantity is zero.
@@ -271,9 +241,9 @@ Hotbar.prototype.render = function(buf, x, y) {
     buf.drawUI('hotbar-cap-bottom',
             x + ((this._width - 14) / 2)|0, y + this._height - 7);
     buf.drawUI('hotbar-bar',
-            x + ((this._width - 12) / 2)|0,
+            x + ((this._width - 10) / 2)|0,
             y + 7,
-            12,
+            10,
             this._height - 7 * 2);
 
 };

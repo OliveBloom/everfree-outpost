@@ -42,10 +42,14 @@ var KeybindingEditor = require('ui/keybinding').KeybindingEditor;
 var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
 var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
-var GameUI = require('ui_gl/hud').GameUI;
-var UIRenderContext = require('ui_gl/render').UIRenderContext;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 var DNDState = require('ui/dnd').DNDState;
+
+var GameUI = require('ui_gl/hud').GameUI;
+var UIRenderContext = require('ui_gl/render').UIRenderContext;
+var InventoryUIGL = require('ui_gl/inventory').InventoryUIGL;
+var Input = require('input').Input;
+var UIInput = require('ui_gl/input').UIInput;
 
 var BlockDef = require('data/chunk').BlockDef;
 var ItemDef = require('data/items').ItemDef;
@@ -124,7 +128,9 @@ var chat;
 var error_list;
 var inv_update_list;
 var music_test;
+
 var ui_gl;
+var input;
 
 var main_menu;
 var debug_menu;
@@ -189,8 +195,11 @@ function init() {
     chat = new ChatWindow();
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
-    ui_gl = new GameUI();
+
+    ui_gl = new GameUI(keyboard);
     ui_gl.calcSize(0, 0);
+    input = new Input();
+    input.handlers.push(new UIInput(ui_gl));
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -407,6 +416,7 @@ function maybeRegister(info, next) {
 
 function buildUI() {
     keyboard.attach(document);
+    input.attach(document);
     setupKeyHandler();
 
     function doResize() {
@@ -633,21 +643,23 @@ function setupKeyHandler() {
                         break;
                     }
                     var inv = item_inv.clone();
-                    var ui = new InventoryUI(dnd, inv);
-                    dialog.show(ui);
-                    ui.ontransfer = function(from_inv, from_slot, to_inv, to_slot, amount) {
-                        conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
-                    };
+                    var ui = new InventoryUIGL(inv);
+                    ui_gl.showDialog(ui, 'Inventory');
 
-                    ui.enableSelect(ui_gl.hotbar.getItem(), function(idx, new_id) {
-                        ui_gl.hotbar.setSlot(idx, new_id, true);
+                    ui.addListener('transfer',
+                        function(from_inv, from_slot, to_inv, to_slot, amount) {
+                            conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
+                        });
+
+                    ui.addListener('set_hotbar', function(idx, item_id) {
+                        ui_gl.hotbar.setSlot(idx, item_id, true);
                         ui_gl.hotbar.selectSlot(idx);
                     });
 
-                    ui.oncancel = function() {
-                        dialog.hide();
+                    ui.addListener('cancel', function() {
+                        ui_gl.hideDialog();
                         inv.release();
-                    };
+                    });
                     break;
 
                 case 'abilities':

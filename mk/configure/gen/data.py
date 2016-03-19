@@ -37,14 +37,14 @@ def rules(i):
             description = GEN $out
     ''', **locals())
 
-def font(basename, src_img, charset_args='--first-char=0x21'):
+def font(basename, src_img, charset_args='--first-char=0x21', extra_args=''):
     out_img = '$b_data/fonts/' + basename + '.png'
     out_metrics = '$b_data/fonts/' + basename + '_metrics.json'
 
     return template('''
         build %out_img %out_metrics: process_font %src_img $
             | $root/src/gen/process_font.py
-            extra_args = %charset_args
+            extra_args = %charset_args %extra_args
             out_img = %out_img
             out_metrics = %out_metrics
     ''', **locals())
@@ -78,7 +78,7 @@ def day_night(out_json, src_img):
 def ui_atlas(out_dir, src_dir):
     return template('''
         build %out_dir/ui_atlas.png %out_dir/ui_atlas.json: gen_ui_atlas $
-            | $root/src/gen/gen_day_night.py %src_dir
+            | $root/src/gen/gen_ui_atlas.py %src_dir
             in_dir = %src_dir
             out_dir = %out_dir
     ''', **locals())

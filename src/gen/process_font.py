@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import struct
 import sys
 
 from PIL import Image
@@ -21,6 +22,11 @@ def build_parser():
     parser.add_argument('--space-width', metavar='SIZE',
             default=2,
             help='width of the space character in pixels')
+
+    parser.add_argument('--color', metavar='COLOR', default='0xffffff',
+            help='font color to use in the generated image')
+    parser.add_argument('--no-shadow', action='store_true',
+            help='don\'t add a drop shadow in the generated image')
 
     parser.add_argument('--font-image-out', metavar='FILE',
             required=True,
@@ -134,18 +140,25 @@ def main():
     parser = build_parser()
     args = parser.parse_args()
 
+    text_color = tuple(struct.pack('>I', int(args.color, 0))[1:]) + (255,)
+    if not args.no_shadow:
+        offsets = [(1, 1), (1, 0), (0, 1), (0, 0)]
+        mx, my = (1, 1)
+    else:
+        offsets = [(0, 0)]
+        mx, my = (1, 0)
+
     img = Image.open(args.font_image_in)
 
     boxes = get_glyph_boxes(img)
     adjust_palette(img)
-    mask = build_mask(img, boxes, 1, 1)
-    metrics = build_metrics(args, boxes, 1, 1)
-
+    mask = build_mask(img, boxes, mx, my)
+    metrics = build_metrics(args, boxes, mx, my)
 
     out = Image.new('RGBA', mask.size, (0, 0, 0, 0))
-    for offset in [(1, 1), (1, 0), (0, 1), (0, 0)]:
+    for offset in offsets:
         if offset == (0, 0):
-            color = (255, 255, 255, 255)
+            color = text_color
         else:
             color = (64, 64, 64, 255)
         out.paste(color, offset, mask)

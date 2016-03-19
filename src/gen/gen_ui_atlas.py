@@ -101,7 +101,7 @@ def build_json(parts):
                 x=p.x,
                 y=p.y,
                 w=p.w,
-                h=p.w,
+                h=p.h,
                 )
 
     return result
