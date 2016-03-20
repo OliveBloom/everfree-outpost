@@ -184,6 +184,13 @@ class Context:
 
         setattr(self.info, key, result)
 
+    def copy_arg(self, key, desc, default=None):
+        self.info.add(key, desc)
+        value = getattr(self.args, key)
+        if value is None:
+            value = default
+        setattr(self.info, key, value)
+
     # Cache save/load
     def load_cache(self):
         cache_file = os.path.join(self.info.build_dir, 'config.cache')

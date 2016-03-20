@@ -27,7 +27,7 @@ def build_parser():
     args.add_argument('--mods',
             help='list of mods to include in the compiled game')
 
-    args.add_argument('--debug', action='store_true',
+    args.add_argument('--debug', action='store_true', default=False,
             help='produce a debug build')
     args.add_argument('--release', action='store_false', dest='debug',
             help='produce a release build (default)')
@@ -60,7 +60,7 @@ def build_parser():
     args.add_argument('--yui-compressor',
             help='name of the YUI Compressor binary')
 
-    args.add_argument('--force', action='store_true',
+    args.add_argument('--force', action='store_true', default=False,
             help='proceed even if there are configuration errors')
 
     args.add_argument('--cflags',

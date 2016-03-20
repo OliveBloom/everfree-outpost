@@ -27,20 +27,31 @@ NEED_RUST_LIBS = (
     'vec_map',
     )
 
+NEED_RUST_LIB_SRC = (
+        'core',
+        'bitflags',
+        # If you extend this, also add a new check in configure()
+        )
+
 def configure(ctx):
     ctx.detect('rustc', 'Rust compiler', ('rustc',), chk_rustc)
 
     ctx.info.add('rust_externs', 'Rust library --extern flags')
-    ctx.info.rust_externs = []
+    ctx.info.rust_externs = ctx.args.rust_lib_externs.split(',')
 
     for lib in NEED_RUST_LIBS:
         configure_lib(ctx, lib)
+
+    configure_lib_src(ctx, 'core', ctx.args.rust_home, 'src/libcore')
+    configure_lib_src(ctx, 'bitflags', ctx.args.bitflags_home)
 
 def requirements(ctx):
     if ctx.info.data_only:
         return ()
     else:
-        return ('rustc',) + tuple('rust_lib%s_path' % l for l in NEED_RUST_LIBS)
+        return ('rustc',) + \
+                tuple('rust_lib%s_path' % l for l in NEED_RUST_LIBS) + \
+                tuple('rust_lib%s_src' % l for l in NEED_RUST_LIB_SRC)
 
 def configure_lib(ctx, crate_name):
     key = 'rust_lib%s_path' % crate_name
@@ -92,6 +103,18 @@ def configure_lib(ctx, crate_name):
     setattr(ctx.info, key, path)
     if path is not None and path != '':
         ctx.info.rust_externs.append('%s=%s' % (crate_name, extern))
+
+def configure_lib_src(ctx, crate_name, home, rel_dir='src'):
+    candidates = (os.path.join(home, rel_dir, 'lib.rs'),)
+
+    def chk(ctx, path):
+        if not os.path.isfile(path):
+            raise ConfigError('not found')
+        return True
+
+    key = 'rust_lib%s_src' % crate_name
+    desc = 'Rust lib%s source file' % crate_name
+    ctx.detect(key, desc, candidates, chk)
 
 
 def chk_rustc(ctx, rustc):

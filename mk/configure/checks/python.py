@@ -16,11 +16,11 @@ def configure(ctx):
         ctx.detect_('python3_config', (ctx.info.python3 + '-config',),
                 chk_python3_config)
 
-    ctx.detect('python3_pil', 'Python3 imaging library', ('PIL',),
+    ctx.detect('python3_pil', 'Python 3 imaging library', ('PIL',),
             chk_python3_lib, deps=('python3',))
-    ctx.detect('python3_yaml', 'Python3 YAML library', ('yaml',),
+    ctx.detect('python3_yaml', 'Python 3 YAML library', ('yaml',),
             chk_python3_lib, deps=('python3',))
-    ctx.detect('python3_json', 'Python3 JSON library', ('simplejson', 'json'),
+    ctx.detect('python3_json', 'Python 3 JSON library', ('simplejson', 'json'),
             chk_python3_lib, deps=('python3',))
 
 def requirements(ctx):

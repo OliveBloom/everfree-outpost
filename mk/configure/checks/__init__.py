@@ -38,25 +38,22 @@ def post_configure(ctx):
     else:
         ctx.info.dist_dir = ctx.args.dist_dir
 
-    ctx.info.add('debug', 'debug build')
-    ctx.info.debug = ctx.args.debug
-
-    ctx.info.add('with_server_gui', 'include server_gui.py')
-    ctx.info.with_server_gui = ctx.args.with_server_gui
+    ctx.copy_arg('debug', 'debug build')
+    ctx.copy_arg('with_server_gui', 'include server_gui.py')
 
     ctx.info.add('mod_list', 'included mods')
     ctx.info.mod_list = ('outpost',) + \
             (tuple(ctx.args.mods.split(',')) if ctx.args.mods else ())
 
+    ctx.copy_arg('data_only', 'build data only?')
+    ctx.copy_arg('use_prebuilt', 'use prebuilt files')
+    ctx.copy_arg('prebuilt_dir', 'path to prebuilt files')
 
-    ctx.info.add('data_only', 'build data only?')
-    ctx.info.data_only = ctx.args.data_only
+    ctx.copy_arg('cflags', 'extra C compiler flags', default='')
+    ctx.copy_arg('cxxflags', 'extra C++ compiler flags', default='')
+    ctx.copy_arg('ldflags', 'extra C/C++ linker flags', default='')
 
-    ctx.info.add('use_prebuilt', 'use prebuilt files')
-    ctx.info.use_prebuilt = ctx.args.use_prebuilt
-
-    ctx.info.add('prebuilt_dir', 'path to prebuilt files')
-    ctx.info.prebuilt_dir = ctx.args.prebuilt_dir
+    ctx.copy_arg('force', 'ignore configuration errors')
 
 def check(ctx, need_vars):
     ok = True
@@ -106,6 +103,6 @@ def run(args, log_file):
         reqs.extend(js.requirements(ctx))
         ok = check(ctx, reqs)
 
-        ctx.log('Configuration settings:')
+        ctx.out('Configuration settings:')
         for k,v in sorted(ctx.info._values.items()):
-            ctx.log('  %-20s %s' % (k + ':', v))
+            ctx.out('  %-40s %s' % (ctx.info._descs[k] + ':', v))
