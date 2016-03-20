@@ -10,7 +10,7 @@ def rules(i):
             '--emit link,dep-info',
             '-L $b_native',
             maybe('-L %s', i.rust_extra_libdir),
-            i.rust_lib_externs,
+            *('--extern %s' % x for x in i.rust_externs),
             )
 
     common_cflags = join(

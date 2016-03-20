@@ -22,10 +22,12 @@ def build_parser():
             help='use prebuild versions of the named files/directories')
     args.add_argument('--prebuilt-dir', default=None,
             help='directory containing a previously compiled version')
+    args.add_argument('--reconfigure', action='store_true', default=False,
+            help='reuse cached configuration info when possible')
     args.add_argument('--mods',
             help='list of mods to include in the compiled game')
 
-    args.add_argument('--debug', action='store_true',
+    args.add_argument('--debug', action='store_true', default=False,
             help='produce a debug build')
     args.add_argument('--release', action='store_false', dest='debug',
             help='produce a release build (default)')
@@ -58,7 +60,7 @@ def build_parser():
     args.add_argument('--yui-compressor',
             help='name of the YUI Compressor binary')
 
-    args.add_argument('--force', action='store_true',
+    args.add_argument('--force', action='store_true', default=False,
             help='proceed even if there are configuration errors')
 
     args.add_argument('--cflags',
@@ -126,19 +128,16 @@ def header(i):
 
         mods = %{','.join(i.mod_list)}
 
-        rust_home = %{i.rust_home}
-        bitflags_home = %{i.bitflags_home}
-
         rustc = %{i.rustc}
         cc = %{i.cc}
         cxx = %{i.cxx}
         python3 = %{i.python3}
-        closure_compiler = closure-compiler
-        yui_compressor = yui-compressor
+        closure_compiler = %{i.closure_compiler}
+        yui_compressor = %{i.yui_compressor}
 
-        user_cflags = %{i.cflags or ''}
-        user_cxxflags = %{i.cxxflags or ''}
-        user_ldflags = %{i.ldflags or ''}
+        user_cflags = %{i.cflags}
+        user_cxxflags = %{i.cxxflags}
+        user_ldflags = %{i.ldflags}
     ''', os=os, **locals())
 
 
@@ -158,12 +157,12 @@ def fix_bitflags(src_out, src_in):
 if __name__ == '__main__':
     parser = build_parser()
     args = parser.parse_args(sys.argv[1:])
-    i = Info(args)
 
     log = open('config.log', 'w')
     log.write('Arguments: %r\n\n' % (sys.argv[1:],))
 
-    if not checks.run(i, log):
+    i, ok = checks.run(args, log)
+    if not ok:
         if i.force:
             print('Ignoring errors due to --force')
         else:
@@ -189,8 +188,6 @@ if __name__ == '__main__':
     dist_extra = []
     if i.with_server_gui:
         dist_extra.append(('server_gui.py', '$root/util/server_gui.py'))
-
-    i.mod_list = ['outpost'] + (i.mods.split(',') if i.mods else [])
 
     content = header(i)
 
@@ -221,6 +218,7 @@ if __name__ == '__main__':
                     if f.endswith('.cpp')),
                 cxxflags='-DWEBSOCKETPP_STRICT_MASKING',
                 ldflags='-static',
+                # TODO: detect these lib flags
                 libs='-lboost_system -lpthread' if not i.win32 else
                     '-lboost_system-mt -lpthread -lwsock32 -lws2_32'),
             native.cxx('outpost_savegame', 'shlib',
@@ -247,8 +245,8 @@ if __name__ == '__main__':
 
             '# Asm.js',
             asmjs.rules(i),
-            asmjs.rlib('core', (), '$rust_home/src/libcore/lib.rs'),
-            asmjs.rlib('bitflags', ('core',), '$bitflags_home/src/lib.rs'),
+            asmjs.rlib('core', (), i.rust_libcore_src),
+            asmjs.rlib('bitflags', ('core',), i.rust_libbitflags_src),
             asmjs.rlib('asmrt', ('core',)),
             asmjs.rlib('physics', ('core', 'bitflags', 'asmrt')),
             asmjs.rlib('graphics', ('core', 'asmrt', 'physics')),
