@@ -128,19 +128,16 @@ def header(i):
 
         mods = %{','.join(i.mod_list)}
 
-        rust_home = %{i.rust_home}
-        bitflags_home = %{i.bitflags_home}
-
         rustc = %{i.rustc}
         cc = %{i.cc}
         cxx = %{i.cxx}
         python3 = %{i.python3}
-        closure_compiler = closure-compiler
-        yui_compressor = yui-compressor
+        closure_compiler = %{i.closure_compiler}
+        yui_compressor = %{i.yui_compressor}
 
-        user_cflags = %{i.cflags or ''}
-        user_cxxflags = %{i.cxxflags or ''}
-        user_ldflags = %{i.ldflags or ''}
+        user_cflags = %{i.cflags}
+        user_cxxflags = %{i.cxxflags}
+        user_ldflags = %{i.ldflags}
     ''', os=os, **locals())
 
 
@@ -160,12 +157,12 @@ def fix_bitflags(src_out, src_in):
 if __name__ == '__main__':
     parser = build_parser()
     args = parser.parse_args(sys.argv[1:])
-    i = Info(args)
 
     log = open('config.log', 'w')
     log.write('Arguments: %r\n\n' % (sys.argv[1:],))
 
-    if not checks.run(i, log):
+    i, ok = checks.run(args, log)
+    if not ok:
         if i.force:
             print('Ignoring errors due to --force')
         else:
@@ -221,6 +218,7 @@ if __name__ == '__main__':
                     if f.endswith('.cpp')),
                 cxxflags='-DWEBSOCKETPP_STRICT_MASKING',
                 ldflags='-static',
+                # TODO: detect these lib flags
                 libs='-lboost_system -lpthread' if not i.win32 else
                     '-lboost_system-mt -lpthread -lwsock32 -lws2_32'),
             native.cxx('outpost_savegame', 'shlib',
@@ -247,8 +245,8 @@ if __name__ == '__main__':
 
             '# Asm.js',
             asmjs.rules(i),
-            asmjs.rlib('core', (), '$rust_home/src/libcore/lib.rs'),
-            asmjs.rlib('bitflags', ('core',), '$bitflags_home/src/lib.rs'),
+            asmjs.rlib('core', (), i.rust_libcore_src),
+            asmjs.rlib('bitflags', ('core',), i.rust_libbitflags_src),
             asmjs.rlib('asmrt', ('core',)),
             asmjs.rlib('physics', ('core', 'bitflags', 'asmrt')),
             asmjs.rlib('graphics', ('core', 'asmrt', 'physics')),

@@ -37,13 +37,16 @@ def configure(ctx):
     ctx.detect('rustc', 'Rust compiler', ('rustc',), chk_rustc)
 
     ctx.info.add('rust_externs', 'Rust library --extern flags')
-    ctx.info.rust_externs = ctx.args.rust_lib_externs.split(',')
+    ext_arg = ctx.args.rust_lib_externs
+    ctx.info.rust_externs = ext_arg.split(',') if ext_arg else []
 
     for lib in NEED_RUST_LIBS:
         configure_lib(ctx, lib)
 
     configure_lib_src(ctx, 'core', ctx.args.rust_home, 'src/libcore')
     configure_lib_src(ctx, 'bitflags', ctx.args.bitflags_home)
+
+    ctx.copy_arg('rust_extra_libdir', 'Rust extra library directory')
 
 def requirements(ctx):
     if ctx.info.data_only:

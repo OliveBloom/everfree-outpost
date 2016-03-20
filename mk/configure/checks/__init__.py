@@ -106,3 +106,6 @@ def run(args, log_file):
         ctx.out('Configuration settings:')
         for k,v in sorted(ctx.info._values.items()):
             ctx.out('  %-40s %s' % (ctx.info._descs[k] + ':', v))
+        print('')
+
+        return ctx.info, ok
