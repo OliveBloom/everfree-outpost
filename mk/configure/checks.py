@@ -341,43 +341,6 @@ class Checker(object):
             for k in keys:
                 detect(k)
 
-        p = platform.system()
-        self.out('Checking platform: %s' % p)
-        self.i.win32 = (p == 'Windows')
-
-        detect('python3')
-
-        if not self.i.data_only:
-            detect_all('cc', 'cxx', 'rustc', 'python3_config',
-                    'emscripten_fastcomp_prefix', 'emscripten_passes_prefix',
-                    'closure_compiler', 'yui_compressor')
-
-
-        for missing_lib in self.detect_python_libraries(('PIL.Image', 'yaml')):
-            errs.append('Cannot find Python 3 library %s' % missing_lib)
-
-        if not self.i.data_only:
-            libs = (
-                    # Keep these in dependency order.  That way necessary --extern flags will already be
-                    # set before they are needed for later checks.
-                    'libc',
-                    'bitflags',
-                    'rand',
-                    'regex_syntax',
-                    'regex',
-                    'log',
-                    'env_logger',
-                    'rustc_serialize',
-                    'time',
-                    'libsqlite3_sys',
-                    'rusqlite',
-                    'linked_hash_map',
-                    'lru_cache',
-                    'python3_sys',
-                    )
-            for missing_lib in self.detect_rust_libraries(libs):
-                errs.append('Cannot find Rust library %s' % missing_lib)
-
 
         if len(errs) == 0:
             self.out('\nConfiguration OK')

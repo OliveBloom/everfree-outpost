@@ -1,4 +1,5 @@
 import os
+import pickle
 import platform
 import subprocess
 import sys
@@ -15,8 +16,8 @@ else:
 
 class Info:
     def __init__(self):
-        super(Info, self).__setattr__('_values', {})
-        super(Info, self).__setattr__('_descs', {})
+        self._values = {}
+        self._descs = {}
 
     def add(self, key, desc):
         self._values[key] = None
@@ -29,12 +30,22 @@ class Info:
             raise AttributeError(k)
 
     def __setattr__(self, k, v):
-        if k in self._values:
-            self._values[k] = v
-        elif k.startswith('_'):
+        if k.startswith('_'):
             super(Info, self).__setattr__(k, v)
+        elif k in self._values:
+            self._values[k] = v
         else:
             raise AttributeError(k)
+
+class InstrumentedArgs:
+    def __init__(self, args):
+        self._args = args
+        self._used = {}
+
+    def __getattr__(self, k):
+        v = getattr(self._args, k)
+        self._used[k] = v
+        return v
 
 class ConfigError(Exception):
     pass
@@ -42,7 +53,8 @@ class ConfigError(Exception):
 class Context:
     def __init__(self, args, temp_dir, log_file):
         self.info = Info()
-        self.args = args
+        self.args = InstrumentedArgs(args)
+        self.raw_args = args
 
         self.temp_dir = temp_dir
         self.counter = 0
@@ -136,7 +148,6 @@ class Context:
             return (val,)
 
     # Run check
-
     def detect(self, key, desc, candidates, chk, deps=()):
         self.info.add(key, desc)
         self.detect_(key, candidates, chk, deps=deps)
@@ -173,35 +184,39 @@ class Context:
 
         setattr(self.info, key, result)
 
-    if False:
-        def check_present(self, desc, x, chk):
-            self.out_part('Checking for %s %r: ' % (desc, x))
+    # Cache save/load
+    def load_cache(self):
+        cache_file = os.path.join(self.info.build_dir, 'config.cache')
+        if self.raw_args.reconfigure and os.path.exists(cache_file):
             try:
-                ok = chk(self, x)
-                if ok:
-                    self.out('ok')
-                    return True
-                else:
-                    raise ConfigError('error')
-            except ConfigError as e:
-                self.out(str(e))
+                with open(cache_file, 'rb') as f:
+                    old_args, old_info, old_descs = pickle.load(f)
+            except Exception as e:
+                self.log('Failed to load cache: %s' % e)
                 return False
 
-        def check_all(self, desc, candidates, chk):
-            if len(candidates) == 0:
-                self.out('Checking %s: (no candidates to check)' % desc, level='WARN')
-                return None
+            # Only reuse the old info if all relevant argument values match.
+            all_match = True
+            self.log('Comparing cached args:')
+            for k, old_v in sorted(old_args.items()):
+                new_v = getattr(self.raw_args, k, None)
+                eq = (new_v == old_v)
+                self.log('  %r: %r %s %r' % (k, old_v, '==' if eq else '!=', new_v))
+                if not eq:
+                    self.log('    mismatch!')
+                    all_match = False
 
-            for c in candidates:
-                self.out_part('Checking %s %r: ' % (desc, c))
-                try:
-                    ok = chk(self, c)
-                    if ok:
-                        self.out('ok')
-                        return c
-                    else:
-                        raise ConfigError('error')
-                except ConfigError as e:
-                    self.out(str(e))
+            if all_match:
+                self.out('Reused old configuration info from %s' % cache_file)
+                self.args._used = old_args
+                self.info._values = old_info
+                self.info._descs = old_descs
+                return True
 
-            return None
+        return False
+
+    def save_cache(self):
+        os.makedirs(self.info.build_dir, exist_ok=True)
+        cache_file = os.path.join(self.info.build_dir, 'config.cache')
+        with open(cache_file, 'wb') as f:
+            pickle.dump((self.args._used, self.info._values, self.info._descs), f)

@@ -23,6 +23,12 @@ def configure(ctx):
     ctx.detect('python3_json', 'Python3 JSON library', ('simplejson', 'json'),
             chk_python3_lib, deps=('python3',))
 
+def requirements(ctx):
+    reqs = ('python3', 'python3_pil', 'python3_yaml', 'python3_json')
+    if not ctx.info.data_only:
+        reqs += ('python3_config',)
+    return reqs
+
 
 def chk_python3(ctx, python3):
     out = ctx.run_output(python3, ('-c', 'import sys; print(tuple(sys.version_info))'))

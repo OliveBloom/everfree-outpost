@@ -36,6 +36,12 @@ def configure(ctx):
     for lib in NEED_RUST_LIBS:
         configure_lib(ctx, lib)
 
+def requirements(ctx):
+    if ctx.info.data_only:
+        return ()
+    else:
+        return ('rustc',) + tuple('rust_lib%s_path' % l for l in NEED_RUST_LIBS)
+
 def configure_lib(ctx, crate_name):
     key = 'rust_lib%s_path' % crate_name
     desc = 'Rust lib%s library path' % crate_name

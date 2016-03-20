@@ -22,6 +22,8 @@ def build_parser():
             help='use prebuild versions of the named files/directories')
     args.add_argument('--prebuilt-dir', default=None,
             help='directory containing a previously compiled version')
+    args.add_argument('--reconfigure', action='store_true', default=False,
+            help='reuse cached configuration info when possible')
     args.add_argument('--mods',
             help='list of mods to include in the compiled game')
 
@@ -189,8 +191,6 @@ if __name__ == '__main__':
     dist_extra = []
     if i.with_server_gui:
         dist_extra.append(('server_gui.py', '$root/util/server_gui.py'))
-
-    i.mod_list = ['outpost'] + (i.mods.split(',') if i.mods else [])
 
     content = header(i)
 

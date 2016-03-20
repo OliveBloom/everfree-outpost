@@ -8,6 +8,12 @@ def configure(ctx):
     ctx.detect('emscripten_passes_prefix', 'rust-emscripten-passes build directory',
             ('',), chk_plugins, deps=('emscripten_fastcomp_prefix',))
 
+def requirements(ctx):
+    if ctx.info.data_only:
+        return ()
+    else:
+        return ('emscripten_fastcomp_prefix', 'emscripten_passes_prefix')
+
 
 def chk_fastcomp(ctx, prefix):
     if prefix == '':

@@ -11,6 +11,13 @@ def configure(ctx):
     ctx.detect('cxx', 'C++ compiler', ('c++', 'g++', 'clang++'),
             lambda ctx, cxx: chk_cc(ctx, cxx, src, out))
 
+def requirements(ctx):
+    if ctx.info.data_only:
+        return ()
+    else:
+        return ('cc', 'cxx')
+
+
 def chk_cc(ctx, cc, src, out):
     if not ctx.run(cc, (src, '-o', out)):
         raise ConfigError('not found')

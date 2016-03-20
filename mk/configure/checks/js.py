@@ -8,6 +8,12 @@ def configure(ctx):
     ctx.detect('yui_compressor', 'YUI Compressor',
             ('yui-compressor',), chk_yui)
 
+def requirements(ctx):
+    if ctx.info.data_only:
+        return ()
+    else:
+        return ('closure_compiler', 'yui_compressor')
+
 
 def chk_closure(ctx, closure):
     # Strangely, closure-compiler --help seems to return 255, not 0.
