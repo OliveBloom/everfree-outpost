@@ -1,0 +1,9 @@
+explorer-hat-f.png: &hat
+    title: Explorer Hat
+    author: Nonnykins
+
+explorer-hat-m.png: *hat
+
+explorer-hat-icon.png:
+    title: Explorer Hat Icon
+    author: Nonnykins, Stuart Pernsteiner

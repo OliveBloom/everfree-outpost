@@ -75,6 +75,7 @@ class DataProxy:
         _define_methods(cls, RecipeProxy, 'recipe')
         _define_methods(cls, TemplateProxy, 'template')
         _define_methods(cls, AnimationProxy, 'animation')
+        _define_methods(cls, SpritePartProxy, 'sprite_part')
 
 DATA = DataProxy()
 
@@ -158,6 +159,14 @@ class AnimationProxy(DefProxy):
     def length(self):
         return _DATA.animation_length(self.id)
 
+class SpritePartProxy(DefProxy):
+    @property
+    def name(self):
+        return _DATA.sprite_part_name(self.id)
+
+    def variant_id(self, name):
+        return _DATA.get_sprite_part_variant_id(self.id, name)
+
 
 def init(data):
     global _DATA
@@ -168,5 +177,6 @@ def init(data):
     RecipeProxy.INSTANCES = [None] * data.recipe_count()
     TemplateProxy.INSTANCES = [None] * data.template_count()
     AnimationProxy.INSTANCES = [None] * data.animation_count()
+    SpritePartProxy.INSTANCES = [None] * data.sprite_part_count()
 
     DataProxy._init()

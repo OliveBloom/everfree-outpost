@@ -161,6 +161,43 @@ define_python_class! {
                               runtime_error, "no animation with that ID");
             Ok(a.length)
         }
+
+
+        fn sprite_part_count(&this) -> usize {
+            this.sprite_parts.len()
+        }
+
+        fn sprite_part_by_name(&this, name: String) -> PyResult<u32> {
+            Ok(pyunwrap!(this.sprite_parts.find_id(&name),
+                         key_error, "no such sprite part: {:?}", name))
+        }
+
+        fn get_sprite_part_by_name(&this, name: String) -> Option<u32> {
+            this.sprite_parts.find_id(&name)
+        }
+
+        fn sprite_part_name(&this, id: u32) -> PyResult<PyBox> {
+            let p = pyunwrap!(this.sprite_parts.get_part(id),
+                              runtime_error, "no sprite part with that ID");
+            Pack::pack(&p.name as &str)
+        }
+
+        fn sprite_part_variant_id(&this, id: u32, variant_name: String) -> PyResult<u32> {
+            let p = pyunwrap!(this.sprite_parts.get_part(id),
+                              runtime_error, "no sprite part with that ID");
+            Ok(pyunwrap!(p.find_id(&variant_name),
+                         key_error, "no such sprite part variant: {:?}", variant_name))
+        }
+
+        fn get_sprite_part_variant_id(&this,
+                                      id: u32,
+                                      variant_name: String) -> PyResult<Option<u32>> {
+            let p = pyunwrap!(this.sprite_parts.get_part(id),
+                              runtime_error, "no sprite part with that ID");
+            Ok(p.find_id(&variant_name))
+        }
+
+
     }
 }
 

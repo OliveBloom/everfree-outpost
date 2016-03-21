@@ -106,7 +106,7 @@ def init():
     do_sign(structures('sign.png'))
 
     ITEM.new('hat') \
-            .display_name('Hat') \
+            .display_name('Witch Hat') \
             .icon(icons('equip_hat_icon.png'))
     ITEM.new('party_hat') \
             .display_name('Party Hat') \

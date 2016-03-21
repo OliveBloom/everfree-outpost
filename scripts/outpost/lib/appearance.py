@@ -1,3 +1,5 @@
+from outpost_server.core.data import DATA
+
 
 def _mask(base, bits):
     return ((1 << bits) - 1) << base
@@ -24,13 +26,35 @@ def is_tribe(e, tribe):
     return t == tribe or t == 'A'
 
 
+STALLION_BIT = 1 << 8
+
+def set_stallion(e, stallion):
+    old_a = e.appearance()
+    if stallion:
+        new_a = old_a | STALLION_BIT
+    else:
+        new_a = old_a & ~STALLION_BIT
+    e.set_appearance(new_a)
+
+def is_stallion(e):
+    a = e.appearance()
+    return bool(a & STALLION_BIT)
+
+
 HAT_BASE = 18
 HAT_BITS = 4
 HAT_MASK = _mask(HAT_BASE, HAT_BITS)
 
-def set_hat(e, idx):
+def set_hat(e, name):
     old_a = e.appearance()
-    new_a = (old_a & ~HAT_MASK) | (idx << HAT_BASE)
+
+    sex = 'm' if old_a & STALLION_BIT else 'f'
+    if name is not None:
+        hat_id = DATA.sprite_part('pony//%s/equip0' % sex).variant_id(name)
+    else:
+        hat_id = 0
+
+    new_a = (old_a & ~HAT_MASK) | (hat_id << HAT_BASE)
     e.set_appearance(new_a)
 
 
