@@ -49,6 +49,15 @@ function GameUI(keyboard) {
         }
     });
 
+    // If an event arrives on this element, that means it didn't hit any child.
+    // In that case, use the default action instead of intercepting the event.
+    this.addListener('mousedown', function(evt) {
+        evt.requestDefault();
+    });
+
+    this.addListener('mouseup', function(evt) {
+        evt.requestDefault();
+    });
 }
 GameUI.prototype = Object.create(W.Widget.prototype);
 GameUI.prototype.constructor = GameUI;
