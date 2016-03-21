@@ -1,11 +1,14 @@
 #![crate_name = "asmlibs"]
 #![no_std]
 
-#![feature(raw)]
+#![feature(raw, alloc, heap_api)]
+
+extern crate alloc;
 
 extern crate physics;
 extern crate graphics;
 #[macro_use] extern crate asmrt;
+extern crate asmmalloc;
 
 use core::mem;
 use core::raw;
@@ -417,5 +420,6 @@ pub extern fn get_sizes(sizes: &mut Sizes, num_sizes: &mut usize) {
 
 
 #[export_name = "test"]
-pub extern fn test_wrapper() {
+pub extern fn test_wrapper() -> *mut u8 {
+    unsafe { alloc::heap::allocate(16, 4) }
 }

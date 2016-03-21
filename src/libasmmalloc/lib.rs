@@ -128,19 +128,19 @@ impl BlockHeader {
                 "size must a multiple of WORD_SIZE");
 
         let log_align = 
-            if align != 0 {
-                align.trailing_zeros() as usize
-            } else {
-                LOG_WORD_SIZE
-            };
-        assert!(LOG_WORD_SIZE <= log_align && log_align < LOG_WORD_SIZE + 4,
-                "log_align out of range");
+            if align == 0 { LOG_WORD_SIZE }
+            else if align == 1 * WORD_SIZE { 0 + LOG_WORD_SIZE }
+            else if align == 2 * WORD_SIZE { 1 + LOG_WORD_SIZE }
+            else if align == 4 * WORD_SIZE { 2 + LOG_WORD_SIZE }
+            else if align == 8 * WORD_SIZE { 3 + LOG_WORD_SIZE }
+            else { panic!("invalid alignment value") };
 
-        self.word =
+        let word =
             ((size >> LOG_WORD_SIZE) << 4) |
             ((log_align - LOG_WORD_SIZE) << 2) |
             ((prev_in_use as usize) << 1) |
             ((in_use as usize) << 0);
+        self.word = word;
     }
 
     fn set_prev_in_use(&mut self, prev_in_use: bool) {
@@ -232,8 +232,6 @@ impl State {
         let align = cmp::max(align, BLOCK_ALIGN);
         let obj_size = cmp::max(aligned(obj_size, align), MIN_BLOCK_SIZE - HEADER_SIZE);
 
-        //println!("looking for {} bytes, {}-aligned", obj_size, align);
-
         for free in self.iter_free() {
             let free = *free;
             let free_size = (*free).hdr.size();
@@ -247,8 +245,6 @@ impl State {
 
             let free_start = free as usize;
             let free_end = free_start + free_size;
-
-            //println!("  candidate block: {} @ {:x}", free_size, free_start);
 
             // Find a start address for the object (NB: *not* for the UsedBlock).
             let mut obj_addr = aligned(free_start + HEADER_SIZE, align);
@@ -264,7 +260,6 @@ impl State {
                     }
                 }
             }
-            //println!("    place object @ {:x}", obj_addr);
 
             // Make sure the block will fit
             if obj_addr + HEADER_SIZE > free_end {
@@ -275,17 +270,14 @@ impl State {
             // leaving a FreeBlock of size < MIN_BLOCK_SIZE after the UsedBlock.
             let used_start = obj_addr - HEADER_SIZE;
             let mut used_size = HEADER_SIZE + obj_size;
-            //println!("    used block begins at {:x}", used_start);
 
             let end_offset = free_end - (used_start + used_size);
             if end_offset != 0 && end_offset < MIN_BLOCK_SIZE {
                 used_size += end_offset;
             }
-            //println!("    used block size is {}", used_size);
 
             // Actually allocate the UsedBlock.
             self.alloc_block(free, used_start, used_size, align);
-            println!("    allocated space!");
             return obj_addr as *mut u8;
         }
 
@@ -312,8 +304,6 @@ impl State {
                           start: usize,
                           size: usize,
                           prev_in_use: bool) -> *mut FreeBlock {
-        println!(" - create free block @{:x}, size {}, prev {}",
-                 start - self.base_addr, size, prev_in_use);
         let ptr = start as *mut FreeBlock;
         (*ptr).hdr.set(size, 0, false, prev_in_use);
         ptr::write((start + size - WORD_SIZE) as *mut usize, size);
@@ -325,8 +315,6 @@ impl State {
                           size: usize,
                           align: usize,
                           prev_in_use: bool) -> *mut UsedBlock {
-        println!(" - create used block @{:x}, size {}, align {}, prev {}",
-                 start - self.base_addr, size, align, prev_in_use);
         let ptr = start as *mut UsedBlock;
         (*ptr).hdr.set(size, align, true, prev_in_use);
         ptr
@@ -397,9 +385,7 @@ impl State {
 
         // Check the previous block in memory order, and try to coalesce.
         if !prev_in_use {
-            println!(" + free: read prev size from {:x}", start - WORD_SIZE - self.base_addr);
             let free_size = ptr::read((start - WORD_SIZE) as *const usize);
-            println!(" + free: coalesce backward ({} bytes)", free_size);
             let free = (start - free_size) as *mut FreeBlock;
             prev = (*free).prev;
             next = (*free).next;
@@ -412,7 +398,6 @@ impl State {
         // Check the next block in memory order.
         if !(*(end as *mut BlockHeader)).in_use() {
             let free = end as *mut FreeBlock;
-            println!(" + free: coalesce forward ({} bytes)", (*free).hdr.size());
             prev = (*free).prev;
             next = (*free).next;
             (*free).unlink();
@@ -437,7 +422,9 @@ impl State {
 
 
     unsafe fn debug_print(&mut self) {
-        for hdr in self.iter_mem() {
+        println!("Base addr: {:x}, top addr: {:x}", self.base_addr, self.top_addr);
+        println!("Highest allocated addr: {:x}", self.get_highest_addr() - self.base_addr);
+        for hdr in self.iter_mem().take(100) {
             let hdr = *hdr;
 
             let addr = hdr as usize - self.base_addr;
@@ -464,8 +451,6 @@ impl State {
                 break;
             }
         }
-
-        println!("Top addr: {:x}", self.get_highest_addr() - self.base_addr);
     }
 }
 
@@ -539,8 +524,7 @@ pub mod __allocator {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn asmmalloc_reinit(_base: *mut u8,
-                                              _top: *mut u8) {
+    pub unsafe extern "C" fn asmmalloc_reinit(_top: *mut u8) {
         assert!(false, "reinit not yet implemented");
     }
 

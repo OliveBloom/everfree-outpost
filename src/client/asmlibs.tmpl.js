@@ -165,6 +165,13 @@ var asmlibs_code_raw = function(global, env, buffer) {
         light_geom_reset: _light_geom_reset,
         light_geom_generate: _light_geom_generate,
 
+        asmmalloc_init: _asmmalloc_init,
+        asmmalloc_reinit: _asmmalloc_reinit,
+        asmmalloc_max_allocated_address: _asmmalloc_max_allocated_address,
+        asmmalloc_alloc: _asmmalloc_alloc,
+        asmmalloc_free: _asmmalloc_free,
+        asmmalloc_debug_print: _asmmalloc_debug_print,
+
         test: _test,
     });
 };

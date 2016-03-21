@@ -17,3 +17,9 @@ structure_geom_generate
 light_geom_init
 light_geom_reset
 light_geom_generate
+asmmalloc_init
+asmmalloc_reinit
+asmmalloc_max_allocated_address
+asmmalloc_alloc
+asmmalloc_free
+asmmalloc_debug_print
