@@ -91,6 +91,18 @@ class Image(object):
             dct[name] = self.extract(pos, unit=unit)
         return dct
 
+    def chop_xy(self, unit=None):
+        ux, uy = t2(unit) if unit else self.unit
+        pw, ph = self.px_size
+
+        result = []
+        for y in range(ph // uy):
+            row = []
+            for x in range(pw // ux):
+                row.append(self.extract((x, y), unit=unit))
+            result.append(row)
+        return result
+
     def chop_grid(self, names, unit=None):
         dct = {}
         for y, row in enumerate(names):

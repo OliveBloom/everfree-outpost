@@ -11,3 +11,7 @@ def sit(client, args):
     e = client.pawn()
     dir_ = facing_to_dir(e.facing())
     e.set_anim(DATA.animation_id('pony//sit-%d' % dir_))
+
+@chat.command()
+def sleep(client, args):
+    client.pawn().set_anim(DATA.animation_id('pony//sleep'))

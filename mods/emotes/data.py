@@ -1,4 +1,4 @@
-from outpost_data.core.image2 import loader
+from outpost_data.core.image2 import loader, Image, Anim
 # The `pony_sprite` module contains lots of pony-specific helper functions.
 from outpost_data.outpost.lib import pony_sprite
 # Other miscellaneous image manipulation functions for sprites.
@@ -49,9 +49,15 @@ def init():
     # In this case the length is 1 frame and the rate is 1 FPS.
     pony_sprite.make_anim_dirs(pony, 'sit', 1, 1)
 
+
     # Define the "sleep" animation.  This doesn't have different directions,
-    # but it does have 4 frames.
-    pony.add_anim('sleep', 4, 1)
+    # but it does have 6 frames.
+    sleep_anim = pony.add_anim('sleep', 6, 2)
+
+    # Since the sleep animation doesn't have -0..-7 directional variants, we
+    # need to specifically register its direction.  Otherwise, the wrong
+    # hat/eye graphics will be used during this animation.
+    pony_sprite.register_anim_facing(sleep_anim, 0)
 
 
     # Now we need to provide images for the new animations.
@@ -116,3 +122,59 @@ def init():
                     .extract((1, 0))
             anim = img.sheet_to_anim((1, 1), 1)
             variant = part.get_variant('hat_box').add_graphics(anim_name, anim)
+
+    # Now add the "sleep" animation data.
+
+    # Handle both male and female variants
+    for sex in ('m', 'f'):
+        sheet = sprites('sleep-%s.png' % sex)
+
+        # The "sleep" sprite sheets have five rows of three frames each.
+        # First, cut apart the rows.
+        rows = [sheet.extract((0, y), size=(3, 1)) for y in range(5)]
+
+        # Use the first four rows to build the tribe base sheets.
+        tribe_images = pony_sprite.make_tribe_sheets({
+            'base': rows[0],
+            'horn': rows[1],
+            'frontwing': rows[2],
+            'backwing': rows[3],
+            })
+
+        # Define a helper function to turn a sheet into an anim.  We can't use
+        # the normal `sheet_to_anim()` because we need to loop the frames in
+        # order 0-0-1-2-2-1.
+        def make_anim(sheet):
+            frames = [sheet.extract((x, 0)) for x in (0, 0, 1, 2, 2, 1)]
+            return Anim(frames, rate=2)
+
+        part = pony.get_part('%s/base' % sex)
+        # Now we can add the base anims.
+        for tribe, img in tribe_images.items():
+            anim = make_anim(img)
+            part.get_variant(tribe).add_graphics('sleep', anim)
+
+        # Add the hat box, from the bottom row of the "sleep" sheet.
+        part = pony.get_part('%s/_dummy' % sex)
+        part.get_variant('hat_box').add_graphics('sleep', make_anim(rows[4]))
+
+
+        # Mane and tail parts.  These are in the original MLPonline layout, so
+        # the sleep animation frames are located at (10, 0).
+        for mane_or_tail, index in pony_sprite.standard_manes_tails():
+            part = pony.get_part('%s/%s' % (sex, mane_or_tail))
+            img = sprites('parts/%s/%s%d.png' % (ms, mane_or_tail, index)) \
+                    .extract((10, 0), size=(3, 1))
+            img = sprite_util.set_depth(img, 120)
+            anim = make_anim(img)
+            part.get_variant('%d' % index).add_graphics('sleep', anim)
+
+        # Eye part.  We add a blank animation so that the closed eyes from the
+        # underlying sprite sheet will be visible.
+        blank_frame = Image((1, 1), unit=pony_sprite.SPRITE_SIZE)
+        blank_anim = Anim([blank_frame] * 6, rate=2)
+        part = pony.get_part('%s/eyes' % sex)
+        # TODO: kind of a hack - this trick of looping over the variants only
+        # works if the variants are defined before this code runs.
+        for v in part.iter_variants():
+            v.add_graphics('sleep', blank_anim)
