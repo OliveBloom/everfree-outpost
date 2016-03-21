@@ -14,6 +14,7 @@ const RECIPE_DATA_FILE: &'static str = "recipes.json";
 const OLD_TEMPLATE_DATA_FILE: &'static str = "objects.json";
 const TEMPLATE_DATA_FILE: &'static str = "structures.json";
 const ANIMATION_DATA_FILE: &'static str = "animations.json";
+const SPRITE_PART_DATA_FILE: &'static str = "sprite_parts.json";
 const LOOT_TABLE_DATA_FILE: &'static str = "loot_tables.json";
 
 const SCRIPT_DIR: &'static str = "scripts";
@@ -70,6 +71,10 @@ impl Storage {
 
     pub fn open_animation_data(&self) -> File {
         File::open(self.data_path(ANIMATION_DATA_FILE)).unwrap()
+    }
+
+    pub fn open_sprite_part_data(&self) -> File {
+        File::open(self.data_path(SPRITE_PART_DATA_FILE)).unwrap()
     }
 
     pub fn open_loot_table_data(&self) -> File {
