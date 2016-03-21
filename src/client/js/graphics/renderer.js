@@ -610,7 +610,7 @@ Renderer.prototype.render = function(scene, draw_ui) {
         this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_final);
     }
 
-    if (draw_ui != null) {
+    if (draw_ui != null && !window.hideUI) {
         draw_ui(scene.camera_size, this.buffers.fb_final);
     }
 

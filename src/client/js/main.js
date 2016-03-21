@@ -635,7 +635,7 @@ function setupKeyHandler() {
                     debug.container.classList.toggle('hidden', setting != 2);
                     break;
                 case 'debug_test':
-                    chat.container.classList.toggle('hidden');
+                    window.hideUI = !window.hideUI;
                     break;
                 case 'chat':
                     chat.startTyping(keyboard, conn, '');

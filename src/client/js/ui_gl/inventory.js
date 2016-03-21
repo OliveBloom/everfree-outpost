@@ -197,7 +197,7 @@ InventoryGrid.prototype.enableTransfer = function(event_target) {
                 if (evt.button == 2 && total != -1) {
                     to_move = ((to_move + 1) / 2)|0;
                 }
-                input.startDrag(slot, evt, 'inv_items', {
+                input.startDrag(this_, evt, 'inv_items', {
                     inv_id: inv_id,
                     slot: i,
                     item_id: slot.getItem(),

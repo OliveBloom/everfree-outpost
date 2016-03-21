@@ -5,10 +5,10 @@ var W = require('ui_gl/widget');
 var ItemDisplay = require('ui_gl/inventory').ItemDisplay;
 
 
-var ITEM_BOX_COLORS = ['yellow', 'green', 'blue', 'red'];
+var HOTBAR_SLOT_COLORS = ['yellow', 'green', 'blue', 'red'];
 
 /** @constructor */
-function ItemBox() {
+function HotbarSlot() {
     W.Widget.call(this);
 
     this.slot = new ItemDisplay();
@@ -16,25 +16,25 @@ function ItemBox() {
 
     this.addChild(this.slot);
 }
-ItemBox.prototype = Object.create(W.Widget.prototype);
-ItemBox.prototype.constructor = ItemBox;
+HotbarSlot.prototype = Object.create(W.Widget.prototype);
+HotbarSlot.prototype.constructor = HotbarSlot;
 
-ItemBox.prototype.setItem = function(item_id) {
+HotbarSlot.prototype.setItem = function(item_id) {
     this.slot.setItem(item_id);
 };
 
-ItemBox.prototype.setQuantity = function(qty) {
+HotbarSlot.prototype.setQuantity = function(qty) {
     this.slot.setQuantity(qty);
 };
 
-ItemBox.prototype.setColor = function(color) {
+HotbarSlot.prototype.setColor = function(color) {
     if (this.color != color) {
         this.color = color;
         this.damage();
     }
 };
 
-ItemBox.prototype.runLayout = function() {
+HotbarSlot.prototype.runLayout = function() {
     this.slot.runLayout();
     this.slot._x = 4;
     this.slot._y = 4;
@@ -42,8 +42,8 @@ ItemBox.prototype.runLayout = function() {
     this._height = this.slot._height + 2 * 4;
 };
 
-ItemBox.prototype.render = function(buf, x, y) {
-    buf.drawUI('hotbar-box-' + ITEM_BOX_COLORS[this.color], x, y);
+HotbarSlot.prototype.render = function(buf, x, y) {
+    buf.drawUI('hotbar-box-' + HOTBAR_SLOT_COLORS[this.color], x, y);
 };
 
 
@@ -51,6 +51,8 @@ ItemBox.prototype.render = function(buf, x, y) {
 function Hotbar() {
     W.Widget.call(this);
     this.layout = new W.ColumnLayout(1);
+
+    var this_ = this;
 
     this.item_ids = new Array(9);
     this.is_item = new Array(9);
@@ -60,7 +62,25 @@ function Hotbar() {
         // Suppress quantity display for unused slots.
         this.is_item[i] = false;
 
-        this.boxes[i] = new ItemBox();
+        var box = new HotbarSlot();
+        this.boxes[i] = box;
+
+        (function(i) {
+            box.addListener('dropcheck', function(type) {
+                // TODO: support abilities as well
+                return type == 'inv_items';
+            });
+
+            box.addListener('drop', function(type, data, input) {
+                console.assert(type == 'inv_items');
+                this_.setSlot(i, data.item_id, true);
+                this_.selectSlot(i);
+
+                if (input.drag_source.resetSlot) {
+                    input.drag_source.resetSlot(data.slot);
+                }
+            });
+        })(i);
     }
 
     this.active_item = -1;
