@@ -63,6 +63,21 @@ pub fn raw_println(args: fmt::Arguments) {
     unsafe { flush_str() };
 }
 
+pub fn raw_print(args: fmt::Arguments) {
+    let _ = fmt::write(&mut AsmJsFormatWriter, args);
+}
+
+
+#[macro_export]
+macro_rules! print {
+    ($str:expr) => {
+        $crate::raw_print(format_args!($str))
+    };
+    ($str:expr, $($rest:tt)*) => {
+        $crate::raw_print(format_args!($str, $($rest)*))
+    };
+}
+
 #[macro_export]
 macro_rules! println {
     ($str:expr) => {

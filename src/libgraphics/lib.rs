@@ -1,16 +1,13 @@
 #![crate_name = "graphics"]
 #![no_std]
 
-#[macro_use] extern crate bitflags;
-#[cfg(asmjs)] #[macro_use] extern crate asmrt;
+#[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
+use std::prelude::v1::*;
+
+#[macro_use] extern crate bitflags;
 extern crate physics;
 
-
-#[cfg(asmjs)]
-mod std {
-    pub use core::{cmp, fmt, iter, marker, ops, option, result};
-}
 
 pub mod types;
 pub mod structures;

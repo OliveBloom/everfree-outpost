@@ -1,23 +1,22 @@
 #![crate_name = "physics"]
 #![no_std]
 
-#[macro_use] extern crate bitflags;
-#[cfg(asmjs)] #[macro_use] extern crate asmrt;
+#[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
+use std::prelude::v1::*;
+
+// TODO: currently this is the way to get the asm.js log macros
+#[cfg(asmjs)] #[macro_use] extern crate asmrt;
 #[cfg(not(asmjs))] #[macro_use] extern crate log;
+
+#[macro_use] extern crate bitflags;
+
 
 use v3::{Vn, V3, scalar};
 
 
 pub mod v3;
 mod walk;
-
-
-// Some macros in `core` rely on names within `::std`.
-#[cfg(asmjs)]
-mod std {
-    pub use core::*;
-}
 
 
 pub const TILE_BITS: usize = 5;
