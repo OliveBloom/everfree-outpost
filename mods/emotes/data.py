@@ -127,6 +127,8 @@ def init():
 
     # Handle both male and female variants
     for sex in ('m', 'f'):
+        ms = 'mare' if sex == 'f' else 'stallion'
+
         sheet = sprites('sleep-%s.png' % sex)
 
         # The "sleep" sprite sheets have five rows of three frames each.
