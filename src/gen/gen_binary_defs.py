@@ -121,6 +121,8 @@ def convert_template_parts(j):
 
     b = bytearray()
     for obj in j:
+        if 'anim_size' in obj:
+            obj['anim_step'] = obj['anim_size'][0]
         b.extend(c.convert(obj))
     return b
 
