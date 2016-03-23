@@ -168,6 +168,20 @@ var asmlibs_code_raw = function(global, env, buffer) {
         data_init: _data_init,
         client_init: _client_init,
 
+        set_region_shape: _set_region_shape,
+        load_terrain_chunk: _load_terrain_chunk,
+        find_ceiling: _find_ceiling,
+        floodfill: _floodfill,
+        structure_buffer_insert: _structure_buffer_insert,
+        structure_buffer_remove: _structure_buffer_remove,
+
+        terrain_geom_reset: _terrain_geom_reset,
+        terrain_geom_generate: _terrain_geom_generate,
+        structure_geom_reset: _structure_geom_reset,
+        structure_geom_generate: _structure_geom_generate,
+        light_geom_reset: _light_geom_reset,
+        light_geom_generate: _light_geom_generate,
+
         /*
         collide: _collide,
         set_region_shape: _set_region_shape,

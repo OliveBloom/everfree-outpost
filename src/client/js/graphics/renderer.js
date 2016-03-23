@@ -203,7 +203,7 @@ RenderData.prototype.loadBlockData = function(blocks) {
 };
 
 RenderData.prototype.loadChunk = function(i, j, chunk) {
-    this._asm.chunkView(j, i).set(chunk._tiles);
+    this._asm.loadTerrainChunk(j, i, chunk._tiles);
 
     this.terrain_buf.invalidate(j, i);
     this.cavern_map.invalidate();

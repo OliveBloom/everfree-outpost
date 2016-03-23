@@ -159,6 +159,16 @@ DynAsm.prototype._stackFree = function(view) {
     this._raw['__adjust_stack'](-((size + 7) & ~7));
 };
 
+DynAsm.prototype._heapAlloc = function(type, count) {
+    var size = count * type.BYTES_PER_ELEMENT;
+    var base = this._raw['asmmalloc_alloc'](size, type.BYTES_PER_ELEMENT);
+    return new type(this.buffer, base, count);
+};
+
+DynAsm.prototype._heapFree = function(view) {
+    this._raw['asmmalloc_free'](view.byteOffset);
+};
+
 DynAsm.prototype._makeView = function(type, offset, bytes) {
     return new type(this.buffer, offset, bytes / type.BYTES_PER_ELEMENT);
 };
@@ -198,6 +208,183 @@ DynAsm.prototype.initClient = function(assets) {
 
     this._stackFree(data);
     this._stackFree(blobs);
+};
+
+DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
+    var region = this._stackAlloc(Int32Array, 6);
+    region[0] = base.x;
+    region[1] = base.y;
+    region[2] = base.z;
+    region[3] = size.x;
+    region[4] = size.y;
+    region[5] = size.z;
+
+    var buf = this._heapAlloc(Uint8Array, shape.length);
+    buf.set(shape);
+    this._raw['set_region_shape'](this.client,
+            region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
+    this._heapFree(buf);
+
+    this._stackFree(region);
+};
+
+DynAsm.prototype.clearRegionShape = function(base, size, layer) {
+    var region = this._stackAlloc(Int32Array, 6);
+    region[0] = base.x;
+    region[1] = base.y;
+    region[2] = base.z;
+    region[3] = size.x;
+    region[4] = size.y;
+    region[5] = size.z;
+
+    var buf = this._heapAlloc(Uint8Array, shape.length);
+    buf.fill(0);
+    this._raw['set_region_shape'](this.client,
+            region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
+    this._heapFree(buf);
+
+    this._stackFree(region);
+};
+
+DynAsm.prototype.findCeiling = function(pos) {
+    var vec = this._stackAlloc(Int32Array, 3);
+    vec[0] = pos.x;
+    vec[1] = pos.y;
+    vec[2] = pos.z;
+
+    var result = this._raw['find_ceiling'](this.client, vec.byteOffset);
+
+    this._stackFree(vec);
+
+    return result;
+};
+
+DynAsm.prototype.floodfill = function(pos, radius) {
+    var size = radius * 2;
+    var len = size * size;
+
+    var pos_buf = this._stackAlloc(Int32Array, 3);
+    pos_buf[0] = pos.x;
+    pos_buf[1] = pos.y;
+    pos_buf[2] = pos.z;
+    var grid = this._stackAlloc(Uint8Array, len);
+    grid.fill(0);
+    var queue = this._stackAlloc(Uint8Array, 2 * len);
+
+    this._raw['floodfill'](
+            this.client,
+            pos_buf.byteOffset, radius,
+            grid.byteOffset, len,
+            queue.byteOffset, 2 * len);
+
+    var result = grid.slice();
+
+    this._stackFree(queue);
+    this._stackFree(grid);
+    this._stackFree(pos_buf);
+
+    return result;
+};
+
+DynAsm.prototype.loadTerrainChunk = function(cx, cy, blocks) {
+    var buf = this._heapAlloc(Uint16Array, blocks.length);
+    buf.set(blocks);
+    this._raw['load_terrain_chunk'](this.client,
+            cx, cy, buf.byteOffset, buf.byteLength);
+    this._heapFree(buf);
+};
+
+DynAsm.prototype.structureBufferInsert = function(id, x, y, z, template_id, oneshot_start) {
+    return this._raw['structure_buffer_insert'](this.client,
+            id, x, y, z, template_id, oneshot_start);
+};
+
+DynAsm.prototype.structureBufferRemove = function(idx) {
+    return this._raw['structure_buffer_remove'](this.client, idx);
+};
+
+DynAsm.prototype.terrainGeomReset = function(cx, cy) {
+    this._raw['terrain_geom_reset'](this.client, cx, cy);
+};
+
+DynAsm.prototype.terrainGeomGenerate = function() {
+    var output = this._stackAlloc(Int32Array, 2);
+    var buf = this._heapAlloc(Uint8Array, 256 * 1024);
+
+    this._raw['terrain_geom_generate'](
+            this.client,
+            buf.byteOffset,
+            buf.byteLength,
+            output.byteOffset);
+
+    var vertex_count = output[0];
+    var more = (output[1] & 1) != 0;
+    this._stackFree(output);
+
+    var geom = new Uint8Array(vertex_count * this.SIZEOF.TerrainVertex);
+    geom.set(buf.subarray(0, geom.length));
+    this._heapFree(buf);
+
+    return {
+        geometry: geom,
+        more: more,
+    };
+};
+
+DynAsm.prototype.structureGeomReset = function(cx0, cy0, cx1, cy1, sheet) {
+    this._raw['structure_geom_reset'](this.client, cx0, cy0, cx1, cy1, sheet);
+};
+
+DynAsm.prototype.structureGeomGenerate = function() {
+    var output = this._stackAlloc(Int32Array, 2);
+    var buf = this._heapAlloc(Uint8Array, 256 * 1024);
+
+    this._raw['structure_geom_generate'](
+            this.client,
+            buf.byteOffset,
+            buf.byteLength,
+            output.byteOffset);
+
+    var vertex_count = output[0];
+    var more = (output[1] & 1) != 0;
+    this._stackFree(output);
+
+    var geom = new Uint8Array(vertex_count * this.SIZEOF.TerrainVertex);
+    geom.set(buf.subarray(0, geom.length));
+    this._heapFree(buf);
+
+    return {
+        geometry: geom,
+        more: more,
+    };
+};
+
+DynAsm.prototype.lightGeomReset = function(cx0, cy0, cx1, cy1) {
+    this._raw['light_geom_reset'](this.client, cx0, cy0, cx1, cy1);
+};
+
+DynAsm.prototype.lightGeomGenerate = function() {
+    var output = this._stackAlloc(Int32Array, 2);
+    var buf = this._heapAlloc(Uint8Array, 256 * 1024);
+
+    this._raw['light_geom_generate'](
+            this.client,
+            buf.byteOffset,
+            buf.byteLength,
+            output.byteOffset);
+
+    var vertex_count = output[0];
+    var more = (output[1] & 1) != 0;
+    this._stackFree(output);
+
+    var geom = new Uint8Array(vertex_count * this.SIZEOF.TerrainVertex);
+    geom.set(buf.subarray(0, geom.length));
+    this._heapFree(buf);
+
+    return {
+        geometry: geom,
+        more: more,
+    };
 };
 
 

@@ -23,7 +23,7 @@ function Physics(asm) {
 exports.Physics = Physics;
 
 Physics.prototype.loadChunk = function(ci, cj, tiles) {
-    var view = this._asm.shapeLayerView(ci * LOCAL_SIZE + cj, -1);
+    var view = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
     console.assert(tiles.length == view.length,
             'expected ' + view.length + ' tiles, but got ' + tiles.length);
 
@@ -35,7 +35,7 @@ Physics.prototype.loadChunk = function(ci, cj, tiles) {
                        ci * CHUNK_SIZE,
                        0);
     var size = new Vec(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE);
-    this._asm.refreshShapeLayers(base, size);
+    this._asm.setRegionShape(base, size, -1, view);
 };
 
 Physics.prototype.addStructure = function(structure) {

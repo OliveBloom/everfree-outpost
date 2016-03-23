@@ -2,7 +2,8 @@ use std::prelude::v1::*;
 
 use graphics::{lights, structures};
 use graphics::terrain as g_terrain;
-use graphics::types::{LocalChunks, BlockData, StructureTemplate, TemplatePart, TemplateVertex};
+use graphics::types::{BlockChunk, LocalChunks,
+    BlockData, StructureTemplate, TemplatePart, TemplateVertex};
 
 use physics;
 use physics::CHUNK_BITS;
@@ -11,7 +12,7 @@ use physics::v3::{V3, V2, scalar, Region};
 
 use data::Data;
 use terrain::TerrainShape;
-use terrain::LOCAL_BITS;
+use terrain::{LOCAL_SIZE, LOCAL_BITS};
 
 
 pub struct Client {
@@ -22,7 +23,7 @@ pub struct Client {
     structures: structures::Buffer,
 
     terrain_geom_gen: g_terrain::GeomGenState,
-    struct_geom_gen: structures::geom::GeomGenState,
+    structure_geom_gen: structures::geom::GeomGenState,
     light_geom_gen: lights::GeomGenState,
 }
 
@@ -36,7 +37,7 @@ impl Client {
             structures: structures::Buffer::new(),
 
             terrain_geom_gen: g_terrain::GeomGenState::new(scalar(0)),
-            struct_geom_gen: structures::geom::GeomGenState::new(Region::empty(), 0),
+            structure_geom_gen: structures::geom::GeomGenState::new(Region::empty(), 0),
             light_geom_gen: lights::GeomGenState::new(Region::empty()),
         }
     }
@@ -67,6 +68,11 @@ impl Client {
 
     // Graphics
 
+    pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
+        let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
+        self.chunks[bounds.index(cpos)] = *blocks;
+    }
+
     pub fn terrain_geom_reset(&mut self, cpos: V2) {
         self.terrain_geom_gen = g_terrain::GeomGenState::new(cpos);
     }
@@ -80,4 +86,50 @@ impl Client {
 
         (idx, more)
     }
+
+    pub fn structure_buffer_insert(&mut self,
+                                   external_id: u32,
+                                   pos: (u8, u8, u8),
+                                   template_id: u32,
+                                   oneshot_start: u16) -> usize {
+        self.structures.insert(external_id, pos, template_id, oneshot_start)
+    }
+
+    pub fn structure_buffer_remove(&mut self,
+                                   idx: usize) -> u32 {
+        self.structures.remove(idx)
+    }
+
+    pub fn structure_geom_reset(&mut self, bounds: Region<V2>, sheet: u8) {
+        self.structure_geom_gen = structures::geom::GeomGenState::new(bounds, sheet);
+    }
+
+    pub fn structure_geom_generate(&mut self,
+                                   buf: &mut [structures::geom::Vertex]) -> (usize, bool) {
+        println!("doing geometry for {} structures", self.structures.len());
+        let mut gen = structures::geom::GeomGen::new(&self.structures,
+                                                     &self.data.template_data,
+                                                     &mut self.structure_geom_gen);
+        let mut idx = 0;
+        let more = gen.generate(buf, &mut idx);
+        println!("  generated {}, more={}", idx, more);
+
+        (idx, more)
+    }
+
+    pub fn light_geom_reset(&mut self, bounds: Region<V2>) {
+        self.light_geom_gen = lights::GeomGenState::new(bounds);
+    }
+
+    pub fn light_geom_generate(&mut self,
+                                   buf: &mut [lights::Vertex]) -> (usize, bool) {
+        let mut gen = lights::GeomGen::new(&self.structures,
+                                           &self.data.template_data.templates,
+                                           &mut self.light_geom_gen);
+        let mut idx = 0;
+        let more = gen.generate(buf, &mut idx);
+
+        (idx, more)
+    }
+
 }

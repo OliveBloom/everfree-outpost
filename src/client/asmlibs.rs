@@ -117,7 +117,7 @@ pub struct GeometryResult {
 }
 
 
-#[export_name = "asmlibs_init"]
+#[no_mangle]
 pub unsafe extern fn asmlibs_init() {
     fn oom() -> ! {
         panic!("out of memory");
@@ -126,8 +126,8 @@ pub unsafe extern fn asmlibs_init() {
     alloc::oom::set_oom_handler(oom);
 }
 
-#[export_name = "data_init"]
-pub unsafe extern fn data_init(blobs: &[(*mut u8, usize)],
+#[no_mangle]
+pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 4],
                                out: *mut Data) {
     let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
     let templates =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
@@ -137,21 +137,32 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize)],
             blocks, templates, template_parts, template_verts));
 }
 
-#[export_name = "client_init"]
+#[no_mangle]
 pub unsafe extern fn client_init(data_ptr: *const Data,
                                  out: *mut Client) {
     let data = ptr::read(data_ptr);
     ptr::write(out, Client::new(data));
 }
 
-#[export_name = "terrain_geom_reset"]
+#[no_mangle]
+pub unsafe extern fn load_terrain_chunk(client: &mut Client,
+                                 cx: i32,
+                                 cy: i32,
+                                 blocks_ptr: *const u16,
+                                 blocks_byte_len: usize) {
+    assert!(blocks_byte_len == mem::size_of::<gfx_types::BlockChunk>());
+    let blocks = &*(blocks_ptr as *const gfx_types::BlockChunk);
+    client.load_terrain_chunk(V2::new(cx, cy), blocks);
+}
+
+#[no_mangle]
 pub extern fn terrain_geom_reset(client: &mut Client,
                                  cx: i32,
                                  cy: i32) {
     client.terrain_geom_reset(V2::new(cx, cy))
 }
 
-#[export_name = "terrain_geom_generate"]
+#[no_mangle]
 pub unsafe extern fn terrain_geom_generate(client: &mut Client,
                                            buf_ptr: *mut terrain::Vertex,
                                            buf_byte_len: usize,
@@ -163,78 +174,66 @@ pub unsafe extern fn terrain_geom_generate(client: &mut Client,
 }
 
 
-#[export_name = "structure_buffer_init"]
-pub unsafe extern fn structure_buffer_init(buf: &mut structures::Buffer,
-                                           storage_ptr: *mut structures::Structure,
-                                           storage_byte_len: usize) {
-}
-
-#[export_name = "structure_buffer_insert"]
-pub extern fn structure_buffer_insert(buf: &mut structures::Buffer,
+#[no_mangle]
+pub extern fn structure_buffer_insert(client: &mut Client,
                                       external_id: u32,
                                       pos_x: u8,
                                       pos_y: u8,
                                       pos_z: u8,
                                       template_id: u32,
                                       oneshot_start: u16) -> usize {
-    0
+    client.structure_buffer_insert(external_id,
+                                   (pos_x, pos_y, pos_z),
+                                   template_id,
+                                   oneshot_start)
 }
 
-#[export_name = "structure_buffer_remove"]
-pub extern fn structure_buffer_remove(buf: &mut structures::Buffer,
+#[no_mangle]
+pub extern fn structure_buffer_remove(client: &mut Client,
                                       idx: usize) -> u32 {
-    buf.remove(idx)
+    client.structure_buffer_remove(idx)
 }
 
 
-#[export_name = "structure_geom_init"]
-pub unsafe extern fn structure_geom_init(geom: &mut structures::GeomGen<'static>,
-                                         buffer: &'static structures::Buffer,
-                                         templates_ptr: *const gfx_types::StructureTemplate,
-                                         templates_byte_len: usize,
-                                         parts_ptr: *const gfx_types::TemplatePart,
-                                         parts_byte_len: usize,
-                                         verts_ptr: *const gfx_types::TemplateVertex,
-                                         verts_byte_len: usize) {
-}
-
-#[export_name = "structure_geom_reset"]
-pub extern fn structure_geom_reset(geom: &mut structures::GeomGen,
+#[no_mangle]
+pub extern fn structure_geom_reset(client: &mut Client,
                                    cx0: i32,
                                    cy0: i32,
                                    cx1: i32,
                                    cy1: i32,
                                    sheet: u8) {
+    client.structure_geom_reset(Region::new(V2::new(cx0, cy0), V2::new(cx1, cy1)), sheet);
 }
 
-#[export_name = "structure_geom_generate"]
-pub unsafe extern fn structure_geom_generate(geom: &mut structures::GeomGen,
+#[no_mangle]
+pub unsafe extern fn structure_geom_generate(client: &mut Client,
                                              buf_ptr: *mut structures::Vertex,
                                              buf_byte_len: usize,
                                              result: &mut GeometryResult) {
+    let buf = make_slice_mut(buf_ptr, buf_byte_len);
+    let (count, more) = client.structure_geom_generate(buf);
+    result.vertex_count = count;
+    result.more = more as u8;
 }
 
-
-#[export_name = "light_geom_init"]
-pub unsafe extern fn light_geom_init(geom: &mut lights::GeomGen<'static>,
-                                     buffer: &'static structures::Buffer,
-                                     templates_ptr: *const gfx_types::StructureTemplate,
-                                     templates_byte_len: usize) {
-}
-
-#[export_name = "light_geom_reset"]
-pub extern fn light_geom_reset(geom: &mut lights::GeomGen,
+#[no_mangle]
+pub extern fn light_geom_reset(client: &mut Client,
                                cx0: i32,
                                cy0: i32,
                                cx1: i32,
                                cy1: i32) {
+    client.light_geom_reset(Region::new(V2::new(cx0, cy0), V2::new(cx1, cy1)));
 }
 
-#[export_name = "light_geom_generate"]
-pub unsafe extern fn light_geom_generate(geom: &mut lights::GeomGen,
+#[no_mangle]
+pub unsafe extern fn light_geom_generate(client: &mut Client,
                                          buf_ptr: *mut lights::Vertex,
                                          buf_byte_len: usize,
                                          result: &mut GeometryResult) {
+    let buf = make_slice_mut(buf_ptr, buf_byte_len);
+    let (count, more) = client.light_geom_generate(buf);
+    result.vertex_count = count;
+    result.more = more as u8;
 }
 
 

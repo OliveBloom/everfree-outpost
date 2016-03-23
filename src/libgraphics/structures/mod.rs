@@ -33,15 +33,20 @@ impl Buffer {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.storage.len()
+    }
+
     pub fn insert(&mut self,
                   external_id: u32,
                   pos: (u8, u8, u8),
-                  template_id: u32) -> usize {
+                  template_id: u32,
+                  oneshot_start: u16) -> usize {
         self.storage.push(Structure {
             pos: pos,
             external_id: external_id,
             template_id: template_id as u16,
-            oneshot_start: 0,
+            oneshot_start: oneshot_start,
         });
         self.storage.len() - 1
     }
