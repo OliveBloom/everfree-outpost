@@ -237,7 +237,7 @@ DynAsm.prototype.clearRegionShape = function(base, size, layer) {
     region[4] = size.y;
     region[5] = size.z;
 
-    var buf = this._heapAlloc(Uint8Array, shape.length);
+    var buf = this._heapAlloc(Uint8Array, size.x * size.y * size.z);
     buf.fill(0);
     this._raw['set_region_shape'](this.client,
             region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
