@@ -89,17 +89,18 @@ def convert_blocks(j):
     return b
 
 def convert_templates(j):
-    c = Converter(18, (
+    c = Converter(20, (
         Field('size',           'BBB',  0),
-        Field('part_idx',       'H',    4),
-        Field('part_count',     'B',    6),
-        Field('vert_count',     'B',    7),
-        Field('layer',          'B',    8),
-        Field('flags',          'B',    9, 0),
+        Field('shape_idx',      'H',    4),
+        Field('part_idx',       'H',    6),
+        Field('part_count',     'B',    8),
+        Field('vert_count',     'B',    9),
+        Field('layer',          'B',    10),
+        Field('flags',          'B',    11, 0),
 
-        Field('light_pos',      'BBB', 10, (0, 0, 0)),
-        Field('light_color',    'BBB', 13, (0, 0, 0)),
-        Field('light_radius',   'H', 16, 0),
+        Field('light_pos',      'BBB', 12, (0, 0, 0)),
+        Field('light_color',    'BBB', 15, (0, 0, 0)),
+        Field('light_radius',   'H',   18, 0),
         ))
 
     b = bytearray()

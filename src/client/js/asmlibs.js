@@ -187,7 +187,7 @@ DynAsm.prototype._memcpy = function(dest_offset, data) {
 };
 
 DynAsm.prototype.initClient = function(assets) {
-    var blobs = this._stackAlloc(Int32Array, 4 * 2);
+    var blobs = this._stackAlloc(Int32Array, 5 * 2);
     var idx = 0;
     var this_ = this;
     var load_blob = function(x) {
@@ -202,6 +202,7 @@ DynAsm.prototype.initClient = function(assets) {
     load_blob(assets['template_defs_bin']);
     load_blob(assets['template_part_defs_bin']);
     load_blob(assets['template_vert_defs_bin']);
+    load_blob(assets['template_shape_defs_bin']);
 
     var data = this._stackAlloc(Uint8Array, this.SIZEOF.Data);
     // NB: takes ownership of `blobs`

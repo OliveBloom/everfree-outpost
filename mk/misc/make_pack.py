@@ -48,6 +48,7 @@ def main(src_dir, build_dir, out_file):
     add('binary', 'template_defs_bin',  build('structures_client.bin'))
     add('binary', 'template_part_defs_bin', build('structure_parts_client.bin'))
     add('binary', 'template_vert_defs_bin', build('structure_verts_client.bin'))
+    add('binary', 'template_shape_defs_bin', build('structure_shapes_client.bin'))
 
     add('text', 'sprite.vert',          src('assets/shaders/sprite.vert'))
     add('text', 'sprite.frag',          src('assets/shaders/sprite.frag'))

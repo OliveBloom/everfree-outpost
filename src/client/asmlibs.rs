@@ -127,14 +127,15 @@ pub unsafe extern fn asmlibs_init() {
 }
 
 #[no_mangle]
-pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 4],
+pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 5],
                                out: *mut Data) {
     let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
     let templates =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
     let template_parts =    make_boxed_slice(blobs[2].0 as *mut _, blobs[2].1);
     let template_verts =    make_boxed_slice(blobs[3].0 as *mut _, blobs[3].1);
+    let template_shapes =   make_boxed_slice(blobs[4].0 as *mut _, blobs[4].1);
     ptr::write(out, Data::new(
-            blocks, templates, template_parts, template_verts));
+            blocks, templates, template_parts, template_verts, template_shapes));
 }
 
 #[no_mangle]

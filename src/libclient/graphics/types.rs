@@ -52,18 +52,19 @@ pub struct StructureTemplate {
     // 0
     pub size: (u8, u8, u8),
     pub _pad1: u8,
+    pub shape_idx: u16,
     pub part_idx: u16,
     pub part_count: u8,
     pub vert_count: u8,
     pub layer: u8,
     pub flags: TemplateFlags,
 
-    // 10
+    // 12
     pub light_pos: (u8, u8, u8),
     pub light_color: (u8, u8, u8),
     pub light_radius: u16,
 
-    // 18
+    // 20
 }
 
 pub struct TemplatePart {
