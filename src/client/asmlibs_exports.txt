@@ -9,6 +9,7 @@ asmmalloc_debug_print
 data_init
 client_init
 set_region_shape
+collide
 find_ceiling
 floodfill
 load_terrain_chunk

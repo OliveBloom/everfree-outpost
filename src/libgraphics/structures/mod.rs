@@ -55,11 +55,12 @@ impl Buffer {
                   idx: usize) -> u32 {
         // Do a sort of `swap_remove`, except we don't need to return the old value.
         self.storage[idx] = self.storage[self.storage.len() - 1];
+        let new_ext_id = self.storage[idx].external_id;
         self.storage.pop();
 
         // Return the external ID of the structure that now occupies slot `idx`, so the caller can
         // update their records.
-        self.storage[idx].external_id
+        new_ext_id
     }
 }
 

@@ -94,10 +94,10 @@ impl TerrainShape {
     }
 
     pub fn set_shape_in_region(&mut self, bounds: Region, layer: usize, shape: &[Shape]) {
-        let cpos_bounds = bounds.div_round_signed(CHUNK_SIZE);
+        let cpos_bounds = bounds.reduce().div_round_signed(CHUNK_SIZE);
         let local_bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
         for cpos in cpos_bounds.points() {
-            let adj_bounds = bounds - cpos * scalar(CHUNK_SIZE);
+            let adj_bounds = bounds - (cpos * scalar(CHUNK_SIZE)).extend(0);
             let cpos = cpos & scalar(LOCAL_MASK);
             self.chunks[local_bounds.index(cpos)].set_shape_in_region(adj_bounds, layer, shape);
         }

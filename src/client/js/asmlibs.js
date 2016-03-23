@@ -77,6 +77,12 @@ function next_heap_size(size) {
     }
 }
 
+function store_vec(view, offset, vec) {
+    view[offset + 0] = vec.x;
+    view[offset + 1] = vec.y;
+    view[offset + 2] = vec.z;
+}
+
 INIT_HEAP_SIZE = 4 * 1024 * 1024;
 HEAP_PADDING = 256 * 1024;
 
@@ -212,12 +218,8 @@ DynAsm.prototype.initClient = function(assets) {
 
 DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
     var region = this._stackAlloc(Int32Array, 6);
-    region[0] = base.x;
-    region[1] = base.y;
-    region[2] = base.z;
-    region[3] = size.x;
-    region[4] = size.y;
-    region[5] = size.z;
+    store_vec(region, 0, base);
+    store_vec(region, 3, size);
 
     var buf = this._heapAlloc(Uint8Array, shape.length);
     buf.set(shape);
@@ -230,12 +232,8 @@ DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
 
 DynAsm.prototype.clearRegionShape = function(base, size, layer) {
     var region = this._stackAlloc(Int32Array, 6);
-    region[0] = base.x;
-    region[1] = base.y;
-    region[2] = base.z;
-    region[3] = size.x;
-    region[4] = size.y;
-    region[5] = size.z;
+    store_vec(region, 0, base);
+    store_vec(region, 3, size);
 
     var buf = this._heapAlloc(Uint8Array, size.x * size.y * size.z);
     buf.fill(0);
@@ -246,11 +244,32 @@ DynAsm.prototype.clearRegionShape = function(base, size, layer) {
     this._stackFree(region);
 };
 
+DynAsm.prototype.collide = function(pos, size, velocity) {
+    var input = this._stackAlloc(Int32Array, 9);
+    var output = this._stackAlloc(Int32Array, 4);
+
+    store_vec(input, 0, pos);
+    store_vec(input, 3, size);
+    store_vec(input, 6, velocity);
+
+    this._raw['collide'](this.client, input.byteOffset, output.byteOffset);
+
+    var result = ({
+        x: output[0],
+        y: output[1],
+        z: output[2],
+        t: output[3],
+    });
+
+    this._stackFree(output);
+    this._stackFree(input);
+
+    return result;
+};
+
 DynAsm.prototype.findCeiling = function(pos) {
     var vec = this._stackAlloc(Int32Array, 3);
-    vec[0] = pos.x;
-    vec[1] = pos.y;
-    vec[2] = pos.z;
+    store_vec(vec, 0, pos);
 
     var result = this._raw['find_ceiling'](this.client, vec.byteOffset);
 
@@ -264,9 +283,7 @@ DynAsm.prototype.floodfill = function(pos, radius) {
     var len = size * size;
 
     var pos_buf = this._stackAlloc(Int32Array, 3);
-    pos_buf[0] = pos.x;
-    pos_buf[1] = pos.y;
-    pos_buf[2] = pos.z;
+    store_vec(pos_buf, 0, pos);
     var grid = this._stackAlloc(Uint8Array, len);
     grid.fill(0);
     var queue = this._stackAlloc(Uint8Array, 2 * len);

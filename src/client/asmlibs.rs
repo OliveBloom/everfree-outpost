@@ -22,9 +22,9 @@ use std::slice;
 use client::Client;
 use client::Data;
 
-use physics::v3::{V3, V2, scalar, Region};
+use physics::v3::{V3, V2, Vn, scalar, Region};
 use physics::{Shape, ShapeSource};
-use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_BITS};
+use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE, TILE_BITS};
 
 use graphics::lights;
 use graphics::structures;
@@ -47,21 +47,22 @@ pub struct CollideResult {
     pub time: i32,
 }
 
-#[export_name = "collide"]
-pub extern fn collide_wrapper(client: &Client,
-                              input: &CollideArgs,
-                              output: &mut CollideResult) {
+#[no_mangle]
+pub extern fn collide(client: &Client,
+                      input: &CollideArgs,
+                      output: &mut CollideResult) {
     let (pos, time) = client.collide(input.pos, input.size, input.velocity);
     output.pos = pos;
     output.time = time;
 }
 
-#[export_name = "set_region_shape"]
+#[no_mangle]
 pub extern fn set_region_shape(client: &mut Client,
-                               bounds: &Region,
+                               bounds: &(V3, V3),
                                layer: usize,
                                shape_data: *const Shape,
                                shape_len: usize) {
+    let bounds = Region::new(bounds.0, bounds.0 + bounds.1);
     let shape: &[Shape] = unsafe {
         mem::transmute(raw::Slice {
             data: shape_data,
@@ -69,16 +70,16 @@ pub extern fn set_region_shape(client: &mut Client,
         })
     };
 
-    client.set_region_shape(*bounds, layer, shape);
+    client.set_region_shape(bounds, layer, shape);
 }
 
-#[export_name = "find_ceiling"]
+#[no_mangle]
 pub extern fn find_ceiling(client: &Client,
                            pos: &V3) -> i32 {
-    client.find_ceiling(*pos)
+    client.find_ceiling(*pos >> TILE_BITS)
 }
 
-#[export_name = "floodfill"]
+#[no_mangle]
 pub unsafe extern fn floodfill(client: &Client,
                                pos: &V3,
                                radius: u8,
@@ -88,7 +89,7 @@ pub unsafe extern fn floodfill(client: &Client,
                                queue_byte_len: usize) {
     let grid = make_slice_mut(grid_ptr as *mut physics::fill_flags::Flags, grid_byte_len);
     let queue = make_slice_mut(queue_ptr, queue_byte_len);
-    client.floodfill(*pos, radius, grid, queue);
+    client.floodfill(*pos >> TILE_BITS, radius, grid, queue);
 }
 
 
