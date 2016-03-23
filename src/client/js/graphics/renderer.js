@@ -50,9 +50,9 @@ var ONESHOT_MODULUS = ANIM_MODULUS;
 
 
 /** @constructor */
-function RenderData(gl) {
+function RenderData(gl, asm) {
     this.gl = gl;
-    this._asm = null;
+    this._asm = asm;
 
     this.texture_cache = new WeakMap();
 
@@ -524,9 +524,9 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
 
 
 /** @constructor */
-function Renderer(gl, assets) {
+function Renderer(gl, assets, asm) {
     this.gl = gl;
-    this.data = new RenderData(gl);
+    this.data = new RenderData(gl, asm);
     this.buffers = new RenderBuffers(gl);
     this.simple_slice = Config.render_simplified_slicing.get();
     if (!this.simple_slice) {

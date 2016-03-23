@@ -5,8 +5,8 @@ use graphics::types::{BlockData, StructureTemplate, TemplatePart, TemplateVertex
 
 
 pub struct Data {
-    template_data: structures::geom::TemplateData,
-    block_data: Box<[BlockData]>,
+    pub template_data: structures::geom::TemplateData,
+    pub block_data: Box<[BlockData]>,
 }
 
 impl Data {

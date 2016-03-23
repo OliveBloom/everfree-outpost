@@ -15,10 +15,10 @@ var DURATION_MAX = 0xffff;
 
 
 /** @constructor */
-function Physics() {
+function Physics(asm) {
     var chunk_total = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
     var local_total = LOCAL_SIZE * LOCAL_SIZE;
-    this._asm = new Asm(getPhysicsHeapSize());
+    this._asm = asm;
 }
 exports.Physics = Physics;
 

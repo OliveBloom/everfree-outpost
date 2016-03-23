@@ -1,12 +1,13 @@
 use std::prelude::v1::*;
 
 use graphics::{lights, structures};
+use graphics::terrain as g_terrain;
 use graphics::types::{LocalChunks, BlockData, StructureTemplate, TemplatePart, TemplateVertex};
 
 use physics;
 use physics::CHUNK_BITS;
 use physics::Shape;
-use physics::v3::{V3, Region};
+use physics::v3::{V3, V2, scalar, Region};
 
 use data::Data;
 use terrain::TerrainShape;
@@ -20,6 +21,7 @@ pub struct Client {
     terrain_shape: Box<TerrainShape>,
     structures: structures::Buffer,
 
+    terrain_geom_gen: g_terrain::GeomGenState,
     struct_geom_gen: structures::geom::GeomGenState,
     light_geom_gen: lights::GeomGenState,
 }
@@ -33,6 +35,7 @@ impl Client {
             terrain_shape: box TerrainShape::new(),
             structures: structures::Buffer::new(),
 
+            terrain_geom_gen: g_terrain::GeomGenState::new(scalar(0)),
             struct_geom_gen: structures::geom::GeomGenState::new(Region::empty(), 0),
             light_geom_gen: lights::GeomGenState::new(Region::empty()),
         }
@@ -59,5 +62,22 @@ impl Client {
                      grid: &mut [physics::fill_flags::Flags],
                      queue: &mut [(u8, u8)]) {
         physics::floodfill(pos, radius, &*self.terrain_shape, grid, queue);
+    }
+
+
+    // Graphics
+
+    pub fn terrain_geom_reset(&mut self, cpos: V2) {
+        self.terrain_geom_gen = g_terrain::GeomGenState::new(cpos);
+    }
+
+    pub fn terrain_geom_generate(&mut self, buf: &mut [g_terrain::Vertex]) -> (usize, bool) {
+        let mut gen = g_terrain::GeomGen::new(&self.chunks,
+                                              &self.data.block_data,
+                                              &mut self.terrain_geom_gen);
+        let mut idx = 0;
+        let more = gen.generate(buf, &mut idx);
+
+        (idx, more)
     }
 }

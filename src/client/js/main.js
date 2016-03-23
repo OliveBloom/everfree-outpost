@@ -222,7 +222,7 @@ function init() {
 
     chunks = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return new Chunk(); });
     chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
-    //physics = new Physics();
+    physics = new Physics(asm_client);
     prediction = Config.motion_prediction.get() ? new Prediction(physics) : new DummyPrediction();
 
     renderer = null;
@@ -242,9 +242,7 @@ function init() {
 
     checkBrowser(dialog, function() {
         loadAssets(function() {
-            //renderer = new Renderer(canvas.ctx, assets);
-            //renderer.initData(BlockDef.by_id, TemplateDef.by_id,
-                    //TemplatePart.by_index, assets['template_vert_defs']);
+            renderer = new Renderer(canvas.ctx, assets, asm_client);
             ui_renderer = new UIRenderContext(canvas.ctx, assets);
             runner.job('preload-textures', preloadTextures);
 

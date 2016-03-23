@@ -144,23 +144,22 @@ pub unsafe extern fn client_init(data_ptr: *const Data,
     ptr::write(out, Client::new(data));
 }
 
-#[export_name = "terrain_geom_init"]
-pub unsafe extern fn terrain_geom_init(client: &mut Client,
-                                       block_data_ptr: *const gfx_types::BlockData,
-                                       block_data_byte_len: usize) {
-}
-
 #[export_name = "terrain_geom_reset"]
-pub extern fn terrain_geom_reset(geom: &mut terrain::GeomGen,
+pub extern fn terrain_geom_reset(client: &mut Client,
                                  cx: i32,
                                  cy: i32) {
+    client.terrain_geom_reset(V2::new(cx, cy))
 }
 
 #[export_name = "terrain_geom_generate"]
-pub unsafe extern fn terrain_geom_generate(geom: &mut terrain::GeomGen,
+pub unsafe extern fn terrain_geom_generate(client: &mut Client,
                                            buf_ptr: *mut terrain::Vertex,
                                            buf_byte_len: usize,
                                            result: &mut GeometryResult) {
+    let buf = make_slice_mut(buf_ptr, buf_byte_len);
+    let (count, more) = client.terrain_geom_generate(buf);
+    result.vertex_count = count;
+    result.more = more as u8;
 }
 
 

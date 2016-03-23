@@ -1,4 +1,6 @@
-var SIZEOF = require('asmlibs').SIZEOF;
+//var SIZEOF = require('asmlibs').SIZEOF;
+// TODO: hack
+var SIZEOF = window.SIZEOF;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
 var TILE_SIZE = require('data/chunk').TILE_SIZE;
 

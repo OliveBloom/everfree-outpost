@@ -91,6 +91,9 @@ function DynAsm() {
 
     this.client = null;
     this.SIZEOF = this._calcSizeof();
+
+    // TODO: hack (also see shaders.js)
+    window.SIZEOF = this.SIZEOF;
 }
 exports.DynAsm = DynAsm;
 
