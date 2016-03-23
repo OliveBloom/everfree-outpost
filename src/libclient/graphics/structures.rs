@@ -5,9 +5,9 @@ use std::ptr;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
-use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
+use structures::Structures;
 
-use super::Buffer;
+use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
 
 
 #[derive(Clone, Copy)]
@@ -62,7 +62,7 @@ impl TemplateData {
 
 pub struct GeomGenState {
     bounds: Region<V2>,
-    cur: usize,
+    next: u32,
     sheet: u8,
 }
 
@@ -70,20 +70,20 @@ impl GeomGenState {
     pub fn new(bounds: Region<V2>, sheet: u8) -> GeomGenState {
         GeomGenState {
             bounds: bounds * scalar(CHUNK_SIZE),
-            cur: 0,
+            next: 0,
             sheet: sheet,
         }
     }
 }
 
 pub struct GeomGen<'a> {
-    buffer: &'a Buffer,
+    buffer: &'a Structures,
     data: &'a TemplateData,
     state: &'a mut GeomGenState,
 }
 
 impl<'a> GeomGen<'a> {
-    pub fn new(buffer: &'a Buffer,
+    pub fn new(buffer: &'a Structures,
                data: &'a TemplateData,
                state: &'a mut GeomGenState) -> GeomGen<'a> {
         GeomGen {
@@ -96,37 +96,31 @@ impl<'a> GeomGen<'a> {
     pub fn generate(&mut self,
                     buf: &mut [Vertex],
                     idx: &mut usize) -> bool {
-        while *idx < buf.len() {
-            if self.cur >= self.buffer.len() {
-                // No more structures
-                return false;
-            }
-
-            let s = &self.buffer[self.cur];
-            self.cur += 1;
+        for (&id, s) in self.buffer.iter_from(self.state.next) {
+            self.state.next = id;
 
             let t = &self.data.templates[s.template_id as usize];
 
             let s_pos = V3::new(s.pos.0 as i32,
                                 s.pos.1 as i32,
                                 s.pos.2 as i32);
-            if !self.bounds.contains(s_pos.reduce()) {
+            if !self.state.bounds.contains(s_pos.reduce()) {
                 // Not visible
                 continue;
             }
 
             if *idx + t.vert_count as usize >= buf.len() {
                 // Not enough space for all this structure's vertices.  Bailing out in this case
-                // means we don't have to deal with tracking partially-emitted structures.  Though
-                // we do have to adjust self.cur to avoid skipping `s` completely.
-                self.cur -= 1;
-                break;
+                // means we don't have to deal with tracking partially-emitted structures.  On the
+                // next call, we'll start at `self.state.next`, which was already set to the
+                // current structure's `id`.
+                return true;
             }
 
             let i0 = t.part_idx as usize;
             let i1 = i0 + t.part_count as usize;
             for p in &self.data.parts[i0 .. i1] {
-                if p.sheet != self.sheet {
+                if p.sheet != self.state.sheet {
                     continue;
                 }
 
@@ -148,19 +142,7 @@ impl<'a> GeomGen<'a> {
             }
         }
 
-        true
-    }
-}
-
-impl<'a> Deref for GeomGen<'a> {
-    type Target = GeomGenState;
-    fn deref(&self) -> &GeomGenState {
-        &self.state
-    }
-}
-
-impl<'a> DerefMut for GeomGen<'a> {
-    fn deref_mut(&mut self) -> &mut GeomGenState {
-        &mut self.state
+        // Ran out of structures - we're done.
+        false
     }
 }

@@ -5,11 +5,13 @@ use std::ptr;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
+use structures::Structures;
+
 use graphics::IntrusiveCorner;
 use graphics::{emit_quad, remaining_quads};
 use graphics::LOCAL_BITS;
 use graphics::types::{StructureTemplate, HAS_LIGHT};
-use graphics::structures::Buffer;
+
 
 
 #[derive(Clone, Copy)]
@@ -47,13 +49,13 @@ impl GeomGenState {
 }
 
 pub struct GeomGen<'a> {
-    buffer: &'a Buffer,
+    buffer: &'a Structures,
     templates: &'a [StructureTemplate],
     state: &'a mut GeomGenState,
 }
 
 impl<'a> GeomGen<'a> {
-    pub fn new(buffer: &'a Buffer,
+    pub fn new(buffer: &'a Structures,
                templates: &'a [StructureTemplate],
                state: &'a mut GeomGenState) -> GeomGen<'a> {
         GeomGen {
@@ -67,6 +69,8 @@ impl<'a> GeomGen<'a> {
     pub fn generate(&mut self,
                     buf: &mut [Vertex],
                     idx: &mut usize) -> bool {
+        false
+            /*
         while remaining_quads(buf, *idx) >= 1 {
             if self.cur >= self.buffer.len() {
                 return false;
@@ -116,6 +120,7 @@ impl<'a> GeomGen<'a> {
         }
 
         true
+        */
     }
 }
 

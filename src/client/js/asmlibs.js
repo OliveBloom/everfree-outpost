@@ -121,7 +121,7 @@ DynAsm.prototype._heapCheck = function() {
 };
 
 DynAsm.prototype._calcSizeof = function() {
-    var EXPECT_SIZES = 12;
+    var EXPECT_SIZES = 11;
     var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
 
     var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
@@ -142,7 +142,6 @@ DynAsm.prototype._calcSizeof = function() {
     result.TemplateVertex = next();
 
     result.BlockChunk = next();
-    result.Structure = next();
 
     result.TerrainVertex = next();
     result.StructureVertex = next();

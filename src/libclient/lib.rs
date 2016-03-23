@@ -1,9 +1,14 @@
 #![crate_name = "client"]
 #![no_std]
 
-// Have to use box syntax because Box::new() in Client::new() tries to allocate 1.5MB of temporary
-// arrays on the stack.
-#![feature(box_syntax)]
+#![feature(
+    // Have to use box syntax because Box::new() in Client::new() tries to allocate 1.5MB of
+    // temporary arrays on the stack.
+    box_syntax,
+    btree_range,
+    collections,
+    collections_bound,
+    )]
 
 #[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
@@ -20,4 +25,5 @@ pub mod client;
 pub mod data;
 
 mod terrain;
+mod structures;
 pub mod graphics;

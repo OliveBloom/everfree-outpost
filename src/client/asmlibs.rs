@@ -252,7 +252,6 @@ pub struct Sizes {
     template_vertex: usize,
 
     block_chunk: usize,
-    structure: usize,
 
     terrain_vertex: usize,
     structure_vertex: usize,
@@ -274,7 +273,6 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
     sizes.template_vertex = size_of::<gfx_types::TemplateVertex>();
 
     sizes.block_chunk = size_of::<gfx_types::BlockChunk>();
-    sizes.structure = size_of::<structures::Structure>();
 
     sizes.terrain_vertex = size_of::<terrain::Vertex>();
     sizes.structure_vertex = size_of::<structures::Vertex>();

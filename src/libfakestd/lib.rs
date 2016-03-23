@@ -3,6 +3,7 @@
 #![feature(
     alloc,
     collections,
+    collections_bound,
     core_intrinsics,
     macro_reexport,
     raw,
@@ -76,6 +77,7 @@ pub use rustc_unicode::{
 pub mod collections {
     // From libstd/collections/mod.rs
     pub use collections_::{
+        Bound,
         binary_heap, BinaryHeap,
         btree_map, BTreeMap,
         btree_set, BTreeSet,

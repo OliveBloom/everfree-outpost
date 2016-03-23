@@ -5,7 +5,7 @@ use graphics::types::{BlockData, StructureTemplate, TemplatePart, TemplateVertex
 
 
 pub struct Data {
-    pub template_data: structures::geom::TemplateData,
+    pub template_data: structures::TemplateData,
     pub block_data: Box<[BlockData]>,
 }
 
@@ -15,7 +15,7 @@ impl Data {
                parts: Box<[TemplatePart]>,
                verts: Box<[TemplateVertex]>) -> Data {
         Data {
-            template_data: structures::geom::TemplateData::new(templates, parts, verts),
+            template_data: structures::TemplateData::new(templates, parts, verts),
             block_data: block_data,
         }
     }
