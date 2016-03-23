@@ -8,13 +8,14 @@ asmmalloc_free
 asmmalloc_debug_print
 data_init
 client_init
+structure_appear
+structure_gone
+structure_replace
 set_region_shape
 collide
 find_ceiling
 floodfill
 load_terrain_chunk
-structure_buffer_insert
-structure_buffer_remove
 terrain_geom_reset
 terrain_geom_generate
 structure_geom_reset

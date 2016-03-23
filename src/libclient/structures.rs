@@ -1,5 +1,6 @@
 use std::collections::btree_map::{self, BTreeMap};
 use std::collections::Bound;
+use std::ops::Index;
 
 
 #[derive(Clone, Copy)]
@@ -42,13 +43,17 @@ impl Structures {
         });
     }
 
-    pub fn remove(&mut self, id: u32) {
-        self.map.remove(&id);
+    pub fn remove(&mut self, id: u32) -> Structure {
+        self.map.remove(&id).unwrap()
     }
 
-    pub fn replace(&mut self, id: u32, template_id: u32) {
+    pub fn replace(&mut self,
+                   id: u32,
+                   template_id: u32,
+                   oneshot_start: u16) {
         if let Some(s) = self.map.get_mut(&id) {
             s.template_id = template_id;
+            s.oneshot_start = oneshot_start;
         }
     }
 
@@ -63,3 +68,10 @@ impl Structures {
 
 pub type Iter<'a> = btree_map::Iter<'a, u32, Structure>;
 pub type RangeIter<'a> = btree_map::Range<'a, u32, Structure>;
+
+impl Index<u32> for Structures {
+    type Output = Structure;
+    fn index(&self, idx: u32) -> &Structure {
+        &self.map[&idx]
+    }
+}

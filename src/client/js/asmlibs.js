@@ -216,6 +216,19 @@ DynAsm.prototype.initClient = function(assets) {
     this._stackFree(blobs);
 };
 
+DynAsm.prototype.structureAppear = function(id, x, y, z, template_id, oneshot_start) {
+    this._raw['structure_appear'](this.client,
+            id, x, y, z, template_id, oneshot_start);
+};
+
+DynAsm.prototype.structureGone = function(id) {
+    this._raw['structure_gone'](this.client, id);
+};
+
+DynAsm.prototype.structureReplace = function(id, template_id, oneshot_start) {
+    this._raw['structure_replace'](this.client, id, template_id, oneshot_start);
+};
+
 DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
     var region = this._stackAlloc(Int32Array, 6);
     store_vec(region, 0, base);
@@ -309,15 +322,6 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, blocks) {
     this._raw['load_terrain_chunk'](this.client,
             cx, cy, buf.byteOffset, buf.byteLength);
     this._heapFree(buf);
-};
-
-DynAsm.prototype.structureBufferInsert = function(id, x, y, z, template_id, oneshot_start) {
-    return this._raw['structure_buffer_insert'](this.client,
-            id, x, y, z, template_id, oneshot_start);
-};
-
-DynAsm.prototype.structureBufferRemove = function(idx) {
-    return this._raw['structure_buffer_remove'](this.client, idx);
 };
 
 DynAsm.prototype.terrainGeomReset = function(cx, cy) {

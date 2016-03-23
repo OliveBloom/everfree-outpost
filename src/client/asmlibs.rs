@@ -31,6 +31,37 @@ use client::graphics::terrain;
 use client::graphics::types as gfx_types;
 
 
+// New API
+
+#[no_mangle]
+pub unsafe extern fn structure_appear(client: &mut Client,
+                                      id: u32,
+                                      pos_x: u8,
+                                      pos_y: u8,
+                                      pos_z: u8,
+                                      template_id: u32,
+                                      oneshot_start: u16) {
+    client.structure_appear(id,
+                            (pos_x, pos_y, pos_z),
+                            template_id,
+                            oneshot_start);
+}
+
+#[no_mangle]
+pub unsafe extern fn structure_gone(client: &mut Client,
+                                    id: u32) {
+    client.structure_gone(id);
+}
+
+#[no_mangle]
+pub unsafe extern fn structure_replace(client: &mut Client,
+                                       id: u32,
+                                       template_id: u32,
+                                       oneshot_start: u16) {
+    client.structure_replace(id, template_id, oneshot_start);
+}
+
+
 // Physics
 
 #[derive(Clone, Copy)]
@@ -172,27 +203,6 @@ pub unsafe extern fn terrain_geom_generate(client: &mut Client,
     let (count, more) = client.terrain_geom_generate(buf);
     result.vertex_count = count;
     result.more = more as u8;
-}
-
-
-#[no_mangle]
-pub extern fn structure_buffer_insert(client: &mut Client,
-                                      external_id: u32,
-                                      pos_x: u8,
-                                      pos_y: u8,
-                                      pos_z: u8,
-                                      template_id: u32,
-                                      oneshot_start: u16) -> usize {
-    client.structure_buffer_insert(external_id,
-                                   (pos_x, pos_y, pos_z),
-                                   template_id,
-                                   oneshot_start)
-}
-
-#[no_mangle]
-pub extern fn structure_buffer_remove(client: &mut Client,
-                                      idx: usize) -> u32 {
-    client.structure_buffer_remove(idx)
 }
 
 

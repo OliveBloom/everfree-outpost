@@ -1,5 +1,7 @@
 use std::prelude::v1::*;
 
+use util;
+
 use graphics::lights;
 use graphics::structures as g_structures;
 use graphics::terrain as g_terrain;
@@ -45,6 +47,42 @@ impl Client {
     }
 
 
+    pub fn structure_appear(&mut self,
+                            id: u32,
+                            pos: (u8, u8, u8),
+                            template_id: u32,
+                            oneshot_start: u16) {
+        self.structures.insert(id, pos, template_id, oneshot_start);
+
+        let t = &self.data.templates[template_id as usize];
+        let pos = util::unpack_v3(pos);
+        let size = util::unpack_v3(t.size);
+        let bounds = Region::new(pos, pos + size);
+        let base = t.shape_idx as usize;
+        let shape = &self.data.template_shapes[base .. base + bounds.volume() as usize];
+        self.terrain_shape.set_shape_in_region(bounds, t.layer as usize, shape);
+    }
+
+    pub fn structure_gone(&mut self,
+                          id: u32) {
+        let s = self.structures.remove(id);
+
+        let t = &self.data.templates[s.template_id as usize];
+        let pos = util::unpack_v3(s.pos);
+        let size = util::unpack_v3(t.size);
+        let bounds = Region::new(pos, pos + size);
+        self.terrain_shape.fill_shape_in_region(bounds, t.layer as usize, Shape::Empty);
+    }
+
+    pub fn structure_replace(&mut self,
+                             id: u32,
+                             template_id: u32,
+                             oneshot_start: u16) {
+        self.structures.replace(id, template_id, oneshot_start);
+        unimplemented!();
+    }
+
+
     // Physics
 
     pub fn collide(&self, pos: V3, size: V3, velocity: V3) -> (V3, i32) {
@@ -87,21 +125,6 @@ impl Client {
         let more = gen.generate(buf, &mut idx);
 
         (idx, more)
-    }
-
-    pub fn structure_buffer_insert(&mut self,
-                                   external_id: u32,
-                                   pos: (u8, u8, u8),
-                                   template_id: u32,
-                                   oneshot_start: u16) -> usize {
-        self.structures.insert(external_id, pos, template_id, oneshot_start);
-        external_id as usize
-    }
-
-    pub fn structure_buffer_remove(&mut self,
-                                   idx: usize) -> u32 {
-        self.structures.remove(idx as u32);
-        idx as u32
     }
 
     pub fn structure_geom_reset(&mut self, bounds: Region<V2>, sheet: u8) {

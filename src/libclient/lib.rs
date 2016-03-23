@@ -24,6 +24,8 @@ pub use data::Data;
 pub mod client;
 pub mod data;
 
+mod util;
+
 mod terrain;
 mod structures;
 pub mod graphics;

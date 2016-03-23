@@ -38,6 +38,15 @@ impl ChunkShape {
         self.refresh(inner_bounds);
     }
 
+    pub fn fill_shape_in_region(&mut self, bounds: Region, layer: usize, shape: Shape) {
+        let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
+        let inner_bounds = bounds.intersect(chunk_bounds);
+        for pos in inner_bounds.points() {
+            self.layers[layer][chunk_bounds.index(pos)] = shape;
+        }
+        self.refresh(inner_bounds);
+    }
+
     pub fn find_ceiling(&self, pos: V3) -> i32 {
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
         for z in pos.z + 1 .. CHUNK_SIZE {
@@ -100,6 +109,16 @@ impl TerrainShape {
             let adj_bounds = bounds - (cpos * scalar(CHUNK_SIZE)).extend(0);
             let cpos = cpos & scalar(LOCAL_MASK);
             self.chunks[local_bounds.index(cpos)].set_shape_in_region(adj_bounds, layer, shape);
+        }
+    }
+
+    pub fn fill_shape_in_region(&mut self, bounds: Region, layer: usize, shape: Shape) {
+        let cpos_bounds = bounds.reduce().div_round_signed(CHUNK_SIZE);
+        let local_bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
+        for cpos in cpos_bounds.points() {
+            let adj_bounds = bounds - (cpos * scalar(CHUNK_SIZE)).extend(0);
+            let cpos = cpos & scalar(LOCAL_MASK);
+            self.chunks[local_bounds.index(cpos)].fill_shape_in_region(adj_bounds, layer, shape);
         }
     }
 

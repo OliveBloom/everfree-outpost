@@ -271,7 +271,7 @@ RenderData.prototype.addStructure = function(now, id, x, y, z, template) {
     if (oneshot_start < 0) {
         oneshot_start += ONESHOT_MODULUS;
     }
-    var render_idx = this._asm.structureBufferInsert(
+    var render_idx = this._asm.structureAppear(
             id, tx, ty, tz, template.id, oneshot_start);
 
     this._invalidateStructure(tx, ty, tz, template);
@@ -279,13 +279,10 @@ RenderData.prototype.addStructure = function(now, id, x, y, z, template) {
 };
 
 RenderData.prototype.removeStructure = function(structure) {
-    // ID of the structure that now occupies the old slot.
-    var new_id = this._asm.structureBufferRemove(structure.render_index);
+    this._asm.structureGone(structure.render_index);
 
     var pos = structure.pos;
     this._invalidateStructure(pos.x, pos.y, pos.z, structure.template);
-
-    return new_id;
 };
 
 RenderData.prototype._invalidateStructure = function(x, y, z, template) {
