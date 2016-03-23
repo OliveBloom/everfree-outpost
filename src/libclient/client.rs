@@ -106,13 +106,11 @@ impl Client {
 
     pub fn structure_geom_generate(&mut self,
                                    buf: &mut [structures::geom::Vertex]) -> (usize, bool) {
-        println!("doing geometry for {} structures", self.structures.len());
         let mut gen = structures::geom::GeomGen::new(&self.structures,
                                                      &self.data.template_data,
                                                      &mut self.structure_geom_gen);
         let mut idx = 0;
         let more = gen.generate(buf, &mut idx);
-        println!("  generated {}, more={}", idx, more);
 
         (idx, more)
     }

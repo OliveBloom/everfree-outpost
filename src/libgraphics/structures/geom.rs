@@ -69,7 +69,7 @@ pub struct GeomGenState {
 impl GeomGenState {
     pub fn new(bounds: Region<V2>, sheet: u8) -> GeomGenState {
         GeomGenState {
-            bounds: bounds,
+            bounds: bounds * scalar(CHUNK_SIZE),
             cur: 0,
             sheet: sheet,
         }

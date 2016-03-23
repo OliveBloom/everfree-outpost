@@ -349,7 +349,7 @@ DynAsm.prototype.structureGeomGenerate = function() {
     var more = (output[1] & 1) != 0;
     this._stackFree(output);
 
-    var geom = new Uint8Array(vertex_count * this.SIZEOF.TerrainVertex);
+    var geom = new Uint8Array(vertex_count * this.SIZEOF.StructureVertex);
     geom.set(buf.subarray(0, geom.length));
     this._heapFree(buf);
 
@@ -377,7 +377,7 @@ DynAsm.prototype.lightGeomGenerate = function() {
     var more = (output[1] & 1) != 0;
     this._stackFree(output);
 
-    var geom = new Uint8Array(vertex_count * this.SIZEOF.TerrainVertex);
+    var geom = new Uint8Array(vertex_count * this.SIZEOF.LightVertex);
     geom.set(buf.subarray(0, geom.length));
     this._heapFree(buf);
 
