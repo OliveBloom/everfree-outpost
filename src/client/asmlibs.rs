@@ -33,6 +33,51 @@ use client::graphics::types as gfx_types;
 
 // New API
 
+// Init
+
+#[no_mangle]
+pub unsafe extern fn asmlibs_init() {
+    fn oom() -> ! {
+        panic!("out of memory");
+    }
+
+    alloc::oom::set_oom_handler(oom);
+}
+
+#[no_mangle]
+pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 5],
+                               out: *mut Data) {
+    let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
+    let templates =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
+    let template_parts =    make_boxed_slice(blobs[2].0 as *mut _, blobs[2].1);
+    let template_verts =    make_boxed_slice(blobs[3].0 as *mut _, blobs[3].1);
+    let template_shapes =   make_boxed_slice(blobs[4].0 as *mut _, blobs[4].1);
+    ptr::write(out, Data::new(
+            blocks, templates, template_parts, template_verts, template_shapes));
+}
+
+#[no_mangle]
+pub unsafe extern fn client_init(data_ptr: *const Data,
+                                 out: *mut Client) {
+    let data = ptr::read(data_ptr);
+    ptr::write(out, Client::new(data));
+}
+
+// Chunks
+
+#[no_mangle]
+pub unsafe extern fn load_terrain_chunk(client: &mut Client,
+                                        cx: i32,
+                                        cy: i32,
+                                        blocks_ptr: *const u16,
+                                        blocks_byte_len: usize) {
+    assert!(blocks_byte_len == mem::size_of::<gfx_types::BlockChunk>());
+    let blocks = &*(blocks_ptr as *const gfx_types::BlockChunk);
+    client.load_terrain_chunk(V2::new(cx, cy), blocks);
+}
+
+// Structures
+
 #[no_mangle]
 pub unsafe extern fn structure_appear(client: &mut Client,
                                       id: u32,
@@ -62,6 +107,8 @@ pub unsafe extern fn structure_replace(client: &mut Client,
 }
 
 
+
+
 // Physics
 
 #[derive(Clone, Copy)]
@@ -84,23 +131,6 @@ pub extern fn collide(client: &Client,
     let (pos, time) = client.collide(input.pos, input.size, input.velocity);
     output.pos = pos;
     output.time = time;
-}
-
-#[no_mangle]
-pub extern fn set_region_shape(client: &mut Client,
-                               bounds: &(V3, V3),
-                               layer: usize,
-                               shape_data: *const Shape,
-                               shape_len: usize) {
-    let bounds = Region::new(bounds.0, bounds.0 + bounds.1);
-    let shape: &[Shape] = unsafe {
-        mem::transmute(raw::Slice {
-            data: shape_data,
-            len: shape_len,
-        })
-    };
-
-    client.set_region_shape(bounds, layer, shape);
 }
 
 #[no_mangle]
@@ -147,45 +177,6 @@ pub struct GeometryResult {
     more: u8,
 }
 
-
-#[no_mangle]
-pub unsafe extern fn asmlibs_init() {
-    fn oom() -> ! {
-        panic!("out of memory");
-    }
-
-    alloc::oom::set_oom_handler(oom);
-}
-
-#[no_mangle]
-pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 5],
-                               out: *mut Data) {
-    let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
-    let templates =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
-    let template_parts =    make_boxed_slice(blobs[2].0 as *mut _, blobs[2].1);
-    let template_verts =    make_boxed_slice(blobs[3].0 as *mut _, blobs[3].1);
-    let template_shapes =   make_boxed_slice(blobs[4].0 as *mut _, blobs[4].1);
-    ptr::write(out, Data::new(
-            blocks, templates, template_parts, template_verts, template_shapes));
-}
-
-#[no_mangle]
-pub unsafe extern fn client_init(data_ptr: *const Data,
-                                 out: *mut Client) {
-    let data = ptr::read(data_ptr);
-    ptr::write(out, Client::new(data));
-}
-
-#[no_mangle]
-pub unsafe extern fn load_terrain_chunk(client: &mut Client,
-                                 cx: i32,
-                                 cy: i32,
-                                 blocks_ptr: *const u16,
-                                 blocks_byte_len: usize) {
-    assert!(blocks_byte_len == mem::size_of::<gfx_types::BlockChunk>());
-    let blocks = &*(blocks_ptr as *const gfx_types::BlockChunk);
-    client.load_terrain_chunk(V2::new(cx, cy), blocks);
-}
 
 #[no_mangle]
 pub extern fn terrain_geom_reset(client: &mut Client,

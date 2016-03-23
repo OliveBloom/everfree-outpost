@@ -22,32 +22,6 @@ function Physics(asm) {
 }
 exports.Physics = Physics;
 
-Physics.prototype.loadChunk = function(ci, cj, tiles) {
-    var view = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE);
-    console.assert(tiles.length == view.length,
-            'expected ' + view.length + ' tiles, but got ' + tiles.length);
-
-    for (var i = 0; i < tiles.length; ++i) {
-        view[i] = BlockDef.by_id[tiles[i]].shape;
-    }
-
-    var base = new Vec(cj * CHUNK_SIZE,
-                       ci * CHUNK_SIZE,
-                       0);
-    var size = new Vec(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE);
-    this._asm.setRegionShape(base, size, -1, view);
-};
-
-Physics.prototype.addStructure = function(structure) {
-    var template = structure.template;
-    this._asm.setRegionShape(structure.pos, template.size, template.layer, template.shape);
-};
-
-Physics.prototype.removeStructure = function(structure) {
-    var template = structure.template;
-    this._asm.clearRegionShape(structure.pos, template.size, template.layer);
-};
-
 Physics.prototype.computeForecast = function(now, entity, target_velocity) {
     var start_pos = entity.position(now);
     // TODO: hardcoded constant based on entity size

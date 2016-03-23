@@ -156,8 +156,6 @@ var asmlibs_code_raw = function(global, env, buffer) {
         __adjust_stack: __adjust_stack,
         get_sizes: _get_sizes,
 
-        asmlibs_init: _asmlibs_init,
-
         asmmalloc_init: _asmmalloc_init,
         asmmalloc_reinit: _asmmalloc_reinit,
         asmmalloc_max_allocated_address: _asmmalloc_max_allocated_address,
@@ -165,15 +163,17 @@ var asmlibs_code_raw = function(global, env, buffer) {
         asmmalloc_free: _asmmalloc_free,
         asmmalloc_debug_print: _asmmalloc_debug_print,
 
+        asmlibs_init: _asmlibs_init,
         data_init: _data_init,
         client_init: _client_init,
+
+        load_terrain_chunk: _load_terrain_chunk,
 
         structure_appear: _structure_appear,
         structure_gone: _structure_gone,
         structure_replace: _structure_replace,
 
-        set_region_shape: _set_region_shape,
-        load_terrain_chunk: _load_terrain_chunk,
+
         collide: _collide,
         find_ceiling: _find_ceiling,
         floodfill: _floodfill,

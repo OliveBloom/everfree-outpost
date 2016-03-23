@@ -9,7 +9,7 @@ use graphics::types::{BlockChunk, LocalChunks,
     BlockData, StructureTemplate, TemplatePart, TemplateVertex};
 
 use physics;
-use physics::CHUNK_BITS;
+use physics::{CHUNK_SIZE, CHUNK_BITS};
 use physics::Shape;
 use physics::v3::{V3, V2, scalar, Region};
 
@@ -47,6 +47,19 @@ impl Client {
     }
 
 
+    pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
+        let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
+        self.chunks[bounds.index(cpos)] = *blocks;
+
+        let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
+                           (cpos * scalar(CHUNK_SIZE)).extend(0);
+        let block_data = &self.data.blocks;
+        self.terrain_shape.set_shape_in_region_by(chunk_bounds, 0, |pos| {
+            let b = blocks[chunk_bounds.index(pos)];
+            block_data[b as usize].shape
+        });
+    }
+
     pub fn structure_appear(&mut self,
                             id: u32,
                             pos: (u8, u8, u8),
@@ -60,7 +73,7 @@ impl Client {
         let bounds = Region::new(pos, pos + size);
         let base = t.shape_idx as usize;
         let shape = &self.data.template_shapes[base .. base + bounds.volume() as usize];
-        self.terrain_shape.set_shape_in_region(bounds, t.layer as usize, shape);
+        self.terrain_shape.set_shape_in_region(bounds, 1 + t.layer as usize, shape);
     }
 
     pub fn structure_gone(&mut self,
@@ -71,7 +84,7 @@ impl Client {
         let pos = util::unpack_v3(s.pos);
         let size = util::unpack_v3(t.size);
         let bounds = Region::new(pos, pos + size);
-        self.terrain_shape.fill_shape_in_region(bounds, t.layer as usize, Shape::Empty);
+        self.terrain_shape.fill_shape_in_region(bounds, 1 + t.layer as usize, Shape::Empty);
     }
 
     pub fn structure_replace(&mut self,
@@ -89,10 +102,6 @@ impl Client {
         physics::collide(&*self.terrain_shape, pos, size, velocity)
     }
 
-    pub fn set_region_shape(&mut self, bounds: Region, layer: usize, shape: &[Shape]) {
-        self.terrain_shape.set_shape_in_region(bounds, layer, shape);
-    }
-
     pub fn find_ceiling(&self, pos: V3) -> i32 {
         self.terrain_shape.find_ceiling(pos)
     }
@@ -107,11 +116,6 @@ impl Client {
 
 
     // Graphics
-
-    pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
-        let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
-        self.chunks[bounds.index(cpos)] = *blocks;
-    }
 
     pub fn terrain_geom_reset(&mut self, cpos: V2) {
         self.terrain_geom_gen = g_terrain::GeomGenState::new(cpos);
