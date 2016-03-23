@@ -297,6 +297,7 @@ if __name__ == '__main__':
         data.binary_defs('$b_data/structures_client.json', 'templates'),
         data.binary_defs('$b_data/structure_parts_client.json', 'template_parts'),
         data.binary_defs('$b_data/structure_verts_client.json', 'template_verts'),
+        data.binary_defs('$b_data/structure_shapes_client.json', 'template_shapes'),
         data.pack(),
         data.credits('$b_data/credits.html'),
 

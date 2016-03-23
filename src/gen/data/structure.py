@@ -143,6 +143,9 @@ class StructureDef2(object):
 
         # Filled in by `collect_parts`
         self.part_idx = None
+        
+        # Filled in by `collect_shapes`
+        self.shape_idx = None
 
     '''
     def get_display_px(self):
@@ -242,6 +245,19 @@ def collect_verts(parts):
 
     return all_verts
 
+def collect_shapes(structures):
+    idx_map = {}
+    all_shapes = []
+
+    for s in structures:
+        k = tuple(SHAPE_ID[x] for x in s.shape)
+        if k not in idx_map:
+            idx_map[k] = len(all_shapes)
+            all_shapes.extend(k)
+        s.shape_idx = idx_map[k]
+
+    return all_shapes
+
 
 # JSON output
 
@@ -250,6 +266,7 @@ def build_client_json(structures):
         dct = {
                 'size': s.size,
                 'shape': [SHAPE_ID[x] for x in s.shape],
+                'shape_idx': s.shape_idx,
                 'part_idx': s.part_idx,
                 'part_count': len(s.parts),
                 'vert_count': sum(p.vert_count for p in s.parts),
@@ -299,6 +316,9 @@ def build_parts_json(parts):
 
 def build_verts_json(verts):
     return list(x for v in verts for x in v)
+
+def build_shapes_json(shapes):
+    return list(shapes)
 
 def build_server_json(structures):
     def convert(s):

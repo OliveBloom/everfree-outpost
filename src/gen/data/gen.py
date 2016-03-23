@@ -59,9 +59,10 @@ def write_json(output_dir, basename, j):
         json.dump(j, f)
 
 def emit_structures(output_dir, structures):
-    # Final processing to assign array slots to parts and vertices
+    # Final processing to assign array slots to parts, vertices, and shapes
     parts = structure.collect_parts(structures)
     verts = structure.collect_verts(parts)
+    shapes = structure.collect_shapes(structures)
 
     # Handle sheet images
     for f in os.listdir(output_dir):
@@ -82,6 +83,9 @@ def emit_structures(output_dir, structures):
 
     write_json(output_dir, 'structure_verts_client.json',
             structure.build_verts_json(verts))
+
+    write_json(output_dir, 'structure_shapes_client.json',
+            structure.build_shapes_json(shapes))
 
     # Emit actual structure json
     write_json(output_dir, 'structures_server.json',

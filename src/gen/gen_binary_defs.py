@@ -8,7 +8,8 @@ def build_parser():
     args = argparse.ArgumentParser()
 
     args.add_argument('--mode', required=True,
-            choices=('blocks', 'templates', 'template_parts', 'template_verts'),
+            choices=('blocks', 'templates', 'template_parts', 'template_verts',
+                'template_shapes'),
             help='convert block defs')
 
     args.add_argument('input', metavar='FILE_IN.json',
@@ -132,6 +133,12 @@ def convert_template_verts(j):
         b.extend(struct.pack('H', x))
     return b
 
+def convert_template_shapes(j):
+    b = bytearray()
+    for x in j:
+        b.extend(struct.pack('B', x))
+    return b
+
 
 def main():
     parser = build_parser()
@@ -148,6 +155,8 @@ def main():
         b = convert_template_parts(j)
     elif args.mode == 'template_verts':
         b = convert_template_verts(j)
+    elif args.mode == 'template_shapes':
+        b = convert_template_shapes(j)
     else:
         parser.error('must provide flag to indicate input type')
 

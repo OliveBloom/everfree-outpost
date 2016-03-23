@@ -123,7 +123,8 @@ def pack():
             'day_night.json',
             'ui_atlas.png', 'ui_atlas.json',
             ) + tuple('%s_client.bin' % f
-                    for f in ('blocks', 'structures', 'structure_parts', 'structure_verts'))
+                    for f in ('blocks', 'structures', 'structure_parts',
+                        'structure_verts', 'structure_shapes'))
 
     return template('''
         rule build_pack
