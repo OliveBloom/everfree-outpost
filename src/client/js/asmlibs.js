@@ -54,8 +54,6 @@ var module_env = function(buffer) {
 // Helper functions
 
 function memcpy(dest_buffer, dest_offset, src_buffer, src_offset, len) {
-    console.log('memcpy', dest_buffer, dest_offset);
-    console.log('  from', src_buffer, src_offset, len);
     var dest = new Int8Array(dest_buffer, dest_offset, len);
     var src = new Int8Array(src_buffer, src_offset, len);
     dest.set(src);
@@ -141,8 +139,6 @@ DynAsm.prototype._calcSizeof = function() {
     result.StructureVertex = next();
     result.LightVertex = next();
 
-    console.log('SIZEOF Client: ', result);
-
     console.assert(index == EXPECT_SIZES,
             'some items were left over after building sizeof', index, EXPECT_SIZES);
 
@@ -177,7 +173,6 @@ DynAsm.prototype.initClient = function(assets) {
     var idx = 0;
     var this_ = this;
     var load_blob = function(x) {
-        console.log(x);
         var len = x.byteLength;
         var addr = this_._raw['asmmalloc_alloc'](len, 4);
         this_._memcpy(addr, x);
@@ -271,7 +266,6 @@ Asm.prototype._makeView = function(type, offset, bytes) {
 };
 
 Asm.prototype.memcpy = function(dest_offset, data) {
-    console.log(data.constructor);
     if (data.constructor !== window.ArrayBuffer) {
         memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
     } else {
