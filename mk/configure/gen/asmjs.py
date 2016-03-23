@@ -31,15 +31,18 @@ def rules(i):
         em_pass_remove_assume = %{passes('RemoveAssume.so')}
 
 
+        # See comment in native.py about this sed command
         rule asm_compile_rlib
             command = %compile_base --emit=link,dep-info $
-                --crate-type=rlib --crate-name=$crate_name
+                --crate-type=rlib --crate-name=$crate_name $
+                && sed -i -e '\,^$out: ,p;d' $b_asmjs/$crate_name.d
             depfile = $b_asmjs/$crate_name.d
             description = RUSTC $out
 
         rule asm_compile_ir
             # Like opt-level=3 above, lto is mandatory to prevent emscripten-fastcomp errors.
-            command = %compile_base --emit=llvm-ir,dep-info --crate-type=staticlib -C lto
+            command = %compile_base --emit=llvm-ir,dep-info --crate-type=staticlib -C lto $
+                && sed -i -e '\,^$out: ,p;d' $b_asmjs/$crate_name.d
             depfile = $b_asmjs/$crate_name.d
             description = RUSTC $out
 

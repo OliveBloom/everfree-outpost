@@ -105,6 +105,9 @@ PackReader.prototype._startReadItem = function() {
         case 'image':
             this._startReadImage(entry);
             break;
+        case 'binary':
+            this._startReadBinary(entry);
+            break;
         case 'url':
             this._startReadUrl(entry);
             break;
@@ -160,6 +163,19 @@ PackReader.prototype._startReadImage = function(entry) {
 PackReader.prototype._finishReadImage = function(name, img) {
     this.assets[name] = img;
     img.onloadend = null;
+    this._finishReadItem();
+};
+
+PackReader.prototype._startReadBinary = function(entry) {
+    var this_ = this;
+    this.fr.onloadend = function() { this_._finishReadBinary(entry['name']); };
+    var base = 4 + this.index_bytes + entry['offset'];
+    this.fr.readAsArrayBuffer(this.blob.slice(base, base + entry['length']));
+};
+
+PackReader.prototype._finishReadBinary = function(name) {
+    checkError(this.fr.error, name);
+    this.assets[name] = this.fr.result;
     this._finishReadItem();
 };
 

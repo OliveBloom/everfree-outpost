@@ -293,6 +293,10 @@ if __name__ == '__main__':
         data.server_json('$b_data/server.json'),
         data.ui_atlas('$b_data', '$root/assets/ui_gl/png'),
         data.process(),
+        data.binary_defs('$b_data/blocks_client.json', 'blocks'),
+        data.binary_defs('$b_data/structures_client.json', 'templates'),
+        data.binary_defs('$b_data/structure_parts_client.json', 'template_parts'),
+        data.binary_defs('$b_data/structure_verts_client.json', 'template_verts'),
         data.pack(),
         data.credits('$b_data/credits.html'),
 

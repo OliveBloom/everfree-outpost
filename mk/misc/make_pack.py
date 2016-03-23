@@ -44,6 +44,11 @@ def main(src_dir, build_dir, out_file):
     add('json', 'day_night',            build('day_night.json'))
     add('json', 'ui_atlas_parts',       build('ui_atlas.json'))
 
+    add('binary', 'block_defs_bin',     build('blocks_client.bin'))
+    add('binary', 'template_defs_bin',  build('structures_client.bin'))
+    add('binary', 'template_part_defs_bin', build('structure_parts_client.bin'))
+    add('binary', 'template_vert_defs_bin', build('structure_verts_client.bin'))
+
     add('text', 'sprite.vert',          src('assets/shaders/sprite.vert'))
     add('text', 'sprite.frag',          src('assets/shaders/sprite.frag'))
     add('text', 'app_pony.frag',        src('assets/shaders/app_pony.frag'))
