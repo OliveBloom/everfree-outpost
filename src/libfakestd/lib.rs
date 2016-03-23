@@ -20,6 +20,10 @@ extern crate asmrt;
 extern crate asmmalloc;     // Pull in the asm.js #[allocator] crate
 
 
+// Needed for macros
+pub use asmrt::{raw_print, raw_println};
+
+
 // The `pub use`s below match the list in libstd/lib.rs
 pub use core::{
     any,

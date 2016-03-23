@@ -70,6 +70,8 @@ var Physics = require('physics').Physics;
 var Prediction = require('physics').Prediction;
 var DummyPrediction = require('physics').DummyPrediction;
 
+var DynAsm = require('asmlibs').DynAsm;
+
 var net = require('net');
 var Timing = require('time').Timing;
 
@@ -138,6 +140,8 @@ var debug_menu;
 var runner;
 var assets;
 
+
+var asm_client;
 
 var entities;
 var player_entity;
@@ -210,13 +214,15 @@ function init() {
     runner = new BackgroundJobRunner();
     assets = null;
 
+    asm_client = new DynAsm();
+
     entities = {};
     player_entity = -1;
     structures = {};
 
     chunks = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return new Chunk(); });
     chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
-    physics = new Physics();
+    //physics = new Physics();
     prediction = Config.motion_prediction.get() ? new Prediction(physics) : new DummyPrediction();
 
     renderer = null;
@@ -236,9 +242,9 @@ function init() {
 
     checkBrowser(dialog, function() {
         loadAssets(function() {
-            renderer = new Renderer(canvas.ctx, assets);
-            renderer.initData(BlockDef.by_id, TemplateDef.by_id,
-                    TemplatePart.by_index, assets['template_vert_defs']);
+            //renderer = new Renderer(canvas.ctx, assets);
+            //renderer.initData(BlockDef.by_id, TemplateDef.by_id,
+                    //TemplatePart.by_index, assets['template_vert_defs']);
             ui_renderer = new UIRenderContext(canvas.ctx, assets);
             runner.job('preload-textures', preloadTextures);
 
@@ -246,6 +252,8 @@ function init() {
             day_night = new DayNight(assets);
 
             ui_gl.hotbar.init();
+
+            asm_client.initClient(assets);
 
             var info = assets['server_info'];
             openConn(info, function() {

@@ -1,5 +1,5 @@
-use core::ops::{Deref, DerefMut};
-use core::ptr;
+use std::prelude::v1::*;
+use std::ops::{Deref, DerefMut};
 
 pub use self::geom::{Vertex, GeomGen};
 
@@ -22,47 +22,35 @@ pub struct Structure {
 }
 
 
-pub struct Buffer<'a> {
-    /// Some space to store the actual structure data.
-    storage: &'a mut [Structure],
-
-    /// The number of structures currently present in the buffer.  Slots `0 .. len` of `storage`
-    /// contain valid data.
-    len: usize,
+pub struct Buffer {
+    storage: Vec<Structure>,
 }
 
-impl<'a> Buffer<'a> {
-    pub unsafe fn init(&mut self, storage: &'a mut [Structure]) {
-        ptr::write(&mut self.storage, storage);
-        self.len = 0;
+impl Buffer {
+    pub fn new() -> Buffer {
+        Buffer {
+            storage: Vec::new(),
+        }
     }
 
     pub fn insert(&mut self,
                   external_id: u32,
                   pos: (u8, u8, u8),
-                  template_id: u32) -> Option<usize> {
-        if self.len >= self.storage.len() {
-            // No space for more structures.
-            return None;
-        }
-
-        let idx = self.len;
-        self.storage[idx] = Structure {
+                  template_id: u32) -> usize {
+        self.storage.push(Structure {
             pos: pos,
             external_id: external_id,
             template_id: template_id as u16,
             oneshot_start: 0,
-        };
-        self.len += 1;
-
-        Some(idx)
+        });
+        self.storage.len() - 1
     }
 
     pub fn remove(&mut self,
                   idx: usize) -> u32 {
         // Do a sort of `swap_remove`, except we don't need to return the old value.
-        self.storage[idx] = self.storage[self.len - 1];
-        self.len -= 1;
+        self.storage[idx] = self.storage[self.storage.len() - 1];
+        self.storage.pop();
 
         // Return the external ID of the structure that now occupies slot `idx`, so the caller can
         // update their records.
@@ -70,16 +58,16 @@ impl<'a> Buffer<'a> {
     }
 }
 
-impl<'a> Deref for Buffer<'a> {
+impl Deref for Buffer {
     type Target = [Structure];
 
     fn deref(&self) -> &[Structure] {
-        &self.storage[.. self.len]
+        &self.storage
     }
 }
 
-impl<'a> DerefMut for Buffer<'a> {
+impl DerefMut for Buffer {
     fn deref_mut(&mut self) -> &mut [Structure] {
-        &mut self.storage[.. self.len]
+        &mut self.storage
     }
 }

@@ -1,4 +1,6 @@
-use core::ptr;
+use std::prelude::v1::*;
+use std::ops::{Deref, DerefMut};
+use std::ptr;
 
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
@@ -28,44 +30,74 @@ pub struct Vertex {
 }
 
 
-pub struct GeomGen<'a> {
-    buffer: &'a Buffer<'a>,
-    templates: &'a [StructureTemplate],
-    parts: &'a [TemplatePart],
-    verts: &'a [TemplateVertex],
+pub struct TemplateData {
+    pub templates: Box<[StructureTemplate]>,
+    pub parts: Box<[TemplatePart]>,
+    pub verts: Box<[TemplateVertex]>,
+}
 
+impl TemplateData {
+    pub fn new(templates: Box<[StructureTemplate]>,
+               parts: Box<[TemplatePart]>,
+               verts: Box<[TemplateVertex]>) -> TemplateData {
+        TemplateData {
+            templates: templates,
+            parts: parts,
+            verts: verts,
+        }
+    }
+
+    pub fn templates_ptr(&self) -> *mut StructureTemplate {
+        self.templates.as_ptr() as *mut _
+    }
+
+    pub fn template_parts_ptr(&self) -> *mut TemplatePart {
+        self.parts.as_ptr() as *mut _
+    }
+
+    pub fn template_verts_ptr(&self) -> *mut TemplateVertex {
+        self.verts.as_ptr() as *mut _
+    }
+}
+
+pub struct GeomGenState {
     bounds: Region<V2>,
     cur: usize,
     sheet: u8,
 }
 
-impl<'a> GeomGen<'a> {
-    pub unsafe fn init(&mut self,
-                       buffer: &'a Buffer<'a>,
-                       templates: &'a [StructureTemplate],
-                       parts: &'a [TemplatePart],
-                       verts: &'a [TemplateVertex]) {
-        ptr::write(&mut self.buffer, buffer);
-        ptr::write(&mut self.templates, templates);
-        ptr::write(&mut self.parts, parts);
-        ptr::write(&mut self.verts, verts);
-
-        ptr::write(&mut self.bounds, Region::new(scalar(0), scalar(0)));
-        self.cur = 0;
-        self.sheet = 0;
+impl GeomGenState {
+    pub fn new(bounds: Region<V2>, sheet: u8) -> GeomGenState {
+        GeomGenState {
+            bounds: bounds,
+            cur: 0,
+            sheet: sheet,
+        }
     }
+}
 
-    pub fn reset(&mut self, chunk_bounds: Region<V2>, sheet: u8) {
-        self.bounds = chunk_bounds * scalar(CHUNK_SIZE);
-        self.cur = 0;
-        self.sheet = sheet;
+pub struct GeomGen<'a> {
+    buffer: &'a Buffer,
+    data: &'a TemplateData,
+    state: &'a mut GeomGenState,
+}
+
+impl<'a> GeomGen<'a> {
+    pub fn new(buffer: &'a Buffer,
+               data: &'a TemplateData,
+               state: &'a mut GeomGenState) -> GeomGen<'a> {
+        GeomGen {
+            buffer: buffer,
+            data: data,
+            state: state,
+        }
     }
 
     pub fn generate(&mut self,
                     buf: &mut [Vertex],
                     idx: &mut usize) -> bool {
         while *idx < buf.len() {
-            if self.cur >= self.buffer.len {
+            if self.cur >= self.buffer.len() {
                 // No more structures
                 return false;
             }
@@ -73,7 +105,7 @@ impl<'a> GeomGen<'a> {
             let s = &self.buffer[self.cur];
             self.cur += 1;
 
-            let t = &self.templates[s.template_id as usize];
+            let t = &self.data.templates[s.template_id as usize];
 
             let s_pos = V3::new(s.pos.0 as i32,
                                 s.pos.1 as i32,
@@ -93,14 +125,14 @@ impl<'a> GeomGen<'a> {
 
             let i0 = t.part_idx as usize;
             let i1 = i0 + t.part_count as usize;
-            for p in &self.parts[i0 .. i1] {
+            for p in &self.data.parts[i0 .. i1] {
                 if p.sheet != self.sheet {
                     continue;
                 }
 
                 let j0 = p.vert_idx as usize;
                 let j1 = j0 + p.vert_count as usize;
-                for v in &self.verts[j0 .. j1] {
+                for v in &self.data.verts[j0 .. j1] {
                     buf[*idx] = Vertex {
                         vert_offset: (v.x, v.y, v.z),
                         anim_length: p.anim_length,
@@ -117,5 +149,18 @@ impl<'a> GeomGen<'a> {
         }
 
         true
+    }
+}
+
+impl<'a> Deref for GeomGen<'a> {
+    type Target = GeomGenState;
+    fn deref(&self) -> &GeomGenState {
+        &self.state
+    }
+}
+
+impl<'a> DerefMut for GeomGen<'a> {
+    fn deref_mut(&mut self) -> &mut GeomGenState {
+        &mut self.state
     }
 }

@@ -15,12 +15,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
 
     var abort = env.abort;
     var _llvm_trap = env.abort;
-    var _trace_ints = env.traceInts;
-    var _phys_trace = env.physTrace;
-    var _reset_phys_trace = env.resetPhysTrace;
     var _write_str = env.writeStr;
     var _flush_str = env.flushStr;
-    var _run_callback = env.runCallback;
     var Math_imul = global.Math.imul;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 
@@ -137,12 +133,42 @@ var asmlibs_code_raw = function(global, env, buffer) {
         return ret|0;
     }
 
+    function _llvm_cttz_i32(x) {
+        x = x|0;
+        var y = 0;
+        var n = 31;
+
+        if ((x|0) == 0) {
+            return 32;
+        }
+
+        y = (x << 16)|0; if ((y|0) != 0) { n = (n - 16)|0; x = (y|0); }
+        y = (x <<  8)|0; if ((y|0) != 0) { n = (n -  8)|0; x = (y|0); }
+        y = (x <<  4)|0; if ((y|0) != 0) { n = (n -  4)|0; x = (y|0); }
+        y = (x <<  2)|0; if ((y|0) != 0) { n = (n -  2)|0; x = (y|0); }
+        y = (x <<  1)|0; if ((y|0) != 0) { n = (n -  1)|0; x = (y|0); }
+        return (n|0);
+    }
+
     // INSERT_EMSCRIPTEN_FUNCTIONS
 
     return ({
         __adjust_stack: __adjust_stack,
         get_sizes: _get_sizes,
 
+        asmlibs_init: _asmlibs_init,
+
+        asmmalloc_init: _asmmalloc_init,
+        asmmalloc_reinit: _asmmalloc_reinit,
+        asmmalloc_max_allocated_address: _asmmalloc_max_allocated_address,
+        asmmalloc_alloc: _asmmalloc_alloc,
+        asmmalloc_free: _asmmalloc_free,
+        asmmalloc_debug_print: _asmmalloc_debug_print,
+
+        data_init: _data_init,
+        client_init: _client_init,
+
+        /*
         collide: _collide,
         set_region_shape: _set_region_shape,
         refresh_shape_cache: _refresh_shape_cache,
@@ -165,14 +191,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
         light_geom_reset: _light_geom_reset,
         light_geom_generate: _light_geom_generate,
 
-        asmmalloc_init: _asmmalloc_init,
-        asmmalloc_reinit: _asmmalloc_reinit,
-        asmmalloc_max_allocated_address: _asmmalloc_max_allocated_address,
-        asmmalloc_alloc: _asmmalloc_alloc,
-        asmmalloc_free: _asmmalloc_free,
-        asmmalloc_debug_print: _asmmalloc_debug_print,
-
         test: _test,
+        */
     });
 };
 

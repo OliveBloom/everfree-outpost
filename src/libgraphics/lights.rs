@@ -1,4 +1,6 @@
-use core::ptr;
+use std::prelude::v1::*;
+use std::ops::{Deref, DerefMut};
+use std::ptr;
 
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
@@ -30,29 +32,37 @@ impl IntrusiveCorner for Vertex {
     fn corner_mut(&mut self) -> &mut (u8, u8) { &mut self.corner }
 }
 
-pub struct GeomGen<'a> {
-    buffer: &'a Buffer<'a>,
-    templates: &'a [StructureTemplate],
-
+pub struct GeomGenState {
     bounds: Region<V2>,
     cur: usize,
 }
 
+impl GeomGenState {
+    pub fn new(bounds: Region<V2>) -> GeomGenState {
+        GeomGenState {
+            bounds: bounds,
+            cur: 0,
+        }
+    }
+}
+
+pub struct GeomGen<'a> {
+    buffer: &'a Buffer,
+    templates: &'a [StructureTemplate],
+    state: &'a mut GeomGenState,
+}
+
 impl<'a> GeomGen<'a> {
-    pub unsafe fn init(&mut self,
-                       buffer: &'a Buffer<'a>,
-                       templates: &'a [StructureTemplate]) {
-        ptr::write(&mut self.buffer, buffer);
-        ptr::write(&mut self.templates, templates);
-
-        ptr::write(&mut self.bounds, Region::new(scalar(0), scalar(0)));
-        self.cur = 0;
+    pub fn new(buffer: &'a Buffer,
+               templates: &'a [StructureTemplate],
+               state: &'a mut GeomGenState) -> GeomGen<'a> {
+        GeomGen {
+            buffer: buffer,
+            templates: templates,
+            state: state,
+        }
     }
 
-    pub fn reset(&mut self, chunk_bounds: Region<V2>) {
-        self.bounds = chunk_bounds * scalar(CHUNK_SIZE * TILE_SIZE);
-        self.cur = 0;
-    }
 
     pub fn generate(&mut self,
                     buf: &mut [Vertex],
@@ -106,5 +116,18 @@ impl<'a> GeomGen<'a> {
         }
 
         true
+    }
+}
+
+impl<'a> Deref for GeomGen<'a> {
+    type Target = GeomGenState;
+    fn deref(&self) -> &GeomGenState {
+        &self.state
+    }
+}
+
+impl<'a> DerefMut for GeomGen<'a> {
+    fn deref_mut(&mut self) -> &mut GeomGenState {
+        &mut self.state
     }
 }

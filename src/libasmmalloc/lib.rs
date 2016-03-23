@@ -234,13 +234,14 @@ impl State {
 
         for free in self.iter_free() {
             let free = *free;
+            if free == self.sentinel() {
+                break;
+            }
+
             let free_size = (*free).hdr.size();
             // Early check
             if free_size < obj_size + HEADER_SIZE {
                 continue;
-            }
-            if free == self.sentinel() {
-                break;
             }
 
             let free_start = free as usize;

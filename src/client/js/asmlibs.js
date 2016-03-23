@@ -26,30 +26,13 @@ var HEAP_START = STACK_END;
 
 // External functions
 
-var msg_buffer = '';
+var module_env = function(buffer) {
+    var msg_buffer = '';
 
-var module_env = function(buffer, callback_array) {
     return ({
         'abort': function() {
             console.assert(false, 'abort');
             throw 'abort';
-        },
-
-        'traceInts': function(ptr, len) {
-            var arr = [];
-            var view = new Int32Array(buffer);
-            for (var i = 0; i < len; ++i) {
-                arr.push(view[(ptr >> 2) + i]);
-            }
-            console.log(arr);
-        },
-
-        'physTrace': function(x, y, w, h) {
-            window.physTrace.push([x, y, w, h]);
-        },
-
-        'resetPhysTrace': function() {
-            window.physTrace = [];
         },
 
         'writeStr': function(ptr, len) {
@@ -62,14 +45,6 @@ var module_env = function(buffer, callback_array) {
             msg_buffer = '';
         },
 
-        'runCallback': function(index, arg_base, arg_len) {
-            var cb = callback_array[index];
-            console.assert(cb != null, 'bad callback index: ', index);
-
-            var args = new Int32Array(buffer, arg_base, arg_len);
-            return cb.apply(window, args);
-        },
-
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,
     });
@@ -79,68 +54,16 @@ var module_env = function(buffer, callback_array) {
 // Helper functions
 
 function memcpy(dest_buffer, dest_offset, src_buffer, src_offset, len) {
+    console.log('memcpy', dest_buffer, dest_offset);
+    console.log('  from', src_buffer, src_offset, len);
     var dest = new Int8Array(dest_buffer, dest_offset, len);
     var src = new Int8Array(src_buffer, src_offset, len);
     dest.set(src);
 }
 
-
-// Buffer size computations
-var SIZEOF = (function() {
-    var buffer = new ArrayBuffer((HEAP_START + 0xffff) & ~0xffff);
-    memcpy(buffer, STATIC_START,
-            static_data.buffer, static_data.byteOffset, static_data.byteLength);
-    var asm = module(window, module_env(buffer), buffer);
-
-    var EXPECT_SIZES = 16;
-    var alloc = ((1 + EXPECT_SIZES) * 4 + 7) & ~7;
-    var base = asm['__adjust_stack'](alloc);
-
-    asm['get_sizes'](base + 4, base);
-
-    var view = new Int32Array(buffer, base, 1 + EXPECT_SIZES);
-    console.assert(view[0] == EXPECT_SIZES,
-            'expected sizes for ' + EXPECT_SIZES + ' types, but got ' + view[0]);
-
-    var sizeof = {};
-    var index = 0;
-    var next = function() { return view[1 + index++]; };
-
-    sizeof.ShapeChunk = next();
-    sizeof.ShapeLayers = next();
-
-    sizeof.BlockData = next();
-    sizeof.BlockChunk = next();
-    sizeof.LocalChunks = next();
-
-    sizeof.Structure = next();
-
-    sizeof.TerrainVertex = next();
-    sizeof.TerrainGeomGen = next();
-
-    sizeof.StructureTemplate = next();
-    sizeof.TemplatePart = next();
-    sizeof.TemplateVertex = next();
-    sizeof.StructureBuffer = next();
-    sizeof.StructureVertex = next();
-    sizeof.StructureGeomGen = next();
-
-    sizeof.LightVertex = next();
-    sizeof.LightGeomGen = next();
-
-    console.assert(index == EXPECT_SIZES,
-            'some items were left over after building sizeof', index, EXPECT_SIZES);
-
-    return sizeof;
-})();
-exports.SIZEOF = SIZEOF;
-
-
-// window.Asm wrapper
-
 function next_heap_size(size) {
     // "the heap object's byteLength must be either 2^n for n in [12, 24) or
-    // 2^24 * n for n ≥ 1"
+    // 2^24 * n for n >= 1"
     if (size <= (1 << 12)) {
         return (1 << 12);
     } else if (size >= (1 << 24)) {
@@ -155,6 +78,153 @@ function next_heap_size(size) {
         return (1 << 24);
     }
 }
+
+INIT_HEAP_SIZE = 4 * 1024 * 1024;
+HEAP_PADDING = 256 * 1024;
+
+/** @constructor */
+function DynAsm() {
+    this.buffer = new ArrayBuffer(next_heap_size(INIT_HEAP_SIZE));
+    this._memcpy(STATIC_START, static_data);
+    this._raw = module(window, module_env(this.buffer), this.buffer);
+
+    this._raw['asmlibs_init']();
+    this._raw['asmmalloc_init'](HEAP_START, this.buffer.byteLength);
+
+    this.client = null;
+    this.SIZEOF = this._calcSizeof();
+}
+exports.DynAsm = DynAsm;
+
+DynAsm.prototype._grow = function(size) {
+    var old_buffer = this.buffer;
+
+    this.buffer = new ArrayBuffer(next_heap_size(size));
+    this._memcpy(0, old_buffer);
+    this._raw = module(window, module_env(this.buffer), this.buffer);
+
+    this._raw['asmmalloc_reinit'](this.buffer.byteLength);
+};
+
+DynAsm.prototype._heapCheck = function() {
+    var max = this._raw['asmmalloc_max_allocated_address'];
+    if (max >= this.buffer.length - HEAP_PADDING) {
+        this._grow(this.buffer.byteLength * 2);
+    }
+};
+
+DynAsm.prototype._calcSizeof = function() {
+    var EXPECT_SIZES = 12;
+    var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
+
+    var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
+    console.assert(num_sizes == EXPECT_SIZES,
+            'expected sizes for ' + EXPECT_SIZES + ' types, but got ' + num_sizes);
+
+    var index = 0;
+    var next = function() { return sizes[index++]; };
+    var result = {};
+
+    result.Client = next();
+    result.ClientAlignment = next();
+    result.Data = next();
+
+    result.BlockData = next();
+    result.StructureTemplate = next();
+    result.TemplatePart = next();
+    result.TemplateVertex = next();
+
+    result.BlockChunk = next();
+    result.Structure = next();
+
+    result.TerrainVertex = next();
+    result.StructureVertex = next();
+    result.LightVertex = next();
+
+    console.log('SIZEOF Client: ', result);
+
+    console.assert(index == EXPECT_SIZES,
+            'some items were left over after building sizeof', index, EXPECT_SIZES);
+
+    return result;
+};
+
+DynAsm.prototype._stackAlloc = function(type, count) {
+    var size = count * type.BYTES_PER_ELEMENT;
+    var base = this._raw['__adjust_stack']((size + 7) & ~7);
+    return new type(this.buffer, base, count);
+};
+
+DynAsm.prototype._stackFree = function(view) {
+    var size = view.byteLength;
+    this._raw['__adjust_stack'](-((size + 7) & ~7));
+};
+
+DynAsm.prototype._makeView = function(type, offset, bytes) {
+    return new type(this.buffer, offset, bytes / type.BYTES_PER_ELEMENT);
+};
+
+DynAsm.prototype._memcpy = function(dest_offset, data) {
+    if (data.constructor !== window.ArrayBuffer) {
+        memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
+    } else {
+        memcpy(this.buffer, dest_offset, data, 0, data.byteLength);
+    }
+};
+
+DynAsm.prototype.initClient = function(assets) {
+    var blobs = this._stackAlloc(Int32Array, 4 * 2);
+    var idx = 0;
+    var this_ = this;
+    var load_blob = function(x) {
+        console.log(x);
+        var len = x.byteLength;
+        var addr = this_._raw['asmmalloc_alloc'](len, 4);
+        this_._memcpy(addr, x);
+        blobs[idx++] = addr;
+        blobs[idx++] = len;
+    };
+
+    load_blob(assets['block_defs_bin']);
+    load_blob(assets['template_defs_bin']);
+    load_blob(assets['template_part_defs_bin']);
+    load_blob(assets['template_vert_defs_bin']);
+
+    var data = this._stackAlloc(Uint8Array, this.SIZEOF.Data);
+    // NB: takes ownership of `blobs`
+    this._raw['data_init'](blobs.byteOffset, data.byteOffset);
+
+    this.client = this._raw['asmmalloc_alloc'](this.SIZEOF.Client, this.SIZEOF.ClientAlignment);
+    // NB: takes ownership of `data`
+    this._raw['client_init'](data.byteOffset, this.client);
+
+    this._stackFree(data);
+    this._stackFree(blobs);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (false) {
+
+// window.Asm wrapper
 
 /** @constructor */
 function Asm(heap_size) {
@@ -201,7 +271,12 @@ Asm.prototype._makeView = function(type, offset, bytes) {
 };
 
 Asm.prototype.memcpy = function(dest_offset, data) {
-    memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
+    console.log(data.constructor);
+    if (data.constructor !== window.ArrayBuffer) {
+        memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
+    } else {
+        memcpy(this.buffer, dest_offset, data, 0, data.byteLength);
+    }
 };
 
 
@@ -248,7 +323,6 @@ Asm.prototype.setRegionShape = function(pos, size, layer, shape) {
     this._raw['set_region_shape'](SHAPE_LAYERS_START,
             input_bounds.byteOffset, layer,
             input_shape.byteOffset, input_shape.length);
-    this._raw['refresh_shape_cache'](SHAPE_LAYERS_START, input_bounds.byteOffset);
 
     this._stackFree(input_shape);
     this._stackFree(input_bounds);
@@ -269,7 +343,6 @@ Asm.prototype.clearRegionShape = function(pos, size, layer) {
     this._raw['set_region_shape'](PHYSICS_HEAP_START,
             input_bounds.byteOffset, layer,
             input_shape.byteOffset, input_shape.length);
-    this._raw['refresh_shape_cache'](PHYSICS_HEAP_START, input_bounds.byteOffset);
 
     this._stackFree(input_shape);
     this._stackFree(input_bounds);
@@ -552,3 +625,5 @@ AsmGraphics.prototype.lightGeomGenerate = function() {
 
 Asm.prototype.test = function() {
 };
+
+}

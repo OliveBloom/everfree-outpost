@@ -1,4 +1,6 @@
-use core::ptr;
+use std::prelude::v1::*;
+use std::ops::{Deref, DerefMut};
+use std::ptr;
 
 use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
@@ -26,28 +28,35 @@ impl IntrusiveCorner for Vertex {
 }
 
 
-pub struct GeomGen<'a> {
-    block_data: &'a [BlockData],
-    local_chunks: &'a LocalChunks,
-
+pub struct GeomGenState {
     cpos: V2,
     iter: RegionPoints<V3>,
 }
 
-impl<'a> GeomGen<'a> {
-    pub unsafe fn init(&mut self,
-                       block_data: &'a [BlockData],
-                       local_chunks: &'a LocalChunks) {
-        ptr::write(&mut self.block_data, block_data);
-        ptr::write(&mut self.local_chunks, local_chunks);
-
-        ptr::write(&mut self.cpos, scalar(0));
-        ptr::write(&mut self.iter, Region::new(scalar(0), scalar(0)).points());
+impl GeomGenState {
+    pub fn new(cpos: V2) -> GeomGenState {
+        GeomGenState {
+            cpos: cpos,
+            iter: Region::new(scalar(0), scalar::<V3>(CHUNK_SIZE)).points(),
+        }
     }
+}
 
-    pub fn reset(&mut self, cpos: V2) {
-        self.cpos = cpos;
-        self.iter = Region::new(scalar(0), scalar::<V3>(CHUNK_SIZE)).points();
+pub struct GeomGen<'a> {
+    local_chunks: &'a LocalChunks,
+    block_data: &'a [BlockData],
+    state: &'a mut GeomGenState,
+}
+
+impl<'a> GeomGen<'a> {
+    pub fn new(local_chunks: &'a LocalChunks,
+               block_data: &'a [BlockData],
+               state: &'a mut GeomGenState) -> GeomGen<'a> {
+        GeomGen {
+            local_chunks: local_chunks,
+            block_data: block_data,
+            state: state,
+        }
     }
 
     pub fn generate(&mut self,
@@ -91,5 +100,18 @@ impl<'a> GeomGen<'a> {
 
         // Stopped because the buffer is full.
         true
+    }
+}
+
+impl<'a> Deref for GeomGen<'a> {
+    type Target = GeomGenState;
+    fn deref(&self) -> &GeomGenState {
+        &self.state
+    }
+}
+
+impl<'a> DerefMut for GeomGen<'a> {
+    fn deref_mut(&mut self) -> &mut GeomGenState {
+        &mut self.state
     }
 }

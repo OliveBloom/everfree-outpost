@@ -269,7 +269,7 @@ pub trait Vn: Sized+Copy {
         <Self as Vn>::from_fn(|a| if a == axis { mag } else { self.get(a) })
     }
 
-    #[inline]
+    #[inline(always)]
     fn div_floor(self, other: Self) -> Self {
         self.zip(other, |a, b| div_floor(a, b))
     }
