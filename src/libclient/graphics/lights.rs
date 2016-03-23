@@ -36,14 +36,14 @@ impl IntrusiveCorner for Vertex {
 
 pub struct GeomGenState {
     bounds: Region<V2>,
-    cur: usize,
+    next: u32,
 }
 
 impl GeomGenState {
     pub fn new(bounds: Region<V2>) -> GeomGenState {
         GeomGenState {
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
-            cur: 0,
+            next: 0,
         }
     }
 }
@@ -69,15 +69,8 @@ impl<'a> GeomGen<'a> {
     pub fn generate(&mut self,
                     buf: &mut [Vertex],
                     idx: &mut usize) -> bool {
-        false
-            /*
-        while remaining_quads(buf, *idx) >= 1 {
-            if self.cur >= self.buffer.len() {
-                return false;
-            }
-
-            let s = &self.buffer[self.cur];
-            self.cur += 1;
+        for (&id, s) in self.buffer.iter_from(self.state.next) {
+            self.state.next = id;
 
             let t = &self.templates[s.template_id as usize];
 
@@ -97,8 +90,8 @@ impl<'a> GeomGen<'a> {
 
             // Do a wrapped version of `self.bounds.contains(center)`.
             const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
-            let wrapped_center = (center.reduce() - self.bounds.min) & scalar(MASK);
-            let wrapped_bounds = self.bounds - self.bounds.min;
+            let wrapped_center = (center.reduce() - self.state.bounds.min) & scalar(MASK);
+            let wrapped_bounds = self.state.bounds - self.state.bounds.min;
             if !wrapped_bounds.contains(wrapped_center) {
                 continue;
             }
@@ -119,20 +112,7 @@ impl<'a> GeomGen<'a> {
             });
         }
 
-        true
-        */
-    }
-}
-
-impl<'a> Deref for GeomGen<'a> {
-    type Target = GeomGenState;
-    fn deref(&self) -> &GeomGenState {
-        &self.state
-    }
-}
-
-impl<'a> DerefMut for GeomGen<'a> {
-    fn deref_mut(&mut self) -> &mut GeomGenState {
-        &mut self.state
+        // Ran out of structures - we're done.
+        false
     }
 }
