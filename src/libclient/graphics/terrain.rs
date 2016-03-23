@@ -4,12 +4,12 @@ use std::ptr;
 
 use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
-use ATLAS_SIZE;
-use LOCAL_SIZE;
 
-use IntrusiveCorner;
-use {emit_quad, remaining_quads};
-use types::{BlockData, LocalChunks};
+use graphics::ATLAS_SIZE;
+use graphics::LOCAL_SIZE;
+use graphics::IntrusiveCorner;
+use graphics::{emit_quad, remaining_quads};
+use graphics::types::{BlockData, LocalChunks};
 
 
 /// Vertex attributes for terrain.

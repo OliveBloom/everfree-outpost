@@ -1,5 +1,5 @@
 use physics::{CHUNK_BITS, Shape};
-use LOCAL_BITS;
+use graphics::LOCAL_BITS;
 
 
 /// Tile numbers used to display a particular block.

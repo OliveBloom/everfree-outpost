@@ -264,11 +264,10 @@ if __name__ == '__main__':
                 'asmrt', 'asmmalloc')),
             asmjs.rlib('bitflags', ('core',), i.rust_libbitflags_src),
             asmjs.rlib('physics', ('fakestd', 'bitflags')),
-            asmjs.rlib('graphics', ('fakestd', 'physics')),
-            asmjs.rlib('client', ('fakestd', 'physics', 'graphics')),
+            asmjs.rlib('client', ('fakestd', 'physics')),
             asmjs.asmlibs('asmlibs',
                 '$root/src/client/asmlibs.rs',
-                ('core', 'collections', 'asmrt', 'asmmalloc', 'physics', 'graphics', 'client'),
+                ('core', 'collections', 'asmrt', 'asmmalloc', 'physics', 'client'),
                 '$root/src/client/asmlibs_exports.txt',
                 '$root/src/client/asmlibs.tmpl.js'),
 

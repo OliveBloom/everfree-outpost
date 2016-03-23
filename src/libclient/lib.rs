@@ -9,7 +9,8 @@
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
 use std::prelude::v1::*;
 
-extern crate graphics;
+#[macro_use] extern crate bitflags;
+
 extern crate physics;
 
 pub use client::Client;
@@ -19,3 +20,4 @@ pub mod client;
 pub mod data;
 
 mod terrain;
+pub mod graphics;

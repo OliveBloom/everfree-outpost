@@ -5,7 +5,7 @@ use std::ptr;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
-use types::{StructureTemplate, TemplatePart, TemplateVertex};
+use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
 
 use super::Buffer;
 

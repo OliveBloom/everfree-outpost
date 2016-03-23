@@ -5,11 +5,11 @@ use std::ptr;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
-use IntrusiveCorner;
-use {emit_quad, remaining_quads};
-use LOCAL_BITS;
-use types::{StructureTemplate, HAS_LIGHT};
-use structures::Buffer;
+use graphics::IntrusiveCorner;
+use graphics::{emit_quad, remaining_quads};
+use graphics::LOCAL_BITS;
+use graphics::types::{StructureTemplate, HAS_LIGHT};
+use graphics::structures::Buffer;
 
 
 #[derive(Clone, Copy)]

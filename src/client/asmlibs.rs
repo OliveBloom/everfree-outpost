@@ -10,7 +10,6 @@ extern crate alloc;
 
 extern crate client;
 extern crate physics;
-extern crate graphics;
 
 use std::intrinsics;
 use std::iter;
@@ -26,10 +25,10 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 use physics::{Shape, ShapeSource};
 use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE, TILE_BITS};
 
-use graphics::lights;
-use graphics::structures;
-use graphics::terrain;
-use graphics::types as gfx_types;
+use client::graphics::lights;
+use client::graphics::structures;
+use client::graphics::terrain;
+use client::graphics::types as gfx_types;
 
 
 // Physics
