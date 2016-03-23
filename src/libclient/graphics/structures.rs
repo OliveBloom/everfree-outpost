@@ -5,6 +5,7 @@ use std::ptr;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
+use data::Data;
 use structures::Structures;
 
 use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
@@ -30,36 +31,6 @@ pub struct Vertex {
 }
 
 
-pub struct TemplateData {
-    pub templates: Box<[StructureTemplate]>,
-    pub parts: Box<[TemplatePart]>,
-    pub verts: Box<[TemplateVertex]>,
-}
-
-impl TemplateData {
-    pub fn new(templates: Box<[StructureTemplate]>,
-               parts: Box<[TemplatePart]>,
-               verts: Box<[TemplateVertex]>) -> TemplateData {
-        TemplateData {
-            templates: templates,
-            parts: parts,
-            verts: verts,
-        }
-    }
-
-    pub fn templates_ptr(&self) -> *mut StructureTemplate {
-        self.templates.as_ptr() as *mut _
-    }
-
-    pub fn template_parts_ptr(&self) -> *mut TemplatePart {
-        self.parts.as_ptr() as *mut _
-    }
-
-    pub fn template_verts_ptr(&self) -> *mut TemplateVertex {
-        self.verts.as_ptr() as *mut _
-    }
-}
-
 pub struct GeomGenState {
     bounds: Region<V2>,
     next: u32,
@@ -78,13 +49,13 @@ impl GeomGenState {
 
 pub struct GeomGen<'a> {
     buffer: &'a Structures,
-    data: &'a TemplateData,
+    data: &'a Data,
     state: &'a mut GeomGenState,
 }
 
 impl<'a> GeomGen<'a> {
     pub fn new(buffer: &'a Structures,
-               data: &'a TemplateData,
+               data: &'a Data,
                state: &'a mut GeomGenState) -> GeomGen<'a> {
         GeomGen {
             buffer: buffer,
@@ -119,14 +90,14 @@ impl<'a> GeomGen<'a> {
 
             let i0 = t.part_idx as usize;
             let i1 = i0 + t.part_count as usize;
-            for p in &self.data.parts[i0 .. i1] {
+            for p in &self.data.template_parts[i0 .. i1] {
                 if p.sheet != self.state.sheet {
                     continue;
                 }
 
                 let j0 = p.vert_idx as usize;
                 let j1 = j0 + p.vert_count as usize;
-                for v in &self.data.verts[j0 .. j1] {
+                for v in &self.data.template_verts[j0 .. j1] {
                     buf[*idx] = Vertex {
                         vert_offset: (v.x, v.y, v.z),
                         anim_length: p.anim_length,

@@ -81,7 +81,7 @@ impl Client {
 
     pub fn terrain_geom_generate(&mut self, buf: &mut [g_terrain::Vertex]) -> (usize, bool) {
         let mut gen = g_terrain::GeomGen::new(&self.chunks,
-                                              &self.data.block_data,
+                                              &self.data.blocks,
                                               &mut self.terrain_geom_gen);
         let mut idx = 0;
         let more = gen.generate(buf, &mut idx);
@@ -111,7 +111,7 @@ impl Client {
     pub fn structure_geom_generate(&mut self,
                                    buf: &mut [g_structures::Vertex]) -> (usize, bool) {
         let mut gen = g_structures::GeomGen::new(&self.structures,
-                                                 &self.data.template_data,
+                                                 &self.data,
                                                  &mut self.structure_geom_gen);
         let mut idx = 0;
         let more = gen.generate(buf, &mut idx);
@@ -126,7 +126,7 @@ impl Client {
     pub fn light_geom_generate(&mut self,
                                    buf: &mut [lights::Vertex]) -> (usize, bool) {
         let mut gen = lights::GeomGen::new(&self.structures,
-                                           &self.data.template_data.templates,
+                                           &self.data.templates,
                                            &mut self.light_geom_gen);
         let mut idx = 0;
         let more = gen.generate(buf, &mut idx);

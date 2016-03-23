@@ -5,34 +5,22 @@ use graphics::types::{BlockData, StructureTemplate, TemplatePart, TemplateVertex
 
 
 pub struct Data {
-    pub template_data: structures::TemplateData,
-    pub block_data: Box<[BlockData]>,
+    pub blocks: Box<[BlockData]>,
+    pub templates: Box<[StructureTemplate]>,
+    pub template_parts: Box<[TemplatePart]>,
+    pub template_verts: Box<[TemplateVertex]>,
 }
 
 impl Data {
-    pub fn new(block_data: Box<[BlockData]>,
+    pub fn new(blocks: Box<[BlockData]>,
                templates: Box<[StructureTemplate]>,
-               parts: Box<[TemplatePart]>,
-               verts: Box<[TemplateVertex]>) -> Data {
+               template_parts: Box<[TemplatePart]>,
+               template_verts: Box<[TemplateVertex]>) -> Data {
         Data {
-            template_data: structures::TemplateData::new(templates, parts, verts),
-            block_data: block_data,
+            blocks: blocks,
+            templates: templates,
+            template_parts: template_parts,
+            template_verts: template_verts,
         }
-    }
-
-    pub fn blocks_ptr(&self) -> *mut BlockData {
-        self.block_data.as_ptr() as *mut _
-    }
-
-    pub fn templates_ptr(&self) -> *mut StructureTemplate {
-        self.template_data.templates_ptr()
-    }
-
-    pub fn template_parts_ptr(&self) -> *mut TemplatePart {
-        self.template_data.template_parts_ptr()
-    }
-
-    pub fn template_verts_ptr(&self) -> *mut TemplateVertex {
-        self.template_data.template_verts_ptr()
     }
 }
