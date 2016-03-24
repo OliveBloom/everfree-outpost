@@ -186,7 +186,6 @@ var asmlibs_code_raw = function(global, env, buffer) {
         floodfill: _floodfill,
 
         update_terrain_geometry: _update_terrain_geometry,
-        invalidate_terrain_geometry: _invalidate_terrain_geometry,
         get_terrain_geometry_buffer: _get_terrain_geometry_buffer,
         structure_geom_reset: _structure_geom_reset,
         structure_geom_generate: _structure_geom_generate,

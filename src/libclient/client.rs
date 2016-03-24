@@ -52,9 +52,11 @@ impl<GL: GlContext> Client<GL> {
 
 
     pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
+        // Update self.chunks
         let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
         self.chunks[bounds.index(cpos)] = *blocks;
 
+        // Update self.terrain_shape
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
                            (cpos * scalar(CHUNK_SIZE)).extend(0);
         let block_data = &self.data.blocks;
@@ -62,6 +64,9 @@ impl<GL: GlContext> Client<GL> {
             let b = blocks[chunk_bounds.index(pos)];
             block_data[b as usize].shape
         });
+
+        // Notify renderer to rebuild geometry
+        self.renderer.invalidate_terrain_geometry();
     }
 
     pub fn structure_appear(&mut self,
@@ -126,7 +131,6 @@ impl<GL: GlContext> Client<GL> {
     }
 
     pub fn invalidate_terrain_geometry(&mut self) {
-        self.renderer.invalidate_terrain_geometry();
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {

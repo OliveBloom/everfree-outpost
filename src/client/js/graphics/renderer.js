@@ -195,7 +195,6 @@ RenderData.prototype.loadBlockData = function(blocks) {
 RenderData.prototype.loadChunk = function(i, j, chunk) {
     this._asm.loadTerrainChunk(j, i, chunk._tiles);
 
-    this._asm.invalidateTerrainGeometry();
     this.cavern_map.invalidate();
 };
 
