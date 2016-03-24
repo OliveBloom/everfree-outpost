@@ -13,13 +13,14 @@ use physics::Shape;
 use physics::v3::{V3, V2, scalar, Region};
 
 use data::Data;
+use graphics::types::StructureTemplate;
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 
 
-pub struct Client<GL: GlContext> {
-    data: Data,
+pub struct Client<'d, GL: GlContext> {
+    data: &'d Data,
 
     chunks: Box<LocalChunks>,
     terrain_shape: Box<TerrainShape>,
@@ -28,8 +29,8 @@ pub struct Client<GL: GlContext> {
     renderer: Renderer<GL>,
 }
 
-impl<GL: GlContext> Client<GL> {
-    pub fn new(data: Data, gl: GL) -> Client<GL> {
+impl<'d, GL: GlContext> Client<'d, GL> {
+    pub fn new(data: &'d Data, gl: GL) -> Client<'d, GL> {
         Client {
             data: data,
 
@@ -42,12 +43,28 @@ impl<GL: GlContext> Client<GL> {
     }
 
 
+    pub fn reset_all(&mut self) {
+        for chunk in self.chunks.iter_mut() {
+            for block in chunk.iter_mut() {
+                *block = 0;
+            }
+        }
+
+        self.terrain_shape.clear();
+        self.structures.clear();
+
+        self.renderer.invalidate_terrain_geometry();
+        self.renderer.invalidate_structure_geometry();
+        self.renderer.invalidate_light_geometry();
+    }
+
+
     pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
         // Update self.chunks
         let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
         self.chunks[bounds.index(cpos)] = *blocks;
 
-        // Refresh self.terrain_shape
+        // Update self.terrain_shape
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
                            (cpos * scalar(CHUNK_SIZE)).extend(0);
         let block_data = &self.data.blocks;
@@ -60,6 +77,27 @@ impl<GL: GlContext> Client<GL> {
         self.renderer.invalidate_terrain_geometry();
     }
 
+
+    pub fn add_structure_shape(&mut self,
+                               t: &StructureTemplate,
+                               pos: (u8, u8, u8)) {
+        let pos = util::unpack_v3(pos);
+        let size = util::unpack_v3(t.size);
+        let bounds = Region::new(pos, pos + size);
+        let base = t.shape_idx as usize;
+        let shape = &self.data.template_shapes[base .. base + bounds.volume() as usize];
+        self.terrain_shape.set_shape_in_region(bounds, 1 + t.layer as usize, shape);
+    }
+
+    pub fn remove_structure_shape(&mut self,
+                                  t: &StructureTemplate,
+                                  pos: (u8, u8, u8)) {
+        let pos = util::unpack_v3(pos);
+        let size = util::unpack_v3(t.size);
+        let bounds = Region::new(pos, pos + size);
+        self.terrain_shape.fill_shape_in_region(bounds, 1 + t.layer as usize, Shape::Empty);
+    }
+
     pub fn structure_appear(&mut self,
                             id: u32,
                             pos: (u8, u8, u8),
@@ -68,14 +106,9 @@ impl<GL: GlContext> Client<GL> {
         // Update self.structures
         self.structures.insert(id, pos, template_id, oneshot_start);
 
-        // Refresh self.terrain_cache
+        // Update self.terrain_cache
         let t = &self.data.templates[template_id as usize];
-        let pos = util::unpack_v3(pos);
-        let size = util::unpack_v3(t.size);
-        let bounds = Region::new(pos, pos + size);
-        let base = t.shape_idx as usize;
-        let shape = &self.data.template_shapes[base .. base + bounds.volume() as usize];
-        self.terrain_shape.set_shape_in_region(bounds, 1 + t.layer as usize, shape);
+        self.add_structure_shape(t, pos);
 
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
@@ -89,12 +122,9 @@ impl<GL: GlContext> Client<GL> {
         // Update self.structures
         let s = self.structures.remove(id);
 
-        // Refresh self.terrain_cache
+        // Update self.terrain_cache
         let t = &self.data.templates[s.template_id as usize];
-        let pos = util::unpack_v3(s.pos);
-        let size = util::unpack_v3(t.size);
-        let bounds = Region::new(pos, pos + size);
-        self.terrain_shape.fill_shape_in_region(bounds, 1 + t.layer as usize, Shape::Empty);
+        self.remove_structure_shape(t, s.pos);
 
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
@@ -107,8 +137,25 @@ impl<GL: GlContext> Client<GL> {
                              id: u32,
                              template_id: u32,
                              oneshot_start: u16) {
+        let (pos, old_t) = {
+            let s = &self.structures[id];
+            (s.pos,
+             &self.data.templates[template_id as usize])
+        };
+        let new_t = &self.data.templates[template_id as usize];
+
+        // Update self.structures
         self.structures.replace(id, template_id, oneshot_start);
-        unimplemented!();
+
+        // Update self.terrain_cache
+        self.remove_structure_shape(old_t, pos);
+        self.add_structure_shape(new_t, pos);
+
+        // Invalidate cached geometry
+        self.renderer.invalidate_structure_geometry();
+        if old_t.flags.contains(HAS_LIGHT) || new_t.flags.contains(HAS_LIGHT) {
+            self.renderer.invalidate_light_geometry();
+        }
     }
 
 

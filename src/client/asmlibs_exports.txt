@@ -8,6 +8,7 @@ asmmalloc_debug_print
 asmlibs_init
 data_init
 client_init
+client_reset
 structure_appear
 structure_gone
 structure_replace

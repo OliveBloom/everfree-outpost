@@ -106,7 +106,7 @@ RenderData.prototype.loadChunk = function(i, j, chunk) {
 
 // Structure tracking
 
-RenderData.prototype.addStructure = function(now, id, x, y, z, template) {
+RenderData.prototype.addStructure = function(now, id, x, y, z, template_id) {
     var tx = (x / TILE_SIZE) & (LOCAL_SIZE * CHUNK_SIZE - 1);
     var ty = (y / TILE_SIZE) & (LOCAL_SIZE * CHUNK_SIZE - 1);
     var tz = (z / TILE_SIZE) & (LOCAL_SIZE * CHUNK_SIZE - 1);
@@ -115,18 +115,24 @@ RenderData.prototype.addStructure = function(now, id, x, y, z, template) {
     if (oneshot_start < 0) {
         oneshot_start += ONESHOT_MODULUS;
     }
-    var render_idx = this._asm.structureAppear(
-            id, tx, ty, tz, template.id, oneshot_start);
+    this._asm.structureAppear(id, tx, ty, tz, template_id, oneshot_start);
 
-    this._invalidateStructure(tx, ty, tz, template);
-    return render_idx;
+    this.cavern_map.invalidate();
 };
 
-RenderData.prototype.removeStructure = function(structure) {
-    this._asm.structureGone(structure.render_index);
+RenderData.prototype.removeStructure = function(id) {
+    this._asm.structureGone(id);
+    this.cavern_map.invalidate();
+};
 
-    var pos = structure.pos;
-    this._invalidateStructure(pos.x, pos.y, pos.z, structure.template);
+RenderData.prototype.replaceStructure = function(now, id, template_id) {
+    var oneshot_start = now % ONESHOT_MODULUS;
+    if (oneshot_start < 0) {
+        oneshot_start += ONESHOT_MODULUS;
+    }
+    this._asm.structureReplace(id, template_id, oneshot_start);
+
+    this.cavern_map.invalidate();
 };
 
 RenderData.prototype._invalidateStructure = function(x, y, z, template) {
@@ -395,12 +401,16 @@ Renderer.prototype.loadChunk = function(i, j, chunk) {
     this.data.loadChunk(i, j, chunk);
 };
 
-Renderer.prototype.addStructure = function(now, id, x, y, z, template) {
-    return this.data.addStructure(now, id, x, y, z, template);
+Renderer.prototype.addStructure = function(now, id, x, y, z, template_id) {
+    return this.data.addStructure(now, id, x, y, z, template_id);
 };
 
-Renderer.prototype.removeStructure = function(structure) {
-    return this.data.removeStructure(structure);
+Renderer.prototype.removeStructure = function(id) {
+    return this.data.removeStructure(id);
+};
+
+Renderer.prototype.replaceStructure = function(now, id, template_id) {
+    return this.data.replaceStructure(now, id, template_id);
 };
 
 Renderer.prototype.updateCavernMap = function(phys_asm, pos) {

@@ -145,7 +145,6 @@ var asm_client;
 
 var entities;
 var player_entity;
-var structures;
 
 var chunks;
 var chunkLoaded;
@@ -218,7 +217,6 @@ function init() {
 
     entities = {};
     player_entity = -1;
-    structures = {};
 
     chunks = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return new Chunk(); });
     chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
@@ -921,29 +919,17 @@ function handleEntityGone(id, time) {
 
 function handleStructureAppear(id, template_id, x, y, z) {
     var now = timing.visibleNow();
-    var template = TemplateDef.by_id[template_id];
-
-    renderer.addStructure(now, id, x, y, z, template);
-
-    var pos = new Vec(x, y, z).divScalar(TILE_SIZE);
-    structures[id] = new Structure(pos, template, id);
+    renderer.addStructure(now, id, x, y, z, template_id);
 }
 
 function handleStructureGone(id, time) {
     // TODO: pay attention to the time
-    if (structures[id] != null) {
-        renderer.removeStructure(structures[id]);
-    }
-    delete structures[id];
+    renderer.removeStructure(id);
 }
 
 function handleStructureReplace(id, template_id) {
-    if (structures[id] != null) {
-        var now = timing.visibleNow();
-        var pos = structures[id].pos.mulScalar(TILE_SIZE);
-        handleStructureGone(id, now);
-        handleStructureAppear(id, template_id, pos.x, pos.y, pos.z);
-    }
+    var now = timing.visibleNow();
+    renderer.replaceStructure(now, id, template_id);
 }
 
 function handleMainInventory(iid) {
@@ -1031,9 +1017,7 @@ function resetAll() {
     });
     player_entity = -1;
 
-    Object.getOwnPropertyNames(structures).forEach(function(id) {
-        handleStructureGone(id, now);
-    });
+    asm_client.resetClient();
 }
 
 

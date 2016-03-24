@@ -36,7 +36,7 @@ use client::graphics::types as gfx_types;
 mod asmgl;
 
 
-pub type Client = client::Client<asmgl::GL>;
+pub type Client<'d> = client::Client<'d, asmgl::GL>;
 
 
 // New API
@@ -67,8 +67,12 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 5],
 #[no_mangle]
 pub unsafe extern fn client_init(data_ptr: *const Data,
                                  out: *mut Client) {
-    let data = ptr::read(data_ptr);
-    ptr::write(out, Client::new(data, asmgl::GL::new()));
+    ptr::write(out, Client::new(&*data_ptr, asmgl::GL::new()));
+}
+
+#[no_mangle]
+pub unsafe extern fn client_reset(client: &mut Client) {
+    client.reset_all();
 }
 
 // Chunks
@@ -224,13 +228,7 @@ pub struct Sizes {
     client: usize,
     client_alignment: usize,
     data: usize,
-
-    block_data: usize,
-    structures_template: usize,
-    template_part: usize,
-    template_vertex: usize,
-
-    block_chunk: usize,
+    data_alignment: usize,
 
     terrain_vertex: usize,
     structure_vertex: usize,
@@ -245,13 +243,7 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
     sizes.client = size_of::<Client>();
     sizes.client_alignment = align_of::<Client>();
     sizes.data = size_of::<client::Data>();
-
-    sizes.block_data = size_of::<gfx_types::BlockData>();
-    sizes.structures_template = size_of::<gfx_types::StructureTemplate>();
-    sizes.template_part = size_of::<gfx_types::TemplatePart>();
-    sizes.template_vertex = size_of::<gfx_types::TemplateVertex>();
-
-    sizes.block_chunk = size_of::<gfx_types::BlockChunk>();
+    sizes.data_alignment = align_of::<client::Data>();
 
     sizes.terrain_vertex = size_of::<terrain::Vertex>();
     sizes.structure_vertex = size_of::<structure::Vertex>();

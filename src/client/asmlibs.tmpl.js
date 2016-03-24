@@ -173,6 +173,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
         asmlibs_init: _asmlibs_init,
         data_init: _data_init,
         client_init: _client_init,
+        client_reset: _client_reset,
 
         load_terrain_chunk: _load_terrain_chunk,
 

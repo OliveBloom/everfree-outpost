@@ -119,6 +119,7 @@ function DynAsm() {
     this._raw['asmlibs_init']();
     this._raw['asmmalloc_init'](HEAP_START, this.buffer.byteLength);
 
+    this.data = null;
     this.client = null;
     this.SIZEOF = this._calcSizeof();
 
@@ -145,7 +146,7 @@ DynAsm.prototype._heapCheck = function() {
 };
 
 DynAsm.prototype._calcSizeof = function() {
-    var EXPECT_SIZES = 11;
+    var EXPECT_SIZES = 7;
     var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
 
     var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
@@ -159,13 +160,7 @@ DynAsm.prototype._calcSizeof = function() {
     result.Client = next();
     result.ClientAlignment = next();
     result.Data = next();
-
-    result.BlockData = next();
-    result.StructureTemplate = next();
-    result.TemplatePart = next();
-    result.TemplateVertex = next();
-
-    result.BlockChunk = next();
+    result.DataAlignment = next();
 
     result.TerrainVertex = next();
     result.StructureVertex = next();
@@ -231,16 +226,18 @@ DynAsm.prototype.initClient = function(gl, assets) {
     load_blob(assets['template_vert_defs_bin']);
     load_blob(assets['template_shape_defs_bin']);
 
-    var data = this._stackAlloc(Uint8Array, this.SIZEOF.Data);
+    this.data = this._raw['asmmalloc_alloc'](this.SIZEOF.Data, this.SIZEOF.DataAlignment);
     // NB: takes ownership of `blobs`
-    this._raw['data_init'](blobs.byteOffset, data.byteOffset);
+    this._raw['data_init'](blobs.byteOffset, this.data);
 
     this.client = this._raw['asmmalloc_alloc'](this.SIZEOF.Client, this.SIZEOF.ClientAlignment);
-    // NB: takes ownership of `data`
-    this._raw['client_init'](data.byteOffset, this.client);
+    this._raw['client_init'](this.data, this.client);
 
-    this._stackFree(data);
     this._stackFree(blobs);
+};
+
+DynAsm.prototype.resetClient = function() {
+    this._raw['client_reset'](this.client);
 };
 
 DynAsm.prototype.structureAppear = function(id, x, y, z, template_id, oneshot_start) {

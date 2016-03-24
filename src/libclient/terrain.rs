@@ -14,6 +14,18 @@ pub struct ChunkShape {
 }
 
 impl ChunkShape {
+    fn clear(&mut self) {
+        for layer in self.layers.iter_mut() {
+            for shape in layer.iter_mut() {
+                *shape = Shape::Empty;
+            }
+        }
+
+        for shape in self.merged.iter_mut() {
+            *shape = Shape::Empty;
+        }
+    }
+
     fn refresh(&mut self, bounds: Region) {
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
 
@@ -92,6 +104,12 @@ impl TerrainShape {
     pub fn new() -> TerrainShape {
         // 0 == Shape::Empty
         unsafe { mem::zeroed() }
+    }
+
+    pub fn clear(&mut self) {
+        for chunk in self.chunks.iter_mut() {
+            chunk.clear();
+        }
     }
 
     pub fn set_shape_in_region_by<F>(&mut self, bounds: Region, layer: usize, f: F)
