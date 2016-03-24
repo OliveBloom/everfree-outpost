@@ -5,7 +5,7 @@ pub mod renderer;
 pub mod types;
 pub mod structure;
 pub mod terrain;
-pub mod lights;
+pub mod light;
 
 
 const ATLAS_SIZE: u16 = 32;

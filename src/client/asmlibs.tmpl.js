@@ -189,8 +189,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
         get_terrain_geometry_buffer: _get_terrain_geometry_buffer,
         update_structure_geometry: _update_structure_geometry,
         get_structure_geometry_buffer: _get_structure_geometry_buffer,
-        light_geom_reset: _light_geom_reset,
-        light_geom_generate: _light_geom_generate,
+        update_light_geometry: _update_light_geometry,
+        get_light_geometry_buffer: _get_light_geometry_buffer,
 
         /*
         collide: _collide,

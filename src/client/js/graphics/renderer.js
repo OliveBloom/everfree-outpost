@@ -58,18 +58,6 @@ function RenderData(gl, asm) {
 
     var r = this;
 
-    // TODO: move these somewhere nicer
-
-    this.light_buf = new BufferCache(gl, function(cx, cy, feed) {
-        r._asm.lightGeomReset(cx, cy, cx + 1, cy + 1);
-        var more = true;
-        while (more) {
-            var result = r._asm.lightGeomGenerate();
-            feed(result.geometry);
-            more = result.more;
-        }
-    });
-
     this.cavern_map = new CavernMap(gl, 32);
 }
 
@@ -88,7 +76,7 @@ RenderData.prototype.prepare = function(scene) {
     // structures from chunks above and to the left can extend into it.
     this._asm.updateStructureGeometry(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
     // Light from any adjacent chunk can extend into the current one.
-    this.light_buf.prepare(cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1);
+    this._asm.updateLightGeometry(cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1);
 };
 
 // RenderData initialization
@@ -268,10 +256,6 @@ RenderData.prototype._invalidateStructure = function(x, y, z, template) {
     var cx = (x / CHUNK_SIZE)|0;
     var cy = (y / CHUNK_SIZE)|0;
 
-    // TODO: magic number
-    if (template.flags & 4) {   // HAS_LIGHT
-        this.light_buf.invalidate(cx, cy);
-    }
     this.cavern_map.invalidate();
 };
 
@@ -455,8 +439,9 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_light.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        var buf = data.light_buf.getBuffer();
-        var len = data.light_buf.getSize();
+        var light_info = data._asm.getLightGeometryBuffer();
+        var buf = light_info.buf;
+        var len = light_info.len;
         this_.light_static.draw(fb_idx, 0, len / SIZEOF.LightVertex, {}, {'*': buf}, {
             'depthTex': buffers.fb_world.depth_texture,
         });

@@ -6,8 +6,9 @@ use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
 use structures::Structures;
+use util;
 
-use graphics::IntrusiveCorner;
+use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
 use graphics::LOCAL_BITS;
 use graphics::types::{StructureTemplate, HAS_LIGHT};
@@ -34,43 +35,60 @@ impl IntrusiveCorner for Vertex {
     fn corner_mut(&mut self) -> &mut (u8, u8) { &mut self.corner }
 }
 
-pub struct GeomGenState {
+
+pub struct GeomGen<'a> {
+    structures: &'a Structures,
+    templates: &'a [StructureTemplate],
     bounds: Region<V2>,
     next: u32,
 }
 
-impl GeomGenState {
-    pub fn new(bounds: Region<V2>) -> GeomGenState {
-        GeomGenState {
+impl<'a> GeomGen<'a> {
+    pub fn new(structures: &'a Structures,
+               templates: &'a [StructureTemplate],
+               bounds: Region<V2>) -> GeomGen<'a> {
+        GeomGen {
+            structures: structures,
+            templates: templates,
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
             next: 0,
         }
     }
-}
 
-pub struct GeomGen<'a> {
-    buffer: &'a Structures,
-    templates: &'a [StructureTemplate],
-    state: &'a mut GeomGenState,
-}
+    pub fn count_verts(&self) -> usize {
+        let mut count = 0;
+        for (_, s) in self.structures.iter() {
+            let t = &self.templates[s.template_id as usize];
+            if !t.flags.contains(HAS_LIGHT) {
+                continue;
+            }
 
-impl<'a> GeomGen<'a> {
-    pub fn new(buffer: &'a Structures,
-               templates: &'a [StructureTemplate],
-               state: &'a mut GeomGenState) -> GeomGen<'a> {
-        GeomGen {
-            buffer: buffer,
-            templates: templates,
-            state: state,
+            let offset = V3::new(t.light_pos.0 as i32,
+                                 t.light_pos.1 as i32,
+                                 t.light_pos.2 as i32);
+            let s_pos = V3::new(s.pos.0 as i32,
+                                s.pos.1 as i32,
+                                s.pos.2 as i32);
+            let center = s_pos * scalar(TILE_SIZE) + offset;
+
+            const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
+            if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
+                continue;
+            }
+
+            count += 6;
         }
+        count
     }
+}
 
+impl<'a> GeometryGenerator for GeomGen<'a> {
+    type Vertex = Vertex;
 
-    pub fn generate(&mut self,
-                    buf: &mut [Vertex],
-                    idx: &mut usize) -> bool {
-        for (&id, s) in self.buffer.iter_from(self.state.next) {
-            self.state.next = id;
+    fn generate(&mut self, buf: &mut [Vertex]) -> (usize, bool) {
+        let mut idx = 0;
+        for (&id, s) in self.structures.iter_from(self.next) {
+            self.next = id;
 
             let t = &self.templates[s.template_id as usize];
 
@@ -88,15 +106,17 @@ impl<'a> GeomGen<'a> {
                                 s.pos.2 as i32);
             let center = s_pos * scalar(TILE_SIZE) + offset;
 
-            // Do a wrapped version of `self.bounds.contains(center)`.
             const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
-            let wrapped_center = (center.reduce() - self.state.bounds.min) & scalar(MASK);
-            let wrapped_bounds = self.state.bounds - self.state.bounds.min;
-            if !wrapped_bounds.contains(wrapped_center) {
+            if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
                 continue;
             }
 
-            emit_quad(buf, idx, Vertex {
+            if remaining_quads(buf, idx) < 1 {
+                // No more space in buffer.
+                return (idx, true);
+            }
+
+            emit_quad(buf, &mut idx, Vertex {
                 corner: (0, 0),
                 // Give the position of the front corner of the structure, since the quad should
                 // cover the front plane.
@@ -113,6 +133,6 @@ impl<'a> GeomGen<'a> {
         }
 
         // Ran out of structures - we're done.
-        false
+        (idx, false)
     }
 }

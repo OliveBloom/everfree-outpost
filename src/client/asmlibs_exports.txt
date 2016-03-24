@@ -19,5 +19,5 @@ update_terrain_geometry
 get_terrain_geometry_buffer
 update_structure_geometry
 get_structure_geometry_buffer
-light_geom_reset
-light_geom_generate
+update_light_geometry
+get_light_geometry_buffer

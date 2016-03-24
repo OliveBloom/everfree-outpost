@@ -383,30 +383,18 @@ DynAsm.prototype.getStructureGeometryBuffer = function() {
     };
 };
 
-DynAsm.prototype.lightGeomReset = function(cx0, cy0, cx1, cy1) {
-    this._raw['light_geom_reset'](this.client, cx0, cy0, cx1, cy1);
+DynAsm.prototype.updateLightGeometry = function(cx0, cy0, cx1, cy1) {
+    this._raw['update_light_geometry'](this.client,
+            cx0, cy0, cx1, cy1);
 };
 
-DynAsm.prototype.lightGeomGenerate = function() {
-    var output = this._stackAlloc(Int32Array, 2);
-    var buf = this._heapAlloc(Uint8Array, 256 * 1024);
-
-    this._raw['light_geom_generate'](
-            this.client,
-            buf.byteOffset,
-            buf.byteLength,
-            output.byteOffset);
-
-    var vertex_count = output[0];
-    var more = (output[1] & 1) != 0;
-    this._stackFree(output);
-
-    var geom = new Uint8Array(vertex_count * this.SIZEOF.LightVertex);
-    geom.set(buf.subarray(0, geom.length));
-    this._heapFree(buf);
-
+DynAsm.prototype.getLightGeometryBuffer = function() {
+    var len_buf = this._stackAlloc(Int32Array, 1);
+    var name = this._raw['get_light_geometry_buffer'](this.client, len_buf.byteOffset);
+    var len = len_buf[0];
+    this._stackFree(len_buf);
     return {
-        geometry: geom,
-        more: more,
+        buf: this.asmgl.getBufferWrapper(name),
+        len: len,
     };
 };

@@ -12,6 +12,7 @@ use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use util;
 
+use super::light;
 use super::structure;
 use super::terrain;
 
@@ -21,18 +22,21 @@ pub struct Renderer<GL: GlContext> {
 
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
+    light_geom: GeomCache<GL, Region<V2>>,
 }
 
 impl<GL: GlContext> Renderer<GL> {
     pub fn new(mut gl: GL) -> Renderer<GL> {
         let terrain_geom = GeomCache::new(&mut gl);
         let structure_geom = GeomCache::new(&mut gl);
+        let light_geom = GeomCache::new(&mut gl);
 
         Renderer {
             gl: gl,
 
             terrain_geom: terrain_geom,
             structure_geom: structure_geom,
+            light_geom: light_geom,
         }
     }
 
@@ -93,6 +97,27 @@ impl<GL: GlContext> Renderer<GL> {
 
     pub fn get_structure_buffer(&self) -> &GL::Buffer {
         self.structure_geom.buffer()
+    }
+
+
+    pub fn update_light_geometry(&mut self,
+                                     data: &Data,
+                                     structures: &Structures,
+                                     bounds: Region<V2>) {
+        self.light_geom.update(bounds, |buffer, _| {
+            let mut gen = light::GeomGen::new(structures, &data.templates, bounds);
+            buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
+            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+            load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut 0);
+        });
+    }
+
+    pub fn invalidate_light_geometry(&mut self) {
+        self.light_geom.invalidate();
+    }
+
+    pub fn get_light_buffer(&self) -> &GL::Buffer {
+        self.light_geom.buffer()
     }
 }
 

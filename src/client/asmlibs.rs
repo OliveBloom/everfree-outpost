@@ -33,7 +33,7 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 use physics::{Shape, ShapeSource};
 use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE, TILE_BITS};
 
-use client::graphics::lights;
+use client::graphics::light;
 use client::graphics::structure;
 use client::graphics::terrain;
 use client::graphics::types as gfx_types;
@@ -209,7 +209,6 @@ pub unsafe extern fn get_terrain_geometry_buffer(client: &Client,
     buf.name()
 }
 
-
 #[no_mangle]
 pub unsafe extern fn update_structure_geometry(client: &mut Client,
                                                cx0: i32,
@@ -229,23 +228,21 @@ pub unsafe extern fn get_structure_geometry_buffer(client: &Client,
 }
 
 #[no_mangle]
-pub extern fn light_geom_reset(client: &mut Client,
-                               cx0: i32,
-                               cy0: i32,
-                               cx1: i32,
-                               cy1: i32) {
-    client.light_geom_reset(Region::new(V2::new(cx0, cy0), V2::new(cx1, cy1)));
+pub unsafe extern fn update_light_geometry(client: &mut Client,
+                                           cx0: i32,
+                                           cy0: i32,
+                                           cx1: i32,
+                                           cy1: i32) {
+    client.update_light_geometry(Region::new(V2::new(cx0, cy0),
+                                               V2::new(cx1, cy1)));
 }
 
 #[no_mangle]
-pub unsafe extern fn light_geom_generate(client: &mut Client,
-                                         buf_ptr: *mut lights::Vertex,
-                                         buf_byte_len: usize,
-                                         result: &mut GeometryResult) {
-    let buf = make_slice_mut(buf_ptr, buf_byte_len);
-    let (count, more) = client.light_geom_generate(buf);
-    result.vertex_count = count;
-    result.more = more as u8;
+pub unsafe extern fn get_light_geometry_buffer(client: &Client,
+                                               len: &mut usize) -> u32 {
+    let buf = client.get_light_geometry_buffer();
+    *len = buf.len();
+    buf.name()
 }
 
 
@@ -288,7 +285,7 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
 
     sizes.terrain_vertex = size_of::<terrain::Vertex>();
     sizes.structure_vertex = size_of::<structure::Vertex>();
-    sizes.light_vertex = size_of::<lights::Vertex>();
+    sizes.light_vertex = size_of::<light::Vertex>();
 
     size_of::<Sizes>() / size_of::<usize>()
 }

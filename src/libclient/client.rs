@@ -3,9 +3,9 @@ use std::prelude::v1::*;
 use gl::GlContext;
 use util;
 
-use graphics::lights;
 use graphics::types::{BlockChunk, LocalChunks,
     BlockData, StructureTemplate, TemplatePart, TemplateVertex};
+use graphics::types::HAS_LIGHT;
 use graphics::renderer::Renderer;
 
 use physics;
@@ -27,8 +27,6 @@ pub struct Client<GL: GlContext> {
     structures: Structures,
 
     renderer: Renderer<GL>,
-
-    light_geom_gen: lights::GeomGenState,
 }
 
 impl<GL: GlContext> Client<GL> {
@@ -41,8 +39,6 @@ impl<GL: GlContext> Client<GL> {
             structures: Structures::new(),
 
             renderer: Renderer::new(gl),
-
-            light_geom_gen: lights::GeomGenState::new(Region::empty()),
         }
     }
 
@@ -84,17 +80,28 @@ impl<GL: GlContext> Client<GL> {
 
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
+        if t.flags.contains(HAS_LIGHT) {
+            self.renderer.invalidate_light_geometry();
+        }
     }
 
     pub fn structure_gone(&mut self,
                           id: u32) {
+        // Update self.structures
         let s = self.structures.remove(id);
 
+        // Refresh self.terrain_cache
         let t = &self.data.templates[s.template_id as usize];
         let pos = util::unpack_v3(s.pos);
         let size = util::unpack_v3(t.size);
         let bounds = Region::new(pos, pos + size);
         self.terrain_shape.fill_shape_in_region(bounds, 1 + t.layer as usize, Shape::Empty);
+
+        // Invalidate cached geometry
+        self.renderer.invalidate_structure_geometry();
+        if t.flags.contains(HAS_LIGHT) {
+            self.renderer.invalidate_light_geometry();
+        }
     }
 
     pub fn structure_replace(&mut self,
@@ -143,19 +150,11 @@ impl<GL: GlContext> Client<GL> {
         self.renderer.get_structure_buffer()
     }
 
-    pub fn light_geom_reset(&mut self, bounds: Region<V2>) {
-        self.light_geom_gen = lights::GeomGenState::new(bounds);
+    pub fn update_light_geometry(&mut self, bounds: Region<V2>) {
+        self.renderer.update_light_geometry(&self.data, &self.structures, bounds);
     }
 
-    pub fn light_geom_generate(&mut self,
-                                   buf: &mut [lights::Vertex]) -> (usize, bool) {
-        let mut gen = lights::GeomGen::new(&self.structures,
-                                           &self.data.templates,
-                                           &mut self.light_geom_gen);
-        let mut idx = 0;
-        let more = gen.generate(buf, &mut idx);
-
-        (idx, more)
+    pub fn get_light_geometry_buffer(&self) -> &GL::Buffer {
+        self.renderer.get_light_buffer()
     }
-
 }
