@@ -8,9 +8,11 @@ use data::Data;
 use gl::{self, GlContext, GlBuffer};
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
+use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use util;
 
+use super::structure;
 use super::terrain;
 
 
@@ -18,18 +20,22 @@ pub struct Renderer<GL: GlContext> {
     gl: GL,
 
     terrain_geom: GeomCache<GL, Region<V2>>,
+    structure_geom: GeomCache<GL, Region<V2>>,
 }
 
 impl<GL: GlContext> Renderer<GL> {
     pub fn new(mut gl: GL) -> Renderer<GL> {
         let terrain_geom = GeomCache::new(&mut gl);
+        let structure_geom = GeomCache::new(&mut gl);
 
         Renderer {
             gl: gl,
 
             terrain_geom: terrain_geom,
+            structure_geom: structure_geom,
         }
     }
+
 
     pub fn update_terrain_geometry(&mut self,
                                    data: &Data,
@@ -47,7 +53,7 @@ impl<GL: GlContext> Renderer<GL> {
             }
 
             buffer.alloc(vert_count * mem::size_of::<terrain::Vertex>());
-            let mut buf = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
 
             let mut offset = 0;
             for cpos in bounds.points() {
@@ -55,7 +61,7 @@ impl<GL: GlContext> Renderer<GL> {
                 let mut gen = terrain::GeomGen::new(&data.blocks,
                                                     &chunks[chunk_idx],
                                                     cpos);
-                load_buffer::<GL, _>(buffer, &mut gen, &mut buf, &mut offset);
+                load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut offset);
             }
         });
     }
@@ -66,6 +72,27 @@ impl<GL: GlContext> Renderer<GL> {
 
     pub fn get_terrain_buffer(&self) -> &GL::Buffer {
         self.terrain_geom.buffer()
+    }
+
+
+    pub fn update_structure_geometry(&mut self,
+                                     data: &Data,
+                                     structures: &Structures,
+                                     bounds: Region<V2>) {
+        self.structure_geom.update(bounds, |buffer, _| {
+            let mut gen = structure::GeomGen::new(structures, data, bounds);
+            buffer.alloc(gen.count_verts() * mem::size_of::<structure::Vertex>());
+            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+            load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut 0);
+        });
+    }
+
+    pub fn invalidate_structure_geometry(&mut self) {
+        self.structure_geom.invalidate();
+    }
+
+    pub fn get_structure_buffer(&self) -> &GL::Buffer {
+        self.structure_geom.buffer()
     }
 }
 

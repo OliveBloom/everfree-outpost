@@ -367,31 +367,19 @@ DynAsm.prototype.getTerrainGeometryBuffer = function() {
     };
 };
 
-DynAsm.prototype.structureGeomReset = function(cx0, cy0, cx1, cy1, sheet) {
-    this._raw['structure_geom_reset'](this.client, cx0, cy0, cx1, cy1, sheet);
+DynAsm.prototype.updateStructureGeometry = function(cx0, cy0, cx1, cy1) {
+    this._raw['update_structure_geometry'](this.client,
+            cx0, cy0, cx1, cy1);
 };
 
-DynAsm.prototype.structureGeomGenerate = function() {
-    var output = this._stackAlloc(Int32Array, 2);
-    var buf = this._heapAlloc(Uint8Array, 256 * 1024);
-
-    this._raw['structure_geom_generate'](
-            this.client,
-            buf.byteOffset,
-            buf.byteLength,
-            output.byteOffset);
-
-    var vertex_count = output[0];
-    var more = (output[1] & 1) != 0;
-    this._stackFree(output);
-
-    var geom = new Uint8Array(vertex_count * this.SIZEOF.StructureVertex);
-    geom.set(buf.subarray(0, geom.length));
-    this._heapFree(buf);
-
+DynAsm.prototype.getStructureGeometryBuffer = function() {
+    var len_buf = this._stackAlloc(Int32Array, 1);
+    var name = this._raw['get_structure_geometry_buffer'](this.client, len_buf.byteOffset);
+    var len = len_buf[0];
+    this._stackFree(len_buf);
     return {
-        geometry: geom,
-        more: more,
+        buf: this.asmgl.getBufferWrapper(name),
+        len: len,
     };
 };
 

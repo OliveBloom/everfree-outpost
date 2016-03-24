@@ -3,7 +3,7 @@
 pub mod renderer;
 
 pub mod types;
-pub mod structures;
+pub mod structure;
 pub mod terrain;
 pub mod lights;
 

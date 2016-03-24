@@ -60,16 +60,6 @@ function RenderData(gl, asm) {
 
     // TODO: move these somewhere nicer
 
-    this.structure_buf = new BufferCache(gl, function(cx, cy, feed) {
-        r._asm.structureGeomReset(cx, cy, cx + 1, cy + 1);
-        var more = true;
-        while (more) {
-            var result = r._asm.structureGeomGenerate();
-            feed(result.geometry);
-            more = result.more;
-        }
-    });
-
     this.light_buf = new BufferCache(gl, function(cx, cy, feed) {
         r._asm.lightGeomReset(cx, cy, cx + 1, cy + 1);
         var more = true;
@@ -96,7 +86,7 @@ RenderData.prototype.prepare = function(scene) {
     this._asm.updateTerrainGeometry(cx0, cy0, cx1, cy1 + 1);
     // Structures from the chunk below can cover the current one, and also
     // structures from chunks above and to the left can extend into it.
-    this.structure_buf.prepare(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
+    this._asm.updateStructureGeometry(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
     // Light from any adjacent chunk can extend into the current one.
     this.light_buf.prepare(cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1);
 };
@@ -278,7 +268,6 @@ RenderData.prototype._invalidateStructure = function(x, y, z, template) {
     var cx = (x / CHUNK_SIZE)|0;
     var cy = (y / CHUNK_SIZE)|0;
 
-    this.structure_buf.invalidate(cx, cy);
     // TODO: magic number
     if (template.flags & 4) {   // HAS_LIGHT
         this.light_buf.invalidate(cx, cy);
@@ -426,8 +415,9 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
             'cavernTex': data.cavern_map.getTexture(),
         });
 
-        var buf = data.structure_buf.getBuffer();
-        var len = data.structure_buf.getSize();
+        var structure_info = data._asm.getStructureGeometryBuffer();
+        var buf = structure_info.buf;
+        var len = structure_info.len;
         this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
@@ -442,8 +432,9 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_shadow.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        var buf = data.structure_buf.getBuffer();
-        var len = data.structure_buf.getSize();
+        var structure_info = data._asm.getStructureGeometryBuffer();
+        var buf = structure_info.buf;
+        var len = structure_info.len;
         this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });

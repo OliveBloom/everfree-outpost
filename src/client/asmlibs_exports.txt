@@ -17,7 +17,7 @@ find_ceiling
 floodfill
 update_terrain_geometry
 get_terrain_geometry_buffer
-structure_geom_reset
-structure_geom_generate
+update_structure_geometry
+get_structure_geometry_buffer
 light_geom_reset
 light_geom_generate

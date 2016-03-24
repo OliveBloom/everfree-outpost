@@ -4,8 +4,6 @@ use gl::GlContext;
 use util;
 
 use graphics::lights;
-use graphics::structures as g_structures;
-use graphics::terrain as g_terrain;
 use graphics::types::{BlockChunk, LocalChunks,
     BlockData, StructureTemplate, TemplatePart, TemplateVertex};
 use graphics::renderer::Renderer;
@@ -30,7 +28,6 @@ pub struct Client<GL: GlContext> {
 
     renderer: Renderer<GL>,
 
-    structure_geom_gen: g_structures::GeomGenState,
     light_geom_gen: lights::GeomGenState,
 }
 
@@ -45,7 +42,6 @@ impl<GL: GlContext> Client<GL> {
 
             renderer: Renderer::new(gl),
 
-            structure_geom_gen: g_structures::GeomGenState::new(Region::empty(), 0),
             light_geom_gen: lights::GeomGenState::new(Region::empty()),
         }
     }
@@ -56,7 +52,7 @@ impl<GL: GlContext> Client<GL> {
         let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
         self.chunks[bounds.index(cpos)] = *blocks;
 
-        // Update self.terrain_shape
+        // Refresh self.terrain_shape
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
                            (cpos * scalar(CHUNK_SIZE)).extend(0);
         let block_data = &self.data.blocks;
@@ -65,7 +61,7 @@ impl<GL: GlContext> Client<GL> {
             block_data[b as usize].shape
         });
 
-        // Notify renderer to rebuild geometry
+        // Invalidate cached geometry
         self.renderer.invalidate_terrain_geometry();
     }
 
@@ -74,8 +70,10 @@ impl<GL: GlContext> Client<GL> {
                             pos: (u8, u8, u8),
                             template_id: u32,
                             oneshot_start: u16) {
+        // Update self.structures
         self.structures.insert(id, pos, template_id, oneshot_start);
 
+        // Refresh self.terrain_cache
         let t = &self.data.templates[template_id as usize];
         let pos = util::unpack_v3(pos);
         let size = util::unpack_v3(t.size);
@@ -83,6 +81,9 @@ impl<GL: GlContext> Client<GL> {
         let base = t.shape_idx as usize;
         let shape = &self.data.template_shapes[base .. base + bounds.volume() as usize];
         self.terrain_shape.set_shape_in_region(bounds, 1 + t.layer as usize, shape);
+
+        // Invalidate cached geometry
+        self.renderer.invalidate_structure_geometry();
     }
 
     pub fn structure_gone(&mut self,
@@ -130,26 +131,16 @@ impl<GL: GlContext> Client<GL> {
         self.renderer.update_terrain_geometry(&self.data, &self.chunks, bounds);
     }
 
-    pub fn invalidate_terrain_geometry(&mut self) {
-    }
-
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
         self.renderer.get_terrain_buffer()
     }
 
-    pub fn structure_geom_reset(&mut self, bounds: Region<V2>, sheet: u8) {
-        self.structure_geom_gen = g_structures::GeomGenState::new(bounds, sheet);
+    pub fn update_structure_geometry(&mut self, bounds: Region<V2>) {
+        self.renderer.update_structure_geometry(&self.data, &self.structures, bounds);
     }
 
-    pub fn structure_geom_generate(&mut self,
-                                   buf: &mut [g_structures::Vertex]) -> (usize, bool) {
-        let mut gen = g_structures::GeomGen::new(&self.structures,
-                                                 &self.data,
-                                                 &mut self.structure_geom_gen);
-        let mut idx = 0;
-        let more = gen.generate(buf, &mut idx);
-
-        (idx, more)
+    pub fn get_structure_geometry_buffer(&self) -> &GL::Buffer {
+        self.renderer.get_structure_buffer()
     }
 
     pub fn light_geom_reset(&mut self, bounds: Region<V2>) {
