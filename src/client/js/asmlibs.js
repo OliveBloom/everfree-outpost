@@ -351,8 +351,8 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, blocks) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.updateTerrainGeometry = function(cx0, cy0, cx1, cy1) {
-    this._raw['update_terrain_geometry'](this.client,
+DynAsm.prototype.prepareGeometry = function(cx0, cy0, cx1, cy1) {
+    this._raw['prepare_geometry'](this.client,
             cx0, cy0, cx1, cy1);
 };
 
@@ -367,11 +367,6 @@ DynAsm.prototype.getTerrainGeometryBuffer = function() {
     };
 };
 
-DynAsm.prototype.updateStructureGeometry = function(cx0, cy0, cx1, cy1) {
-    this._raw['update_structure_geometry'](this.client,
-            cx0, cy0, cx1, cy1);
-};
-
 DynAsm.prototype.getStructureGeometryBuffer = function() {
     var len_buf = this._stackAlloc(Int32Array, 1);
     var name = this._raw['get_structure_geometry_buffer'](this.client, len_buf.byteOffset);
@@ -381,11 +376,6 @@ DynAsm.prototype.getStructureGeometryBuffer = function() {
         buf: this.asmgl.getBufferWrapper(name),
         len: len,
     };
-};
-
-DynAsm.prototype.updateLightGeometry = function(cx0, cy0, cx1, cy1) {
-    this._raw['update_light_geometry'](this.client,
-            cx0, cy0, cx1, cy1);
 };
 
 DynAsm.prototype.getLightGeometryBuffer = function() {

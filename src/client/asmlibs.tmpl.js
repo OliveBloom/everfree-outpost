@@ -185,11 +185,9 @@ var asmlibs_code_raw = function(global, env, buffer) {
         find_ceiling: _find_ceiling,
         floodfill: _floodfill,
 
-        update_terrain_geometry: _update_terrain_geometry,
+        prepare_geometry: _prepare_geometry,
         get_terrain_geometry_buffer: _get_terrain_geometry_buffer,
-        update_structure_geometry: _update_structure_geometry,
         get_structure_geometry_buffer: _get_structure_geometry_buffer,
-        update_light_geometry: _update_light_geometry,
         get_light_geometry_buffer: _get_light_geometry_buffer,
 
         /*

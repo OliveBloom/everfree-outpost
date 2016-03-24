@@ -185,20 +185,15 @@ unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
     Box::from_raw(raw)
 }
 
-pub struct GeometryResult {
-    vertex_count: usize,
-    more: u8,
-}
-
 
 #[no_mangle]
-pub unsafe extern fn update_terrain_geometry(client: &mut Client,
-                                             cx0: i32,
-                                             cy0: i32,
-                                             cx1: i32,
-                                             cy1: i32) {
-    client.update_terrain_geometry(Region::new(V2::new(cx0, cy0),
-                                               V2::new(cx1, cy1)));
+pub unsafe extern fn prepare_geometry(client: &mut Client,
+                                      cx0: i32,
+                                      cy0: i32,
+                                      cx1: i32,
+                                      cy1: i32) {
+    client.prepare_geometry(Region::new(V2::new(cx0, cy0),
+                                        V2::new(cx1, cy1)));
 }
 
 #[no_mangle]
@@ -210,31 +205,11 @@ pub unsafe extern fn get_terrain_geometry_buffer(client: &Client,
 }
 
 #[no_mangle]
-pub unsafe extern fn update_structure_geometry(client: &mut Client,
-                                               cx0: i32,
-                                               cy0: i32,
-                                               cx1: i32,
-                                               cy1: i32) {
-    client.update_structure_geometry(Region::new(V2::new(cx0, cy0),
-                                               V2::new(cx1, cy1)));
-}
-
-#[no_mangle]
 pub unsafe extern fn get_structure_geometry_buffer(client: &Client,
                                                    len: &mut usize) -> u32 {
     let buf = client.get_structure_geometry_buffer();
     *len = buf.len();
     buf.name()
-}
-
-#[no_mangle]
-pub unsafe extern fn update_light_geometry(client: &mut Client,
-                                           cx0: i32,
-                                           cy0: i32,
-                                           cx1: i32,
-                                           cy1: i32) {
-    client.update_light_geometry(Region::new(V2::new(cx0, cy0),
-                                               V2::new(cx1, cy1)));
 }
 
 #[no_mangle]

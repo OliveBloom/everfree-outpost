@@ -134,24 +134,30 @@ impl<GL: GlContext> Client<GL> {
 
     // Graphics
 
-    pub fn update_terrain_geometry(&mut self, bounds: Region<V2>) {
-        self.renderer.update_terrain_geometry(&self.data, &self.chunks, bounds);
+    pub fn prepare_geometry(&mut self, bounds: Region<V2>) {
+        // Terrain from the chunk below can cover the current one.
+        let terrain_bounds = Region::new(bounds.min - V2::new(0, 0),
+                                         bounds.max + V2::new(0, 1));
+        self.renderer.update_terrain_geometry(&self.data, &self.chunks, terrain_bounds);
+
+        // Structures from the chunk below can cover the current one, and also
+        // structures from chunks above and to the left can extend into it.
+        let structure_bounds = Region::new(bounds.min - V2::new(1, 1),
+                                           bounds.max + V2::new(0, 1));
+        self.renderer.update_structure_geometry(&self.data, &self.structures, structure_bounds);
+
+        // Light from any adjacent chunk can extend into the current one.
+        let light_bounds = Region::new(bounds.min - V2::new(1, 1),
+                                       bounds.max + V2::new(1, 1));
+        self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
         self.renderer.get_terrain_buffer()
     }
 
-    pub fn update_structure_geometry(&mut self, bounds: Region<V2>) {
-        self.renderer.update_structure_geometry(&self.data, &self.structures, bounds);
-    }
-
     pub fn get_structure_geometry_buffer(&self) -> &GL::Buffer {
         self.renderer.get_structure_buffer()
-    }
-
-    pub fn update_light_geometry(&mut self, bounds: Region<V2>) {
-        self.renderer.update_light_geometry(&self.data, &self.structures, bounds);
     }
 
     pub fn get_light_geometry_buffer(&self) -> &GL::Buffer {

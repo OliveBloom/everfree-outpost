@@ -70,13 +70,7 @@ RenderData.prototype.prepare = function(scene) {
     var cy0 = ((pos[1]|0) / CHUNK_PX)|0;
     var cy1 = (((pos[1]|0) + (size[1]|0) + CHUNK_PX) / CHUNK_PX)|0;
 
-    // Terrain from the chunk below can cover the current one.
-    this._asm.updateTerrainGeometry(cx0, cy0, cx1, cy1 + 1);
-    // Structures from the chunk below can cover the current one, and also
-    // structures from chunks above and to the left can extend into it.
-    this._asm.updateStructureGeometry(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
-    // Light from any adjacent chunk can extend into the current one.
-    this._asm.updateLightGeometry(cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1);
+    this._asm.prepareGeometry(cx0, cy0, cx1, cy1);
 };
 
 // RenderData initialization

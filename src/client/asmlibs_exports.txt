@@ -15,9 +15,7 @@ load_terrain_chunk
 collide
 find_ceiling
 floodfill
-update_terrain_geometry
+prepare_geometry
 get_terrain_geometry_buffer
-update_structure_geometry
 get_structure_geometry_buffer
-update_light_geometry
 get_light_geometry_buffer
