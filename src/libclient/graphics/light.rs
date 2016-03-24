@@ -1,6 +1,4 @@
 use std::prelude::v1::*;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
 
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};

@@ -13,7 +13,7 @@
 
 #[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
-use std::prelude::v1::*;
+#[allow(unused_imports)] use std::prelude::v1::*;
 
 #[macro_use] extern crate bitflags;
 

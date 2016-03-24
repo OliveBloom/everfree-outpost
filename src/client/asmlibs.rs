@@ -4,9 +4,7 @@
 #![feature(
     alloc,
     box_syntax,
-    core_intrinsics,
     filling_drop,
-    heap_api,
     oom,
     raw,
     unsafe_no_drop_flag,
@@ -20,8 +18,6 @@ extern crate alloc;
 extern crate client;
 extern crate physics;
 
-use std::intrinsics;
-use std::iter;
 use std::mem;
 use std::ptr;
 use std::raw;
@@ -29,9 +25,8 @@ use std::slice;
 
 use client::Data;
 
-use physics::v3::{V3, V2, Vn, scalar, Region};
-use physics::{Shape, ShapeSource};
-use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE, TILE_BITS};
+use physics::v3::{V3, V2, Region};
+use physics::TILE_BITS;
 
 use client::graphics::light;
 use client::graphics::structure;

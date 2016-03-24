@@ -2,10 +2,10 @@ use std::prelude::v1::*;
 use std::mem;
 use std::slice;
 
-use physics::v3::{V3, V2, scalar, Region};
+use physics::v3::{V2, scalar, Region};
 
 use data::Data;
-use gl::{self, GlContext, GlBuffer};
+use gl::{GlContext, GlBuffer};
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use structures::Structures;
@@ -18,7 +18,7 @@ use super::terrain;
 
 
 pub struct Renderer<GL: GlContext> {
-    gl: GL,
+    #[allow(dead_code)] gl: GL,
 
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,

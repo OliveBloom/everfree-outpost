@@ -1,6 +1,4 @@
 use std::prelude::v1::*;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
 
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
@@ -11,7 +9,6 @@ use terrain::LOCAL_MASK;
 use util;
 
 use graphics::GeometryGenerator;
-use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
 
 
 #[derive(Clone, Copy)]

@@ -1,6 +1,4 @@
 use std::prelude::v1::*;
-use std::ops::{Deref, DerefMut};
-use std::ptr;
 
 use graphics::types::{BlockData, BlockChunk};
 
@@ -8,7 +6,6 @@ use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
 
 use graphics::ATLAS_SIZE;
-use graphics::LOCAL_SIZE;
 use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
 

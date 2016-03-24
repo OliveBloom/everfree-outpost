@@ -3,8 +3,7 @@ use std::prelude::v1::*;
 use gl::GlContext;
 use util;
 
-use graphics::types::{BlockChunk, LocalChunks,
-    BlockData, StructureTemplate, TemplatePart, TemplateVertex};
+use graphics::types::{BlockChunk, LocalChunks};
 use graphics::types::HAS_LIGHT;
 use graphics::renderer::Renderer;
 

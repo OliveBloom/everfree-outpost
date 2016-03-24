@@ -2,7 +2,7 @@ use std::mem;
 
 use physics::v3::{V3, V2, Vn, scalar, Region};
 use physics::{Shape, ShapeSource};
-use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_BITS};
+use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK};
 
 pub const NUM_LAYERS: usize = 3;
 
