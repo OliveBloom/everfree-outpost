@@ -1,5 +1,7 @@
 
 
+pub mod renderer;
+
 pub mod types;
 pub mod structures;
 pub mod terrain;

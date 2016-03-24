@@ -2,6 +2,8 @@ use std::prelude::v1::*;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 
+use graphics::types::{BlockData, BlockChunk};
+
 use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
 
@@ -9,7 +11,6 @@ use graphics::ATLAS_SIZE;
 use graphics::LOCAL_SIZE;
 use graphics::IntrusiveCorner;
 use graphics::{emit_quad, remaining_quads};
-use graphics::types::{BlockData, LocalChunks};
 
 
 /// Vertex attributes for terrain.
@@ -28,44 +29,46 @@ impl IntrusiveCorner for Vertex {
 }
 
 
-pub struct GeomGenState {
+pub struct GeomGen<'a> {
+    block_data: &'a [BlockData],
+    chunk: &'a BlockChunk,
     cpos: V2,
     iter: RegionPoints<V3>,
 }
 
-impl GeomGenState {
-    pub fn new(cpos: V2) -> GeomGenState {
-        GeomGenState {
+impl<'a> GeomGen<'a> {
+    pub fn new(block_data: &'a [BlockData],
+               chunk: &'a BlockChunk,
+               cpos: V2) -> GeomGen<'a> {
+        GeomGen {
+            block_data: block_data,
+            chunk: chunk,
             cpos: cpos,
             iter: Region::new(scalar(0), scalar::<V3>(CHUNK_SIZE)).points(),
         }
     }
-}
 
-pub struct GeomGen<'a> {
-    local_chunks: &'a LocalChunks,
-    block_data: &'a [BlockData],
-    state: &'a mut GeomGenState,
-}
+    pub fn count_verts(&self) -> usize {
+        let mut count = 0;
+        for &b in self.chunk.iter() {
+            if b == 0 {
+                continue;
+            }
 
-impl<'a> GeomGen<'a> {
-    pub fn new(local_chunks: &'a LocalChunks,
-               block_data: &'a [BlockData],
-               state: &'a mut GeomGenState) -> GeomGen<'a> {
-        GeomGen {
-            local_chunks: local_chunks,
-            block_data: block_data,
-            state: state,
+            let block_def = &self.block_data[b as usize];
+            for side in 0 .. 4 {
+                if block_def.tile(side) != 0 {
+                    count += 6;
+                }
+            }
         }
+        count
     }
 
     pub fn generate(&mut self,
                     buf: &mut [Vertex],
                     idx: &mut usize) -> bool {
-        let local_bounds = Region::new(scalar(0), scalar(LOCAL_SIZE as i32));
-        let chunk_idx = local_bounds.index(self.cpos);
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
-
         while remaining_quads(buf, *idx) >= 4 {
             let iter_pos = match self.iter.next() {
                 Some(p) => p,
@@ -75,7 +78,7 @@ impl<'a> GeomGen<'a> {
             let pos = self.cpos.extend(0) * scalar(CHUNK_SIZE) + iter_pos;
 
             let block_idx = chunk_bounds.index(iter_pos);
-            let block_id = self.local_chunks[chunk_idx][block_idx];
+            let block_id = self.chunk[block_idx];
             let block = &self.block_data[block_id as usize];
 
             for side in 0 .. 4 {
@@ -100,18 +103,5 @@ impl<'a> GeomGen<'a> {
 
         // Stopped because the buffer is full.
         true
-    }
-}
-
-impl<'a> Deref for GeomGen<'a> {
-    type Target = GeomGenState;
-    fn deref(&self) -> &GeomGenState {
-        &self.state
-    }
-}
-
-impl<'a> DerefMut for GeomGen<'a> {
-    fn deref_mut(&mut self) -> &mut GeomGenState {
-        &mut self.state
     }
 }

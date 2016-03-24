@@ -15,8 +15,8 @@ load_terrain_chunk
 collide
 find_ceiling
 floodfill
-terrain_geom_reset
-terrain_geom_generate
+update_terrain_geometry
+get_terrain_geometry_buffer
 structure_geom_reset
 structure_geom_generate
 light_geom_reset

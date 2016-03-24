@@ -8,6 +8,7 @@
     btree_range,
     collections,
     collections_bound,
+    core_intrinsics,
     )]
 
 #[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
@@ -23,6 +24,8 @@ pub use data::Data;
 
 pub mod client;
 pub mod data;
+
+pub mod gl;
 
 mod util;
 

@@ -251,7 +251,7 @@ function init() {
 
             ui_gl.hotbar.init();
 
-            asm_client.initClient(assets);
+            asm_client.initClient(canvas.ctx, assets);
 
             var info = assets['server_info'];
             openConn(info, function() {

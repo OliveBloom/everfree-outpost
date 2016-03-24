@@ -5,6 +5,8 @@ var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
 var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
 
+var AsmGl = require('asmgl').AsmGl;
+
 
 // Memory layout
 
@@ -26,7 +28,7 @@ var HEAP_START = STACK_END;
 
 // External functions
 
-var module_env = function(buffer) {
+var module_env = function(buffer, asmgl) {
     var msg_buffer = '';
 
     return ({
@@ -44,6 +46,26 @@ var module_env = function(buffer) {
             console.log(msg_buffer);
             msg_buffer = '';
         },
+
+        'asmgl_gen_buffer': function() {
+            return asmgl.genBuffer();
+        },
+        'asmgl_delete_buffer': function(name) {
+            asmgl.deleteBuffer(name);
+        },
+        'asmgl_bind_buffer_array': function(name) {
+            asmgl.bindBufferArray(name);
+        },
+        'asmgl_bind_buffer_index': function(name) {
+            asmgl.bindBufferIndex(name);
+        },
+        'asmgl_buffer_data_alloc': function(len) {
+            asmgl.bufferDataAlloc(len);
+        },
+        'asmgl_buffer_subdata': function(offset, ptr, len) {
+            asmgl.bufferSubdata(offset, new Uint8Array(buffer, ptr, len));
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,
@@ -88,9 +110,11 @@ HEAP_PADDING = 256 * 1024;
 
 /** @constructor */
 function DynAsm() {
+    this.asmgl = new AsmGl();
+
     this.buffer = new ArrayBuffer(next_heap_size(INIT_HEAP_SIZE));
     this._memcpy(STATIC_START, static_data);
-    this._raw = module(window, module_env(this.buffer), this.buffer);
+    this._raw = module(window, module_env(this.buffer, this.asmgl), this.buffer);
 
     this._raw['asmlibs_init']();
     this._raw['asmmalloc_init'](HEAP_START, this.buffer.byteLength);
@@ -186,7 +210,10 @@ DynAsm.prototype._memcpy = function(dest_offset, data) {
     }
 };
 
-DynAsm.prototype.initClient = function(assets) {
+DynAsm.prototype.initClient = function(gl, assets) {
+    // AsmGl must be initialized before calling `client_init`.
+    this.asmgl.init(gl);
+
     var blobs = this._stackAlloc(Int32Array, 5 * 2);
     var idx = 0;
     var this_ = this;
@@ -324,31 +351,19 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, blocks) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.terrainGeomReset = function(cx, cy) {
-    this._raw['terrain_geom_reset'](this.client, cx, cy);
+DynAsm.prototype.updateTerrainGeometry = function(cx0, cy0, cx1, cy1) {
+    this._raw['update_terrain_geometry'](this.client,
+            cx0, cy0, cx1, cy1);
 };
 
-DynAsm.prototype.terrainGeomGenerate = function() {
-    var output = this._stackAlloc(Int32Array, 2);
-    var buf = this._heapAlloc(Uint8Array, 256 * 1024);
-
-    this._raw['terrain_geom_generate'](
-            this.client,
-            buf.byteOffset,
-            buf.byteLength,
-            output.byteOffset);
-
-    var vertex_count = output[0];
-    var more = (output[1] & 1) != 0;
-    this._stackFree(output);
-
-    var geom = new Uint8Array(vertex_count * this.SIZEOF.TerrainVertex);
-    geom.set(buf.subarray(0, geom.length));
-    this._heapFree(buf);
-
+DynAsm.prototype.getTerrainGeometryBuffer = function() {
+    var len_buf = this._stackAlloc(Int32Array, 1);
+    var name = this._raw['get_terrain_geometry_buffer'](this.client, len_buf.byteOffset);
+    var len = len_buf[0];
+    this._stackFree(len_buf);
     return {
-        geometry: geom,
-        more: more,
+        buf: this.asmgl.getBufferWrapper(name),
+        len: len,
     };
 };
 

@@ -60,15 +60,7 @@ function RenderData(gl, asm) {
 
     // TODO: move these somewhere nicer
 
-    this.terrain_buf = new BufferCache(gl, function(cx, cy, feed) {
-        r._asm.terrainGeomReset(cx, cy);
-        var more = true;
-        while (more) {
-            var result = r._asm.terrainGeomGenerate();
-            feed(result.geometry);
-            more = result.more;
-        }
-    });
+    this.terrain_stale = false;
 
     this.structure_buf = new BufferCache(gl, function(cx, cy, feed) {
         r._asm.structureGeomReset(cx, cy, cx + 1, cy + 1);
@@ -103,7 +95,10 @@ RenderData.prototype.prepare = function(scene) {
     var cy1 = (((pos[1]|0) + (size[1]|0) + CHUNK_PX) / CHUNK_PX)|0;
 
     // Terrain from the chunk below can cover the current one.
-    this.terrain_buf.prepare(cx0, cy0, cx1, cy1 + 1);
+    if (this.terrain_stale) {
+        this._asm.updateTerrainGeometry(cx0, cy0, cx1, cy1 + 1);
+        this.terrain_stale = false;
+    }
     // Structures from the chunk below can cover the current one, and also
     // structures from chunks above and to the left can extend into it.
     this.structure_buf.prepare(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
@@ -205,7 +200,7 @@ RenderData.prototype.loadBlockData = function(blocks) {
 RenderData.prototype.loadChunk = function(i, j, chunk) {
     this._asm.loadTerrainChunk(j, i, chunk._tiles);
 
-    this.terrain_buf.invalidate(j, i);
+    this.terrain_stale = true;
     this.cavern_map.invalidate();
 };
 
@@ -430,8 +425,9 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_world.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        var buf = data.terrain_buf.getBuffer();
-        var len = data.terrain_buf.getSize();
+        var terrain_info = data._asm.getTerrainGeometryBuffer();
+        var buf = terrain_info.buf;
+        var len = terrain_info.len;
         this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });

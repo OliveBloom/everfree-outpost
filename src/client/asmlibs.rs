@@ -1,7 +1,16 @@
 #![crate_name = "asmlibs"]
 #![no_std]
 
-#![feature(raw, alloc, oom, heap_api, core_intrinsics)]
+#![feature(
+    alloc,
+    box_syntax,
+    core_intrinsics,
+    filling_drop,
+    heap_api,
+    oom,
+    raw,
+    unsafe_no_drop_flag,
+)]
 
 #[macro_use] extern crate fakestd as std;
 use std::prelude::v1::*;
@@ -18,7 +27,6 @@ use std::ptr;
 use std::raw;
 use std::slice;
 
-use client::Client;
 use client::Data;
 
 use physics::v3::{V3, V2, Vn, scalar, Region};
@@ -29,6 +37,11 @@ use client::graphics::lights;
 use client::graphics::structures;
 use client::graphics::terrain;
 use client::graphics::types as gfx_types;
+
+mod asmgl;
+
+
+pub type Client = client::Client<asmgl::GL>;
 
 
 // New API
@@ -60,7 +73,7 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 5],
 pub unsafe extern fn client_init(data_ptr: *const Data,
                                  out: *mut Client) {
     let data = ptr::read(data_ptr);
-    ptr::write(out, Client::new(data));
+    ptr::write(out, Client::new(data, asmgl::GL::new()));
 }
 
 // Chunks
@@ -179,21 +192,21 @@ pub struct GeometryResult {
 
 
 #[no_mangle]
-pub extern fn terrain_geom_reset(client: &mut Client,
-                                 cx: i32,
-                                 cy: i32) {
-    client.terrain_geom_reset(V2::new(cx, cy))
+pub unsafe extern fn update_terrain_geometry(client: &mut Client,
+                                             cx0: i32,
+                                             cy0: i32,
+                                             cx1: i32,
+                                             cy1: i32) {
+    client.update_terrain_geometry(Region::new(V2::new(cx0, cy0),
+                                               V2::new(cx1, cy1)));
 }
 
 #[no_mangle]
-pub unsafe extern fn terrain_geom_generate(client: &mut Client,
-                                           buf_ptr: *mut terrain::Vertex,
-                                           buf_byte_len: usize,
-                                           result: &mut GeometryResult) {
-    let buf = make_slice_mut(buf_ptr, buf_byte_len);
-    let (count, more) = client.terrain_geom_generate(buf);
-    result.vertex_count = count;
-    result.more = more as u8;
+pub unsafe extern fn get_terrain_geometry_buffer(client: &Client,
+                                                 len: &mut usize) -> u32 {
+    let buf = client.get_terrain_geometry_buffer();
+    *len = buf.len();
+    buf.name()
 }
 
 

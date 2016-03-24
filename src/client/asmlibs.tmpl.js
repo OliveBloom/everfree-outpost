@@ -20,6 +20,13 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var Math_imul = global.Math.imul;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 
+    var _asmgl_gen_buffer = env.asmgl_gen_buffer;
+    var _asmgl_delete_buffer = env.asmgl_delete_buffer;
+    var _asmgl_bind_buffer_array = env.asmgl_bind_buffer_array;
+    var _asmgl_bind_buffer_index = env.asmgl_bind_buffer_index;
+    var _asmgl_buffer_data_alloc = env.asmgl_buffer_data_alloc;
+    var _asmgl_buffer_subdata = env.asmgl_buffer_subdata;
+
     var tempRet0 = 0;
 
     function __adjust_stack(offset) {
@@ -178,8 +185,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
         find_ceiling: _find_ceiling,
         floodfill: _floodfill,
 
-        terrain_geom_reset: _terrain_geom_reset,
-        terrain_geom_generate: _terrain_geom_generate,
+        update_terrain_geometry: _update_terrain_geometry,
+        get_terrain_geometry_buffer: _get_terrain_geometry_buffer,
         structure_geom_reset: _structure_geom_reset,
         structure_geom_generate: _structure_geom_generate,
         light_geom_reset: _light_geom_reset,

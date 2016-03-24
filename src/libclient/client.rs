@@ -1,5 +1,6 @@
 use std::prelude::v1::*;
 
+use gl::GlContext;
 use util;
 
 use graphics::lights;
@@ -7,6 +8,7 @@ use graphics::structures as g_structures;
 use graphics::terrain as g_terrain;
 use graphics::types::{BlockChunk, LocalChunks,
     BlockData, StructureTemplate, TemplatePart, TemplateVertex};
+use graphics::renderer::Renderer;
 
 use physics;
 use physics::{CHUNK_SIZE, CHUNK_BITS};
@@ -19,20 +21,21 @@ use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 
 
-pub struct Client {
+pub struct Client<GL: GlContext> {
     data: Data,
 
     chunks: Box<LocalChunks>,
     terrain_shape: Box<TerrainShape>,
     structures: Structures,
 
-    terrain_geom_gen: g_terrain::GeomGenState,
+    renderer: Renderer<GL>,
+
     structure_geom_gen: g_structures::GeomGenState,
     light_geom_gen: lights::GeomGenState,
 }
 
-impl Client {
-    pub fn new(data: Data) -> Client {
+impl<GL: GlContext> Client<GL> {
+    pub fn new(data: Data, gl: GL) -> Client<GL> {
         Client {
             data: data,
 
@@ -40,7 +43,8 @@ impl Client {
             terrain_shape: box TerrainShape::new(),
             structures: Structures::new(),
 
-            terrain_geom_gen: g_terrain::GeomGenState::new(scalar(0)),
+            renderer: Renderer::new(gl),
+
             structure_geom_gen: g_structures::GeomGenState::new(Region::empty(), 0),
             light_geom_gen: lights::GeomGenState::new(Region::empty()),
         }
@@ -117,18 +121,12 @@ impl Client {
 
     // Graphics
 
-    pub fn terrain_geom_reset(&mut self, cpos: V2) {
-        self.terrain_geom_gen = g_terrain::GeomGenState::new(cpos);
+    pub fn update_terrain_geometry(&mut self, bounds: Region<V2>) {
+        self.renderer.update_terrain_geometry(&self.data, &self.chunks, bounds);
     }
 
-    pub fn terrain_geom_generate(&mut self, buf: &mut [g_terrain::Vertex]) -> (usize, bool) {
-        let mut gen = g_terrain::GeomGen::new(&self.chunks,
-                                              &self.data.blocks,
-                                              &mut self.terrain_geom_gen);
-        let mut idx = 0;
-        let more = gen.generate(buf, &mut idx);
-
-        (idx, more)
+    pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
+        self.renderer.get_terrain_buffer()
     }
 
     pub fn structure_geom_reset(&mut self, bounds: Region<V2>, sheet: u8) {
