@@ -13,7 +13,6 @@ var Texture = require('graphics/glutil').Texture;
 var Buffer = require('graphics/glutil').Buffer;
 var Framebuffer = require('graphics/glutil').Framebuffer;
 var makeShaders = require('graphics/shaders').makeShaders;
-var BufferCache = require('graphics/buffers').BufferCache;
 var CavernMap = require('graphics/cavernmap').CavernMap;
 
 var GlObject = require('graphics/glutil').GlObject;
@@ -73,24 +72,6 @@ RenderData.prototype.prepare = function(scene) {
     this._asm.prepareGeometry(cx0, cy0, cx1, cy1);
 };
 
-// RenderData initialization
-
-RenderData.prototype.initData = function(blocks, templates, parts, verts) {
-    this._asm = new AsmGraphics(
-            blocks.length, templates.length, parts.length, verts.length / 3,
-            512 * 1024, 512 * 1024);
-
-    this._asm.terrainGeomInit();
-    this._asm.structureBufferInit();
-    this._asm.structureGeomInit();
-    this._asm.lightGeomInit();
-
-    this.loadBlockData(blocks);
-    this.loadTemplateData(templates);
-    this.loadTemplateParts(parts);
-    this.loadTemplateVerts(verts);
-};
-
 // Texture object management
 
 RenderData.prototype.cacheTexture = function(image) {
@@ -117,111 +98,13 @@ RenderData.prototype.refreshTexture = function(image) {
 
 // Data loading
 
-// Helper function for writing data into an asm structure.  Constructs a
-// subarray of `view` for accessing element `index` in an array of structures
-// of the given `size`.  The `size` should include any necessary padding for
-// alignment following each structure.
-function mk_out(view, index, size) {
-    var shift;
-    switch (view.constructor.BYTES_PER_ELEMENT) {
-        case 1: shift = 0; break;
-        case 2: shift = 1; break;
-        case 4: shift = 2; break;
-        case 8: shift = 3; break;
-        default: throw 'TypedArray has non-power-of-two BYTES_PER_ELEMENT';
-    }
-    var arr = view.subarray(index * (size >> shift), (index + 1) * (size >> shift));
-
-    // If `count` is null, store number `x` at byte offset `j`.  Otherwise,
-    // store `count` numbers from array `x` starting at byte offset `j`.
-    return function(j, x, count) {
-        if (count == null) {
-            arr[j >> shift] = x;
-        } else {
-            for (var k = 0; k < count; ++k) {
-                arr[(j >> shift) + k] = x[k];
-            }
-        }
-    };
-}
-
-RenderData.prototype.loadBlockData = function(blocks) {
-    var view8 = this._asm.blockDataView8();
-    var view16 = this._asm.blockDataView16();
-    for (var i = 0; i < blocks.length; ++i) {
-        var block = blocks[i];
-        var out8 = mk_out(view8, i, SIZEOF.BlockData);
-        var out16 = mk_out(view16, i, SIZEOF.BlockData);
-
-        out16(  0, block.front);
-        out16(  2, block.back);
-        out16(  4, block.top);
-        out16(  6, block.bottom);
-
-        out8(   8, block.light_color, 3);
-        out8(  11, block.shape);
-        out16( 12, block.light_radius);
-    }
-};
-
 RenderData.prototype.loadChunk = function(i, j, chunk) {
     this._asm.loadTerrainChunk(j, i, chunk._tiles);
 
     this.cavern_map.invalidate();
 };
 
-RenderData.prototype.loadTemplateData = function(templates) {
-    var view8 = this._asm.templateDataView8();
-    var view16 = this._asm.templateDataView16();
-
-    for (var i = 0; i < templates.length; ++i) {
-        var template = templates[i];
-        var out8 = mk_out(view8, i, SIZEOF.StructureTemplate);
-        var out16 = mk_out(view16, i, SIZEOF.StructureTemplate);
-
-        out8(   0, template.size.x);
-        out8(   1, template.size.y);
-        out8(   2, template.size.z);
-        out16(  4, template.part_idx);
-        out8(   6, template.part_count);
-        out8(   7, template.vert_count);
-        out8(   8, template.layer);
-        out8(   9, template.flags);
-
-        out8(  10, template.light_pos, 3);
-        out8(  13, template.light_color, 3);
-        out16( 16, template.light_radius);
-    }
-};
-
-RenderData.prototype.loadTemplateParts = function(parts) {
-    var view8 = this._asm.templatePartView8();
-    var view16 = this._asm.templatePartView16();
-
-    for (var i = 0; i < parts.length; ++i) {
-        var part = parts[i];
-        var out8 = mk_out(view8, i, SIZEOF.TemplatePart);
-        var out16 = mk_out(view16, i, SIZEOF.TemplatePart);
-
-        out16(  0, part.vert_idx);
-        out16(  2, part.vert_count);
-        out16(  4, part.offset[0]);
-        out16(  6, part.offset[1]);
-        out8(   8, part.sheet);
-        out8(   9, part.flags);
-
-        var oneshot_length = part.anim_length * (part.anim_oneshot ? -1 : 1);
-        out8(  10, oneshot_length);
-        out8(  11, part.anim_rate);
-        out16( 12, part.anim_size[0]);
-    }
-};
-
-RenderData.prototype.loadTemplateVerts = function(verts) {
-    console.assert(SIZEOF.TemplateVertex == 6);
-    var view = this._asm.templateVertexView();
-    view.set(verts);
-};
+// Structure tracking
 
 RenderData.prototype.addStructure = function(now, id, x, y, z, template) {
     var tx = (x / TILE_SIZE) & (LOCAL_SIZE * CHUNK_SIZE - 1);
@@ -499,10 +382,6 @@ function Renderer(gl, assets, asm) {
     this.render_time = new TimeSeries(5000);
 }
 exports.Renderer = Renderer;
-
-Renderer.prototype.initData = function(blocks, templates, parts, verts) {
-    this.data.initData(blocks, templates, parts, verts);
-};
 
 Renderer.prototype.cacheTexture = function(img) {
     this.data.cacheTexture(img);
