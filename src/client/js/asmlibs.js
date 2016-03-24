@@ -356,6 +356,10 @@ DynAsm.prototype.updateTerrainGeometry = function(cx0, cy0, cx1, cy1) {
             cx0, cy0, cx1, cy1);
 };
 
+DynAsm.prototype.invalidateTerrainGeometry = function() {
+    this._raw['invalidate_terrain_geometry'](this.client);
+};
+
 DynAsm.prototype.getTerrainGeometryBuffer = function() {
     var len_buf = this._stackAlloc(Int32Array, 1);
     var name = this._raw['get_terrain_geometry_buffer'](this.client, len_buf.byteOffset);

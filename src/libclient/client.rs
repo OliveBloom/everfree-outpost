@@ -125,6 +125,10 @@ impl<GL: GlContext> Client<GL> {
         self.renderer.update_terrain_geometry(&self.data, &self.chunks, bounds);
     }
 
+    pub fn invalidate_terrain_geometry(&mut self) {
+        self.renderer.invalidate_terrain_geometry();
+    }
+
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
         self.renderer.get_terrain_buffer()
     }

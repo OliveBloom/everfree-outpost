@@ -32,3 +32,9 @@ pub fn emit_quad<T: Copy+IntrusiveCorner>(buf: &mut [T],
 pub fn remaining_quads<T>(buf: &[T], idx: usize) -> usize {
     (buf.len() - idx) / 6
 }
+
+
+trait GeometryGenerator {
+    type Vertex;
+    fn generate(&mut self, buf: &mut [Self::Vertex]) -> (usize, bool);
+}

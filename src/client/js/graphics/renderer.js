@@ -60,8 +60,6 @@ function RenderData(gl, asm) {
 
     // TODO: move these somewhere nicer
 
-    this.terrain_stale = false;
-
     this.structure_buf = new BufferCache(gl, function(cx, cy, feed) {
         r._asm.structureGeomReset(cx, cy, cx + 1, cy + 1);
         var more = true;
@@ -95,10 +93,7 @@ RenderData.prototype.prepare = function(scene) {
     var cy1 = (((pos[1]|0) + (size[1]|0) + CHUNK_PX) / CHUNK_PX)|0;
 
     // Terrain from the chunk below can cover the current one.
-    if (this.terrain_stale) {
-        this._asm.updateTerrainGeometry(cx0, cy0, cx1, cy1 + 1);
-        this.terrain_stale = false;
-    }
+    this._asm.updateTerrainGeometry(cx0, cy0, cx1, cy1 + 1);
     // Structures from the chunk below can cover the current one, and also
     // structures from chunks above and to the left can extend into it.
     this.structure_buf.prepare(cx0 - 1, cy0 - 1, cx1, cy1 + 1);
@@ -200,7 +195,7 @@ RenderData.prototype.loadBlockData = function(blocks) {
 RenderData.prototype.loadChunk = function(i, j, chunk) {
     this._asm.loadTerrainChunk(j, i, chunk._tiles);
 
-    this.terrain_stale = true;
+    this._asm.invalidateTerrainGeometry();
     this.cavern_map.invalidate();
 };
 

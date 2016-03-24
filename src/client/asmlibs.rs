@@ -202,6 +202,11 @@ pub unsafe extern fn update_terrain_geometry(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn invalidate_terrain_geometry(client: &mut Client) {
+    client.invalidate_terrain_geometry();
+}
+
+#[no_mangle]
 pub unsafe extern fn get_terrain_geometry_buffer(client: &Client,
                                                  len: &mut usize) -> u32 {
     let buf = client.get_terrain_geometry_buffer();

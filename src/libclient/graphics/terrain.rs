@@ -9,7 +9,7 @@ use physics::CHUNK_SIZE;
 
 use graphics::ATLAS_SIZE;
 use graphics::LOCAL_SIZE;
-use graphics::IntrusiveCorner;
+use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
 
 
@@ -64,15 +64,19 @@ impl<'a> GeomGen<'a> {
         }
         count
     }
+}
 
-    pub fn generate(&mut self,
-                    buf: &mut [Vertex],
-                    idx: &mut usize) -> bool {
+impl<'a> GeometryGenerator for GeomGen<'a> {
+    type Vertex = Vertex;
+
+    fn generate(&mut self,
+                buf: &mut [Vertex]) -> (usize, bool) {
+        let mut idx = 0;
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
-        while remaining_quads(buf, *idx) >= 4 {
+        while remaining_quads(buf, idx) >= 4 {
             let iter_pos = match self.iter.next() {
                 Some(p) => p,
-                None => return false,
+                None => return (idx, false),
             };
 
             let pos = self.cpos.extend(0) * scalar(CHUNK_SIZE) + iter_pos;
@@ -89,7 +93,7 @@ impl<'a> GeomGen<'a> {
 
                 let s = tile % ATLAS_SIZE;
                 let t = tile / ATLAS_SIZE;
-                emit_quad(buf, idx, Vertex {
+                emit_quad(buf, &mut idx, Vertex {
                     corner: (0, 0),
                     pos: (pos.x as u8,
                           pos.y as u8,
@@ -102,6 +106,6 @@ impl<'a> GeomGen<'a> {
         }
 
         // Stopped because the buffer is full.
-        true
+        (idx, true)
     }
 }

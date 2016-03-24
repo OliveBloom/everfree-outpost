@@ -16,6 +16,7 @@ collide
 find_ceiling
 floodfill
 update_terrain_geometry
+invalidate_terrain_geometry
 get_terrain_geometry_buffer
 structure_geom_reset
 structure_geom_generate
