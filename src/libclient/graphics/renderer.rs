@@ -10,6 +10,7 @@ use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
+use ui;
 use util;
 
 use super::light;
@@ -23,6 +24,8 @@ pub struct Renderer<GL: GlContext> {
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
     light_geom: GeomCache<GL, Region<V2>>,
+
+    ui_buffer: GL::Buffer,
 }
 
 impl<GL: GlContext> Renderer<GL> {
@@ -30,6 +33,7 @@ impl<GL: GlContext> Renderer<GL> {
         let terrain_geom = GeomCache::new(&mut gl);
         let structure_geom = GeomCache::new(&mut gl);
         let light_geom = GeomCache::new(&mut gl);
+        let ui_buffer = gl.create_buffer();
 
         Renderer {
             gl: gl,
@@ -37,6 +41,8 @@ impl<GL: GlContext> Renderer<GL> {
             terrain_geom: terrain_geom,
             structure_geom: structure_geom,
             light_geom: light_geom,
+
+            ui_buffer: ui_buffer,
         }
     }
 
@@ -101,9 +107,9 @@ impl<GL: GlContext> Renderer<GL> {
 
 
     pub fn update_light_geometry(&mut self,
-                                     data: &Data,
-                                     structures: &Structures,
-                                     bounds: Region<V2>) {
+                                 data: &Data,
+                                 structures: &Structures,
+                                 bounds: Region<V2>) {
         self.light_geom.update(bounds, |buffer, _| {
             let mut gen = light::GeomGen::new(structures, &data.templates, bounds);
             buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
@@ -118,6 +124,21 @@ impl<GL: GlContext> Renderer<GL> {
 
     pub fn get_light_buffer(&self) -> &GL::Buffer {
         self.light_geom.buffer()
+    }
+
+
+    pub fn load_ui_geometry(&mut self, geom: &[ui::Vertex]) {
+        let byte_len = geom.len() * mem::size_of::<ui::Vertex>();
+        let bytes = unsafe {
+            slice::from_raw_parts(geom.as_ptr() as *const u8, byte_len)
+        };
+
+        self.ui_buffer.alloc(byte_len);
+        self.ui_buffer.load(0, bytes);
+    }
+
+    pub fn get_ui_buffer(&self) -> &GL::Buffer {
+        &self.ui_buffer
     }
 }
 

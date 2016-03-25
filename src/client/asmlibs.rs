@@ -32,6 +32,7 @@ use client::graphics::light;
 use client::graphics::structure;
 use client::graphics::terrain;
 use client::graphics::types as gfx_types;
+use client::ui;
 
 mod asmgl;
 
@@ -219,6 +220,14 @@ pub unsafe extern fn get_light_geometry_buffer(client: &Client,
     buf.name()
 }
 
+#[no_mangle]
+pub unsafe extern fn get_ui_geometry_buffer(client: &Client,
+                                            len: &mut usize) -> u32 {
+    let buf = client.get_ui_geometry_buffer();
+    *len = buf.len();
+    buf.name()
+}
+
 
 // SIZEOF
 
@@ -233,6 +242,7 @@ pub struct Sizes {
     terrain_vertex: usize,
     structure_vertex: usize,
     light_vertex: usize,
+    ui_vertex: usize,
 }
 
 #[export_name = "get_sizes"]
@@ -248,6 +258,7 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
     sizes.terrain_vertex = size_of::<terrain::Vertex>();
     sizes.structure_vertex = size_of::<structure::Vertex>();
     sizes.light_vertex = size_of::<light::Vertex>();
+    sizes.ui_vertex = size_of::<ui::Vertex>();
 
     size_of::<Sizes>() / size_of::<usize>()
 }

@@ -3,6 +3,8 @@ import json
 import os
 import subprocess
 import sys
+import textwrap
+import time
 
 from PIL import Image
 
@@ -106,6 +108,31 @@ def build_json(parts):
 
     return result
 
+def build_rust(parts):
+    result = ''
+
+    now = time.strftime('%Y-%m-%d %H:%M:%S')
+    result += '// Generated %s by %s\n' % (now, sys.argv[0])
+
+    result += textwrap.dedent('''
+        #![crate_name = "client_ui_atlas"]
+        #![no_std]
+        //! This auto-generated library defines the position and size of every
+        //! element in the UI atlas, so they can be referred to by name.
+
+        pub struct AtlasEntry {
+            pub pos: (u16, u16),
+            pub size: (u8, u8),
+        }
+
+    ''')
+
+    tmpl = 'pub const %s: AtlasEntry = AtlasEntry { pos: (%d, %d), size: (%d, %d) };\n'
+    for p in sorted(parts, key=lambda p: p.name):
+        result += tmpl % (p.name.upper().replace('-', '_'), p.x, p.y, p.w, p.h)
+
+    return result
+
 # Works for now, will need to increase later
 ATLAS_SIZE = (256, 256)
 
@@ -122,6 +149,10 @@ def main(src_dir, dest_dir):
     j = build_json(parts)
     with open(path('json'), 'w') as f:
         json.dump(j, f)
+
+    rs = build_rust(parts)
+    with open(path('rs'), 'w') as f:
+        f.write(rs)
 
     dep_str = ' \\\n    '.join(sorted(p.path for p in parts))
     with open(path('d'), 'w') as f:

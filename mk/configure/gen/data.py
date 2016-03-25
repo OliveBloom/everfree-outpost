@@ -81,7 +81,9 @@ def day_night(out_json, src_img):
 
 def ui_atlas(out_dir, src_dir):
     return template('''
-        build %out_dir/ui_atlas.png %out_dir/ui_atlas.json: gen_ui_atlas $
+        build %out_dir/ui_atlas.png $
+            %out_dir/ui_atlas.json $
+            %out_dir/ui_atlas.rs: gen_ui_atlas $
             | $root/src/gen/gen_ui_atlas.py %src_dir
             in_dir = %src_dir
             out_dir = %out_dir

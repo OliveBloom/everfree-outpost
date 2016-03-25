@@ -146,7 +146,7 @@ DynAsm.prototype._heapCheck = function() {
 };
 
 DynAsm.prototype._calcSizeof = function() {
-    var EXPECT_SIZES = 7;
+    var EXPECT_SIZES = 8;
     var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
 
     var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
@@ -165,6 +165,7 @@ DynAsm.prototype._calcSizeof = function() {
     result.TerrainVertex = next();
     result.StructureVertex = next();
     result.LightVertex = next();
+    result.UIVertex = next();
 
     console.assert(index == EXPECT_SIZES,
             'some items were left over after building sizeof', index, EXPECT_SIZES);
@@ -360,7 +361,7 @@ DynAsm.prototype.getTerrainGeometryBuffer = function() {
     this._stackFree(len_buf);
     return {
         buf: this.asmgl.getBufferWrapper(name),
-        len: len,
+        len: len / this.SIZEOF.TerrainVertex,
     };
 };
 
@@ -371,7 +372,7 @@ DynAsm.prototype.getStructureGeometryBuffer = function() {
     this._stackFree(len_buf);
     return {
         buf: this.asmgl.getBufferWrapper(name),
-        len: len,
+        len: len / this.SIZEOF.StructureVertex,
     };
 };
 
@@ -382,6 +383,17 @@ DynAsm.prototype.getLightGeometryBuffer = function() {
     this._stackFree(len_buf);
     return {
         buf: this.asmgl.getBufferWrapper(name),
-        len: len,
+        len: len / this.SIZEOF.LightVertex,
+    };
+};
+
+DynAsm.prototype.getUIGeometryBuffer = function() {
+    var len_buf = this._stackAlloc(Int32Array, 1);
+    var name = this._raw['get_ui_geometry_buffer'](this.client, len_buf.byteOffset);
+    var len = len_buf[0];
+    this._stackFree(len_buf);
+    return {
+        buf: this.asmgl.getBufferWrapper(name),
+        len: len / this.SIZEOF.UIVertex,
     };
 };

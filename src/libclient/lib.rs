@@ -17,6 +17,7 @@
 
 #[macro_use] extern crate bitflags;
 
+extern crate client_ui_atlas;
 extern crate physics;
 
 pub use client::Client;
@@ -32,3 +33,4 @@ mod util;
 mod terrain;
 mod structures;
 pub mod graphics;
+pub mod ui;

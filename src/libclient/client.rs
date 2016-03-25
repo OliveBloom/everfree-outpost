@@ -17,6 +17,7 @@ use graphics::types::StructureTemplate;
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
+use ui::UI;
 
 
 pub struct Client<'d, GL: GlContext> {
@@ -25,6 +26,8 @@ pub struct Client<'d, GL: GlContext> {
     chunks: Box<LocalChunks>,
     terrain_shape: Box<TerrainShape>,
     structures: Structures,
+
+    ui: UI,
 
     renderer: Renderer<GL>,
 }
@@ -37,6 +40,8 @@ impl<'d, GL: GlContext> Client<'d, GL> {
             chunks: box [[0; 1 << (3 * CHUNK_BITS)]; 1 << (2 * LOCAL_BITS)],
             terrain_shape: box TerrainShape::new(),
             structures: Structures::new(),
+
+            ui: UI::new(),
 
             renderer: Renderer::new(gl),
         }
@@ -196,6 +201,11 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         let light_bounds = Region::new(bounds.min - V2::new(1, 1),
                                        bounds.max + V2::new(1, 1));
         self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
+
+        // Also refresh the UI buffer if needed.
+        if self.ui.needs_update() {
+            self.renderer.load_ui_geometry(&self.ui.generate_geom());
+        }
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
@@ -208,5 +218,9 @@ impl<'d, GL: GlContext> Client<'d, GL> {
 
     pub fn get_light_geometry_buffer(&self) -> &GL::Buffer {
         self.renderer.get_light_buffer()
+    }
+
+    pub fn get_ui_geometry_buffer(&self) -> &GL::Buffer {
+        self.renderer.get_ui_buffer()
     }
 }

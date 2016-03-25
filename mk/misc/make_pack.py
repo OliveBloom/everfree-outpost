@@ -73,6 +73,8 @@ def main(src_dir, build_dir, out_file):
     add('text', 'ui_blit.frag',         src('assets/shaders/ui_blit.frag'))
     add('text', 'ui_blit_tiled.vert',   src('assets/shaders/ui_blit_tiled.vert'))
     add('text', 'ui_blit_tiled.frag',   src('assets/shaders/ui_blit_tiled.frag'))
+    add('text', 'ui_blit2.vert',        src('assets/shaders/ui_blit2.vert'))
+    add('text', 'ui_blit2.frag',        src('assets/shaders/ui_blit2.frag'))
 
 
     with open(build('structures_list.json')) as f:

@@ -1,6 +1,5 @@
 var Config = require('config').Config;
 var AsmGraphics = require('asmlibs').AsmGraphics;
-var SIZEOF = require('asmlibs').SIZEOF;
 var getRendererHeapSize = require('asmlibs').getRendererHeapSize;
 var getGraphicsHeapSize = require('asmlibs').getGraphicsHeapSize;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
@@ -243,6 +242,7 @@ RenderShaders.prototype.prepare = function(scene) {
     this.light_dynamic.setUniformValue('cameraPos', pos);
     this.light_dynamic.setUniformValue('cameraSize', size);
     // this.blit_full uses fixed camera
+    this.ui_blit2.setUniformValue('screenSize', size);
 
     if (this.blend_layers) {
         this.blend_layers.setUniformValue('cameraPos', pos);
@@ -278,14 +278,14 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
         var terrain_info = data._asm.getTerrainGeometryBuffer();
         var buf = terrain_info.buf;
         var len = terrain_info.len;
-        this_.terrain.draw(fb_idx, 0, len / SIZEOF.TerrainVertex, {}, {'*': buf}, {
+        this_.terrain.draw(fb_idx, 0, len, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
 
         var structure_info = data._asm.getStructureGeometryBuffer();
         var buf = structure_info.buf;
         var len = structure_info.len;
-        this_.structure.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+        this_.structure.draw(fb_idx, 0, len, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
 
@@ -302,7 +302,7 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
         var structure_info = data._asm.getStructureGeometryBuffer();
         var buf = structure_info.buf;
         var len = structure_info.len;
-        this_.structure_shadow.draw(fb_idx, 0, len / SIZEOF.StructureVertex, {}, {'*': buf}, {
+        this_.structure_shadow.draw(fb_idx, 0, len, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
     });
@@ -325,7 +325,7 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
         var light_info = data._asm.getLightGeometryBuffer();
         var buf = light_info.buf;
         var len = light_info.len;
-        this_.light_static.draw(fb_idx, 0, len / SIZEOF.LightVertex, {}, {'*': buf}, {
+        this_.light_static.draw(fb_idx, 0, len, {}, {'*': buf}, {
             'depthTex': buffers.fb_world.depth_texture,
         });
 
@@ -419,7 +419,7 @@ Renderer.prototype.updateCavernMap = function(phys_asm, pos) {
     }
 };
 
-Renderer.prototype.render = function(scene, draw_ui) {
+Renderer.prototype.render = function(scene) {
     // Prepare all components for rendering
     var start_prep = Date.now();
 
@@ -456,9 +456,19 @@ Renderer.prototype.render = function(scene, draw_ui) {
         this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_final);
     }
 
-    if (draw_ui != null && !window.hideUI) {
-        draw_ui(scene.camera_size, this.buffers.fb_final);
-    }
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    this.buffers.fb_final.use(function(fb_idx) {
+        var ui_info = this_.data._asm.getUIGeometryBuffer();
+        var buf = ui_info.buf;
+        var len = ui_info.len;
+        this_.shaders.ui_blit2.draw(fb_idx, 0, len, {
+            // TODO: sheet size
+        }, {'*': buf}, {
+            // TODO: textures
+        });
+    });
+    gl.disable(gl.BLEND);
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     // TODO: move blit_full to a common location

@@ -160,5 +160,29 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
         .texture('shadowTex')
         .texture('shadowDepthTex')
         .finish();
+
+
+    //
+    // UI
+    //
+
+    var item_tex = ctx.makeAssetTexture('items_img');
+    var ui_tex = ctx.makeAssetTexture('ui_atlas');
+    shaders.ui_blit2 = ctx.start('ui_blit2.vert', 'ui_blit2.frag')
+        .uniformVec2('screenSize')
+        .uniformVec2('sheetSize[0]', [item_tex.width, item_tex.height])
+        .uniformVec2('sheetSize[1]', [ui_tex.width, ui_tex.height])
+        .uniformVec2('sheetSize[2]')
+        .attributes(new SB.Attributes(16)
+                .field(0, gl.UNSIGNED_SHORT, 2, 'srcPos')
+                .field(4, gl.UNSIGNED_BYTE, 2, 'srcSize')
+                .field(6, gl.UNSIGNED_BYTE, 1, 'sheetAttr')
+                .field(8, gl.SHORT, 2, 'dest')
+                .field(12, gl.UNSIGNED_SHORT, 2, 'offset_'))
+        .texture('sheets[0]', item_tex)
+        .texture('sheets[1]', ui_tex)
+        .texture('sheets[2]', null)
+        .finish();
+
 }
 exports.makeShaders = makeShaders;
