@@ -164,7 +164,21 @@ impl Vn for V2 {
 }
 
 
-pub trait Vn: Sized+Copy {
+pub trait Vn:
+    Sized + Copy +
+    Add<Self, Output=Self> +
+    Sub<Self, Output=Self> +
+    Mul<Self, Output=Self> +
+    Div<Self, Output=Self> +
+    Rem<Self, Output=Self> +
+    Neg<Output=Self> +
+    Shl<usize, Output=Self> +
+    Shr<usize, Output=Self> +
+    BitAnd<Self, Output=Self> +
+    BitOr<Self, Output=Self> +
+    BitXor<Self, Output=Self> +
+    Not<Output=Self>
+{
     type Axis: Eq+Copy;
 
     fn unfold<T, F: FnMut(<Self as Vn>::Axis, T) -> (i32, T)>(val: T, mut f: F) -> (Self, T);
@@ -456,6 +470,8 @@ impl<V: Copy+fmt::Debug> fmt::Debug for Region<V> {
 }
 
 impl<V: Vn> Region<V> {
+    // Constructors
+
     #[inline]
     pub fn new(min: V, max: V) -> Region<V> {
         Region { min: min, max: max }
@@ -467,41 +483,35 @@ impl<V: Vn> Region<V> {
     }
 
     #[inline]
+    pub fn around(center: V, radius: i32) -> Region<V> {
+        Region::new(center - scalar(radius),
+                    center + scalar(radius))
+    }
+
+    #[inline]
+    pub fn sized(base: V, size: V) -> Region<V> {
+        Region::new(base, base + size)
+    }
+
+    // Basic inspection
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         <V as Vn>::fold_axes(false, |a, e| e || self.min.get(a) >= self.max.get(a))
     }
 
     #[inline]
-    pub fn points(&self) -> RegionPoints<V> {
-        if self.is_empty() {
-            RegionPoints::empty()
-        } else {
-            RegionPoints::new(self.min, self.max)
-        }
+    pub fn size(&self) -> V {
+        self.max - self.min
     }
 
     #[inline]
-    pub fn points_inclusive(&self) -> RegionPoints<V> {
-        Region::new(self.min, self.max.map(|x| x + 1)).points()
+    pub fn volume(&self) -> i32 {
+        let size = self.size();
+        <V as Vn>::fold_axes(1, |a, v| v * size.get(a))
     }
 
-    #[inline]
-    pub fn contains(&self, point: V) -> bool {
-        <V as Vn>::fold_axes(true, |a, cur| {
-            cur &&
-            point.get(a) >= self.min.get(a) &&
-            point.get(a) <  self.max.get(a)
-        })
-    }
-
-    #[inline]
-    pub fn contains_inclusive(&self, point: V) -> bool {
-        <V as Vn>::fold_axes(true, |a, cur| {
-            cur &&
-            point.get(a) >= self.min.get(a) &&
-            point.get(a) <= self.max.get(a)
-        })
-    }
+    // Region ops
 
     #[inline]
     pub fn join(&self, other: Region<V>) -> Region<V> {
@@ -528,35 +538,23 @@ impl<V: Vn> Region<V> {
     }
 
     #[inline]
-    pub fn clamp_point(&self, point: V) -> V {
-        <V as Vn>::from_fn(|a| max(self.min.get(a),
-                               min(self.max.get(a),
-                                   point.get(a))))
-    }
-}
-
-impl<V: Vn + Add<V, Output=V> + Sub<V, Output=V> > Region<V> {
-    #[inline]
-    pub fn around(center: V, radius: i32) -> Region<V> {
-        Region::new(center - scalar(radius),
-                    center + scalar(radius))
-    }
-
-    #[inline]
-    pub fn size(&self) -> V {
-        self.max - self.min
-    }
-
-    #[inline]
-    pub fn volume(&self) -> i32 {
-        let size = self.size();
-        <V as Vn>::fold_axes(1, |a, v| v * size.get(a))
-    }
-
-    #[inline]
     pub fn expand(&self, amount: V) -> Region<V> {
         Region::new(self.min - amount, self.max + amount)
     }
+
+    #[inline]
+    pub fn div_round(&self, rhs: i32) -> Region<V> {
+        Region::new(self.min / scalar(rhs),
+                    (self.max + scalar(rhs - 1)) / scalar(rhs))
+    }
+
+    #[inline]
+    pub fn div_round_signed(&self, rhs: i32) -> Region<V> {
+        Region::new(self.min.div_floor(scalar(rhs)),
+                    (self.max + scalar(rhs - 1)).div_floor(scalar(rhs)))
+    }
+
+    // Point ops
 
     #[inline]
     pub fn index(&self, point: V) -> usize {
@@ -578,20 +576,46 @@ impl<V: Vn + Add<V, Output=V> + Sub<V, Output=V> > Region<V> {
             (x, acc)
         }).0
     }
-}
 
-impl<V > Region<V>
-        where V: Vn + Add<V, Output=V> + Sub<V, Output=V> + Div<V, Output=V> {
     #[inline]
-    pub fn div_round(&self, rhs: i32) -> Region<V> {
-        Region::new(self.min / scalar(rhs),
-                    (self.max + scalar(rhs - 1)) / scalar(rhs))
+    pub fn contains(&self, point: V) -> bool {
+        <V as Vn>::fold_axes(true, |a, cur| {
+            cur &&
+            point.get(a) >= self.min.get(a) &&
+            point.get(a) <  self.max.get(a)
+        })
     }
 
     #[inline]
-    pub fn div_round_signed(&self, rhs: i32) -> Region<V> {
-        Region::new(self.min.div_floor(scalar(rhs)),
-                    (self.max + scalar(rhs - 1)).div_floor(scalar(rhs)))
+    pub fn contains_inclusive(&self, point: V) -> bool {
+        <V as Vn>::fold_axes(true, |a, cur| {
+            cur &&
+            point.get(a) >= self.min.get(a) &&
+            point.get(a) <= self.max.get(a)
+        })
+    }
+
+    #[inline]
+    pub fn clamp_point(&self, point: V) -> V {
+        <V as Vn>::from_fn(|a| max(self.min.get(a),
+                               min(self.max.get(a),
+                                   point.get(a))))
+    }
+
+    // Iteration
+
+    #[inline]
+    pub fn points(&self) -> RegionPoints<V> {
+        if self.is_empty() {
+            RegionPoints::empty()
+        } else {
+            RegionPoints::new(self.min, self.max)
+        }
+    }
+
+    #[inline]
+    pub fn points_inclusive(&self) -> RegionPoints<V> {
+        Region::new(self.min, self.max.map(|x| x + 1)).points()
     }
 }
 
