@@ -47,6 +47,10 @@ var module_env = function(buffer, asmgl) {
             msg_buffer = '';
         },
 
+        'now': function() {
+            return Date.now() & 0xffffffff;
+        },
+
         'asmgl_gen_buffer': function() {
             return asmgl.genBuffer();
         },
@@ -396,4 +400,9 @@ DynAsm.prototype.getUIGeometryBuffer = function() {
         buf: this.asmgl.getBufferWrapper(name),
         len: len / this.SIZEOF.UIVertex,
     };
+};
+
+
+DynAsm.prototype.bench = function() {
+    return this._raw['client_bench'](this.client);
 };

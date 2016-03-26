@@ -229,6 +229,20 @@ pub unsafe extern fn get_ui_geometry_buffer(client: &Client,
 }
 
 
+#[no_mangle]
+pub unsafe extern fn client_bench(client: &mut Client) -> u32 {
+    extern "C" {
+        fn now() -> u32;
+    }
+
+    let start = now();
+    client.bench();
+    let end = now();
+
+    end - start
+}
+
+
 // SIZEOF
 
 #[repr(C)]

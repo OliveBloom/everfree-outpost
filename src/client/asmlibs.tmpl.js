@@ -17,6 +17,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _llvm_trap = env.abort;
     var _write_str = env.writeStr;
     var _flush_str = env.flushStr;
+    var _now = env.now;
     var Math_imul = global.Math.imul;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 
@@ -191,6 +192,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
         get_structure_geometry_buffer: _get_structure_geometry_buffer,
         get_light_geometry_buffer: _get_light_geometry_buffer,
         get_ui_geometry_buffer: _get_ui_geometry_buffer,
+
+        client_bench: _client_bench,
     });
 };
 

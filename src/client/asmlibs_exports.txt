@@ -21,3 +21,4 @@ get_terrain_geometry_buffer
 get_structure_geometry_buffer
 get_light_geometry_buffer
 get_ui_geometry_buffer
+client_bench

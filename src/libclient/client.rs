@@ -223,4 +223,13 @@ impl<'d, GL: GlContext> Client<'d, GL> {
     pub fn get_ui_geometry_buffer(&self) -> &GL::Buffer {
         self.renderer.get_ui_buffer()
     }
+
+
+    // Misc
+
+    pub fn bench(&mut self) {
+        for i in 0 .. 100000 {
+            self.renderer.load_ui_geometry(&self.ui.generate_geom());
+        }
+    }
 }
