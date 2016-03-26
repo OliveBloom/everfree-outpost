@@ -2,7 +2,7 @@
 //! `ui::state`) with external data (such as `client.inventories`).
 
 use inventory::Inventory;
-use ui::{hotbar, item};
+use ui::{hotbar, inventory, item};
 use ui::state::*;
 
 #[derive(Clone, Copy)]
@@ -40,7 +40,7 @@ impl<'a> hotbar::HotbarDyn for HotbarDyn<'a> {
 
 
 #[derive(Clone, Copy)]
-struct HotbarSlotDyn {
+pub struct HotbarSlotDyn {
     item_id: u16,
     quantity: Option<u16>,
     color: u8,
@@ -56,4 +56,64 @@ impl hotbar::SlotDyn for HotbarSlotDyn {
 impl item::ItemDyn for HotbarSlotDyn {
     fn item_id(self) -> u16 { self.item_id }
     fn quantity(self) -> Option<u16> { self.quantity }
+}
+
+
+#[derive(Clone, Copy)]
+pub struct InventoryGridDyn<'a> {
+    pub state: InventoryGridState,
+    pub inv: Option<&'a Inventory>,
+}
+
+impl<'a> inventory::GridDyn for InventoryGridDyn<'a> {
+    type SlotDyn = InventorySlotDyn;
+
+    fn len(self) -> usize {
+        if let Some(inv) = self.inv {
+            inv.len()
+        } else {
+            0
+        }
+    }
+
+    fn slot(self, i: usize) -> InventorySlotDyn {
+        debug_assert!(i < self.len());
+        debug_assert!(self.inv.is_some());  // implied by self.len() > 0
+        let item = self.inv.unwrap().items[i];
+
+        InventorySlotDyn {
+            item_id: item.id,
+            quantity: item.quantity,
+            state:
+                if i == self.state.focus as usize { inventory::SlotState::Active }
+                else { inventory::SlotState::Inactive },
+        }
+    }
+}
+
+
+#[derive(Clone, Copy)]
+pub struct InventorySlotDyn {
+    item_id: u16,
+    quantity: u8,
+    state: inventory::SlotState,
+}
+
+impl inventory::SlotDyn for InventorySlotDyn {
+    type ItemDyn = Self;
+
+    fn item(self) -> InventorySlotDyn { self }
+    fn state(self) -> inventory::SlotState { self.state }
+}
+
+impl item::ItemDyn for InventorySlotDyn {
+    fn item_id(self) -> u16 { self.item_id }
+
+    fn quantity(self) -> Option<u16> {
+        if self.quantity > 0 {
+            Some(self.quantity as u16)
+        } else {
+            None
+        }
+    }
 }

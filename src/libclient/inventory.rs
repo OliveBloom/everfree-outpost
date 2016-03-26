@@ -5,6 +5,7 @@ use std::ops::Index;
 
 pub type InventoryId = u32;
 
+#[derive(Clone, Copy)]
 pub struct Item {
     pub id: u16,
     pub quantity: u8,
@@ -26,6 +27,10 @@ pub struct Inventory {
 impl Inventory {
     fn new(items: Box<[Item]>) -> Inventory {
         Inventory { items: items }
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 
     pub fn count(&self, item_id: u16) -> u16 {

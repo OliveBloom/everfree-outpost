@@ -25,7 +25,7 @@ impl Slot {
 
 impl<D: SlotDyn> Widget for WidgetPack<Slot, D> {
     fn size(self) -> V2 { Slot::size() }
-        
+
     fn walk_layout<V: Visitor>(self, v: &mut V, pos: V2) {
         let child = WidgetPack::new(ItemDisplay, self.dyn.item());
         let child_size = child.size();

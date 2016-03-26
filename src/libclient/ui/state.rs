@@ -34,6 +34,20 @@ impl HotbarState {
 }
 
 
+#[derive(Clone, Copy)]
+pub struct InventoryGridState {
+    pub focus: u16,
+}
+
+impl InventoryGridState {
+    pub fn new() -> InventoryGridState {
+        InventoryGridState {
+            focus: 0,
+        }
+    }
+}
+
+
 pub struct State {
     pub hotbar: HotbarState,
 }
