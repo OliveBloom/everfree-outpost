@@ -16,7 +16,7 @@ def rules(i):
 
         rule stack_fonts
             command = $python3 $root/src/gen/stack_fonts.py $
-                $out_img $out_metrics $in
+                $out_img $out_metrics $out_rust $in
             description = GEN $out_img
 
         rule process_day_night
@@ -56,9 +56,10 @@ def font(basename, src_img, charset_args='--first-char=0x21', extra_args=''):
 def font_stack(out_base, in_basenames):
     out_img = out_base + '.png'
     out_metrics = out_base + '_metrics.json'
+    out_rust = out_base + '_metrics.rs'
 
     return template('''
-        build %out_img %out_metrics: stack_fonts $
+        build %out_img %out_metrics %out_rust: stack_fonts $
             %for name in in_basenames
                 $b_data/fonts/%name.png $
                 $b_data/fonts/%{name}_metrics.json $
@@ -66,6 +67,7 @@ def font_stack(out_base, in_basenames):
             | $root/src/gen/stack_fonts.py
             out_img = %out_img
             out_metrics = %out_metrics
+            out_rust = %out_rust
     ''', **locals())
 
 def server_json(out_json):

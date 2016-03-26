@@ -117,16 +117,27 @@ def build_metrics(args, boxes, margin_x, margin_y):
     y = 0
     widths = [0] * num_chars
     height = 0
+    spans = [[first_char, first_char, 0]]
+    xs2 = []
+    widths2 = []
+
+    code_boxes = sorted(zip(codes, boxes), key=lambda x: x[0])
 
     cur_x = 0
-    for code, (x0,y0,x1,y1) in zip(codes, boxes):
+    for index, (code, (x0,y0,x1,y1)) in enumerate(code_boxes):
         xs[code - first_char] = cur_x
+        xs2.append(cur_x)
 
         w = x1 - x0 + margin_x
         widths[code - first_char] = w
+        widths2.append(w)
         cur_x += w
 
         height = max(height, y1 - y0 + margin_y)
+
+        if spans[-1][1] != code:
+            spans.append([code, code, index])
+        spans[-1][1] += 1
 
     return {
             'xs': xs,
@@ -134,6 +145,9 @@ def build_metrics(args, boxes, margin_x, margin_y):
             'widths': widths,
             'height': height,
             'first_char': first_char,
+            'spans': spans,
+            'xs2': xs2,
+            'widths2': widths2,
             }
 
 def main():
