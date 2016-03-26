@@ -12,6 +12,11 @@ client_reset
 structure_appear
 structure_gone
 structure_replace
+inventory_appear
+inventory_gone
+inventory_update
+inventory_main_id
+inventory_ability_id
 load_terrain_chunk
 collide
 find_ceiling

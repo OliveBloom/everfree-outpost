@@ -14,8 +14,9 @@ exports.TAG = {
 
 
 
+// TODO: passing in asm_client here is a hack
 /** @constructor */
-function InventoryTracker(conn) {
+function InventoryTracker(conn, asm_client) {
     this.server_invs = {};
     this.client_invs = {};
     this.conn = conn;
@@ -23,12 +24,15 @@ function InventoryTracker(conn) {
     var this_ = this;
     this.conn.onInventoryAppear = function(inventory_id, slots) {
         this_._handleAppear(inventory_id, slots);
+        asm_client.inventoryAppear(inventory_id, slots);
     };
     this.conn.onInventoryUpdate = function(inventory_id, slot_idx, item) {
         this_._handleUpdate(inventory_id, slot_idx, item);
+        asm_client.inventoryUpdate(inventory_id, slot_idx, item);
     };
     this.conn.onInventoryGone = function(inventory_id) {
         this_._handleGone(inventory_id);
+        asm_client.inventoryGone(inventory_id);
     };
 }
 exports.InventoryTracker = InventoryTracker;

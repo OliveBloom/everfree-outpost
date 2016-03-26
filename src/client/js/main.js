@@ -255,7 +255,7 @@ function init() {
             openConn(info, function() {
                 timing = new Timing(conn);
                 timing.scheduleUpdates(5, 30);
-                inv_tracker = new InventoryTracker(conn);
+                inv_tracker = new InventoryTracker(conn, asm_client);
 
                 maybeRegister(info, function() {
                     conn.sendLogin(Config.login_name.get(), Config.login_secret.get());
@@ -941,6 +941,8 @@ function handleMainInventory(iid) {
     if (Config.show_inventory_updates.get()) {
         inv_update_list.attach(item_inv.clone());
     }
+
+    asm_client.inventoryMainId(iid);
 }
 
 function handleAbilityInventory(iid) {
@@ -949,6 +951,8 @@ function handleAbilityInventory(iid) {
     }
     ability_inv = inv_tracker.get(iid);
     ui_gl.hotbar.attachAbilities(ability_inv.clone());
+
+    asm_client.inventoryAbilityId(iid);
 }
 
 function handlePlaneFlags(flags) {

@@ -2,6 +2,8 @@ use std::collections::btree_map::{self, BTreeMap};
 use std::collections::Bound;
 use std::ops::Index;
 
+pub type StructureId = u32;
+
 
 #[derive(Clone, Copy)]
 pub struct Structure {
@@ -17,7 +19,7 @@ pub struct Structure {
 
 
 pub struct Structures {
-    map: BTreeMap<u32, Structure>,
+    map: BTreeMap<StructureId, Structure>,
 }
 
 impl Structures {
@@ -32,7 +34,7 @@ impl Structures {
     }
 
     pub fn insert(&mut self,
-                  id: u32,
+                  id: StructureId,
                   pos: (u8, u8, u8),
                   template_id: u32,
                   oneshot_start: u16) {
@@ -43,12 +45,12 @@ impl Structures {
         });
     }
 
-    pub fn remove(&mut self, id: u32) -> Structure {
+    pub fn remove(&mut self, id: StructureId) -> Structure {
         self.map.remove(&id).unwrap()
     }
 
     pub fn replace(&mut self,
-                   id: u32,
+                   id: StructureId,
                    template_id: u32,
                    oneshot_start: u16) {
         if let Some(s) = self.map.get_mut(&id) {
@@ -61,17 +63,17 @@ impl Structures {
         self.map.iter()
     }
 
-    pub fn iter_from(&self, min: u32) -> RangeIter {
+    pub fn iter_from(&self, min: StructureId) -> RangeIter {
         self.map.range(Bound::Included(&min), Bound::Unbounded)
     }
 }
 
-pub type Iter<'a> = btree_map::Iter<'a, u32, Structure>;
-pub type RangeIter<'a> = btree_map::Range<'a, u32, Structure>;
+pub type Iter<'a> = btree_map::Iter<'a, StructureId, Structure>;
+pub type RangeIter<'a> = btree_map::Range<'a, StructureId, Structure>;
 
-impl Index<u32> for Structures {
+impl Index<StructureId> for Structures {
     type Output = Structure;
-    fn index(&self, idx: u32) -> &Structure {
+    fn index(&self, idx: StructureId) -> &Structure {
         &self.map[&idx]
     }
 }

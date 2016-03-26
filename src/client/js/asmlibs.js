@@ -150,7 +150,7 @@ DynAsm.prototype._heapCheck = function() {
 };
 
 DynAsm.prototype._calcSizeof = function() {
-    var EXPECT_SIZES = 8;
+    var EXPECT_SIZES = 9;
     var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
 
     var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
@@ -170,6 +170,8 @@ DynAsm.prototype._calcSizeof = function() {
     result.StructureVertex = next();
     result.LightVertex = next();
     result.UIVertex = next();
+
+    result.Item = next();
 
     console.assert(index == EXPECT_SIZES,
             'some items were left over after building sizeof', index, EXPECT_SIZES);
@@ -256,6 +258,37 @@ DynAsm.prototype.structureGone = function(id) {
 
 DynAsm.prototype.structureReplace = function(id, template_id, oneshot_start) {
     this._raw['structure_replace'](this.client, id, template_id, oneshot_start);
+};
+
+DynAsm.prototype.inventoryAppear = function(id, items) {
+    var item_arr = this._heapAlloc(Uint8Array, items.length * this.SIZEOF.Item);
+    var view = new DataView(item_arr.buffer, item_arr.byteOffset, item_arr.byteLength);
+
+    for (var i = 0; i < items.length; ++i) {
+        var base = i * this.SIZEOF.Item;
+        var item = items[i];
+        view.setUint16( base +  0,  item.item_id, true);
+        view.setUint8(  base +  2,  item.count);
+    }
+
+    // Takes ownership of `items`.
+    this._raw['inventory_appear'](this.client, id, item_arr.byteOffset, item_arr.byteLength);
+};
+
+DynAsm.prototype.inventoryGone = function(id) {
+    this._raw['inventory_gone'](this.client, id);
+};
+
+DynAsm.prototype.inventoryUpdate = function(id, slot, item) {
+    this._raw['inventory_update'](this.client, id, slot, item.item_id, item.count);
+};
+
+DynAsm.prototype.inventoryMainId = function(id) {
+    this._raw['inventory_main_id'](this.client, id);
+};
+
+DynAsm.prototype.inventoryAbilityId = function(id) {
+    this._raw['inventory_ability_id'](this.client, id);
 };
 
 DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {

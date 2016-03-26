@@ -28,6 +28,7 @@ use client::Data;
 use physics::v3::{V3, V2, Region};
 use physics::TILE_BITS;
 
+use client::inventory;
 use client::graphics::light;
 use client::graphics::structure;
 use client::graphics::terrain;
@@ -117,6 +118,44 @@ pub unsafe extern fn structure_replace(client: &mut Client,
                                        template_id: u32,
                                        oneshot_start: u16) {
     client.structure_replace(id, template_id, oneshot_start);
+}
+
+// Inventories
+
+#[no_mangle]
+pub unsafe extern fn inventory_appear(client: &mut Client,
+                                      id: u32,
+                                      items_ptr: *mut u8,
+                                      items_byte_len: usize) {
+    let items = make_boxed_slice(items_ptr as *mut inventory::Item, items_byte_len);
+    client.inventory_appear(id, items);
+}
+
+#[no_mangle]
+pub unsafe extern fn inventory_gone(client: &mut Client,
+                                    id: u32) {
+    client.inventory_gone(id);
+}
+
+#[no_mangle]
+pub unsafe extern fn inventory_update(client: &mut Client,
+                                      inv_id: u32,
+                                      slot: usize,
+                                      item_id: u16,
+                                      quantity: u8) {
+    client.inventory_update(inv_id, slot, inventory::Item::new(item_id, quantity));
+}
+
+#[no_mangle]
+pub unsafe extern fn inventory_main_id(client: &mut Client,
+                                       inv_id: u32) {
+    client.set_main_inventory_id(inv_id);
+}
+
+#[no_mangle]
+pub unsafe extern fn inventory_ability_id(client: &mut Client,
+                                          inv_id: u32) {
+    client.set_ability_inventory_id(inv_id);
 }
 
 
@@ -257,6 +296,8 @@ pub struct Sizes {
     structure_vertex: usize,
     light_vertex: usize,
     ui_vertex: usize,
+
+    item: usize,
 }
 
 #[export_name = "get_sizes"]
@@ -273,6 +314,8 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
     sizes.structure_vertex = size_of::<structure::Vertex>();
     sizes.light_vertex = size_of::<light::Vertex>();
     sizes.ui_vertex = size_of::<ui::geom::Vertex>();
+
+    sizes.item = size_of::<inventory::Item>();
 
     size_of::<Sizes>() / size_of::<usize>()
 }

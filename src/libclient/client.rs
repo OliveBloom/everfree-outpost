@@ -14,6 +14,7 @@ use physics::v3::{V3, V2, scalar, Region};
 
 use data::Data;
 use graphics::types::StructureTemplate;
+use inventory::{Inventories, Item, InventoryId};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -26,6 +27,7 @@ pub struct Client<'d, GL: GlContext> {
     chunks: Box<LocalChunks>,
     terrain_shape: Box<TerrainShape>,
     structures: Structures,
+    inventories: Inventories,
 
     ui: UI,
 
@@ -40,6 +42,7 @@ impl<'d, GL: GlContext> Client<'d, GL> {
             chunks: box [[0; 1 << (3 * CHUNK_BITS)]; 1 << (2 * LOCAL_BITS)],
             terrain_shape: box TerrainShape::new(),
             structures: Structures::new(),
+            inventories: Inventories::new(),
 
             ui: UI::new(),
 
@@ -57,12 +60,14 @@ impl<'d, GL: GlContext> Client<'d, GL> {
 
         self.terrain_shape.clear();
         self.structures.clear();
+        self.inventories.clear();
 
         self.renderer.invalidate_terrain_geometry();
         self.renderer.invalidate_structure_geometry();
         self.renderer.invalidate_light_geometry();
     }
 
+    // Terrain chunk tracking
 
     pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
         // Update self.chunks
@@ -82,6 +87,7 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         self.renderer.invalidate_terrain_geometry();
     }
 
+    // Structure tracking
 
     pub fn add_structure_shape(&mut self,
                                t: &StructureTemplate,
@@ -161,6 +167,34 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         if old_t.flags.contains(HAS_LIGHT) || new_t.flags.contains(HAS_LIGHT) {
             self.renderer.invalidate_light_geometry();
         }
+    }
+
+    // Inventory tracking
+
+    pub fn inventory_appear(&mut self,
+                            id: InventoryId,
+                            items: Box<[Item]>) {
+        self.inventories.insert(id, items);
+    }
+
+    pub fn inventory_gone(&mut self,
+                          id: InventoryId) {
+        self.inventories.remove(id);
+    }
+
+    pub fn inventory_update(&mut self,
+                            id: InventoryId,
+                            slot: usize,
+                            item: Item) {
+        self.inventories.update(id, slot, item);
+    }
+
+    pub fn set_main_inventory_id(&mut self, id: InventoryId) {
+        self.inventories.set_main_id(id);
+    }
+
+    pub fn set_ability_inventory_id(&mut self, id: InventoryId) {
+        self.inventories.set_ability_id(id);
     }
 
 

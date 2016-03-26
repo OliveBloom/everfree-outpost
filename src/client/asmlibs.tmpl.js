@@ -182,6 +182,11 @@ var asmlibs_code_raw = function(global, env, buffer) {
         structure_gone: _structure_gone,
         structure_replace: _structure_replace,
 
+        inventory_appear: _inventory_appear,
+        inventory_gone: _inventory_gone,
+        inventory_update: _inventory_update,
+        inventory_main_id: _inventory_main_id,
+        inventory_ability_id: _inventory_ability_id,
 
         collide: _collide,
         find_ceiling: _find_ceiling,
