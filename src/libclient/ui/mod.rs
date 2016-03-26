@@ -2,13 +2,16 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region};
 
+use inventory::Inventories;
+
 use self::widget::{Widget, Visitor};
 
 
 //mod context;
 pub use client_ui_atlas as atlas;
 pub mod geom;
-//mod state;
+pub mod state;
+mod dyn;
 
 mod widget;
 mod item;
@@ -18,34 +21,35 @@ mod hotbar;
 //pub use self::context::Vertex;
 //pub use self::state::State;
 
-pub struct UI;
+pub struct UI {
     //context: Context,
-    //state: state::State,
-    //root: hotbar::Hotbar,
+    state: state::State,
+}
 
 impl UI {
     pub fn new() -> UI {
-        UI
+        UI {
             //context: Context::new(),
-            //state: state::State::new(),
-            //root: hotbar::Hotbar::new(),
-        //}
+            state: state::State::new(),
+        }
     }
 
-    /*
-    pub fn state(&self) -> &State {
+    pub fn state(&self) -> &state::State {
         &self.state
     }
 
-    pub fn state_mut(&mut self) -> &mut State {
+    pub fn state_mut(&mut self) -> &mut state::State {
         &mut self.state
     }
-    */
 
-    pub fn generate_geom(&mut self) -> Vec<geom::Vertex> {
+    pub fn generate_geom(&mut self, invs: &Inventories) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();
 
-        let root = widget::WidgetPack::new(hotbar::Hotbar, ());
+        let dyn = dyn::HotbarDyn {
+            state: &self.state.hotbar,
+            inv: invs.main_inventory(),
+        };
+        let root = widget::WidgetPack::new(hotbar::Hotbar, dyn);
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(root, root_rect);
 

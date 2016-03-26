@@ -27,6 +27,16 @@ impl Inventory {
     fn new(items: Box<[Item]>) -> Inventory {
         Inventory { items: items }
     }
+
+    pub fn count(&self, item_id: u16) -> u16 {
+        let mut count = 0;
+        for i in &*self.items {
+            if i.id == item_id {
+                count += i.quantity as u16;
+            }
+        }
+        count
+    }
 }
 
 pub struct Inventories {

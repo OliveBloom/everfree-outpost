@@ -237,7 +237,10 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
 
         // Also refresh the UI buffer.
-        self.renderer.load_ui_geometry(&self.ui.generate_geom());
+        self.ui.state_mut().hotbar.slots[0].item_id = 70;
+        self.ui.state_mut().hotbar.slots[1].item_id = 54;
+        let geom = self.ui.generate_geom(&self.inventories);
+        self.renderer.load_ui_geometry(&geom);
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
@@ -261,7 +264,7 @@ impl<'d, GL: GlContext> Client<'d, GL> {
 
     pub fn bench(&mut self) {
         for i in 0 .. 100000 {
-            self.renderer.load_ui_geometry(&self.ui.generate_geom());
+            //self.renderer.load_ui_geometry(&self.ui.generate_geom());
         }
     }
 }
