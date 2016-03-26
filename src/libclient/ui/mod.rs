@@ -85,5 +85,5 @@ impl hotbar::SlotDyn for () {
 
 impl item::ItemDyn for () {
     fn item_id(self) -> u16 { 1 }
-    fn quantity(self) -> Option<u16> { None }
+    fn quantity(self) -> Option<u16> { Some(54321) }
 }

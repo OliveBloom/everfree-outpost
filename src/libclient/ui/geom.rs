@@ -3,6 +3,8 @@ use std::mem;
 
 use physics::v3::{V2, scalar};
 
+use fonts::{FontMetrics, FontMetricsExt};
+
 use super::atlas::AtlasEntry;
 
 
@@ -27,6 +29,7 @@ const ITEM_SHEET_SIZE: u16 = 32;
 
 const ITEM_SHEET: u8 = 0;
 const UI_SHEET: u8 = 1;
+const FONT_SHEET: u8 = 2;
 
 impl Geom {
     pub fn new() -> Geom {
@@ -81,6 +84,28 @@ impl Geom {
         };
         println!("item: {}, {}, {:?}, {:?}", x, y, entry.pos, entry.size);
         self.emit_quad(entry, ITEM_SHEET, pos, scalar(ITEM_SIZE as i32));
+    }
+
+    pub fn draw_char(&mut self, font: &FontMetrics, idx: usize, pos: V2) {
+        let x = font.xs[idx];
+        let y = font.y as u16;
+        let width = font.widths[idx];
+        let height = font.height;
+
+        let entry = AtlasEntry {
+            pos: (x, y),
+            size: (width, height),
+        };
+
+        self.emit_quad(entry, FONT_SHEET, pos, V2::new(width as i32, height as i32));
+    }
+
+    pub fn draw_str(&mut self, font: &FontMetrics, s: &str, pos: V2) {
+        for (idx, offset) in font.iter_str(s) {
+            if let Some(idx) = idx {
+                self.draw_char(font, idx, pos + V2::new(offset as i32, 0));
+            }
+        }
     }
 
     pub fn unwrap(self) -> Vec<Vertex> {

@@ -17,6 +17,7 @@
 
 #[macro_use] extern crate bitflags;
 
+extern crate client_fonts;
 extern crate client_ui_atlas;
 extern crate physics;
 
@@ -25,6 +26,7 @@ pub use data::Data;
 
 pub mod client;
 pub mod data;
+mod fonts;
 
 pub mod gl;
 

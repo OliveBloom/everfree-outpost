@@ -14,6 +14,7 @@
 // Avoid name collision between libcollections and the std::collections module
 extern crate alloc;
 extern crate rustc_unicode;
+#[macro_reexport(format, vec)]
 extern crate collections as collections_;
 
 #[macro_reexport(print, println)]

@@ -168,6 +168,7 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
 
     var item_tex = ctx.makeAssetTexture('items_img');
     var ui_tex = ctx.makeAssetTexture('ui_atlas');
+    var font_tex = ctx.makeAssetTexture('fonts');
     shaders.ui_blit2 = ctx.start('ui_blit2.vert', 'ui_blit2.frag')
         .uniformVec2('screenSize')
         // TODO: ugly hack - we lie and say the item texture is half as big as
@@ -175,7 +176,7 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
         // will work with the actual 32x32-icon sheet
         .uniformVec2('sheetSize[0]', [item_tex.width / 2, item_tex.height / 2])
         .uniformVec2('sheetSize[1]', [ui_tex.width, ui_tex.height])
-        .uniformVec2('sheetSize[2]')
+        .uniformVec2('sheetSize[2]', [font_tex.width, font_tex.height])
         .attributes(new SB.Attributes(16)
                 .field(0, gl.UNSIGNED_SHORT, 2, 'srcPos')
                 .field(4, gl.UNSIGNED_BYTE, 2, 'srcSize')
@@ -184,7 +185,7 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
                 .field(12, gl.UNSIGNED_SHORT, 2, 'offset_'))
         .texture('sheets[0]', item_tex)
         .texture('sheets[1]', ui_tex)
-        .texture('sheets[2]', null)
+        .texture('sheets[2]', font_tex)
         .finish();
 
 }

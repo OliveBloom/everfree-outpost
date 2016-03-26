@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region};
 
+use fonts::{self, FontMetricsExt};
 use ui::geom::Geom;
 use ui::widget::*;
 
@@ -27,5 +28,24 @@ impl<D: ItemDyn> Widget for WidgetPack<ItemDisplay, D> {
 
     fn render(self, geom: &mut Geom, rect: Region<V2>) {
         geom.draw_item(self.dyn.item_id(), rect.min);
+        if let Some(qty) = self.dyn.quantity() {
+            let s = quantity_string(qty);
+            let width = fonts::HOTBAR.measure_width(&s);
+            let offset = V2::new(width as i32, fonts::HOTBAR.height as i32);
+            geom.draw_str(&fonts::HOTBAR, &s, rect.max - offset + scalar(1));
+        }
+    }
+}
+
+fn quantity_string(quantity: u16) -> String {
+    if quantity < 1000 {
+        format!("{}", quantity)
+    } else if quantity < 10000 {
+        let frac = quantity / 100 % 10;
+        let whole = quantity / 1000;
+        format!("{}.{}k", whole, frac)
+    } else {
+        let thousands = quantity / 1000;
+        format!("{}k", thousands)
     }
 }
