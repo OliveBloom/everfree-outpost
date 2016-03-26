@@ -82,7 +82,6 @@ impl Geom {
             pos: (x * ITEM_SIZE, y * ITEM_SIZE),
             size: (ITEM_SIZE as u8, ITEM_SIZE as u8),
         };
-        println!("item: {}, {}, {:?}, {:?}", x, y, entry.pos, entry.size);
         self.emit_quad(entry, ITEM_SHEET, pos, scalar(ITEM_SIZE as i32));
     }
 
