@@ -170,7 +170,10 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
     var ui_tex = ctx.makeAssetTexture('ui_atlas');
     shaders.ui_blit2 = ctx.start('ui_blit2.vert', 'ui_blit2.frag')
         .uniformVec2('screenSize')
-        .uniformVec2('sheetSize[0]', [item_tex.width, item_tex.height])
+        // TODO: ugly hack - we lie and say the item texture is half as big as
+        // it actually is, so that geometry generated with 16x16 icons in mind
+        // will work with the actual 32x32-icon sheet
+        .uniformVec2('sheetSize[0]', [item_tex.width / 2, item_tex.height / 2])
         .uniformVec2('sheetSize[1]', [ui_tex.width, ui_tex.height])
         .uniformVec2('sheetSize[2]')
         .attributes(new SB.Attributes(16)

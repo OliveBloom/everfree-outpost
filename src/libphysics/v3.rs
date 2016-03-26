@@ -489,8 +489,8 @@ impl<V: Vn> Region<V> {
     }
 
     #[inline]
-    pub fn sized(base: V, size: V) -> Region<V> {
-        Region::new(base, base + size)
+    pub fn sized(size: V) -> Region<V> {
+        Region::new(scalar(0), size)
     }
 
     // Basic inspection
@@ -642,6 +642,43 @@ impl Region<V2> {
     pub fn extend(&self, min: i32, max: i32) -> Region<V3> {
         Region::new(self.min.extend(min),
                     self.max.extend(max))
+    }
+
+    #[inline]
+    pub fn align_x(&self, other: Region<V2>, align: Align) -> Region<V2> {
+        self.align(other, align, Align::None)
+    }
+
+    #[inline]
+    pub fn align_y(&self, other: Region<V2>, align: Align) -> Region<V2> {
+        self.align(other, Align::None, align)
+    }
+
+    #[inline]
+    pub fn align(&self, other: Region<V2>, align_x: Align, align_y: Align) -> Region<V2> {
+        let delta_x = align_delta(align_x,
+                                  self.min.x, self.max.x,
+                                  other.min.x, other.max.x);
+        let delta_y = align_delta(align_y,
+                                  self.min.y, self.max.y,
+                                  other.min.y, other.max.y);
+        *self + V2::new(delta_x, delta_y)
+    }
+}
+
+pub enum Align {
+    Start,
+    End,
+    Center,
+    None,
+}
+
+fn align_delta(align: Align, min1: i32, max1: i32, min2: i32, max2: i32) -> i32 {
+    match align {
+        Align::Start => min2 - min1,
+        Align::End => max2 - max1,
+        Align::Center => ((min2 + max2) - (min1 + max1)) >> 1,
+        Align::None => 0,
     }
 }
 

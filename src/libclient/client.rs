@@ -202,10 +202,8 @@ impl<'d, GL: GlContext> Client<'d, GL> {
                                        bounds.max + V2::new(1, 1));
         self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
 
-        // Also refresh the UI buffer if needed.
-        if self.ui.needs_update() {
-            self.renderer.load_ui_geometry(&self.ui.generate_geom());
-        }
+        // Also refresh the UI buffer.
+        self.renderer.load_ui_geometry(&self.ui.generate_geom());
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {

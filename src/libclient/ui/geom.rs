@@ -16,7 +16,7 @@ pub struct Vertex {
     offset: (u16, u16),
 }
 
-pub struct Context {
+pub struct Geom {
     geom: Vec<Vertex>,
 }
 
@@ -28,9 +28,9 @@ const ITEM_SHEET_SIZE: u16 = 32;
 const ITEM_SHEET: u8 = 0;
 const UI_SHEET: u8 = 1;
 
-impl Context {
-    pub fn new() -> Context {
-        Context {
+impl Geom {
+    pub fn new() -> Geom {
+        Geom {
             geom: Vec::new(),
         }
     }
@@ -79,10 +79,11 @@ impl Context {
             pos: (x * ITEM_SIZE, y * ITEM_SIZE),
             size: (ITEM_SIZE as u8, ITEM_SIZE as u8),
         };
+        println!("item: {}, {}, {:?}, {:?}", x, y, entry.pos, entry.size);
         self.emit_quad(entry, ITEM_SHEET, pos, scalar(ITEM_SIZE as i32));
     }
 
-    pub fn take_geometry(&mut self) -> Vec<Vertex> {
-        mem::replace(&mut self.geom, Vec::new())
+    pub fn unwrap(self) -> Vec<Vertex> {
+        self.geom
     }
 }

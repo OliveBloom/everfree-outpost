@@ -127,8 +127,8 @@ impl<GL: GlContext> Renderer<GL> {
     }
 
 
-    pub fn load_ui_geometry(&mut self, geom: &[ui::Vertex]) {
-        let byte_len = geom.len() * mem::size_of::<ui::Vertex>();
+    pub fn load_ui_geometry(&mut self, geom: &[ui::geom::Vertex]) {
+        let byte_len = geom.len() * mem::size_of::<ui::geom::Vertex>();
         let bytes = unsafe {
             slice::from_raw_parts(geom.as_ptr() as *const u8, byte_len)
         };

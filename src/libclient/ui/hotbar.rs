@@ -1,123 +1,101 @@
 use std::prelude::v1::*;
 
-use physics::v3::{V2, scalar, Region};
+use physics::v3::{V2, scalar, Region, Align};
 
-use super::WidgetBase;
-use super::context::Context;
-use super::atlas;
-use super::item::{ItemDisplay, ItemDyn};
+use ui::atlas;
+use ui::geom::Geom;
+use ui::item::{ItemDisplay, ItemDyn};
+use ui::widget::*;
 
 
 #[derive(Clone, Copy)]
-pub struct Slot {
-    base: WidgetBase,
+pub struct Slot;
 
-    item: ItemDisplay,
-}
-
-pub trait SlotDyn {
+pub trait SlotDyn: Copy {
     type ItemDyn: ItemDyn;
-    fn item(&self) -> Self::ItemDyn;
-    fn color(&self) -> u8;
+    fn item(self) -> Self::ItemDyn;
+    fn color(self) -> u8;
 }
 
 impl Slot {
-    pub fn new() -> Slot {
-        Slot {
-            base: WidgetBase::new(),
-            item: ItemDisplay::new(),
-        }
+    pub fn size() -> V2 {
+        ItemDisplay::size() + scalar(4 * 2)
+    }
+}
+
+impl<D: SlotDyn> Widget for WidgetPack<Slot, D> {
+    fn size(self) -> V2 { Slot::size() }
+        
+    fn walk_layout<V: Visitor>(self, v: &mut V, pos: V2) {
+        let child = WidgetPack::new(ItemDisplay, self.dyn.item());
+        let child_size = child.size();
+        let child_pos = pos + scalar(4);
+        v.visit(child, Region::new(child_pos, child_pos + child_size));
     }
 
-    pub fn calc_size(&self) -> V2 {
-        self.item.calc_size() + scalar(4 * 2)
-    }
-
-    pub fn iter_layout<F>(&self, pos: V2, mut f: F)
-            where F: FnMut(&ItemDisplay, Region<V2>) {
-        let size = self.item.calc_size();
-        let bounds = Region::new(scalar(0), size) + scalar(4);
-        f(&self.item, bounds + pos);
-    }
-
-    pub fn render<D: SlotDyn>(&self, ctx: &mut Context, dyn: D, pos: V2) {
-        let bg = match dyn.color() {
+    fn render(self, geom: &mut Geom, rect: Region<V2>) {
+        let bg = match self.dyn.color() {
             0 => atlas::HOTBAR_BOX_YELLOW,
             1 => atlas::HOTBAR_BOX_GREEN,
             2 => atlas::HOTBAR_BOX_BLUE,
             3 => atlas::HOTBAR_BOX_RED,
             _ => unreachable!(),
         };
-        ctx.draw_ui(bg, pos);
 
-        self.iter_layout(pos, |item, bounds| {
-            item.render(ctx, dyn.item(), bounds.min);
-        });
+        geom.draw_ui(bg, rect.min);
     }
 }
 
 
 #[derive(Clone, Copy)]
-pub struct Hotbar {
-    base: WidgetBase,
+pub struct Hotbar;
 
-    slots: [Slot; 9],
-}
-
-pub trait HotbarDyn {
+pub trait HotbarDyn: Copy {
     type SlotDyn: SlotDyn;
-    fn slot(&self, i: usize) -> Self::SlotDyn;
+    fn slot(self, i: usize) -> Self::SlotDyn;
 }
 
 impl Hotbar {
-    pub fn new() -> Hotbar {
-        Hotbar {
-            base: WidgetBase::new(),
-            slots: [Slot::new(); 9],
-        }
-    }
+    pub fn size() -> V2 {
+        let w = Slot::size().x;
 
-    pub fn calc_size(&self) -> V2 {
-        let slot_size = self.slots[0].calc_size();
-        let w = slot_size.x;
         // Height of all slots, including the gaps in between.
-        let h_slots = 9 * slot_size.y + 8 * 1;
-        let h = 8 + h_slots + 8;
+        let slot_h = 9 * Slot::size().y + 8 * 1;
+        let h = 8 + slot_h + 8;
 
         V2::new(w, h)
     }
+}
 
-    pub fn iter_layout<F>(&self, pos: V2, mut f: F)
-            where F: FnMut(&Slot, Region<V2>) {
-        let base = 8;
-        let spacing = self.slots[0].calc_size().y + 1;
-        for (i, slot) in self.slots.iter().enumerate() {
-            let size = slot.calc_size();
-            let offset = V2::new(0, base + spacing * i as i32);
-            f(slot, Region::new(offset, offset + size) + pos);
+
+impl<D: HotbarDyn> Widget for WidgetPack<Hotbar, D> {
+    fn size(self) -> V2 { Hotbar::size() }
+
+    fn walk_layout<V: Visitor>(self, v: &mut V, pos: V2) {
+        let child_size = Slot::size();
+        let base = pos + V2::new(0, 8);
+        let step = V2::new(0, child_size.y + 1);
+
+        for i in 0 .. 9 {
+            let child = WidgetPack::new(Slot, self.dyn.slot(i));
+            let child_pos = base + step * scalar(i as i32);
+            v.visit(child, Region::new(child_pos, child_pos + child_size));
         }
     }
 
-    pub fn render<D: HotbarDyn>(&self, ctx: &mut Context, dyn: D, pos: V2) {
-        let size = self.calc_size();
-        let w = size.x;
-        let h = size.y;
-
+    fn render(self, geom: &mut Geom, rect: Region<V2>) {
         let (cap_w, cap_h) = atlas::HOTBAR_CAP_TOP.size;
-        let cap_x = (w - cap_w as i32) / 2;
-        ctx.draw_ui(atlas::HOTBAR_CAP_TOP, pos + V2::new(cap_x, 0));
-        ctx.draw_ui(atlas::HOTBAR_CAP_BOTTOM, pos + V2::new(cap_x, h - cap_h as i32));
+        let cap_rect = Region::sized(V2::new(cap_w as i32, cap_h as i32));
+
+        geom.draw_ui(atlas::HOTBAR_CAP_TOP,
+                     cap_rect.align(rect, Align::Center, Align::Start).min);
+        geom.draw_ui(atlas::HOTBAR_CAP_BOTTOM,
+                     cap_rect.align(rect, Align::Center, Align::End).min);
 
         let bar_w = atlas::HOTBAR_BAR.size.0;
-        let bar_x = (w - bar_w as i32) / 2;
-        ctx.draw_ui_tiled(atlas::HOTBAR_BAR,
-                          pos + V2::new(bar_x, cap_h as i32),
-                          V2::new(bar_w as i32, h - 2 * cap_h as i32));
+        let bar_rect = Region::sized(V2::new(bar_w as i32, rect.size().y - 2 * 7));
 
-        let mut iter = 0..;
-        self.iter_layout(pos, |slot, bounds| {
-            let i = iter.next().unwrap();
-            slot.render(ctx, dyn.slot(i), bounds.min);
-        });
+        let bar_dest = bar_rect.align(rect, Align::Center, Align::Center);
+        geom.draw_ui_tiled(atlas::HOTBAR_BAR, bar_dest.min, bar_dest.size());
     }
 }

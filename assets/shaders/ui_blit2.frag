@@ -12,10 +12,10 @@ void main(void) {
 
     if (sheet == 0.0) {
         gl_FragColor = texture2D(sheets[0], texPos + fracPart * texSize);
+        //gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
     } else if (sheet == 1.0) {
         gl_FragColor = texture2D(sheets[1], texPos + fracPart * texSize);
     } else {
         gl_FragColor = texture2D(sheets[2], texPos + fracPart * texSize);
     }
-    //gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }

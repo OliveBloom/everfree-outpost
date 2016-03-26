@@ -272,7 +272,7 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
     sizes.terrain_vertex = size_of::<terrain::Vertex>();
     sizes.structure_vertex = size_of::<structure::Vertex>();
     sizes.light_vertex = size_of::<light::Vertex>();
-    sizes.ui_vertex = size_of::<ui::Vertex>();
+    sizes.ui_vertex = size_of::<ui::geom::Vertex>();
 
     size_of::<Sizes>() / size_of::<usize>()
 }
