@@ -10,15 +10,15 @@ use self::widget::{Widget, Visitor};
 //mod context;
 pub use client_ui_atlas as atlas;
 pub mod geom;
-pub mod state;
+//pub mod state;
 mod dyn;
 
 mod widget;
 mod item;
 mod inventory;
 mod hotbar;
-mod dialog;
 mod root;
+mod dialog;
 
 //pub use self::context::Context;
 //pub use self::context::Vertex;
@@ -26,17 +26,18 @@ mod root;
 
 pub struct UI {
     //context: Context,
-    state: state::State,
+    root: root::Root,
 }
 
 impl UI {
     pub fn new() -> UI {
         UI {
             //context: Context::new(),
-            state: state::State::new(),
+            root: root::Root::new(),
         }
     }
 
+    /*
     pub fn state(&self) -> &state::State {
         &self.state
     }
@@ -44,17 +45,18 @@ impl UI {
     pub fn state_mut(&mut self) -> &mut state::State {
         &mut self.state
     }
+    */
 
     pub fn generate_geom(&mut self, invs: &Inventories) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();
 
         let dyn = dyn::RootDyn {
-            state: &self.state,
-            invs: invs,
+            screen_size: V2::new(799, 379),
+            inventories: invs,
         };
-        let root = widget::WidgetPack::new(root::Root, dyn);
+        let mut root = widget::WidgetPack::new(&mut self.root, &dyn);
         let root_rect = Region::sized(root.size());
-        RenderVisitor::new(&mut geom).visit(root, root_rect);
+        RenderVisitor::new(&mut geom).visit(&mut root, root_rect);
 
         geom.unwrap()
     }
@@ -73,7 +75,7 @@ impl<'a> RenderVisitor<'a> {
 }
 
 impl<'a> Visitor for RenderVisitor<'a> {
-    fn visit<W: Widget>(&mut self, w: W, rect: Region<V2>) {
+    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
         w.render(self.geom, rect);
         w.walk_layout(self, rect.min);
     }

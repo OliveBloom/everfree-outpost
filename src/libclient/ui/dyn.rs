@@ -3,73 +3,40 @@
 
 use physics::v3::{V2, scalar, Region};
 
-use inventory::{Inventory, Inventories};
+use inventory::{Inventory, Inventories, Item};
 use ui::{dialog, hotbar, inventory, item, root};
-use ui::state::*;
 use ui::widget::*;
 
-#[derive(Clone, Copy)]
-// TODO: remove pub
-pub struct HotbarDyn<'a> {
-    state: &'a HotbarState,
-    inv: Option<&'a Inventory>,
+
+pub struct RootDyn<'a> {
+    pub screen_size: V2,
+    pub inventories: &'a Inventories,
 }
 
-impl<'a> hotbar::HotbarDyn for HotbarDyn<'a> {
-    type SlotDyn = HotbarSlotDyn;
+impl<'a, 'b: 'a> root::RootDyn for &'a RootDyn<'b> {
+    fn screen_size(self) -> V2 { self.screen_size }
 
-    fn slot(self, i: usize) -> HotbarSlotDyn {
-        let slot_state = &self.state.slots[i];
-        let quantity =
-            if slot_state.is_ability || slot_state.item_id == 0 {
-                None
-            } else if let Some(inv) = self.inv {
-                Some(inv.count(slot_state.item_id))
-            } else {
-                Some(0)
-            };
-        let color =
-            if i as i8 == self.state.cur_item { 1 }
-            else if i as i8 == self.state.cur_ability { 2 }
-            else { 0 };
+    /*
+    type DialogDyn = Self;
+    fn dialog(self) -> Self { self }
+    */
 
-        HotbarSlotDyn {
-            item_id: slot_state.item_id,
-            quantity: quantity,
-            color: color,
-        }
-    }
+    type HotbarDyn = &'b Inventories;
+    fn hotbar(self) -> &'b Inventories { self.inventories }
 }
 
 
-#[derive(Clone, Copy)]
-pub struct HotbarSlotDyn {
-    item_id: u16,
-    quantity: Option<u16>,
-    color: u8,
-}
-
-impl hotbar::SlotDyn for HotbarSlotDyn {
-    type ItemDyn = Self;
-
-    fn item(self) -> HotbarSlotDyn { self }
-    fn color(self) -> u8 { self.color }
-}
-
-impl item::ItemDyn for HotbarSlotDyn {
-    fn item_id(self) -> u16 { self.item_id }
-    fn quantity(self) -> Option<u16> { self.quantity }
-}
-
-
-#[derive(Clone, Copy)]
 pub struct InventoryGridDyn<'a> {
-    state: InventoryGridState,
-    inv: Option<&'a Inventory>,
+    pub size: V2,
+    pub inv: Option<&'a Inventory>,
 }
 
-impl<'a> inventory::GridDyn for InventoryGridDyn<'a> {
-    type SlotDyn = InventorySlotDyn;
+impl<'a, 'b: 'a> inventory::GridDyn for &'a InventoryGridDyn<'b> {
+    type ItemDyn = Item;
+
+    fn grid_size(self) -> V2 {
+        self.size
+    }
 
     fn len(self) -> usize {
         if let Some(inv) = self.inv {
@@ -79,113 +46,91 @@ impl<'a> inventory::GridDyn for InventoryGridDyn<'a> {
         }
     }
 
-    fn slot(self, i: usize) -> InventorySlotDyn {
-        debug_assert!(i < self.len());
-        debug_assert!(self.inv.is_some());  // implied by self.len() > 0
-        let item = self.inv.unwrap().items[i];
-
-        InventorySlotDyn {
-            item_id: item.id,
-            quantity: item.quantity,
-            state:
-                if i == self.state.focus as usize { inventory::SlotState::Active }
-                else { inventory::SlotState::Inactive },
-        }
+    fn item(self, i: usize) -> Item {
+        // This function is only called when self.inv is Some.
+        self.inv.unwrap().items[i]
     }
 }
 
-
-#[derive(Clone, Copy)]
-pub struct InventorySlotDyn {
-    item_id: u16,
-    quantity: u8,
-    state: inventory::SlotState,
-}
-
-impl inventory::SlotDyn for InventorySlotDyn {
-    type ItemDyn = Self;
-
-    fn item(self) -> InventorySlotDyn { self }
-    fn state(self) -> inventory::SlotState { self.state }
-}
-
-impl item::ItemDyn for InventorySlotDyn {
-    fn item_id(self) -> u16 { self.item_id }
-
+impl item::ItemDyn for Item {
+    fn item_id(self) -> u16 { self.id }
     fn quantity(self) -> Option<u16> {
-        if self.quantity > 0 {
-            Some(self.quantity as u16)
-        } else {
+        if self.id == 0 {
             None
+        } else {
+            Some(self.quantity as u16)
         }
     }
 }
 
 
-#[derive(Clone, Copy)]
-pub struct DialogDyn<'a> {
-    state: &'a DialogState,
-    invs: &'a Inventories,
+impl<'a> hotbar::HotbarDyn for &'a Inventories {
+    fn item_count(self, item_id: u16, ability: bool) -> u16 {
+        if !ability {
+            if let Some(inv) = self.main_inventory() {
+                inv.count(item_id)
+            } else {
+                0
+            }
+        } else {
+            if let Some(inv) = self.ability_inventory() {
+                inv.count(item_id)
+            } else {
+                0
+            }
+        }
+    }
 }
 
-fn visit_sized<V: Visitor, W: Widget+Copy>(v: &mut V, w: W, pos: V2) {
-    let rect = Region::sized(w.size()) + pos;
-    v.visit(w, rect);
+
+pub enum DialogInner {
+    None,
+    Inventory(inventory::Grid),
 }
 
-impl<'a> dialog::DialogDyn for DialogDyn<'a> {
-    fn active(self) -> bool {
-        match *self.state {
-            DialogState::None => false,
+/*
+pub trait DialogInnerDyn: Copy {
+    type InventoryDyn: inventory::GridDyn;
+    fn inventory(self) -> Self::InventoryDyn;
+}
+*/
+
+impl dialog::Inner for DialogInner {
+    fn get_title(&self) -> &str {
+        match *self {
+            DialogInner::None => "",
+            DialogInner::Inventory(_) => "Inventory",
+        }
+    }
+
+    fn active(&self) -> bool {
+        match *self {
+            DialogInner::None => false,
             _ => true,
         }
     }
+}
 
-    fn walk_body<V: Visitor>(self, v: &mut V, pos: V2) {
-        match *self.state {
-            DialogState::None => {},
-            DialogState::Inventory(ref inv_state) => {
-                let dyn = InventoryGridDyn {
-                    state: *inv_state,
-                    inv: self.invs.main_inventory(),
-                };
-                let w = WidgetPack::new(inventory::Grid(6), dyn);
-                visit_sized(v, w, pos);
+/*
+impl<'a, 'b> DialogInnerDyn for &'a RootDyn<'b> {
+    type InventoryDyn = InventoryGridDyn<'b>;
+    fn inventory(self) -> InventoryGridDyn<'b> {
+        InventoryGridDyn {
+            size: V2::new(6, 5),
+            inv: self.inventories.main_inventory(),
+        }
+    }
+}
+
+impl<'a, D: DialogInnerDyn> Widget for WidgetPack<'a, DialogInner, D> {
+    fn size(&mut self) -> V2 {
+        match *self {
+            DialogInner::None => scalar(0),
+            DialogInner::Inventory(ref mut inv) => {
+                let mut child = WidgetPack::new(inv, self.dyn.inventory());
+                child.size()
             },
         }
     }
-
-    fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R {
-        match *self.state {
-            DialogState::None => f(""),
-            DialogState::Inventory(_) => f("Inventory"),
-        }
-    }
 }
-
-
-#[derive(Clone, Copy)]
-pub struct RootDyn<'a> {
-    pub state: &'a State,
-    pub invs: &'a Inventories,
-}
-
-impl<'a> root::RootDyn for RootDyn<'a> {
-    fn screen_size(self) -> V2 { V2::new(799, 379) }
-
-    type DialogDyn = DialogDyn<'a>;
-    fn dialog(self) -> DialogDyn<'a> {
-        DialogDyn {
-            state: &self.state.dialog,
-            invs: self.invs,
-        }
-    }
-
-    type HotbarDyn = HotbarDyn<'a>;
-    fn hotbar(self) -> HotbarDyn<'a> {
-        HotbarDyn {
-            state: &self.state.hotbar,
-            inv: self.invs.main_inventory(),
-        }
-    }
-}
+*/

@@ -9,16 +9,22 @@ use ui::inventory;
 use ui::widget::*;
 
 
-#[derive(Clone, Copy)]
-pub struct Dialog;
+pub trait Inner {
+    fn get_title(&self) -> &str;
+    fn active(&self) -> bool;
+}
 
-pub trait DialogDyn: Copy {
-    /// Check if there is a dialog open.  If not, then nothing will be drawn.
-    fn active(self) -> bool;
-    /// Decide on a child widget, and apply the visitor to that.  We use a visitor instead of a
-    /// closure so the implementation can choose a widget type based on dynamic state.
-    fn walk_body<V: Visitor>(self, v: &mut V, pos: V2);
-    fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R;
+#[derive(Clone, Copy)]
+pub struct Dialog<I: Inner> {
+    inner: I,
+}
+
+impl<I: Inner> Dialog<I> {
+    pub fn new(inner: I) -> Dialog<I> {
+        Dialog {
+            inner: inner,
+        }
+    }
 }
 
 #[inline]
@@ -26,25 +32,29 @@ fn extra_height() -> i32 {
     atlas::DIALOG_TITLE_CENTER.size().y + 3
 }
 
-impl<D: DialogDyn> Widget for WidgetPack<Dialog, D> {
-    fn size(self) -> V2 {
-        if !self.dyn.active() {
+impl<'a, I: Inner, D: Copy> Widget for WidgetPack<'a, Dialog<I>, D>
+        where for<'b> WidgetPack<'b, I, D>: Widget {
+    fn size(&mut self) -> V2 {
+        if !self.state.inner.active() {
             return scalar(0);
         }
 
-        let mut child_size = scalar(0);
-        self.dyn.walk_body(&mut SizeVisitor(&mut child_size), scalar(0));
-        child_size + scalar(6 * 2) + V2::new(0, extra_height())
+        let mut child = WidgetPack::new(&mut self.state.inner, self.dyn);
+        child.size() + scalar(6 * 2) + V2::new(0, extra_height())
     }
 
-    fn walk_layout<V: Visitor>(self, v: &mut V, pos: V2) {
+    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
+        if !self.state.inner.active() {
+            return;
+        }
+
+        let mut child = WidgetPack::new(&mut self.state.inner, self.dyn);
         let child_pos = pos + scalar(6) + V2::new(0, extra_height());
-        // No-op if !self.dyn.active()
-        self.dyn.walk_body(v, child_pos);
+        child.walk_layout(v, child_pos);
     }
 
-    fn render(self, geom: &mut Geom, rect: Region<V2>) {
-        if !self.dyn.active() {
+    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
+        if !self.state.inner.active() {
             return;
         }
 
@@ -93,14 +103,13 @@ impl<D: DialogDyn> Widget for WidgetPack<Dialog, D> {
         geom.draw_ui_tiled(atlas::DIALOG_TITLE_CENTER, title.inset(l, r, 0, 0));
 
 
-        self.dyn.with_title(|title_str| {
-            let font = &fonts::TITLE;
-            let text_width = font.measure_width(title_str);
-            let text =
-                Region::sized(V2::new(text_width as i32, font.height as i32))
-                    .align(title, Align::Center, Align::Center) + V2::new(0, 1);
-            geom.draw_str(font, title_str, text.min);
-        });
+        let title_str = self.state.inner.get_title();
+        let font = &fonts::TITLE;
+        let text_width = font.measure_width(title_str);
+        let text =
+            Region::sized(V2::new(text_width as i32, font.height as i32))
+                .align(title, Align::Center, Align::Center) + V2::new(0, 1);
+        geom.draw_str(font, title_str, text.min);
     }
 }
 
@@ -113,7 +122,7 @@ const DIALOG_SPACER_INSET: i32 = 7 - 8;
 struct SizeVisitor<'a>(&'a mut V2);
 
 impl<'a> Visitor for SizeVisitor<'a> {
-    fn visit<W: Widget>(&mut self, w: W, rect: Region<V2>) {
+    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
         *self.0 = w.size();
     }
 }

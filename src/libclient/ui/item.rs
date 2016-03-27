@@ -19,14 +19,14 @@ impl ItemDisplay {
     pub fn size() -> V2 { scalar(16) }
 }
 
-impl<D: ItemDyn> Widget for WidgetPack<ItemDisplay, D> {
-    fn size(self) -> V2 { ItemDisplay::size() }
+impl<'a, D: ItemDyn> Widget for WidgetPack<'a, ItemDisplay, D> {
+    fn size(&mut self) -> V2 { ItemDisplay::size() }
 
-    fn walk_layout<V: Visitor>(self, v: &mut V, pos: V2) {
+    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
         // No children
     }
 
-    fn render(self, geom: &mut Geom, rect: Region<V2>) {
+    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
         geom.draw_item(self.dyn.item_id(), rect.min);
         if let Some(qty) = self.dyn.quantity() {
             let s = quantity_string(qty);
