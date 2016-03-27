@@ -17,8 +17,10 @@ mod widget;
 mod item;
 mod inventory;
 mod hotbar;
-mod root;
 mod dialog;
+
+mod dialogs;
+mod root;
 
 //pub use self::context::Context;
 //pub use self::context::Vertex;
@@ -40,11 +42,11 @@ impl UI {
     pub fn generate_geom(&mut self, invs: &Inventories) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();
 
-        let dyn = dyn::RootDyn {
+        let dyn = root::RootDyn {
             screen_size: V2::new(799, 379),
             inventories: invs,
         };
-        let mut root = widget::WidgetPack::new(&mut self.root, &dyn);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(&mut root, root_rect);
 

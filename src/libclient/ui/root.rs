@@ -3,63 +3,93 @@ use std::prelude::v1::*;
 use physics::v3::{V2, scalar, Region, Align};
 
 use fonts::{self, FontMetricsExt};
+use inventory::{Inventory, Inventories};
 use ui::atlas;
 use ui::geom::Geom;
 use ui::dyn;
-use ui::{dialog, hotbar};
+use ui::{dialog, dialogs, hotbar};
 use ui::widget::*;
 
 
 pub struct Root {
     pub hotbar: hotbar::Hotbar,
-    //pub dialog: dialog::Dialog<dyn::DialogInner>,
+    pub dialog: dialog::Dialog<dialogs::AnyDialog>,
 }
 
 impl Root {
     pub fn new() -> Root {
         Root {
             hotbar: hotbar::Hotbar::new(),
-            //dialog: dialog::Dialog::new(dyn::DialogInner::None),
+            dialog: dialog::Dialog::new(dialogs::AnyDialog::Inventory(dialogs::Inventory::new())),
         }
     }
 }
 
-pub trait RootDyn: Copy {
-    fn screen_size(self) -> V2;
-
-    /*
-    type DialogDyn: dyn::DialogInnerDyn;
-    fn dialog(self) -> Self::DialogDyn;
-    */
-
-    type HotbarDyn: hotbar::HotbarDyn;
-    fn hotbar(self) -> Self::HotbarDyn;
+#[derive(Clone, Copy)]
+pub struct RootDyn<'a> {
+    pub screen_size: V2,
+    pub inventories: &'a Inventories,
 }
 
-impl<'a, D: RootDyn> Widget for WidgetPack<'a, Root, D> {
+impl<'a> RootDyn<'a> {
+    pub fn new(screen_size: V2,
+               inventories: &'a Inventories) -> RootDyn<'a> {
+        RootDyn {
+            screen_size: screen_size,
+            inventories: inventories,
+        }
+    }
+}
+
+impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn size(&mut self) -> V2 {
-        self.dyn.screen_size()
+        self.dyn.screen_size
     }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
         {
             // Hotbar
-            let mut child = WidgetPack::new(&mut self.state.hotbar, self.dyn.hotbar());
-            let child_rect = Region::sized(child.size()) + pos + scalar(1);
-            v.visit(&mut child, child_rect);
+            let dyn = HotbarDyn::new(self.dyn.inventories.main_inventory());
+            let mut child = WidgetPack::new(&mut self.state.hotbar, dyn);
+            let rect = Region::sized(child.size()) + pos + scalar(1);
+            v.visit(&mut child, rect);
         }
 
-        /*
         {
             // Dialog
-            let mut child = WidgetPack::new(&mut self.state.dialog, self.dyn.dialog());
-            let child_rect = Region::sized(child.size());
             let self_rect = Region::sized(self.size()) + pos;
-            v.visit(&mut child, child_rect.align(self_rect, Align::Center, Align::Center));
+            let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories);
+            let mut child = WidgetPack::new(&mut self.state.dialog, dyn);
+            let child_rect = Region::sized(child.size());
+            let rect = child_rect.align(self_rect, Align::Center, Align::Center);
+            v.visit(&mut child, rect);
         }
-        */
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
+    }
+}
+
+
+#[derive(Clone, Copy)]
+struct HotbarDyn<'a> {
+    inv: Option<&'a Inventory>,
+}
+
+impl<'a> HotbarDyn<'a> {
+    fn new(inv: Option<&'a Inventory>) -> HotbarDyn<'a> {
+        HotbarDyn {
+            inv: inv,
+        }
+    }
+}
+
+impl<'a> hotbar::HotbarDyn for HotbarDyn<'a> {
+    fn item_count(self, item_id: u16) -> u16 {
+        if let Some(inv) = self.inv {
+            inv.count(item_id)
+        } else {
+            0
+        }
     }
 }
