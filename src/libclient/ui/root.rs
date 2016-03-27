@@ -6,7 +6,6 @@ use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::dyn;
 use ui::{dialog, dialogs, hotbar};
 use ui::widget::*;
 

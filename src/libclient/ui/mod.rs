@@ -10,8 +10,6 @@ use self::widget::{Widget, Visitor};
 //mod context;
 pub use client_ui_atlas as atlas;
 pub mod geom;
-//pub mod state;
-mod dyn;
 
 mod widget;
 mod item;
@@ -22,9 +20,6 @@ mod dialog;
 mod dialogs;
 mod root;
 
-//pub use self::context::Context;
-//pub use self::context::Vertex;
-//pub use self::state::State;
 
 pub struct UI {
     //context: Context,
