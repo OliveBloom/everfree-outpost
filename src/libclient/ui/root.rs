@@ -6,6 +6,7 @@ use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
 use ui::atlas;
 use ui::geom::Geom;
+use ui::input::KeyAction;
 use ui::{dialog, dialogs, hotbar};
 use ui::widget::*;
 
@@ -66,6 +67,32 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
+    }
+
+    fn on_key(&mut self, key: KeyAction) -> bool {
+        use ui::dialogs::AnyDialog::*;
+
+        if let KeyAction::SetHotbar(idx) = key {
+            // If the inventory or ability dialog is open, assign the selected item to the hotbar.
+            match self.state.dialog.inner {
+                Inventory(ref inv_dialog) => {
+                    if let Some(inv) = self.dyn.inventories.main_inventory() {
+                        let item_id = inv_dialog.focused_item(inv);
+                        self.state.hotbar.set_slot(idx, item_id, false);
+                    }
+                },
+                _ => {},
+            }
+
+            // Select the indicated hotbar slot.
+            self.state.hotbar.select(idx);
+
+            return true;
+        }
+
+        let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories);
+        let mut child = WidgetPack::new(&mut self.state.dialog, dyn);
+        child.on_key(key)
     }
 }
 

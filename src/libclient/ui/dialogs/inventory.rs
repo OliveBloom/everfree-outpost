@@ -17,6 +17,15 @@ impl Inventory {
             grid: inventory::Grid::new(),
         }
     }
+
+    pub fn focused_item(&self, inv: &::inventory::Inventory) -> u16 {
+        let idx = self.grid.focus;
+        if idx < inv.len() {
+            inv.items[idx].id
+        } else {
+            0
+        }
+    }
 }
 
 #[derive(Clone, Copy)]

@@ -10,6 +10,7 @@ use self::widget::{Widget, Visitor};
 //mod context;
 pub use client_ui_atlas as atlas;
 pub mod geom;
+pub mod input;
 
 mod widget;
 mod item;

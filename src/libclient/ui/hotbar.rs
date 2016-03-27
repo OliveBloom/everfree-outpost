@@ -66,6 +66,41 @@ impl Hotbar {
             cur_ability: -1,
         }
     }
+
+    pub fn set_slot(&mut self, idx: i8, item_id: u16, is_ability: bool) {
+        if idx < 0 || idx >= 9 {
+            return;
+        }
+
+        self.slots[idx as usize] = HotbarSlot {
+            item_id: item_id,
+            is_ability: is_ability,
+        };
+
+        if !is_ability {
+            // Replaced the selected ability with an item
+            if self.cur_ability == idx {
+                self.cur_ability = -1;
+            }
+        } else {
+            // Vice versa
+            if self.cur_item == idx {
+                self.cur_item = -1;
+            }
+        }
+    }
+
+    pub fn select(&mut self, idx: i8) {
+        if idx < 0 || idx >= 9 {
+            return;
+        }
+
+        if !self.slots[idx as usize].is_ability {
+            self.cur_item = idx;
+        } else {
+            self.cur_ability = idx;
+        }
+    }
 }
 
 pub trait HotbarDyn: Copy {

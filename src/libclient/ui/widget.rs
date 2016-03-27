@@ -4,6 +4,7 @@ use std::mem;
 use physics::v3::{V2, Region};
 
 use ui::geom::Geom;
+use ui::input::KeyAction;
 
 pub trait Widget {
     // All methods operate on `&mut self` so that the widget can cache values internally.
@@ -17,6 +18,10 @@ pub trait Widget {
 
     /// Render the widget itself (not including children).
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>);
+
+    /// Handle a keyboard event.  Return true if the event was handled, and should not be processed
+    /// by widgets higher in the tree.
+    fn on_key(&mut self, key: KeyAction) -> bool { false }
 }
 
 pub trait Visitor {

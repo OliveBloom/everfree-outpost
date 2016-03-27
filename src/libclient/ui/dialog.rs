@@ -16,7 +16,7 @@ pub trait Inner {
 
 #[derive(Clone, Copy)]
 pub struct Dialog<I: Inner> {
-    inner: I,
+    pub inner: I,
 }
 
 impl<I: Inner> Dialog<I> {
