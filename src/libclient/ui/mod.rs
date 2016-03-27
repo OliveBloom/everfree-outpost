@@ -17,6 +17,7 @@ mod widget;
 mod item;
 mod inventory;
 mod hotbar;
+mod dialog;
 
 //pub use self::context::Context;
 //pub use self::context::Vertex;
@@ -57,7 +58,7 @@ impl UI {
             state: state::InventoryGridState { focus: 3 },
             inv: invs.main_inventory(),
         };
-        let root = widget::WidgetPack::new(inventory::Grid(6), dyn);
+        let root = widget::WidgetPack::new(dialog::Dialog, dyn);
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(root, root_rect);
 

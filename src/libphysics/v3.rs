@@ -664,6 +664,21 @@ impl Region<V2> {
                                   other.min.y, other.max.y);
         *self + V2::new(delta_x, delta_y)
     }
+
+    /// Compute an inner rect from left/right/top/bottom inset amounts.  A negative inset value
+    /// means to inset from the opposite edge instead.  For example:
+    ///  * `left = 10`: Left edge of the new rect is 10 units right of the left edge of `self`
+    ///  * `left = -10`: Left edge of the new rect is 10 units *left* of the *right* edge of `self`
+    #[inline]
+    pub fn inset(&self, x0: i32, x1: i32, y0: i32, y1: i32) -> Region<V2> {
+        let new_min =
+            V2::new(if x0 >= 0 { self.min.x + x0 } else { self.max.x - (-x0) },
+                    if y0 >= 0 { self.min.y + y0 } else { self.max.y - (-y0) });
+        let new_max =
+            V2::new(if x1 >= 0 { self.max.x - x1 } else { self.min.x + (-x1) },
+                    if y1 >= 0 { self.max.y - y1 } else { self.min.y + (-y1) });
+        Region::new(new_min, new_max)
+    }
 }
 
 pub enum Align {

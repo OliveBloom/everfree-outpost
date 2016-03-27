@@ -120,9 +120,25 @@ def build_rust(parts):
         //! This auto-generated library defines the position and size of every
         //! element in the UI atlas, so they can be referred to by name.
 
+        extern crate physics;
+        use physics::v3::V2;
+
+        #[derive(Clone, Copy)]
         pub struct AtlasEntry {
             pub pos: (u16, u16),
             pub size: (u8, u8),
+        }
+
+        impl AtlasEntry {
+            pub fn pos(&self) -> V2 {
+                V2::new(self.pos.0 as i32,
+                        self.pos.1 as i32)
+            }
+
+            pub fn size(&self) -> V2 {
+                V2::new(self.size.0 as i32,
+                        self.size.1 as i32)
+            }
         }
 
     ''')

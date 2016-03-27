@@ -2,7 +2,7 @@
 //! `ui::state`) with external data (such as `client.inventories`).
 
 use inventory::Inventory;
-use ui::{hotbar, inventory, item};
+use ui::{dialog, hotbar, inventory, item};
 use ui::state::*;
 
 #[derive(Clone, Copy)]
@@ -88,6 +88,15 @@ impl<'a> inventory::GridDyn for InventoryGridDyn<'a> {
                 if i == self.state.focus as usize { inventory::SlotState::Active }
                 else { inventory::SlotState::Inactive },
         }
+    }
+}
+
+impl<'a> dialog::DialogDyn for InventoryGridDyn<'a> {
+    type InvDyn = Self;
+
+    fn inv_grid(self) -> Self { self }
+    fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R {
+        f("Inventory")
     }
 }
 

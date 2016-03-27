@@ -263,8 +263,12 @@ impl<'d, GL: GlContext> Client<'d, GL> {
     // Misc
 
     pub fn bench(&mut self) {
-        for i in 0 .. 100000 {
-            //self.renderer.load_ui_geometry(&self.ui.generate_geom());
+        let mut counter = 0;
+        for i in 0 .. 10000 {
+            let geom = self.ui.generate_geom(&self.inventories);
+            counter += geom.len();
+            //self.renderer.load_ui_geometry(&geom);
         }
+        println!("counter {}", counter);
     }
 }

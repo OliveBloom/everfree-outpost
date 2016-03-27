@@ -264,7 +264,7 @@ if __name__ == '__main__':
                 'asmrt', 'asmmalloc')),
             asmjs.rlib('bitflags', ('core',), i.rust_libbitflags_src),
             asmjs.rlib('physics', ('fakestd', 'bitflags')),
-            asmjs.rlib('client_ui_atlas', (), '$b_data/ui_atlas.rs'),
+            asmjs.rlib('client_ui_atlas', ('physics',), '$b_data/ui_atlas.rs'),
             asmjs.rlib('client_fonts', (), '$b_data/fonts_metrics.rs'),
             asmjs.rlib('client', ('fakestd', 'physics',
                 'client_ui_atlas', 'client_fonts')),

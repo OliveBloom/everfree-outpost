@@ -96,6 +96,6 @@ impl<D: HotbarDyn> Widget for WidgetPack<Hotbar, D> {
         let bar_rect = Region::sized(V2::new(bar_w as i32, rect.size().y - 2 * 7));
 
         let bar_dest = bar_rect.align(rect, Align::Center, Align::Center);
-        geom.draw_ui_tiled(atlas::HOTBAR_BAR, bar_dest.min, bar_dest.size());
+        geom.draw_ui_tiled(atlas::HOTBAR_BAR, bar_dest);
     }
 }

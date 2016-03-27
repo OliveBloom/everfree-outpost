@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 use std::mem;
 
-use physics::v3::{V2, scalar};
+use physics::v3::{V2, scalar, Region};
 
 use fonts::{FontMetrics, FontMetricsExt};
 
@@ -70,8 +70,8 @@ impl Geom {
         self.emit_quad(entry, UI_SHEET, pos, size);
     }
 
-    pub fn draw_ui_tiled(&mut self, entry: AtlasEntry, pos: V2, size: V2) {
-        self.emit_quad(entry, UI_SHEET, pos, size);
+    pub fn draw_ui_tiled(&mut self, entry: AtlasEntry, dest: Region<V2>) {
+        self.emit_quad(entry, UI_SHEET, dest.min, dest.size());
     }
 
     pub fn draw_item(&mut self, item_id: u16, pos: V2) {
