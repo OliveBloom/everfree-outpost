@@ -18,6 +18,7 @@ mod item;
 mod inventory;
 mod hotbar;
 mod dialog;
+mod root;
 
 //pub use self::context::Context;
 //pub use self::context::Vertex;
@@ -47,18 +48,11 @@ impl UI {
     pub fn generate_geom(&mut self, invs: &Inventories) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();
 
-        /*
-        let dyn = dyn::HotbarDyn {
-            state: &self.state.hotbar,
-            inv: invs.main_inventory(),
+        let dyn = dyn::RootDyn {
+            state: &self.state,
+            invs: invs,
         };
-        let root = widget::WidgetPack::new(hotbar::Hotbar, dyn);
-        */
-        let dyn = dyn::InventoryGridDyn {
-            state: state::InventoryGridState { focus: 3 },
-            inv: invs.main_inventory(),
-        };
-        let root = widget::WidgetPack::new(dialog::Dialog, dyn);
+        let root = widget::WidgetPack::new(root::Root, dyn);
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(root, root_rect);
 

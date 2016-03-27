@@ -48,14 +48,29 @@ impl InventoryGridState {
 }
 
 
+pub struct DialogState {
+    pub inv_grid: InventoryGridState,
+}
+
+impl DialogState {
+    pub fn new() -> DialogState {
+        DialogState {
+            inv_grid: InventoryGridState::new(),
+        }
+    }
+}
+
+
 pub struct State {
     pub hotbar: HotbarState,
+    pub dialog: DialogState,
 }
 
 impl State {
     pub fn new() -> State {
         State {
             hotbar: HotbarState::new(),
+            dialog: DialogState::new(),
         }
     }
 }

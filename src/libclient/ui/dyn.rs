@@ -1,15 +1,17 @@
 //! `Dyn` impls for various types of widgets.  These combine widget-specific state (from
 //! `ui::state`) with external data (such as `client.inventories`).
 
-use inventory::Inventory;
-use ui::{dialog, hotbar, inventory, item};
+use physics::v3::{V2, scalar, Region};
+
+use inventory::{Inventory, Inventories};
+use ui::{dialog, hotbar, inventory, item, root};
 use ui::state::*;
 
 #[derive(Clone, Copy)]
 // TODO: remove pub
 pub struct HotbarDyn<'a> {
-    pub state: &'a HotbarState,
-    pub inv: Option<&'a Inventory>,
+    state: &'a HotbarState,
+    inv: Option<&'a Inventory>,
 }
 
 impl<'a> hotbar::HotbarDyn for HotbarDyn<'a> {
@@ -61,8 +63,8 @@ impl item::ItemDyn for HotbarSlotDyn {
 
 #[derive(Clone, Copy)]
 pub struct InventoryGridDyn<'a> {
-    pub state: InventoryGridState,
-    pub inv: Option<&'a Inventory>,
+    state: InventoryGridState,
+    inv: Option<&'a Inventory>,
 }
 
 impl<'a> inventory::GridDyn for InventoryGridDyn<'a> {
@@ -91,15 +93,6 @@ impl<'a> inventory::GridDyn for InventoryGridDyn<'a> {
     }
 }
 
-impl<'a> dialog::DialogDyn for InventoryGridDyn<'a> {
-    type InvDyn = Self;
-
-    fn inv_grid(self) -> Self { self }
-    fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R {
-        f("Inventory")
-    }
-}
-
 
 #[derive(Clone, Copy)]
 pub struct InventorySlotDyn {
@@ -123,6 +116,55 @@ impl item::ItemDyn for InventorySlotDyn {
             Some(self.quantity as u16)
         } else {
             None
+        }
+    }
+}
+
+
+#[derive(Clone, Copy)]
+pub struct DialogDyn<'a> {
+    state: &'a DialogState,
+    invs: &'a Inventories,
+}
+
+impl<'a> dialog::DialogDyn for DialogDyn<'a> {
+    type InvDyn = InventoryGridDyn<'a>;
+
+    fn inv_grid(self) -> InventoryGridDyn<'a> {
+        InventoryGridDyn {
+            state: self.state.inv_grid,
+            inv: self.invs.main_inventory(),
+        }
+    }
+
+    fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R {
+        f("Inventory")
+    }
+}
+
+
+#[derive(Clone, Copy)]
+pub struct RootDyn<'a> {
+    pub state: &'a State,
+    pub invs: &'a Inventories,
+}
+
+impl<'a> root::RootDyn for RootDyn<'a> {
+    fn screen_size(self) -> V2 { V2::new(799, 379) }
+
+    type DialogDyn = DialogDyn<'a>;
+    fn dialog(self) -> DialogDyn<'a> {
+        DialogDyn {
+            state: &self.state.dialog,
+            invs: self.invs,
+        }
+    }
+
+    type HotbarDyn = HotbarDyn<'a>;
+    fn hotbar(self) -> HotbarDyn<'a> {
+        HotbarDyn {
+            state: &self.state.hotbar,
+            inv: self.invs.main_inventory(),
         }
     }
 }

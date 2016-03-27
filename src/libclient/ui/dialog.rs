@@ -42,7 +42,7 @@ impl<D: DialogDyn> Widget for WidgetPack<Dialog, D> {
         let lower = Region::new(rect.min + V2::new(0, extra_height()), rect.max);
 
         let title_height = atlas::DIALOG_TITLE_CENTER.size().y;
-        let title = Region::new(rect.min, V2::new(rect.max.x, title_height));
+        let title = Region::new(rect.min, V2::new(rect.max.x, rect.min.y + title_height));
 
         // We need to place a whole number of spacers, centered, in the eligible area.
         let spacer_size = atlas::DIALOG_SPACER.size();
