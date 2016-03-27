@@ -117,12 +117,3 @@ impl<'a, I: Inner, D: Copy> Widget for WidgetPack<'a, Dialog<I>, D>
 // There are 8 pixels on either side of the spacer graphic that are actually transparent, and don't
 // count.
 const DIALOG_SPACER_INSET: i32 = 7 - 8;
-
-
-struct SizeVisitor<'a>(&'a mut V2);
-
-impl<'a> Visitor for SizeVisitor<'a> {
-    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
-        *self.0 = w.size();
-    }
-}

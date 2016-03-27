@@ -9,12 +9,12 @@ use ui::widget::*;
 
 
 #[derive(Clone, Copy)]
-pub struct Slot;
+struct Slot;
 
-pub trait SlotDyn: Copy {
-    type ItemDyn: item::ItemDyn;
-    fn item(self) -> Self::ItemDyn;
-    fn color(self) -> u8;
+#[derive(Clone, Copy)]
+struct SlotDyn {
+    item_dyn: item::ItemDyn,
+    color: u8,
 }
 
 impl Slot {
@@ -23,17 +23,17 @@ impl Slot {
     }
 }
 
-impl<'a, D: SlotDyn> Widget for WidgetPack<'a, Slot, D> {
+impl<'a> Widget for WidgetPack<'a, Slot, SlotDyn> {
     fn size(&mut self) -> V2 { Slot::size() }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let mut child = WidgetPack::stateless(item::ItemDisplay, self.dyn.item());
-        let child_rect = Region::sized(child.size()) + pos + scalar(4);
-        v.visit(&mut child, child_rect);
+        let mut child = WidgetPack::stateless(item::ItemDisplay, self.dyn.item_dyn);
+        let rect = Region::sized(child.size()) + pos + scalar(4);
+        v.visit(&mut child, rect);
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
-        let bg = match self.dyn.color() {
+        let bg = match self.dyn.color {
             0 => atlas::HOTBAR_BOX_YELLOW,
             1 => atlas::HOTBAR_BOX_GREEN,
             2 => atlas::HOTBAR_BOX_BLUE,
@@ -69,7 +69,7 @@ impl Hotbar {
 }
 
 pub trait HotbarDyn: Copy {
-    fn item_count(self, item_id: u16, ability: bool) -> u16;
+    fn item_count(self, item_id: u16) -> u16;
 }
 
 impl Hotbar {
@@ -94,16 +94,20 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
 
         for i in 0 .. 9 {
             let slot = self.state.slots[i];
-            let qty = self.dyn.item_count(slot.item_id, slot.is_ability);
-            let color =
-                if i as i8 == self.state.cur_item { 1 }
-                else if i as i8 == self.state.cur_ability { 1 }
-                else { 0 };
-            let child_dyn = SlotDynImpl::new(slot, qty, color);
+            let qty =
+                if slot.is_ability || slot.item_id == 0 { None }
+                else { Some(self.dyn.item_count(slot.item_id)) };
+            let dyn = SlotDyn {
+                item_dyn: item::ItemDyn::new(slot.item_id, qty),
+                color:
+                    if i as i8 == self.state.cur_item { 1 }
+                    else if i as i8 == self.state.cur_ability { 1 }
+                    else { 0 },
+            };
 
-            let mut child = WidgetPack::stateless(Slot, child_dyn);
-            let child_rect = Region::sized(child_size) + base + step * scalar(i as i32);
-            v.visit(&mut child, child_rect);
+            let mut child = WidgetPack::stateless(Slot, dyn);
+            let rect = Region::sized(child_size) + base + step * scalar(i as i32);
+            v.visit(&mut child, rect);
         }
     }
 
@@ -122,40 +126,4 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
         let bar_dest = bar_rect.align(rect, Align::Center, Align::Center);
         geom.draw_ui_tiled(atlas::HOTBAR_BAR, bar_dest);
     }
-}
-
-
-#[derive(Clone, Copy)]
-struct SlotDynImpl {
-    slot: HotbarSlot,
-    quantity: u16,
-    color: u8,
-}
-
-impl SlotDynImpl {
-    fn new(slot: HotbarSlot, quantity: u16, color: u8) -> SlotDynImpl {
-        SlotDynImpl {
-            slot: slot,
-            quantity: quantity,
-            color: color,
-        }
-    }
-}
-
-impl item::ItemDyn for SlotDynImpl {
-    fn item_id(self) -> u16 { self.slot.item_id }
-
-    fn quantity(self) -> Option<u16> {
-        if self.slot.is_ability || self.slot.item_id == 0 {
-            None
-        } else {
-            Some(self.quantity)
-        }
-    }
-}
-
-impl SlotDyn for SlotDynImpl {
-    type ItemDyn = Self;
-    fn item(self) -> Self { self }
-    fn color(self) -> u8 { self.color }
 }

@@ -12,14 +12,14 @@ use ui::widget::*;
 
 pub struct Root {
     pub hotbar: hotbar::Hotbar,
-    pub dialog: dialog::Dialog<dyn::DialogInner>,
+    //pub dialog: dialog::Dialog<dyn::DialogInner>,
 }
 
 impl Root {
     pub fn new() -> Root {
         Root {
             hotbar: hotbar::Hotbar::new(),
-            dialog: dialog::Dialog::new(dyn::DialogInner::None),
+            //dialog: dialog::Dialog::new(dyn::DialogInner::None),
         }
     }
 }
