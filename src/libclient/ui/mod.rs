@@ -26,7 +26,7 @@ mod dialog;
 
 pub struct UI {
     //context: Context,
-    root: root::Root,
+    pub root: root::Root,
 }
 
 impl UI {
@@ -36,16 +36,6 @@ impl UI {
             root: root::Root::new(),
         }
     }
-
-    /*
-    pub fn state(&self) -> &state::State {
-        &self.state
-    }
-
-    pub fn state_mut(&mut self) -> &mut state::State {
-        &mut self.state
-    }
-    */
 
     pub fn generate_geom(&mut self, invs: &Inventories) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();

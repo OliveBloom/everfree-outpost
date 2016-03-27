@@ -237,8 +237,8 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
 
         // Also refresh the UI buffer.
-        //self.ui.state_mut().hotbar.slots[0].item_id = 70;
-        //self.ui.state_mut().hotbar.slots[1].item_id = 54;
+        self.ui.root.hotbar.slots[0].item_id = 70;
+        self.ui.root.hotbar.slots[1].item_id = 54;
         let geom = self.ui.generate_geom(&self.inventories);
         self.renderer.load_ui_geometry(&geom);
     }
