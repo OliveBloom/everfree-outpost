@@ -78,19 +78,3 @@ impl<'a> Visitor for RenderVisitor<'a> {
         w.walk_layout(self, rect.min);
     }
 }
-
-impl hotbar::HotbarDyn for () {
-    type SlotDyn = ();
-    fn slot(self, i: usize) -> () {}
-}
-
-impl hotbar::SlotDyn for () {
-    type ItemDyn = ();
-    fn item(self) -> () {}
-    fn color(self) -> u8 { 0 }
-}
-
-impl item::ItemDyn for () {
-    fn item_id(self) -> u16 { 1 }
-    fn quantity(self) -> Option<u16> { Some(54321) }
-}

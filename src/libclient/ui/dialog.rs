@@ -13,9 +13,11 @@ use ui::widget::*;
 pub struct Dialog;
 
 pub trait DialogDyn: Copy {
-    type InvDyn: inventory::GridDyn;
-
-    fn inv_grid(self) -> Self::InvDyn;
+    /// Check if there is a dialog open.  If not, then nothing will be drawn.
+    fn active(self) -> bool;
+    /// Decide on a child widget, and apply the visitor to that.  We use a visitor instead of a
+    /// closure so the implementation can choose a widget type based on dynamic state.
+    fn walk_body<V: Visitor>(self, v: &mut V, pos: V2);
     fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R;
 }
 
@@ -26,19 +28,26 @@ fn extra_height() -> i32 {
 
 impl<D: DialogDyn> Widget for WidgetPack<Dialog, D> {
     fn size(self) -> V2 {
-        let body = WidgetPack::new(inventory::Grid(6), self.dyn.inv_grid());
-        let base_size = body.size() + scalar(6 * 2);
-        base_size + V2::new(0, extra_height())
+        if !self.dyn.active() {
+            return scalar(0);
+        }
+
+        let mut child_size = scalar(0);
+        self.dyn.walk_body(&mut SizeVisitor(&mut child_size), scalar(0));
+        child_size + scalar(6 * 2) + V2::new(0, extra_height())
     }
 
     fn walk_layout<V: Visitor>(self, v: &mut V, pos: V2) {
-        let child = WidgetPack::new(inventory::Grid(6), self.dyn.inv_grid());
-        let child_size = child.size();
         let child_pos = pos + scalar(6) + V2::new(0, extra_height());
-        v.visit(child, Region::new(child_pos, child_pos + child_size));
+        // No-op if !self.dyn.active()
+        self.dyn.walk_body(v, child_pos);
     }
 
     fn render(self, geom: &mut Geom, rect: Region<V2>) {
+        if !self.dyn.active() {
+            return;
+        }
+
         let lower = Region::new(rect.min + V2::new(0, extra_height()), rect.max);
 
         let title_height = atlas::DIALOG_TITLE_CENTER.size().y;
@@ -99,3 +108,12 @@ impl<D: DialogDyn> Widget for WidgetPack<Dialog, D> {
 // There are 8 pixels on either side of the spacer graphic that are actually transparent, and don't
 // count.
 const DIALOG_SPACER_INSET: i32 = 7 - 8;
+
+
+struct SizeVisitor<'a>(&'a mut V2);
+
+impl<'a> Visitor for SizeVisitor<'a> {
+    fn visit<W: Widget>(&mut self, w: W, rect: Region<V2>) {
+        *self.0 = w.size();
+    }
+}

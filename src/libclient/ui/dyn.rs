@@ -6,6 +6,7 @@ use physics::v3::{V2, scalar, Region};
 use inventory::{Inventory, Inventories};
 use ui::{dialog, hotbar, inventory, item, root};
 use ui::state::*;
+use ui::widget::*;
 
 #[derive(Clone, Copy)]
 // TODO: remove pub
@@ -127,18 +128,38 @@ pub struct DialogDyn<'a> {
     invs: &'a Inventories,
 }
 
-impl<'a> dialog::DialogDyn for DialogDyn<'a> {
-    type InvDyn = InventoryGridDyn<'a>;
+fn visit_sized<V: Visitor, W: Widget+Copy>(v: &mut V, w: W, pos: V2) {
+    let rect = Region::sized(w.size()) + pos;
+    v.visit(w, rect);
+}
 
-    fn inv_grid(self) -> InventoryGridDyn<'a> {
-        InventoryGridDyn {
-            state: self.state.inv_grid,
-            inv: self.invs.main_inventory(),
+impl<'a> dialog::DialogDyn for DialogDyn<'a> {
+    fn active(self) -> bool {
+        match *self.state {
+            DialogState::None => false,
+            _ => true,
+        }
+    }
+
+    fn walk_body<V: Visitor>(self, v: &mut V, pos: V2) {
+        match *self.state {
+            DialogState::None => {},
+            DialogState::Inventory(ref inv_state) => {
+                let dyn = InventoryGridDyn {
+                    state: *inv_state,
+                    inv: self.invs.main_inventory(),
+                };
+                let w = WidgetPack::new(inventory::Grid(6), dyn);
+                visit_sized(v, w, pos);
+            },
         }
     }
 
     fn with_title<R, F: FnOnce(&str) -> R>(self, f: F) -> R {
-        f("Inventory")
+        match *self.state {
+            DialogState::None => f(""),
+            DialogState::Inventory(_) => f("Inventory"),
+        }
     }
 }
 
