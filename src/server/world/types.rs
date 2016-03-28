@@ -7,29 +7,14 @@ use world::extra::Extra;
 
 pub use super::World;
 pub use super::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
-pub use super::Item;
 
+pub use libserver_world_types::{Item, Motion};
+pub use libserver_world_types::{
+    EntityAttachment,
+    StructureAttachment,
+    InventoryAttachment,
+};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum EntityAttachment {
-    World,
-    Chunk,
-    Client(ClientId),
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum StructureAttachment {
-    Plane,
-    Chunk,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum InventoryAttachment {
-    World,
-    Client(ClientId),
-    Entity(EntityId),
-    Structure(StructureId),
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Activity {
@@ -137,26 +122,6 @@ impl super::Entity {
 
     pub fn extra_mut(&mut self) -> &mut Extra {
         &mut self.extra
-    }
-}
-
-impl super::Item {
-    pub fn count(&self) -> u8 {
-        use super::Item::*;
-        match *self {
-            Empty => 0,
-            Bulk(count, _) => count,
-            Special(_, _) => 1,
-        }
-    }
-
-    pub fn item(&self) -> ItemId {
-        use super::Item::*;
-        match *self {
-            Empty => NO_ITEM,
-            Bulk(_, item_id) => item_id,
-            Special(_, item_id) => item_id,
-        }
     }
 }
 
@@ -291,55 +256,5 @@ impl super::Structure {
 
     pub fn extra_mut(&mut self) -> &mut Extra {
         &mut self.extra
-    }
-}
-
-
-// TODO: find somewhere better to put Motion
-
-#[derive(Clone, Debug)]
-pub struct Motion {
-    pub start_time: Time,
-    pub duration: Duration,
-    pub start_pos: V3,
-    pub end_pos: V3,
-}
-
-impl Motion {
-    pub fn fixed(pos: V3) -> Motion {
-        Motion {
-            start_time: 0,
-            duration: 0,
-            start_pos: pos,
-            end_pos: pos,
-        }
-    }
-
-    pub fn stationary(pos: V3, now: Time) -> Motion {
-        Motion {
-            start_time: now,
-            duration: -1_i64 as Duration,
-            start_pos: pos,
-            end_pos: pos,
-        }
-    }
-
-    pub fn pos(&self, now: Time) -> V3 {
-        if now <= self.start_time {
-            self.start_pos
-        } else {
-            let delta = now - self.start_time;
-            if delta >= self.duration as Time {
-                self.end_pos
-            } else {
-                let offset = (self.end_pos - self.start_pos) *
-                        scalar(delta as i32) / scalar(self.duration as i32);
-                self.start_pos + offset
-            }
-        }
-    }
-
-    pub fn end_time(&self) -> Time {
-        self.start_time + self.duration as Time
     }
 }

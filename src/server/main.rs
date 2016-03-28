@@ -36,6 +36,7 @@ extern crate terrain_gen as libterrain_gen;
 extern crate server_config as libserver_config;
 extern crate server_types as libserver_types;
 #[macro_use] extern crate server_util as libserver_util;
+extern crate server_world_types as libserver_world_types;
 
 use std::fs::File;
 use std::io::{self, Read};

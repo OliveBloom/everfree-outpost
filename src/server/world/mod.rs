@@ -19,6 +19,8 @@ pub use self::types::{
 pub use self::world::{EntitiesById, StructuresById, InventoriesById};
 use self::extra::Extra;
 
+pub use libserver_world_types::Item;
+
 macro_rules! bad {
     ($ok:expr, $msg:expr) => { bad!($ok, $msg,) };
     ($ok:expr, $msg:expr, $($extra:tt)*) => {{
@@ -109,20 +111,6 @@ pub struct Entity {
     child_inventories: HashSet<InventoryId>,
 }
 impl_IntrusiveStableId!(Entity, stable_id);
-
-#[derive(Clone, Copy, Debug)]
-pub enum Item {
-    /// No item in this slot.
-    Empty,
-    /// Bulk item (stackable).  The `u8` is the item count in the stack, which should never be
-    /// zero.  These items can be moved around, split, combined, etc. with no script intervention.
-    Bulk(u8, ItemId),
-    /// Special item (non-stackable).  This item has script data attached.  The `u8` is an
-    /// identifier assigned by the script.  Moving this item to a different inventory requires
-    /// script intervention.  (Moving within a container does not, because the table slot does not
-    /// change.)
-    Special(u8, ItemId),
-}
 
 pub struct Inventory {
     // Inventory size (number of slots) is capped at 255
