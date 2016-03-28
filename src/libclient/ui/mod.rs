@@ -48,6 +48,15 @@ impl UI {
 
         geom.unwrap()
     }
+
+    pub fn handle_key(&mut self, key: input::KeyAction, invs: &Inventories) -> bool {
+        let dyn = root::RootDyn {
+            screen_size: V2::new(799, 379),
+            inventories: invs,
+        };
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
+        root.on_key(key)
+    }
 }
 
 struct RenderVisitor<'a> {

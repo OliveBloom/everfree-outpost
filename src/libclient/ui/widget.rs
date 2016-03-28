@@ -1,12 +1,12 @@
 use std::prelude::v1::*;
 use std::mem;
 
-use physics::v3::{V2, Region};
+use physics::v3::{V2, scalar, Region};
 
 use ui::geom::Geom;
 use ui::input::KeyAction;
 
-pub trait Widget {
+pub trait Widget: Sized {
     // All methods operate on `&mut self` so that the widget can cache values internally.
 
     /// Compute the total size of this widget, including its children.
@@ -21,7 +21,12 @@ pub trait Widget {
 
     /// Handle a keyboard event.  Return true if the event was handled, and should not be processed
     /// by widgets higher in the tree.
-    fn on_key(&mut self, key: KeyAction) -> bool { false }
+    ///
+    /// The default implementation calls `OnKeyVisitor::dispatch` to dispatch the event to each
+    /// child in turn until one reports that the event has been handled.
+    fn on_key(&mut self, key: KeyAction) -> bool {
+        OnKeyVisitor::dispatch(self, key)
+    }
 }
 
 pub trait Visitor {
@@ -63,4 +68,35 @@ struct NullVisitor;
 
 impl Visitor for NullVisitor {
     fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {}
+}
+
+
+pub struct OnKeyVisitor {
+    key: KeyAction,
+    result: bool,
+}
+
+impl OnKeyVisitor {
+    pub fn new(key: KeyAction) -> OnKeyVisitor {
+        OnKeyVisitor {
+            key: key,
+            result: false,
+        }
+    }
+
+    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: KeyAction) -> bool {
+        let mut v = OnKeyVisitor::new(key);
+        w.walk_layout(&mut v, scalar(0));
+        v.result
+    }
+}
+
+impl Visitor for OnKeyVisitor {
+    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
+        if self.result {
+            return;
+        }
+
+        self.result = w.on_key(self.key);
+    }
 }

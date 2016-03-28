@@ -1,10 +1,12 @@
 use std::prelude::v1::*;
+use std::cmp;
 
 use physics::v3::{V2, scalar, Region, Align};
 
 use inventory::Item;
 use ui::atlas;
 use ui::geom::Geom;
+use ui::input::KeyAction;
 use ui::item;
 use ui::widget::*;
 
@@ -65,6 +67,15 @@ impl Grid {
             focus: 0,
         }
     }
+
+    pub fn move_focus(&mut self, dir: V2, grid_size: V2, inv_len: usize) {
+        let bounds = Region::sized(grid_size);
+        let limit = cmp::min(inv_len, bounds.volume() as usize);
+        let pos = bounds.from_index(cmp::min(self.focus, limit - 1));
+        let new_pos = bounds.clamp_point(pos + dir);
+        let new_focus = bounds.index(new_pos);
+        self.focus = cmp::min(new_focus, limit - 1);
+    }
 }
 
 pub trait GridDyn: Copy {
@@ -95,5 +106,24 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
+    }
+
+    fn on_key(&mut self, key: KeyAction) -> bool {
+        use ui::input::KeyAction::*;
+        let dir =
+            match key {
+                MoveUp =>       Some(V2::new( 0, -1)),
+                MoveDown =>     Some(V2::new( 0,  1)),
+                MoveLeft =>     Some(V2::new(-1,  0)),
+                MoveRight =>    Some(V2::new( 1,  0)),
+                _ =>            None,
+            };
+
+        if let Some(dir) = dir {
+            self.state.move_focus(dir, self.dyn.grid_size(), self.dyn.len());
+            return true;
+        }
+
+        false
     }
 }

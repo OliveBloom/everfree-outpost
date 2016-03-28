@@ -72,6 +72,10 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn on_key(&mut self, key: KeyAction) -> bool {
         use ui::dialogs::AnyDialog::*;
 
+        if OnKeyVisitor::dispatch(self, key) {
+            return true;
+        }
+
         if let KeyAction::SetHotbar(idx) = key {
             // If the inventory or ability dialog is open, assign the selected item to the hotbar.
             match self.state.dialog.inner {
@@ -90,9 +94,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             return true;
         }
 
-        let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories);
-        let mut child = WidgetPack::new(&mut self.state.dialog, dyn);
-        child.on_key(key)
+        false
     }
 }
 

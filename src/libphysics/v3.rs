@@ -598,7 +598,7 @@ impl<V: Vn> Region<V> {
     #[inline]
     pub fn clamp_point(&self, point: V) -> V {
         <V as Vn>::from_fn(|a| max(self.min.get(a),
-                               min(self.max.get(a),
+                               min(self.max.get(a) - 1,
                                    point.get(a))))
     }
 

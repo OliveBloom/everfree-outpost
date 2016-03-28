@@ -158,6 +158,11 @@ pub unsafe extern fn inventory_ability_id(client: &mut Client,
     client.set_ability_inventory_id(inv_id);
 }
 
+#[no_mangle]
+pub unsafe extern fn input_key(client: &mut Client, code: u8) {
+    client.input_key(code);
+}
+
 
 
 

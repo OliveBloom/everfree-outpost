@@ -19,6 +19,7 @@ use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use ui::UI;
+use ui::input::KeyAction;
 
 
 pub struct Client<'d, GL: GlContext> {
@@ -195,6 +196,14 @@ impl<'d, GL: GlContext> Client<'d, GL> {
 
     pub fn set_ability_inventory_id(&mut self, id: InventoryId) {
         self.inventories.set_ability_id(id);
+    }
+
+    // UI input
+
+    pub fn input_key(&mut self, code: u8) {
+        if let Some(key) = KeyAction::from_code(code) {
+            self.ui.handle_key(key, &self.inventories);
+        }
     }
 
 

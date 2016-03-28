@@ -49,8 +49,8 @@ impl<'a, I: Inner, D: Copy> Widget for WidgetPack<'a, Dialog<I>, D>
         }
 
         let mut child = WidgetPack::new(&mut self.state.inner, self.dyn);
-        let child_pos = pos + scalar(6) + V2::new(0, extra_height());
-        child.walk_layout(v, child_pos);
+        let rect = Region::sized(child.size()) + pos + scalar(6) + V2::new(0, extra_height());
+        v.visit(&mut child, rect);
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {

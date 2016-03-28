@@ -188,6 +188,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
         inventory_main_id: _inventory_main_id,
         inventory_ability_id: _inventory_ability_id,
 
+        input_key: _input_key,
+
         collide: _collide,
         find_ceiling: _find_ceiling,
         floodfill: _floodfill,

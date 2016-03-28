@@ -4,6 +4,7 @@ use physics::v3::{V2, scalar, Region};
 use inventory::Inventories;
 use ui::dialog;
 use ui::geom::Geom;
+use ui::input::KeyAction;
 use ui::widget::*;
 
 
@@ -67,6 +68,19 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
+    }
+
+    fn on_key(&mut self, key: KeyAction) -> bool {
+        if OnKeyVisitor::dispatch(self, key) {
+            return true;
+        }
+
+        if key == KeyAction::Cancel {
+            *self.state = AnyDialog::None;
+            return true;
+        }
+
+        false
     }
 }
 
