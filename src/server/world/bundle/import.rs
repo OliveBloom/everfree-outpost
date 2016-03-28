@@ -11,6 +11,7 @@ use world as w;
 use world::Hooks;
 use world::fragment::Fragment;
 use world::ops;
+use world::extra::{self, Extra};
 
 use super::export::{BAD_CLIENT_ID, BAD_ENTITY_ID, BAD_INVENTORY_ID};
 use super::export::{BAD_PLANE_ID, BAD_TERRAIN_CHUNK_ID, BAD_STRUCTURE_ID};
@@ -439,6 +440,87 @@ impl Import for InventoryAttachment {
             InventoryAttachment::Client(id) => InventoryAttachment::Client(i.import(&id)),
             InventoryAttachment::Entity(id) => InventoryAttachment::Entity(i.import(&id)),
             InventoryAttachment::Structure(id) => InventoryAttachment::Structure(i.import(&id)),
+        }
+    }
+}
+
+
+impl Import for Extra {
+    fn import_from(&self, i: &Importer) -> Extra {
+        let mut result = Extra::new();
+        for (k, v) in self.iter() {
+            match v {
+                extra::View::Value(v) =>
+                    result.set(k, i.import(&v)),
+                extra::View::Array(a) =>
+                    import_extra_array(i, a, result.set_array(k)),
+                extra::View::Hash(h) =>
+                    import_extra_hash(i, h, result.set_hash(k)),
+            }
+        }
+        result
+    }
+}
+
+impl Import for extra::Value {
+    fn import_from(&self, i: &Importer) -> extra::Value {
+        use world::extra::Value::*;
+        match *self {
+            Null => Null,
+            Bool(b) => Bool(b),
+            Int(i) => Int(i),
+            Float(f) => Float(f),
+            Str(ref s) => Str(s.clone()),
+
+            ClientId(id) => ClientId(i.import(&id)),
+            EntityId(id) => EntityId(i.import(&id)),
+            InventoryId(id) => InventoryId(i.import(&id)),
+            PlaneId(id) => PlaneId(i.import(&id)),
+            TerrainChunkId(id) => TerrainChunkId(i.import(&id)),
+            StructureId(id) => StructureId(i.import(&id)),
+
+            StableClientId(id) => StableClientId(id),
+            StableEntityId(id) => StableEntityId(id),
+            StableInventoryId(id) => StableInventoryId(id),
+            StablePlaneId(id) => StablePlaneId(id),
+            StableTerrainChunkId(id) => StableTerrainChunkId(id),
+            StableStructureId(id) => StableStructureId(id),
+
+            V2(v) => V2(v),
+            V3(v) => V3(v),
+            Region2(r) => Region2(r),
+            Region3(r) => Region3(r),
+        }
+    }
+}
+
+fn import_extra_array(i: &Importer,
+                      array: extra::ArrayView,
+                      mut result: extra::ArrayViewMut) {
+    for (idx, v) in array.iter().enumerate() {
+        result.borrow().push();
+        match v {
+            extra::View::Value(v) =>
+                result.borrow().set(idx, i.import(&v)),
+            extra::View::Array(a) =>
+                import_extra_array(i, a, result.borrow().set_array(idx)),
+            extra::View::Hash(h) =>
+                import_extra_hash(i, h, result.borrow().set_hash(idx)),
+        }
+    }
+}
+
+fn import_extra_hash(i: &Importer,
+                     hash: extra::HashView,
+                     mut result: extra::HashViewMut) {
+    for (k, v) in hash.iter() {
+        match v {
+            extra::View::Value(v) =>
+                result.borrow().set(k, i.import(&v)),
+            extra::View::Array(a) =>
+                import_extra_array(i, a, result.borrow().set_array(k)),
+            extra::View::Hash(h) =>
+                import_extra_hash(i, h, result.borrow().set_hash(k)),
         }
     }
 }

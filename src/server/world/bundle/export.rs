@@ -6,6 +6,7 @@ use world::bundle::types as b;
 use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
+use world::extra::{self, Extra};
 
 
 pub const BAD_CLIENT_ID: ClientId = ClientId(-1_i16 as u16);
@@ -444,6 +445,87 @@ impl Export for InventoryAttachment {
             InventoryAttachment::Client(id) => InventoryAttachment::Client(e.export(&id)),
             InventoryAttachment::Entity(id) => InventoryAttachment::Entity(e.export(&id)),
             InventoryAttachment::Structure(id) => InventoryAttachment::Structure(e.export(&id)),
+        }
+    }
+}
+
+
+impl Export for Extra {
+    fn export_to(&self, e: &mut Exporter) -> Extra {
+        let mut result = Extra::new();
+        for (k, v) in self.iter() {
+            match v {
+                extra::View::Value(v) =>
+                    result.set(k, e.export(&v)),
+                extra::View::Array(a) =>
+                    export_extra_array(e, a, result.set_array(k)),
+                extra::View::Hash(h) =>
+                    export_extra_hash(e, h, result.set_hash(k)),
+            }
+        }
+        result
+    }
+}
+
+impl Export for extra::Value {
+    fn export_to(&self, e: &mut Exporter) -> extra::Value {
+        use world::extra::Value::*;
+        match *self {
+            Null => Null,
+            Bool(b) => Bool(b),
+            Int(i) => Int(i),
+            Float(f) => Float(f),
+            Str(ref s) => Str(s.clone()),
+
+            ClientId(id) => ClientId(e.export(&id)),
+            EntityId(id) => EntityId(e.export(&id)),
+            InventoryId(id) => InventoryId(e.export(&id)),
+            PlaneId(id) => PlaneId(e.export(&id)),
+            TerrainChunkId(id) => TerrainChunkId(e.export(&id)),
+            StructureId(id) => StructureId(e.export(&id)),
+
+            StableClientId(id) => StableClientId(id),
+            StableEntityId(id) => StableEntityId(id),
+            StableInventoryId(id) => StableInventoryId(id),
+            StablePlaneId(id) => StablePlaneId(id),
+            StableTerrainChunkId(id) => StableTerrainChunkId(id),
+            StableStructureId(id) => StableStructureId(id),
+
+            V2(v) => V2(v),
+            V3(v) => V3(v),
+            Region2(r) => Region2(r),
+            Region3(r) => Region3(r),
+        }
+    }
+}
+
+fn export_extra_array(e: &mut Exporter,
+                      array: extra::ArrayView,
+                      mut result: extra::ArrayViewMut) {
+    for (idx, v) in array.iter().enumerate() {
+        result.borrow().push();
+        match v {
+            extra::View::Value(v) =>
+                result.borrow().set(idx, e.export(&v)),
+            extra::View::Array(a) =>
+                export_extra_array(e, a, result.borrow().set_array(idx)),
+            extra::View::Hash(h) =>
+                export_extra_hash(e, h, result.borrow().set_hash(idx)),
+        }
+    }
+}
+
+fn export_extra_hash(e: &mut Exporter,
+                     hash: extra::HashView,
+                     mut result: extra::HashViewMut) {
+    for (k, v) in hash.iter() {
+        match v {
+            extra::View::Value(v) =>
+                result.borrow().set(k, e.export(&v)),
+            extra::View::Array(a) =>
+                export_extra_array(e, a, result.borrow().set_array(k)),
+            extra::View::Hash(h) =>
+                export_extra_hash(e, h, result.borrow().set_hash(k)),
         }
     }
 }

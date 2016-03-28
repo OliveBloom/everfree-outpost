@@ -4,9 +4,6 @@ use std::slice;
 
 use types::*;
 
-use world::bundle::export::{Export, Exporter};
-use world::bundle::import::{Import, Importer};
-
 
 macro_rules! with_value_variants {
     ($mac:ident!($($args:tt)*)) => {
@@ -491,104 +488,6 @@ impl<'a> Iterator for ExtraIterMut<'a> {
             inner.next()
         } else {
             None
-        }
-    }
-}
-
-
-impl Export for Repr {
-    fn export_to(&self, e: &mut Exporter) -> Repr {
-        use self::Repr::*;
-        match *self {
-            Null => Null,
-            Array(ref v) => Array(v.iter().map(|x| e.export(x)).collect()),
-            Hash(ref h) => Hash(h.iter().map(|(k,v)| (k.clone(), e.export(v))).collect()),
-            Bool(b) => Bool(b),
-            Int(i) => Int(i),
-            Float(f) => Float(f),
-            Str(ref s) => Str(s.clone()),
-
-            ClientId(id) => ClientId(e.export(&id)),
-            EntityId(id) => EntityId(e.export(&id)),
-            InventoryId(id) => InventoryId(e.export(&id)),
-            PlaneId(id) => PlaneId(e.export(&id)),
-            TerrainChunkId(id) => TerrainChunkId(e.export(&id)),
-            StructureId(id) => StructureId(e.export(&id)),
-
-            StableClientId(id) => StableClientId(id),
-            StableEntityId(id) => StableEntityId(id),
-            StableInventoryId(id) => StableInventoryId(id),
-            StablePlaneId(id) => StablePlaneId(id),
-            StableTerrainChunkId(id) => StableTerrainChunkId(id),
-            StableStructureId(id) => StableStructureId(id),
-
-            V2(v) => V2(v),
-            V3(v) => V3(v),
-            Region2(r) => Region2(r),
-            Region3(r) => Region3(r),
-        }
-    }
-}
-
-impl Export for Extra {
-    fn export_to(&self, e: &mut Exporter) -> Extra {
-        if let Some(ref h) = self.h {
-            let mut h2 = HashMap::with_capacity(h.len());
-            for (k, v) in h.iter() {
-                h2.insert(k.clone(), e.export(v));
-            }
-            Extra { h: Some(Box::new(h2)) }
-        } else {
-            Extra { h: None }
-        }
-    }
-}
-
-
-impl Import for Repr {
-    fn import_from(&self, i: &Importer) -> Repr {
-        use self::Repr::*;
-        match *self {
-            Null => Null,
-            Array(ref v) => Array(v.iter().map(|x| i.import(x)).collect()),
-            Hash(ref h) => Hash(h.iter().map(|(k,v)| (k.clone(), i.import(v))).collect()),
-            Bool(b) => Bool(b),
-            Int(i) => Int(i),
-            Float(f) => Float(f),
-            Str(ref s) => Str(s.clone()),
-
-            ClientId(id) => ClientId(i.import(&id)),
-            EntityId(id) => EntityId(i.import(&id)),
-            InventoryId(id) => InventoryId(i.import(&id)),
-            PlaneId(id) => PlaneId(i.import(&id)),
-            TerrainChunkId(id) => TerrainChunkId(i.import(&id)),
-            StructureId(id) => StructureId(i.import(&id)),
-
-            StableClientId(id) => StableClientId(id),
-            StableEntityId(id) => StableEntityId(id),
-            StableInventoryId(id) => StableInventoryId(id),
-            StablePlaneId(id) => StablePlaneId(id),
-            StableTerrainChunkId(id) => StableTerrainChunkId(id),
-            StableStructureId(id) => StableStructureId(id),
-
-            V2(v) => V2(v),
-            V3(v) => V3(v),
-            Region2(r) => Region2(r),
-            Region3(r) => Region3(r),
-        }
-    }
-}
-
-impl Import for Extra {
-    fn import_from(&self, i: &Importer) -> Extra {
-        if let Some(ref h) = self.h {
-            let mut h2 = HashMap::with_capacity(h.len());
-            for (k, v) in h.iter() {
-                h2.insert(k.clone(), i.import(v));
-            }
-            Extra { h: Some(Box::new(h2)) }
-        } else {
-            Extra { h: None }
         }
     }
 }
