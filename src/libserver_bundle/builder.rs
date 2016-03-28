@@ -2,14 +2,14 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::iter;
 
-use types::*;
-
-use data::Data;
-use world::extra::Extra;
-use world::types::{Motion, Item};
-use world::types::{EntityAttachment, InventoryAttachment};
+use server_config::Data;
+use server_extra::Extra;
+use server_types::*;
+use server_world_types::{Motion, Item};
+use server_world_types::{EntityAttachment, InventoryAttachment};
 
 use super::types::*;
+
 
 pub struct Remapper<Val, Id> {
     pub vals: Vec<Val>,

@@ -3,7 +3,7 @@ use std::fmt;
 use std::io;
 use std::result;
 
-use util::{StrError, StringError};
+use server_util::{StrError, StringError};
 
 #[derive(Debug)]
 pub enum Error {

@@ -7,15 +7,10 @@ pub use self::error::{Error, Result};
 pub use self::import::{Importer, import_bundle, import_world};
 pub use self::export::Exporter;
 
-pub mod types;
-pub mod builder;
+pub use libserver_bundle::*;
 
 pub mod export;
 pub mod import;
-
-pub mod error;
-
-pub mod flat;
 
 
 pub fn read_bundle<R: ::std::io::Read>(r: &mut R) -> Result<Bundle> {

@@ -29,14 +29,14 @@ use std::mem;
 use std::slice;
 use std::str;
 
-use types::*;
-use util::Convert;
-use util::{StrError, StrResult};
+use server_types::*;
+use server_util::Convert;
+use server_util::{StrError, StrResult};
 
-use world::{Motion, Item};
-use world::{TerrainChunkFlags, StructureFlags};
-use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
-use world::extra::{self, Extra};
+use server_world_types::{Motion, Item};
+use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
+use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
+use server_extra::{self as extra, Extra};
 
 use super::types::*;
 
@@ -301,7 +301,7 @@ macro_rules! flat {
         }
 
         impl<'a> FlatView<'a> {
-            fn to_owned(&self) -> Flat {
+            pub fn to_owned(&self) -> Flat {
                 Flat {
                     $( $name: <$ty as Section>::to_owned(self.$name), )*
                     string_map: HashMap::new(),
@@ -1248,7 +1248,7 @@ fn flatten_view(x: &extra::View, f: &mut Flat) -> FlatExtra {
 }
 
 fn flatten_value(x: &extra::Value, f: &mut Flat) -> FlatExtra {
-    use world::extra::Value;
+    use server_extra::Value;
     match *x {
         Value::Null => FlatExtra::from_tag(Tag::Null),
         Value::Bool(b) => FlatExtra::from_data(Tag::Bool, b as u32),
@@ -1355,7 +1355,7 @@ fn unflatten_array(fx: &FlatExtra, f: &FlatView, mut v: extra::ArrayViewMut) {
 }
 
 fn unflatten_value(fx: &FlatExtra, f: &FlatView) -> extra::Value {
-    use world::extra::Value;
+    use server_extra::Value;
     match Tag::from_primitive(fx.tag).unwrap() {
         Tag::Null => Value::Null,
         Tag::Bool => Value::Bool(fx.data != 0),

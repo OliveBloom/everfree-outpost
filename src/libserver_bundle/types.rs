@@ -1,9 +1,9 @@
-use types::*;
+use server_extra::Extra;
+use server_types::*;
+use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
+use server_world_types::{Motion, Item};
+use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
 
-use world::extra::Extra;
-use world::flags::{TerrainChunkFlags, StructureFlags};
-use world::types::{Motion, Item};
-use world::types::{EntityAttachment, InventoryAttachment, StructureAttachment};
 
 pub struct Bundle {
     pub anims: Box<[Box<str>]>,

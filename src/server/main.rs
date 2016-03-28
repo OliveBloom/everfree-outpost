@@ -34,6 +34,7 @@ extern crate python3_sys;
 extern crate physics as libphysics;
 extern crate terrain_gen as libterrain_gen;
 extern crate server_config as libserver_config;
+extern crate server_bundle as libserver_bundle;
 extern crate server_extra as libserver_extra;
 extern crate server_types as libserver_types;
 #[macro_use] extern crate server_util as libserver_util;
