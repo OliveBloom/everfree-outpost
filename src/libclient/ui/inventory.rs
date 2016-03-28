@@ -112,10 +112,10 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
         use ui::input::KeyAction::*;
         let dir =
             match key {
-                MoveUp =>       Some(V2::new( 0, -1)),
-                MoveDown =>     Some(V2::new( 0,  1)),
-                MoveLeft =>     Some(V2::new(-1,  0)),
-                MoveRight =>    Some(V2::new( 1,  0)),
+                MoveUp(amt) =>      Some(V2::new(0, -(amt as i32))),
+                MoveDown(amt) =>    Some(V2::new(0,  (amt as i32))),
+                MoveLeft(amt) =>    Some(V2::new(-(amt as i32), 0)),
+                MoveRight(amt) =>   Some(V2::new( (amt as i32), 0)),
                 _ =>            None,
             };
 

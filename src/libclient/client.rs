@@ -200,9 +200,11 @@ impl<'d, GL: GlContext> Client<'d, GL> {
 
     // UI input
 
-    pub fn input_key(&mut self, code: u8) {
+    pub fn input_key(&mut self, code: u8) -> bool {
         if let Some(key) = KeyAction::from_code(code) {
-            self.ui.handle_key(key, &self.inventories);
+            self.ui.handle_key(key, &self.inventories)
+        } else {
+            false
         }
     }
 

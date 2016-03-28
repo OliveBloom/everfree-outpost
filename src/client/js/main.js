@@ -188,11 +188,13 @@ function init() {
                 'rendering in fallback mode');
     }
 
+    asm_client = new DynAsm();
+
     ui_div = util.element('div', ['ui-container']);
     debug = new DebugMonitor();
     window.DEBUG = debug;
     banner = new Banner();
-    keyboard = new Keyboard();
+    keyboard = new Keyboard(asm_client);
     dnd = new DNDState(keyboard);
     dialog = new Dialog(keyboard);
     chat = new ChatWindow();
@@ -212,8 +214,6 @@ function init() {
 
     runner = new BackgroundJobRunner();
     assets = null;
-
-    asm_client = new DynAsm();
 
     entities = {};
     player_entity = -1;

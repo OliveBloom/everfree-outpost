@@ -291,6 +291,10 @@ DynAsm.prototype.inventoryAbilityId = function(id) {
     this._raw['inventory_ability_id'](this.client, id);
 };
 
+DynAsm.prototype.inputKey = function(code) {
+    return this._raw['input_key'](this.client, code);
+};
+
 DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
     var region = this._stackAlloc(Int32Array, 6);
     store_vec(region, 0, base);
