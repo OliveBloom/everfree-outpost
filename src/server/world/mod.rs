@@ -17,7 +17,8 @@ pub use self::types::{
     Motion,
 };
 pub use self::world::{EntitiesById, StructuresById, InventoriesById};
-use self::extra::Extra;
+pub use libserver_extra as extra;
+pub use libserver_extra::Extra;
 
 pub use libserver_world_types::Item;
 
@@ -45,7 +46,6 @@ pub mod hooks;
 mod types;
 pub mod fragment;
 pub mod flags;
-pub mod extra;
 pub mod bundle;
 
 

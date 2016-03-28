@@ -1,8 +1,12 @@
+#![crate_name = "server_extra"]
+
+extern crate server_types;
+
 use std::collections::HashMap;
 use std::collections::hash_map;
 use std::slice;
 
-use types::*;
+use server_types::*;
 
 
 macro_rules! with_value_variants {
