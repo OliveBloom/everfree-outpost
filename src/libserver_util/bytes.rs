@@ -2,7 +2,7 @@ use std::io;
 use std::mem;
 use std::raw;
 
-use libserver_types::{V3, V2};
+use libserver_types::*;
 
 use ReadExact;
 
@@ -63,21 +63,33 @@ bytes_tuple_impl!(A B C D E F G H I J K L);
 unsafe impl Bytes for V2 { }
 unsafe impl Bytes for V3 { }
 
+unsafe impl Bytes for ClientId {}
+unsafe impl Bytes for EntityId {}
+unsafe impl Bytes for InventoryId {}
+unsafe impl Bytes for PlaneId {}
+unsafe impl Bytes for TerrainChunkId {}
+unsafe impl Bytes for StructureId {}
+
+unsafe impl<Id: Copy> Bytes for Stable<Id> {}
+
 
 pub trait WriteBytes {
+    unsafe fn write_as_bytes<T: Copy>(&mut self, x: T) -> io::Result<()>;
     fn write_bytes<T: Bytes>(&mut self, x: T) -> io::Result<()>;
     fn write_bytes_slice<T: Bytes>(&mut self, x: &[T]) -> io::Result<()>;
 }
 
 impl<W: io::Write> WriteBytes for W {
-    fn write_bytes<T: Bytes>(&mut self, x: T) -> io::Result<()> {
-        let slice = unsafe {
-            mem::transmute(raw::Slice {
-                data: &x as *const T as *const u8,
-                len: mem::size_of::<T>(),
-            })
-        };
+    unsafe fn write_as_bytes<T: Copy>(&mut self, x: T) -> io::Result<()> {
+        let slice = mem::transmute(raw::Slice {
+            data: &x as *const T as *const u8,
+            len: mem::size_of::<T>(),
+        });
         self.write_all(slice)
+    }
+
+    fn write_bytes<T: Bytes>(&mut self, x: T) -> io::Result<()> {
+        unsafe { self.write_as_bytes(x) }
     }
 
     fn write_bytes_slice<T: Bytes>(&mut self, x: &[T]) -> io::Result<()> {
@@ -92,21 +104,24 @@ impl<W: io::Write> WriteBytes for W {
 }
 
 pub trait ReadBytes {
+    unsafe fn read_as_bytes<T: Copy>(&mut self) -> io::Result<T>;
     fn read_bytes<T: Bytes>(&mut self) -> io::Result<T>;
     fn read_bytes_slice<T: Bytes>(&mut self, x: &mut [T]) -> io::Result<()>;
 }
 
 impl<R: io::Read> ReadBytes for R {
-    fn read_bytes<T: Bytes>(&mut self) -> io::Result<T> {
-        let mut x = unsafe { mem::zeroed() };
-        let slice = unsafe {
-            mem::transmute(raw::Slice {
-                data: &mut x as *mut T as *mut u8,
-                len: mem::size_of::<T>(),
-            })
-        };
+    unsafe fn read_as_bytes<T: Copy>(&mut self) -> io::Result<T> {
+        let mut x = mem::zeroed();
+        let slice = mem::transmute(raw::Slice {
+            data: &mut x as *mut T as *mut u8,
+            len: mem::size_of::<T>(),
+        });
         try!(self.read_exact(slice));
         Ok(x)
+    }
+
+    fn read_bytes<T: Bytes>(&mut self) -> io::Result<T> {
+        unsafe { self.read_as_bytes() }
     }
 
     fn read_bytes_slice<T: Bytes>(&mut self, x: &mut [T]) -> io::Result<()> {

@@ -1,6 +1,7 @@
 use std::convert::From;
 use std::error::Error;
 use std::fmt;
+use std::io;
 
 
 #[derive(Clone, Copy, Debug)]
@@ -28,7 +29,14 @@ impl From<&'static str> for StrError {
     }
 }
 
+impl From<StrError> for io::Error {
+    fn from(s: StrError) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, s)
+    }
+}
+
 pub type StrResult<T> = Result<T, StrError>;
+
 
 #[derive(Debug)]
 pub struct StringError {
@@ -58,6 +66,12 @@ impl<'a> From<&'a str> for StringError {
         StringError {
             msg: s.to_owned(),
         }
+    }
+}
+
+impl From<StringError> for io::Error {
+    fn from(s: StringError) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, s)
     }
 }
 
