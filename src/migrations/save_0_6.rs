@@ -9,12 +9,14 @@ use std::collections::HashMap;
 use std::io;
 use std::iter;
 use std::mem;
+use std::slice;
 
 use server_extra as extra;
 use server_extra::Extra;
 use server_types::*;
 use server_util::bytes::{Bytes, ReadBytes};
 use server_world_types::{Motion, Item};
+use server_world_types::flags;
 
 
 // Header
@@ -86,54 +88,98 @@ struct ExtraWord {
 pub type SaveId = u32;
 
 pub struct Client {
-    id: SaveId,
-    stable_id: StableId,
+    pub id: SaveId,
+    pub stable_id: StableId,
 
-    pawn_id: Option<SaveId>,
+    pub pawn_id: Option<SaveId>,
 
-    extra: Extra,
-    child_entities: Vec<Entity>,
-    child_inventories: Vec<Inventory>,
+    pub extra: Extra,
+    pub child_entities: Vec<Entity>,
+    pub child_inventories: Vec<Inventory>,
 }
 
 pub struct Entity {
-    id: SaveId,
-    stable_id: StableId,
+    pub id: SaveId,
+    pub stable_id: StableId,
 
-    stable_plane: Stable<PlaneId>,
-    motion: Motion,
-    anim: AnimId,
-    facing: V3,
-    target_velocity: V3,
-    appearance: u32,
+    pub stable_plane: Stable<PlaneId>,
+    pub motion: Motion,
+    pub anim: AnimId,
+    pub facing: V3,
+    pub target_velocity: V3,
+    pub appearance: u32,
 
-    extra: Extra,
-    child_inventories: Vec<Inventory>,
+    pub extra: Extra,
+    pub child_inventories: Vec<Inventory>,
 }
 
 pub struct Inventory {
-    id: SaveId,
-    stable_id: StableId,
+    pub id: SaveId,
+    pub stable_id: StableId,
 
-    contents: Box<[Item]>,
+    pub contents: Box<[Item]>,
 
-    extra: Extra,
+    pub extra: Extra,
+}
+
+pub struct Plane {
+    pub id: SaveId,
+    pub stable_id: StableId,
+
+    pub name: String,
+    pub saved_chunks: HashMap<V2, Stable<TerrainChunkId>>,
+
+    pub extra: Extra,
+}
+
+pub struct TerrainChunk {
+    pub id: SaveId,
+    pub stable_id: StableId,
+
+    pub flags: flags::TerrainChunkFlags,
+    pub blocks: Box<BlockChunk>,
+    pub block_names: HashMap<BlockId, String>,
+
+    pub child_structures: Vec<Structure>,
+}
+
+pub struct Structure {
+    pub id: SaveId,
+    pub stable_id: StableId,
+
+    pub pos: V3,
+    pub template_id: TemplateId,
+    pub flags: flags::StructureFlags,
+
+    pub extra: Extra,
+    pub child_inventories: Vec<Inventory>,
 }
 
 // Reader
 
-struct Reader<R: io::Read> {
+pub struct Reader<R: io::Read> {
     r: R,
 
     item_names: HashMap<ItemId, String>,
+    template_names: HashMap<TemplateId, String>,
 }
 
 impl<R: io::Read> Reader<R> {
-    fn new(r: R) -> Reader<R> {
+    pub fn new(r: R) -> Reader<R> {
         Reader {
             r: r,
             item_names: HashMap::new(),
+            template_names: HashMap::new(),
         }
+    }
+
+
+    pub fn take_item_names(&mut self) -> HashMap<ItemId, String> {
+        mem::replace(&mut self.item_names, HashMap::new())
+    }
+
+    pub fn take_template_names(&mut self) -> HashMap<TemplateId, String> {
+        mem::replace(&mut self.template_names, HashMap::new())
     }
 
 
@@ -153,7 +199,7 @@ impl<R: io::Read> Reader<R> {
     }
 
 
-    fn read_header(&mut self) -> io::Result<SaveHeader> {
+    pub fn read_header(&mut self) -> io::Result<SaveHeader> {
         self.r.read_bytes()
     }
 
@@ -259,7 +305,7 @@ impl<R: io::Read> Reader<R> {
     }
 
 
-    fn read_client(&mut self) -> io::Result<Client> {
+    pub fn read_client(&mut self) -> io::Result<Client> {
         let id = try!(self.r.read_bytes());
         let stable_id = try!(self.r.read_bytes());
 
@@ -289,7 +335,7 @@ impl<R: io::Read> Reader<R> {
         })
     }
 
-    fn read_entity(&mut self) -> io::Result<Entity> {
+    pub fn read_entity(&mut self) -> io::Result<Entity> {
         let id = try!(self.r.read_bytes());
         let stable_id = try!(self.r.read_bytes());
 
@@ -330,7 +376,7 @@ impl<R: io::Read> Reader<R> {
         })
     }
 
-    fn read_inventory(&mut self) -> io::Result<Inventory> {
+    pub fn read_inventory(&mut self) -> io::Result<Inventory> {
         let id = try!(self.r.read_bytes());
         let stable_id = try!(self.r.read_bytes());
 
@@ -369,11 +415,113 @@ impl<R: io::Read> Reader<R> {
             extra: extra,
         })
     }
+
+    pub fn read_plane(&mut self) -> io::Result<Plane> {
+        let id = try!(self.r.read_bytes());
+        let stable_id = try!(self.r.read_bytes());
+
+        let name_len = try!(self.read_count());
+        let name = try!(self.read_string(name_len));
+
+        let mut saved_chunks = HashMap::<V2, Stable<TerrainChunkId>>::new();
+        for _ in 0 .. try!(self.read_count()) {
+            let k = try!(self.r.read_bytes());
+            let v = try!(self.r.read_bytes());
+            saved_chunks.insert(k, v);
+        }
+
+        let extra = try!(self.read_extra());
+
+        Ok(Plane {
+            id: id,
+            stable_id: stable_id,
+
+            name: name,
+            saved_chunks: saved_chunks,
+
+            extra: extra,
+        })
+    }
+
+    pub fn read_terrain_chunk(&mut self) -> io::Result<TerrainChunk> {
+        let id = try!(self.r.read_bytes());
+        let stable_id = try!(self.r.read_bytes());
+
+        let flags_raw = try!(self.r.read_bytes());
+        let flags = unwrap!(flags::TerrainChunkFlags::from_bits(flags_raw));
+
+        let mut blocks = Box::new(EMPTY_CHUNK);
+        let slice = unsafe {
+            slice::from_raw_parts_mut(blocks.as_mut_ptr() as *mut u8,
+                                      mem::size_of::<BlockChunk>())
+        };
+        try!(self.r.read_exact(slice));
+
+        let mut block_names = HashMap::new();
+        for _ in 0 .. try!(self.read_count()) {
+            let (id, _, name_len): (u16, u8, u8) = unsafe { try!(self.r.read_as_bytes()) };
+            let name = try!(self.read_string(name_len as usize));
+            block_names.insert(id, name);
+        }
+
+        let mut child_structures = Vec::new();
+        for _ in 0 .. try!(self.read_count()) {
+            child_structures.push(try!(self.read_structure()));
+        }
+
+        Ok(TerrainChunk {
+            id: id,
+            stable_id: stable_id,
+
+            flags: flags,
+            blocks: blocks,
+            block_names: block_names,
+
+            child_structures: child_structures,
+        })
+    }
+
+    pub fn read_structure(&mut self) -> io::Result<Structure> {
+        let id = try!(self.r.read_bytes());
+        let stable_id = try!(self.r.read_bytes());
+
+        let pos = try!(self.r.read_bytes());
+
+        let template_id = try!(self.r.read_bytes());
+        if !self.template_names.contains_key(&template_id) {
+            let (_, _, _, name_len): (u8, u8, u8, u8) = unsafe { try!(self.r.read_as_bytes()) };
+            let name = try!(self.read_string(name_len as usize));
+            self.template_names.insert(template_id, name);
+        }
+
+        let flags_raw = try!(self.r.read_bytes());
+        let flags = unwrap!(flags::StructureFlags::from_bits(flags_raw));
+
+        let extra = try!(self.read_extra());
+
+        let mut child_inventories = Vec::new();
+        for _ in 0 .. try!(self.read_count()) {
+            child_inventories.push(try!(self.read_inventory()));
+        }
+
+        Ok(Structure {
+            id: id,
+            stable_id: stable_id,
+
+            pos: pos,
+            template_id: template_id,
+            flags: flags,
+
+            extra: extra,
+            child_inventories: child_inventories,
+        })
+    }
 }
 
 
 
 fn dump_extra(e: &Extra) {
+    println!(" == extra");
     for (k, v) in e.iter() {
         print!("{:?}: ", k);
         match v {
@@ -382,6 +530,7 @@ fn dump_extra(e: &Extra) {
             extra::View::Hash(h) => dump_extra_hash(h, 1),
         }
     }
+    println!(" ==");
 }
 
 fn dump_extra_value(v: extra::Value) {
@@ -451,10 +600,32 @@ fn dump_extra_hash(h: extra::HashView, indent: usize) {
 
 fn main() {
     use std::fs::File;
-    let mut f = Reader::new(File::open("Mikrokek.client").unwrap());
+    use std::env;
+
+    let args = env::args().collect::<Vec<_>>();
+    println!("{:?}", args);
+
+    let mut f = Reader::new(File::open(&args[1]).unwrap());
     let h = f.read_header().unwrap();
     println!("found version: {}.{}", h.major, h.minor);
 
+    let tc = f.read_terrain_chunk().unwrap();
+    println!("read terrain chunk: {:x}", tc.stable_id);
+
+    println!("found {} child structures", tc.child_structures.len());
+    for s in &tc.child_structures {
+        println!("  {} @ {:?}", f.template_names[&s.template_id], s.pos);
+    }
+
+    /*
+    let p = f.read_plane().unwrap();
+    println!("read plane: {} ({:x})", p.name, p.stable_id);
+    dump_extra(&p.extra);
+
+    println!("  plane has {} saved chunks", p.saved_chunks.len());
+    */
+
+    /*
     let c = f.read_client().unwrap();
     println!("read client: {:x}", c.stable_id);
     dump_extra(&c.extra);
@@ -467,7 +638,8 @@ fn main() {
         dump_extra(&e.extra);
 
         for i in &e.child_inventories {
-            println!("read inventory: {:x}", e.id);
+            println!("read inventory: {:x}", i.id);
+            dump_extra(&i.extra);
             for item in i.contents.iter() {
                 match *item {
                     Item::Empty => continue,
@@ -479,4 +651,5 @@ fn main() {
             }
         }
     }
+    */
 }
