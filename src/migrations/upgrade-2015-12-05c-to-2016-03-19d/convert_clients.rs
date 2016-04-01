@@ -22,7 +22,7 @@ use rustc_serialize::json;
 use physics::{CHUNK_SIZE, TILE_SIZE};
 use server_bundle::builder::Builder;
 use server_config::{storage, data};
-use server_extra::{Extra, View, Value};
+use server_extra::{Extra, View, ViewMut, Value};
 use server_types::*;
 use server_util::bytes::WriteBytes;
 use server_world_types::{Motion, Item};
@@ -148,31 +148,40 @@ impl<'d, 'b> Context<'d, 'b> {
     }
 
 
-    fn pre_client(&mut self, c: &Client) {
+    fn pre_client(&mut self, c: &Client) -> ClientId {
         let cid = self.builder.client().id();
         self.id_map.insert(c.id, AnyId::Client(cid));
 
         for e in &c.child_entities {
-            self.pre_entity(e);
+            let eid = self.pre_entity(e);
+            self.builder.get_client(cid).child_entity(eid);
         }
 
         for i in &c.child_inventories {
-            self.pre_inventory(i);
+            let iid = self.pre_inventory(i);
+            self.builder.get_client(cid).child_inventory(iid);
         }
+
+        cid
     }
 
-    fn pre_entity(&mut self, e: &Entity) {
+    fn pre_entity(&mut self, e: &Entity) -> EntityId {
         let eid = self.builder.entity().id();
         self.id_map.insert(e.id, AnyId::Entity(eid));
 
         for i in &e.child_inventories {
-            self.pre_inventory(i);
+            let iid = self.pre_inventory(i);
+            self.builder.get_entity(eid).child_inventory(iid);
         }
+
+        eid
     }
 
-    fn pre_inventory(&mut self, i: &Inventory) {
+    fn pre_inventory(&mut self, i: &Inventory) -> InventoryId {
         let iid = self.builder.inventory().id();
         self.id_map.insert(i.id, AnyId::Inventory(iid));
+
+        iid
     }
 
 
@@ -252,9 +261,89 @@ impl<'d, 'b> Context<'d, 'b> {
 }
 
 fn convert_client_extra(old: &Extra, new: &mut Extra, map: &HashMap<SaveId, AnyId>) {
+    for (k,v) in old.iter() {
+        match k {
+            "used_cornucopia" => {
+                if let View::Value(Value::Bool(b)) = v {
+                    new.set("used_cornucopia", Value::Bool(b));
+                    continue;
+                }
+            },
+            "home_pos" => {
+                if let View::Value(Value::V3(pos)) = v {
+                    new.set("home_pos", Value::V3(pos));
+                    continue;
+                }
+            },
+            "superuser" => {
+                if let View::Value(Value::Bool(b)) = v {
+                    new.set("superuser", Value::Bool(b));
+                    continue;
+                }
+            },
+            _ => {},
+        }
+        // Only falls through if the key/value was unrecognized.
+        match v {
+            View::Value(v) => println!("  unrecognized: {} => {:?}", k, v),
+            View::Array(_) => println!("  unrecognized: {} => <array>", k),
+            View::Hash(_) => println!("  unrecognized: {} => <hash>", k),
+        }
+    }
 }
 
 fn convert_entity_extra(old: &Extra, new: &mut Extra, map: &HashMap<SaveId, AnyId>) {
+    let set_inv = |e: &mut Extra, k, v| {
+        if let Some(inv) = e.get_mut("inv") {
+            if let ViewMut::Hash(h) = inv {
+                h.set(k, v);
+                return;
+            } else {
+                panic!("extra[\"inv\"] was not a hash");
+            }
+        }
+        // Otherwise...
+        let inv = e.set_hash("inv");
+        inv.set(k, v);
+    };
+
+    for (k,v) in old.iter() {
+        match k {
+            "inventory_main" => {
+                if let View::Value(Value::InventoryId(iid)) = v {
+                    set_inv(new, "main", Value::InventoryId(iid));
+                    continue;
+                }
+            },
+            "inventory_ability" => {
+                if let View::Value(Value::InventoryId(iid)) = v {
+                    set_inv(new, "ability", Value::InventoryId(iid));
+                    continue;
+                }
+            },
+            "hat_type" => {
+                if let View::Value(Value::Str(s)) = v {
+                    new.set("hat_type", Value::Str(s));
+                    continue;
+                }
+            },
+            "light_active" => {
+                // This value is now computed directly from e.appearance.
+                continue;
+            },
+            "inited_abilities" => {
+                // Ability init is now handled in logic::client, not scripts.
+                continue;
+            },
+            _ => {},
+        }
+        // Only falls through if the key/value was unrecognized.
+        match v {
+            View::Value(v) => println!("  unrecognized: {} => {:?}", k, v),
+            View::Array(_) => println!("  unrecognized: {} => <array>", k),
+            View::Hash(_) => println!("  unrecognized: {} => <hash>", k),
+        }
+    }
 }
 
 fn decode_name(name: &str) -> String {

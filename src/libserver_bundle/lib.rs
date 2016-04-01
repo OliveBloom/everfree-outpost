@@ -1,5 +1,6 @@
 #![crate_name = "server_bundle"]
 
+extern crate physics;
 extern crate server_config;
 extern crate server_extra;
 extern crate server_types;

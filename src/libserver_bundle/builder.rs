@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::iter;
 
+use physics::CHUNK_SIZE;
 use server_config::Data;
 use server_extra::Extra;
 use server_types::*;
 use server_world_types::{Motion, Item};
-use server_world_types::{EntityAttachment, InventoryAttachment};
+use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
+use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
 
 use super::types::*;
 
@@ -53,9 +55,9 @@ pub struct Builder<'d> {
     clients: Vec<ClientBits>,
     entities: Vec<EntityBits>,
     inventories: Vec<InventoryBits>,
-    //planes: Vec<Plane>,
-    //terrain_chunks: Vec<TerrainChunk>,
-    //structures: Vec<Structure>,
+    //planes: Vec<PlaneBits>,
+    terrain_chunks: Vec<TerrainChunkBits>,
+    structures: Vec<StructureBits>,
 }
 
 impl<'d> Builder<'d> {
@@ -72,8 +74,8 @@ impl<'d> Builder<'d> {
             entities: Vec::new(),
             inventories: Vec::new(),
             //planes: Vec::new(),
-            //terrain_chunks: Vec::new(),
-            //structures: Vec::new(),
+            terrain_chunks: Vec::new(),
+            structures: Vec::new(),
         }
     }
 
@@ -98,6 +100,28 @@ impl<'d> Builder<'d> {
         let d = &self.data.item_data;
         self.items.get_or(id, |raw| (raw as ItemId,
                                      d.name(id)))
+    }
+
+    pub fn block(&mut self, name: &str) -> BlockId {
+        let id = self.data.block_data.get_id(name);
+        self.block_id(id)
+    }
+
+    pub fn block_id(&mut self, id: BlockId) -> BlockId {
+        let d = &self.data.block_data;
+        self.blocks.get_or(id, |raw| (raw as BlockId,
+                                      d.name(id)))
+    }
+
+    pub fn template(&mut self, name: &str) -> TemplateId {
+        let id = self.data.structure_templates.get_id(name);
+        self.template_id(id)
+    }
+
+    pub fn template_id(&mut self, id: TemplateId) -> TemplateId {
+        let d = &self.data.structure_templates;
+        self.templates.get_or(id, |raw| (raw as TemplateId,
+                                         &d.template(id).name))
     }
 
 
@@ -155,6 +179,42 @@ impl<'d> Builder<'d> {
         }
     }
 
+    pub fn terrain_chunk<'a>(&'a mut self) -> TerrainChunkBuilder<'a, 'd> {
+        let idx = self.terrain_chunks.len();
+        self.terrain_chunks.push(TerrainChunkBits::new());
+        TerrainChunkBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
+    pub fn get_terrain_chunk<'a>(&'a mut self, id: TerrainChunkId) -> TerrainChunkBuilder<'a, 'd> {
+        let idx = id.unwrap() as usize;
+        assert!(idx < self.terrain_chunks.len());
+        TerrainChunkBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
+    pub fn structure<'a>(&'a mut self) -> StructureBuilder<'a, 'd> {
+        let idx = self.structures.len();
+        self.structures.push(StructureBits::new());
+        StructureBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
+    pub fn get_structure<'a>(&'a mut self, id: StructureId) -> StructureBuilder<'a, 'd> {
+        let idx = id.unwrap() as usize;
+        assert!(idx < self.structures.len());
+        StructureBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
 
     /// Final cleanup: provide default values for any data references that aren't set.
     fn cleanup(&mut self) {
@@ -183,8 +243,8 @@ impl<'d> Builder<'d> {
             entities: convert_vec(self.entities, |c| c.finish()),
             inventories: convert_vec(self.inventories, |c| c.finish()),
             planes: Vec::new().into_boxed_slice(),
-            terrain_chunks: Vec::new().into_boxed_slice(),
-            structures: Vec::new().into_boxed_slice(),
+            terrain_chunks: convert_vec(self.terrain_chunks, |c| c.finish()),
+            structures: convert_vec(self.structures, |c| c.finish()),
         }
     }
 }
@@ -293,6 +353,17 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         self
     }
 
+    pub fn child_entity(&mut self, eid: EntityId) -> &mut Self {
+        let cid = self.id();
+        {
+            let mut e = self.owner.get_entity(eid);
+            assert!(e.get().attachment == EntityAttachment::World);
+            e.get().attachment = EntityAttachment::Client(cid);
+        }
+        self.get().child_entities.push(eid);
+        self
+    }
+
     pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
         let cid = self.id();
         let iid = {
@@ -301,6 +372,17 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
             i.get().attachment = InventoryAttachment::Client(cid);
             i.id()
         };
+        self.get().child_inventories.push(iid);
+        self
+    }
+
+    pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
+        let cid = self.id();
+        {
+            let mut i = self.owner.get_inventory(iid);
+            assert!(i.get().attachment == InventoryAttachment::World);
+            i.get().attachment = InventoryAttachment::Client(cid);
+        }
         self.get().child_inventories.push(iid);
         self
     }
@@ -429,6 +511,17 @@ impl<'a, 'd> EntityBuilder<'a, 'd> {
         self.get().child_inventories.push(iid);
         self
     }
+
+    pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
+        let eid = self.id();
+        {
+            let mut i = self.owner.get_inventory(iid);
+            assert!(i.get().attachment == InventoryAttachment::World);
+            i.get().attachment = InventoryAttachment::Entity(eid);
+        }
+        self.get().child_inventories.push(iid);
+        self
+    }
 }
 
 
@@ -504,6 +597,234 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
 
     pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
         f(&mut self.get().extra);
+        self
+    }
+}
+
+
+struct TerrainChunkBits {
+    stable_plane: Stable<PlaneId>,
+    cpos: V2,
+    blocks: Box<BlockChunk>,
+
+    extra: Extra,
+    stable_id: StableId,
+    flags: TerrainChunkFlags,
+    child_structures: Vec<StructureId>,
+}
+
+impl TerrainChunkBits {
+    fn new() -> TerrainChunkBits {
+        TerrainChunkBits {
+            stable_plane: STABLE_PLANE_LIMBO,
+            cpos: scalar(0),
+            blocks: Box::new(EMPTY_CHUNK),
+
+            extra: Extra::new(),
+            stable_id: NO_STABLE_ID,
+            flags: TerrainChunkFlags::empty(),
+            child_structures: Vec::new(),
+        }
+    }
+
+    fn finish(self) -> TerrainChunk {
+        TerrainChunk {
+            stable_plane: self.stable_plane,
+            cpos: self.cpos,
+            blocks: self.blocks,
+
+            extra: self.extra,
+            stable_id: self.stable_id,
+            flags: self.flags,
+            child_structures: self.child_structures.into_boxed_slice(),
+        }
+    }
+}
+
+pub struct TerrainChunkBuilder<'a, 'd: 'a> {
+    owner: &'a mut Builder<'d>,
+    idx: usize,
+}
+
+impl<'a, 'd> TerrainChunkBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
+    pub fn id(&self) -> TerrainChunkId {
+        TerrainChunkId(self.idx as u32)
+    }
+
+    fn get(&mut self) -> &mut TerrainChunkBits {
+        &mut self.owner.terrain_chunks[self.idx]
+    }
+
+    pub fn stable_plane(&mut self, stable_plane: Stable<PlaneId>) -> &mut Self {
+        self.get().stable_plane = stable_plane;
+        self
+    }
+
+    pub fn cpos(&mut self, cpos: V2) -> &mut Self {
+        self.get().cpos = cpos;
+        self
+    }
+
+    pub fn blocks(&mut self, blocks: Box<BlockChunk>) -> &mut Self {
+        self.get().blocks = blocks;
+        self
+    }
+
+    pub fn block(&mut self, pos: V3, name: &str) -> &mut Self {
+        let id = self.owner.block(name);
+        let bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
+        assert!(bounds.contains(pos));
+        self.get().blocks[bounds.index(pos)] = id;
+        self
+    }
+
+    pub fn block_id(&mut self, pos: V3, block_id: BlockId) -> &mut Self {
+        let id = self.owner.block_id(block_id);
+        let bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
+        assert!(bounds.contains(pos));
+        self.get().blocks[bounds.index(pos)] = id;
+        self
+    }
+
+    pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
+        f(&mut self.get().extra);
+        self
+    }
+
+    pub fn structure<F: FnOnce(&mut StructureBuilder)>(&mut self, f: F) -> &mut Self {
+        let sid = {
+            let mut s = self.owner.structure();
+            f(&mut s);
+            s.get().attachment = StructureAttachment::Chunk;
+            s.id()
+        };
+        self.get().child_structures.push(sid);
+        self
+    }
+
+    pub fn child_structure(&mut self, sid: StructureId) -> &mut Self {
+        {
+            let mut e = self.owner.get_structure(sid);
+            assert!(e.get().attachment == StructureAttachment::Plane);
+            e.get().attachment = StructureAttachment::Chunk;
+        }
+        self.get().child_structures.push(sid);
+        self
+    }
+}
+
+
+struct StructureBits {
+    stable_plane: Stable<PlaneId>,
+    pos: V3,
+    template: TemplateId,
+
+    extra: Extra,
+    stable_id: StableId,
+    flags: StructureFlags,
+    attachment: StructureAttachment,
+    child_inventories: Vec<InventoryId>,
+}
+
+impl StructureBits {
+    fn new() -> StructureBits {
+        StructureBits {
+            stable_plane: STABLE_PLANE_LIMBO,
+            pos: scalar(0),
+            template: 0,
+
+            extra: Extra::new(),
+            stable_id: NO_STABLE_ID,
+            flags: StructureFlags::empty(),
+            attachment: StructureAttachment::Plane,
+            child_inventories: Vec::new(),
+        }
+    }
+
+    fn finish(self) -> Structure {
+        Structure {
+            stable_plane: self.stable_plane,
+            pos: self.pos,
+            template: self.template,
+
+            extra: self.extra,
+            stable_id: self.stable_id,
+            flags: self.flags,
+            attachment: self.attachment,
+            child_inventories: self.child_inventories.into_boxed_slice(),
+        }
+    }
+}
+
+pub struct StructureBuilder<'a, 'd: 'a> {
+    owner: &'a mut Builder<'d>,
+    idx: usize,
+}
+
+impl<'a, 'd> StructureBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
+    pub fn id(&self) -> StructureId {
+        StructureId(self.idx as u32)
+    }
+
+    fn get(&mut self) -> &mut StructureBits {
+        &mut self.owner.structures[self.idx]
+    }
+
+    pub fn stable_plane(&mut self, stable_plane: Stable<PlaneId>) -> &mut Self {
+        self.get().stable_plane = stable_plane;
+        self
+    }
+
+    pub fn pos(&mut self, pos: V3) -> &mut Self {
+        self.get().pos = pos;
+        self
+    }
+
+    pub fn template(&mut self, name: &str) -> &mut Self {
+        let id = self.owner.template(name);
+        self.get().template = id;
+        self
+    }
+
+    pub fn template_id(&mut self, template_id: TemplateId) -> &mut Self {
+        let id = self.owner.template_id(template_id);
+        self.get().template = id;
+        self
+    }
+
+    pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
+        f(&mut self.get().extra);
+        self
+    }
+
+    pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
+        let sid = self.id();
+        let iid = {
+            let mut i = self.owner.inventory();
+            f(&mut i);
+            i.get().attachment = InventoryAttachment::Structure(sid);
+            i.id()
+        };
+        self.get().child_inventories.push(iid);
+        self
+    }
+
+    pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
+        let sid = self.id();
+        {
+            let mut i = self.owner.get_inventory(iid);
+            assert!(i.get().attachment == InventoryAttachment::World);
+            i.get().attachment = InventoryAttachment::Structure(sid);
+        }
+        self.get().child_inventories.push(iid);
         self
     }
 }
