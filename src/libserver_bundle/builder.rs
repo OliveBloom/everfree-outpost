@@ -110,6 +110,15 @@ impl<'d> Builder<'d> {
         }
     }
 
+    pub fn get_client<'a>(&'a mut self, id: ClientId) -> ClientBuilder<'a, 'd> {
+        let idx = id.unwrap() as usize;
+        assert!(idx < self.clients.len());
+        ClientBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
     pub fn entity<'a>(&'a mut self) -> EntityBuilder<'a, 'd> {
         let idx = self.entities.len();
         self.entities.push(EntityBits::new());
@@ -119,9 +128,27 @@ impl<'d> Builder<'d> {
         }
     }
 
+    pub fn get_entity<'a>(&'a mut self, id: EntityId) -> EntityBuilder<'a, 'd> {
+        let idx = id.unwrap() as usize;
+        assert!(idx < self.entities.len());
+        EntityBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
     pub fn inventory<'a>(&'a mut self) -> InventoryBuilder<'a, 'd> {
         let idx = self.inventories.len();
         self.inventories.push(InventoryBits::new());
+        InventoryBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
+    pub fn get_inventory<'a>(&'a mut self, id: InventoryId) -> InventoryBuilder<'a, 'd> {
+        let idx = id.unwrap() as usize;
+        assert!(idx < self.inventories.len());
         InventoryBuilder {
             owner: self,
             idx: idx,
@@ -209,6 +236,10 @@ pub struct ClientBuilder<'a, 'd: 'a> {
 }
 
 impl<'a, 'd> ClientBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
     pub fn id(&self) -> ClientId {
         ClientId(self.idx as u16)
     }
@@ -232,6 +263,16 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         };
         self.get().pawn = Some(eid);
         self.get().child_entities.push(eid);
+        self
+    }
+
+    pub fn pawn_id(&mut self, eid: EntityId) -> &mut Self {
+        self.get().pawn = Some(eid);
+        self
+    }
+
+    pub fn stable_id(&mut self, id: StableId) -> &mut Self {
+        self.get().stable_id = id;
         self
     }
 
@@ -323,6 +364,10 @@ pub struct EntityBuilder<'a, 'd: 'a> {
 }
 
 impl<'a, 'd> EntityBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
     pub fn id(&self) -> EntityId {
         EntityId(self.idx as u32)
     }
@@ -360,6 +405,11 @@ impl<'a, 'd> EntityBuilder<'a, 'd> {
 
     pub fn appearance(&mut self, appearance: u32) -> &mut Self {
         self.get().appearance = appearance;
+        self
+    }
+
+    pub fn stable_id(&mut self, id: StableId) -> &mut Self {
+        self.get().stable_id = id;
         self
     }
 
@@ -418,6 +468,10 @@ pub struct InventoryBuilder<'a, 'd: 'a> {
 }
 
 impl<'a, 'd> InventoryBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
     pub fn id(&self) -> InventoryId {
         InventoryId(self.idx as u32)
     }
@@ -440,6 +494,11 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
     pub fn item_id(&mut self, slot: u8, item_id: ItemId, count: u8) -> &mut Self {
         let id = self.owner.item_id(item_id);
         self.get().contents[slot as usize] = Item::Bulk(count, id);
+        self
+    }
+
+    pub fn stable_id(&mut self, id: StableId) -> &mut Self {
+        self.get().stable_id = id;
         self
     }
 
