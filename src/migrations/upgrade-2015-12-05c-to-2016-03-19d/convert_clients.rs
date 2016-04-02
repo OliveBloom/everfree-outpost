@@ -311,13 +311,15 @@ fn convert_entity_extra(old: &Extra, new: &mut Extra, map: &HashMap<SaveId, AnyI
         match k {
             "inventory_main" => {
                 if let View::Value(Value::InventoryId(iid)) = v {
-                    set_inv(new, "main", Value::InventoryId(iid));
+                    let new_iid = map[&iid.unwrap()].as_inventory();
+                    set_inv(new, "main", Value::InventoryId(new_iid));
                     continue;
                 }
             },
             "inventory_ability" => {
                 if let View::Value(Value::InventoryId(iid)) = v {
-                    set_inv(new, "ability", Value::InventoryId(iid));
+                    let new_iid = map[&iid.unwrap()].as_inventory();
+                    set_inv(new, "ability", Value::InventoryId(new_iid));
                     continue;
                 }
             },

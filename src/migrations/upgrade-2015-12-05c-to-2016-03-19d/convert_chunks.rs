@@ -207,19 +207,19 @@ fn build_block_map() -> HashMap<String, String> {
 
 fn repack4_2<F: Fn(i32, &mut String)>(i: i32, f: F) -> String {
     let mut s = String::new();
-    f(i / (2 * 2 * 2) % 2, &mut s);
-    f(i / (2 * 2) % 2, &mut s);
-    f(i / 2 % 2, &mut s);
     f(i % 2, &mut s);
+    f(i / 2 % 2, &mut s);
+    f(i / (2 * 2) % 2, &mut s);
+    f(i / (2 * 2 * 2) % 2, &mut s);
     s
 }
 
 fn repack4_3<F: Fn(i32, &mut String)>(i: i32, f: F) -> String {
     let mut s = String::new();
-    f(i / (3 * 3 * 3) % 3, &mut s);
-    f(i / (3 * 3) % 3, &mut s);
-    f(i / 3 % 3, &mut s);
     f(i % 3, &mut s);
+    f(i / 3 % 3, &mut s);
+    f(i / (3 * 3) % 3, &mut s);
+    f(i / (3 * 3 * 3) % 3, &mut s);
     s
 }
 
@@ -355,7 +355,8 @@ fn convert_structure_extra(old: &Extra, new: &mut Extra, map: &HashMap<SaveId, A
         match k {
             "inventory_contents" => {
                 if let View::Value(Value::InventoryId(iid)) = v {
-                    new.set_hash("inv").set("main", Value::InventoryId(iid));
+                    let new_iid = map[&iid.unwrap()].as_inventory();
+                    new.set_hash("inv").set("main", Value::InventoryId(new_iid));
                     continue;
                 }
             },
