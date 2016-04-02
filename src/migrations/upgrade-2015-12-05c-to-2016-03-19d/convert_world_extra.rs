@@ -107,6 +107,43 @@ fn convert_ward_perm(old: View,
     }
 }
 
+fn convert_ward_info(old: View,
+                     mut new: extra::HashViewMut,
+                     id_map: &HashMap<u64, u64>) {
+    let old = match old {
+        View::Hash(h) => h,
+        _ => panic!("expected ward_info to be a hash"),
+    };
+    for (key, info) in old.iter() {
+        let info = match info {
+            View::Hash(h) => h,
+            _ => panic!("expected ward_info[{:?}] to be a hash", key),
+        };
+
+        let new_key =
+            if key == "server" {
+                String::from("server")
+            } else {
+                let old_key_val = u64::from_str_radix(key, 16).unwrap();
+                let new_key_val = id_map[&old_key_val];
+                format!("{}", new_key_val)
+            };
+
+        println!("ward info key: {} -> {}", key, new_key);
+        let mut new_info = new.borrow().set_hash(&new_key);
+        let name = match info.get("name") {
+            Some(View::Value(Value::Str(s))) => s,
+            _ => panic!("expected ward_info[{:?}][\"name\"] to be a String", key),
+        };
+        let pos = match info.get("pos") {
+            Some(View::Value(Value::V3(v))) => v,
+            _ => panic!("expected ward_info[{:?}][\"name\"] to be a V3", key),
+        };
+        new_info.borrow().set("name", Value::Str(String::from(name)));
+        new_info.borrow().set("pos", Value::V3(pos));
+    }
+}
+
 fn build_new_extra(old: Extra, id_map: &HashMap<u64, u64>) -> (Extra, Extra) {
     let mut e_world = Extra::new();
     let mut e_plane = Extra::new();
@@ -116,6 +153,8 @@ fn build_new_extra(old: Extra, id_map: &HashMap<u64, u64>) -> (Extra, Extra) {
                 convert_teleport_networks(v, e_world.set_hash("teleport_networks")),
             "ward_perm" =>
                 convert_ward_perm(v, e_world.set_hash("ward_perm"), id_map),
+            "ward_info" =>
+                convert_ward_info(v, e_plane.set_hash("ward_info"), id_map),
             _ => {
                 // Only falls through if the key/value was unrecognized.
                 match v {
