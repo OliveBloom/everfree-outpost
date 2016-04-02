@@ -78,36 +78,44 @@ fn convert_teleport_networks(old: View, mut new: extra::HashViewMut) {
     }
 }
 
-fn convert_ward_perm(old: View, mut new: extra::HashViewMut) {
+fn convert_ward_perm(old: View,
+                     mut new: extra::HashViewMut,
+                     id_map: &HashMap<u64, u64>) {
     let old = match old {
         View::Hash(h) => h,
         _ => panic!("expected ward_perm to be a hash"),
     };
-    for (net, teles) in old.iter() {
-        let teles = match teles {
+    for (key, perms) in old.iter() {
+        let perms = match perms {
             View::Hash(h) => h,
-            _ => panic!("expected teleport_networks[{:?}] to be a hash", net),
+            _ => panic!("expected ward_perm[{:?}] to be a hash", key),
         };
-        let mut new_teles = new.borrow().set_hash(net);
-        for (name, pos) in teles.iter() {
-            let pos = match pos {
-                View::Value(Value::V3(v)) => v,
-                _ => panic!("expected teleport_networks[{:?}][{:?}] to be a V3", net, name),
-            };
-            new_teles.borrow().set(name, Value::V3(pos));
+
+        let old_key_val = u64::from_str_radix(key, 16).unwrap();
+        let new_key_val = id_map[&old_key_val];
+        let new_key = format!("{}", new_key_val);
+
+        println!("ward perm key: {} -> {}", key, new_key);
+        let mut new_perms = new.borrow().set_hash(&new_key);
+        for (name, ok) in perms.iter() {
+            match ok {
+                View::Value(Value::Bool(true)) => {},
+                _ => panic!("expected ward_perm[{:?}][{:?}] to be true", key, name),
+            }
+            new_perms.borrow().set(name, Value::Bool(true));
         }
     }
 }
 
-fn build_new_extra(old: Extra) -> (Extra, Extra) {
+fn build_new_extra(old: Extra, id_map: &HashMap<u64, u64>) -> (Extra, Extra) {
     let mut e_world = Extra::new();
     let mut e_plane = Extra::new();
     for (k,v) in old.iter() {
         match k {
             "teleport_networks" =>
                 convert_teleport_networks(v, e_world.set_hash("teleport_networks")),
-                convert_ward_perm(v, e_world.set_hash("ward_perm")),
             "ward_perm" =>
+                convert_ward_perm(v, e_world.set_hash("ward_perm"), id_map),
             _ => {
                 // Only falls through if the key/value was unrecognized.
                 match v {
@@ -128,9 +136,21 @@ fn main() {
     let old_dir = &args[1];
     let new_dir = &args[2];
 
+
+    let mut id_map = HashMap::new();
+    {
+        let mut f = File::open("upgrade_stable_id_map.dat").unwrap();
+        for _ in 0 .. f.read_bytes::<u32>().unwrap() {
+            let cid = f.read_bytes::<u64>().unwrap();
+            let eid = f.read_bytes::<u64>().unwrap();
+            id_map.insert(cid, eid);
+        }
+    }
+
+
     let world = load_world(&format!("{}/save/world.dat", old_dir));
 
-    let (world_extra, plane_extra) = build_new_extra(world.extra);
+    let (world_extra, plane_extra) = build_new_extra(world.extra, &id_map);
 
     println!("writing world.dat");
     let mut bundle = load_bundle(&format!("{}/save/world.dat", new_dir));
