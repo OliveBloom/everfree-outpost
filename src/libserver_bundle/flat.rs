@@ -83,17 +83,23 @@ pub struct SectionHeader {
 
 pub trait Section<'a> {
     type Ref;
+    type RefMut;
 
     fn len(&self) -> usize;
     fn item_size() -> usize;
 
     fn new() -> Self;
     fn new_ref() -> Self::Ref;
+    fn new_ref_mut() -> Self::RefMut;
     fn borrow(&'a self) -> Self::Ref;
+    fn borrow_mut(&'a mut self) -> Self::RefMut;
     fn to_owned(r: Self::Ref) -> Self;
 
     unsafe fn from_bytes(buf: &'a [u8]) -> Self::Ref;
     unsafe fn as_bytes(r: Self::Ref) -> &'a [u8];
+
+    unsafe fn from_bytes_mut(buf: &'a mut [u8]) -> Self::RefMut;
+    unsafe fn as_bytes_mut(r: Self::RefMut) -> &'a mut [u8];
 
     fn byte_len(&self) -> usize {
         self.len() * Self::item_size()
@@ -102,13 +108,16 @@ pub trait Section<'a> {
 
 impl<'a, T: Clone + 'a> Section<'a> for Vec<T> {
     type Ref = &'a [T];
+    type RefMut = &'a mut [T];
 
     fn len(&self) -> usize { self.len() }
     fn item_size() -> usize { mem::size_of::<T>() }
 
     fn new() -> Vec<T> { Vec::new() }
     fn new_ref() -> &'a [T] { &[] }
+    fn new_ref_mut() -> &'a mut [T] { &mut [] }
     fn borrow(&'a self) -> &'a [T] { &**self }
+    fn borrow_mut(&'a mut self) -> &'a mut [T] { &mut **self }
     fn to_owned(r: &'a [T]) -> Vec<T> { r.to_owned() }
 
     unsafe fn from_bytes(buf: &'a [u8]) -> &'a [T] {
@@ -118,17 +127,31 @@ impl<'a, T: Clone + 'a> Section<'a> for Vec<T> {
     unsafe fn as_bytes(r: &'a [T]) -> &'a [u8] {
         slice::from_raw_parts(r.as_ptr() as *const u8, r.len() * mem::size_of::<T>())
     }
+
+    unsafe fn from_bytes_mut(buf: &'a mut [u8]) -> &'a mut [T] {
+        slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut T, buf.len() / mem::size_of::<T>())
+    }
+
+    unsafe fn as_bytes_mut(r: &'a mut [T]) -> &'a mut [u8] {
+        slice::from_raw_parts_mut(r.as_mut_ptr() as *mut u8, r.len() * mem::size_of::<T>())
+    }
 }
 
 impl<'a> Section<'a> for String {
     type Ref = &'a str;
+    type RefMut = &'a mut str;
 
     fn len(&self) -> usize { self.len() }
     fn item_size() -> usize { 1 }
 
     fn new() -> String { String::new() }
     fn new_ref() -> &'a str { "" }
+    fn new_ref_mut() -> &'a mut str {
+        #![allow(mutable_transmutes)]
+        unsafe { mem::transmute("") }
+    }
     fn borrow(&'a self) -> &'a str { &**self }
+    fn borrow_mut(&'a mut self) -> &'a mut str { &mut **self }
     fn to_owned(r: &'a str) -> String { r.to_owned() }
 
     unsafe fn from_bytes(buf: &'a [u8]) -> &'a str {
@@ -138,17 +161,32 @@ impl<'a> Section<'a> for String {
     unsafe fn as_bytes(r: &'a str) -> &'a [u8] {
         r.as_bytes()
     }
+
+    unsafe fn from_bytes_mut(buf: &'a mut [u8]) -> &'a mut str {
+        // Check for UTF-8 validity...
+        str::from_utf8(buf).unwrap();
+        // Then just transmute the thing.  There aren't any functions for building &mut str
+        // properly.
+        mem::transmute(buf)
+    }
+
+    unsafe fn as_bytes_mut(r: &'a mut str) -> &'a mut [u8] {
+        mem::transmute(r)
+    }
 }
 
 impl<'a, T: Clone + 'a> Section<'a> for Option<Box<T>> {
     type Ref = Option<&'a T>;
+    type RefMut = Option<&'a mut T>;
 
     fn len(&self) -> usize { if self.is_some() { 1 } else { 0 } }
     fn item_size() -> usize { mem::size_of::<T>() }
 
     fn new() -> Option<Box<T>> { None }
     fn new_ref() -> Option<&'a T> { None }
+    fn new_ref_mut() -> Option<&'a mut T> { None }
     fn borrow(&'a self) -> Option<&'a T> { self.as_ref().map(|x| &**x) }
+    fn borrow_mut(&'a mut self) -> Option<&'a mut T> { self.as_mut().map(|x| &mut **x) }
     fn to_owned(r: Option<&'a T>) -> Option<Box<T>> {
         match r {
             None => None,
@@ -170,6 +208,23 @@ impl<'a, T: Clone + 'a> Section<'a> for Option<Box<T>> {
         match r {
             None => &[],
             Some(r) => slice::from_raw_parts(r as *const T as *const u8, mem::size_of::<T>()),
+        }
+    }
+
+    unsafe fn from_bytes_mut(buf: &'a mut [u8]) -> Option<&'a mut T> {
+        if buf.len() == mem::size_of::<T>() {
+            Some(&mut *(buf.as_mut_ptr() as *mut T))
+        } else if buf.len() == 0 {
+            None
+        } else {
+            panic!("bad buffer length");
+        }
+    }
+
+    unsafe fn as_bytes_mut(r: Option<&'a mut T>) -> &'a mut [u8] {
+        match r {
+            None => &mut [],
+            Some(r) => slice::from_raw_parts_mut(r as *mut T as *mut u8, mem::size_of::<T>()),
         }
     }
 }
@@ -201,9 +256,28 @@ unsafe fn extract_section<'a, S: Section<'a>>(buf: &'a [u8],
     }
 }
 
+unsafe fn extract_section_mut<'a, S: Section<'a>>(buf: *mut [u8],
+                                                  offset: u32,
+                                                  len: u32) -> Option<S::RefMut> {
+    let start = offset as usize;
+    let end = start + len as usize * S::item_size();
+    if start > end || end > (*buf).len() {
+        None
+    } else {
+        Some(S::from_bytes_mut(&mut (*buf)[start .. end]))
+    }
+}
+
 macro_rules! extract_section {
     ($buf:expr, $off:expr, $count:expr, $name:ident : $ty:ty) => {
         unwrap!(extract_section::<$ty>($buf, $off, $count),
+                concat!("section ", stringify!($name), " extends out of bounds"))
+    };
+}
+
+macro_rules! extract_section_mut {
+    ($buf:expr, $off:expr, $count:expr, $name:ident : $ty:ty) => {
+        unwrap!(extract_section_mut::<$ty>($buf, $off, $count),
                 concat!("section ", stringify!($name), " extends out of bounds"))
     };
 }
@@ -219,6 +293,10 @@ macro_rules! flat {
             $( pub $name: <$ty as Section<'a>>::Ref, )*
         }
 
+        pub struct FlatViewMut<'a> {
+            $( pub $name: <$ty as Section<'a>>::RefMut, )*
+        }
+
         impl Flat {
             pub fn new() -> Flat {
                 Flat {
@@ -230,6 +308,12 @@ macro_rules! flat {
             pub fn borrow(&self) -> FlatView {
                 FlatView {
                     $( $name: <$ty as Section>::borrow(&self.$name), )*
+                }
+            }
+
+            pub fn borrow_mut(&mut self) -> FlatViewMut {
+                FlatViewMut {
+                    $( $name: <$ty as Section>::borrow_mut(&mut self.$name), )*
                 }
             }
 
@@ -343,6 +427,58 @@ macro_rules! flat {
                             $tag => {
                                 v.$name = unsafe {
                                     extract_section!(buf, s.offset, s.count, $name: $ty)
+                                };
+                            },
+                        )*
+                        _ => fail!("bad tag for section"),
+                    }
+                }
+
+                Ok(v)
+            }
+        }
+
+        impl<'a> FlatViewMut<'a> {
+            pub fn from_bytes(buf: &'a mut [u8]) -> Result<FlatViewMut<'a>> {
+                let mut v = FlatViewMut {
+                    $( $name: <$ty as Section>::new_ref_mut(), )*
+                };
+
+                if buf.as_ptr() as usize % ALIGNMENT != 0 {
+                    fail!("FlatView::from_bytes: misaligned input buffer");
+                }
+
+                // NB: extract_section_mut discards lifetimes!  It borrows `buf` and then forgets
+                // about it.  Only the 'a in the from_bytes signature is keeping things straight.
+
+                // FIXME: This is legitimately memory-unsafe if sections overlap.  At least it's
+                // difficult to turn into a real crash, since everything here is POD...
+
+                let file_header = unsafe {
+                    unwrap!(extract_section_mut!(buf, 0, 1, file_header: Option<Box<FileHeader>>))
+                };
+                // Discard lifetime
+                v.file_header = unsafe { mem::transmute(Some(&mut *file_header)) };
+
+                if file_header.header_offset as usize % ALIGNMENT != 0 {
+                    fail!("FlatViewMut::from_bytes: misaligned section header offset");
+                }
+                let section_headers = unsafe {
+                    extract_section_mut!(buf, file_header.header_offset, file_header.header_count,
+                                         section_headers: Vec<SectionHeader>)
+                };
+                // Discard lifetime
+                v.section_headers = unsafe { mem::transmute(&mut *section_headers) };
+
+                for s in section_headers {
+                    if s.offset as usize % ALIGNMENT != 0 {
+                        fail!("FlatViewMut::from_bytes: misaligned section offset");
+                    }
+                    match &s.tag {
+                        $(
+                            $tag => {
+                                v.$name = unsafe {
+                                    extract_section_mut!(buf, s.offset, s.count, $name: $ty)
                                 };
                             },
                         )*
@@ -1141,7 +1277,7 @@ impl<'a, T: Flatten + FixedSize> UnflattenPart<'a> for Box<[T]> {
 macro_rules! primitive_enum {
     (enum $name:ident: $prim:ty { $($variant:ident = $disr:expr,)* }) => {
         #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-        enum $name {
+        pub enum $name {
             $($variant = $disr,)*
         }
 
