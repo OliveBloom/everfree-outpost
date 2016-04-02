@@ -55,7 +55,7 @@ pub struct Builder<'d> {
     clients: Vec<ClientBits>,
     entities: Vec<EntityBits>,
     inventories: Vec<InventoryBits>,
-    //planes: Vec<PlaneBits>,
+    planes: Vec<PlaneBits>,
     terrain_chunks: Vec<TerrainChunkBits>,
     structures: Vec<StructureBits>,
 }
@@ -73,7 +73,7 @@ impl<'d> Builder<'d> {
             clients: Vec::new(),
             entities: Vec::new(),
             inventories: Vec::new(),
-            //planes: Vec::new(),
+            planes: Vec::new(),
             terrain_chunks: Vec::new(),
             structures: Vec::new(),
         }
@@ -179,6 +179,24 @@ impl<'d> Builder<'d> {
         }
     }
 
+    pub fn plane<'a>(&'a mut self) -> PlaneBuilder<'a, 'd> {
+        let idx = self.planes.len();
+        self.planes.push(PlaneBits::new());
+        PlaneBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
+    pub fn get_plane<'a>(&'a mut self, id: PlaneId) -> PlaneBuilder<'a, 'd> {
+        let idx = id.unwrap() as usize;
+        assert!(idx < self.planes.len());
+        PlaneBuilder {
+            owner: self,
+            idx: idx,
+        }
+    }
+
     pub fn terrain_chunk<'a>(&'a mut self) -> TerrainChunkBuilder<'a, 'd> {
         let idx = self.terrain_chunks.len();
         self.terrain_chunks.push(TerrainChunkBits::new());
@@ -242,7 +260,7 @@ impl<'d> Builder<'d> {
             clients: convert_vec(self.clients, |c| c.finish()),
             entities: convert_vec(self.entities, |c| c.finish()),
             inventories: convert_vec(self.inventories, |c| c.finish()),
-            planes: Vec::new().into_boxed_slice(),
+            planes: convert_vec(self.planes, |c| c.finish()),
             terrain_chunks: convert_vec(self.terrain_chunks, |c| c.finish()),
             structures: convert_vec(self.structures, |c| c.finish()),
         }
@@ -602,6 +620,79 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
 }
 
 
+struct PlaneBits {
+    name: String,
+
+    saved_chunks: HashMap<V2, Stable<TerrainChunkId>>,
+
+    extra: Extra,
+    stable_id: StableId,
+}
+
+impl PlaneBits {
+    fn new() -> PlaneBits {
+        PlaneBits {
+            name: String::new(),
+
+            saved_chunks: HashMap::new(),
+
+            extra: Extra::new(),
+            stable_id: NO_STABLE_ID,
+        }
+    }
+
+    fn finish(self) -> Plane {
+        Plane {
+            name: self.name.into_boxed_str(),
+
+            saved_chunks: self.saved_chunks.into_iter().collect::<Vec<_>>().into_boxed_slice(),
+
+            extra: self.extra,
+            stable_id: self.stable_id,
+        }
+    }
+}
+
+pub struct PlaneBuilder<'a, 'd: 'a> {
+    owner: &'a mut Builder<'d>,
+    idx: usize,
+}
+
+impl<'a, 'd> PlaneBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
+    pub fn id(&self) -> PlaneId {
+        PlaneId(self.idx as u32)
+    }
+
+    fn get(&mut self) -> &mut PlaneBits {
+        &mut self.owner.planes[self.idx]
+    }
+
+    pub fn name(&mut self, name: &str) -> &mut Self {
+        self.get().name = name.to_owned();
+        self
+    }
+
+    pub fn saved_chunk(&mut self, cpos: V2, tcid: Stable<TerrainChunkId>) -> &mut Self {
+        self.get().saved_chunks.insert(cpos, tcid);
+        self
+    }
+
+    pub fn stable_id(&mut self, id: StableId) -> &mut Self {
+        self.get().stable_id = id;
+        self
+    }
+
+    pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
+        f(&mut self.get().extra);
+        self
+    }
+}
+
+
 struct TerrainChunkBits {
     stable_plane: Stable<PlaneId>,
     cpos: V2,
@@ -690,8 +781,18 @@ impl<'a, 'd> TerrainChunkBuilder<'a, 'd> {
         self
     }
 
+    pub fn stable_id(&mut self, id: StableId) -> &mut Self {
+        self.get().stable_id = id;
+        self
+    }
+
     pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
         f(&mut self.get().extra);
+        self
+    }
+
+    pub fn flags(&mut self, flags: TerrainChunkFlags) -> &mut Self {
+        self.get().flags = flags;
         self
     }
 
@@ -797,6 +898,16 @@ impl<'a, 'd> StructureBuilder<'a, 'd> {
     pub fn template_id(&mut self, template_id: TemplateId) -> &mut Self {
         let id = self.owner.template_id(template_id);
         self.get().template = id;
+        self
+    }
+
+    pub fn stable_id(&mut self, id: StableId) -> &mut Self {
+        self.get().stable_id = id;
+        self
+    }
+
+    pub fn flags(&mut self, flags: StructureFlags) -> &mut Self {
+        self.get().flags = flags;
         self
     }
 
