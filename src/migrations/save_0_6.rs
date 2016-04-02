@@ -83,9 +83,22 @@ struct ExtraWord {
     b: u16,
 }
 
-// Client
+// Objects
 
 pub type SaveId = u32;
+
+pub struct World {
+    pub next_client: u64,
+    pub next_entity: u64,
+    pub next_inventory: u64,
+    pub next_plane: u64,
+    pub next_terrain_chunk: u64,
+    pub next_structure: u64,
+
+    pub extra: Extra,
+    pub child_entities: Vec<Entity>,
+    pub child_inventories: Vec<Inventory>,
+}
 
 pub struct Client {
     pub id: SaveId,
@@ -304,6 +317,40 @@ impl<R: io::Read> Reader<R> {
         Ok(e)
     }
 
+
+    pub fn read_world(&mut self) -> io::Result<World> {
+        let next_client = try!(self.r.read_bytes());
+        let next_entity = try!(self.r.read_bytes());
+        let next_inventory = try!(self.r.read_bytes());
+        let next_plane = try!(self.r.read_bytes());
+        let next_terrain_chunk = try!(self.r.read_bytes());
+        let next_structure = try!(self.r.read_bytes());
+
+        let extra = try!(self.read_extra());
+
+
+        let mut child_entities = Vec::new();
+        for _ in 0 .. try!(self.read_count()) {
+            child_entities.push(try!(self.read_entity()));
+        }
+        let mut child_inventories = Vec::new();
+        for _ in 0 .. try!(self.read_count()) {
+            child_inventories.push(try!(self.read_inventory()));
+        }
+
+        Ok(World {
+            next_client: next_client,
+            next_entity: next_entity,
+            next_inventory: next_inventory,
+            next_plane: next_plane,
+            next_terrain_chunk: next_terrain_chunk,
+            next_structure: next_structure,
+
+            extra: extra,
+            child_entities: child_entities,
+            child_inventories: child_inventories,
+        })
+    }
 
     pub fn read_client(&mut self) -> io::Result<Client> {
         let id = try!(self.r.read_bytes());

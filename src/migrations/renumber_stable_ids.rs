@@ -14,7 +14,7 @@ use std::path::Path;
 use server_bundle::flat::{self, FlatView, FlatViewMut};
 
 fn for_each_file<F: FnMut(&Path, &str, &str)>(base: &str, mut f: F) {
-    //f(Path::new(&format!("{}/world.dat", base)), ".", "world.dat");
+    f(Path::new(&format!("{}/save/world.dat", base)), ".", "world.dat");
     for &dir in &["clients", "planes", "terrain_chunks"] {
         for ent in fs::read_dir(&format!("{}/save/{}", base, dir)).unwrap() {
             let ent = ent.unwrap();
@@ -193,6 +193,8 @@ fn main() {
                                     base_out, view.planes[0].stable_id),
                 "terrain_chunks" => format!("{}/save/terrain_chunks/{:x}.terrain_chunk",
                                             base_out, view.terrain_chunks[0].stable_id),
+                // world.dat
+                "." => format!("{}/save/{}", base_out, name),
                 _ => unreachable!(),
             }
         };

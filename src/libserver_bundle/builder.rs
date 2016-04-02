@@ -52,6 +52,7 @@ pub struct Builder<'d> {
     blocks: Remapper<&'d str, BlockId>,
     templates: Remapper<&'d str, TemplateId>,
 
+    world: Option<Box<WorldBits>>,
     clients: Vec<ClientBits>,
     entities: Vec<EntityBits>,
     inventories: Vec<InventoryBits>,
@@ -70,6 +71,7 @@ impl<'d> Builder<'d> {
             blocks: Remapper::new(),
             templates: Remapper::new(),
 
+            world: None,
             clients: Vec::new(),
             entities: Vec::new(),
             inventories: Vec::new(),
@@ -124,6 +126,21 @@ impl<'d> Builder<'d> {
                                          &d.template(id).name))
     }
 
+
+    pub fn world<'a>(&'a mut self) -> WorldBuilder<'a, 'd> {
+        assert!(self.world.is_none());
+        self.world = Some(Box::new(WorldBits::new()));
+        WorldBuilder {
+            owner: self,
+        }
+    }
+
+    pub fn get_world<'a>(&'a mut self) -> WorldBuilder<'a, 'd> {
+        assert!(self.world.is_some());
+        WorldBuilder {
+            owner: self,
+        }
+    }
 
     pub fn client<'a>(&'a mut self) -> ClientBuilder<'a, 'd> {
         let idx = self.clients.len();
@@ -256,7 +273,7 @@ impl<'d> Builder<'d> {
             blocks: convert_vec(self.blocks.vals, |s| s.to_owned().into_boxed_str()),
             templates: convert_vec(self.templates.vals, |s| s.to_owned().into_boxed_str()),
 
-            world: None,
+            world: self.world.map(|w| Box::new(w.finish())),
             clients: convert_vec(self.clients, |c| c.finish()),
             entities: convert_vec(self.entities, |c| c.finish()),
             inventories: convert_vec(self.inventories, |c| c.finish()),
@@ -269,6 +286,149 @@ impl<'d> Builder<'d> {
 
 fn convert_vec<T, U, F: FnMut(T) -> U>(v: Vec<T>, f: F) -> Box<[U]> {
     v.into_iter().map(f).collect::<Vec<_>>().into_boxed_slice()
+}
+
+
+struct WorldBits {
+    now: Time,
+    next_client: StableId,
+    next_entity: StableId,
+    next_inventory: StableId,
+    next_plane: StableId,
+    next_terrain_chunk: StableId,
+    next_structure: StableId,
+
+    extra: Extra,
+    child_entities: Vec<EntityId>,
+    child_inventories: Vec<InventoryId>,
+}
+
+impl WorldBits {
+    fn new() -> WorldBits {
+        WorldBits {
+            now: 0,
+            next_client: 0,
+            next_entity: 0,
+            next_inventory: 0,
+            next_plane: 0,
+            next_terrain_chunk: 0,
+            next_structure: 0,
+
+            extra: Extra::new(),
+            child_entities: Vec::new(),
+            child_inventories: Vec::new(),
+        }
+    }
+
+    fn finish(self) -> World {
+        World {
+            now: self.now,
+            next_client: self.next_client,
+            next_entity: self.next_entity,
+            next_inventory: self.next_inventory,
+            next_plane: self.next_plane,
+            next_terrain_chunk: self.next_terrain_chunk,
+            next_structure: self.next_structure,
+
+            extra: self.extra,
+            child_entities: self.child_entities.into_boxed_slice(),
+            child_inventories: self.child_inventories.into_boxed_slice(),
+        }
+    }
+}
+
+pub struct WorldBuilder<'a, 'd: 'a> {
+    owner: &'a mut Builder<'d>,
+}
+
+impl<'a, 'd> WorldBuilder<'a, 'd> {
+    pub fn owner(&mut self) -> &mut Builder<'d> {
+        self.owner
+    }
+
+    fn get(&mut self) -> &mut WorldBits {
+        self.owner.world.as_mut().unwrap()
+    }
+
+    pub fn now(&mut self, now: Time) -> &mut Self {
+        self.get().now = now;
+        self
+    }
+
+    pub fn next_client(&mut self, id: StableId) -> &mut Self {
+        self.get().next_client = id;
+        self
+    }
+    
+    pub fn next_entity(&mut self, id: StableId) -> &mut Self {
+        self.get().next_entity = id;
+        self
+    }
+    
+    pub fn next_inventory(&mut self, id: StableId) -> &mut Self {
+        self.get().next_inventory = id;
+        self
+    }
+    
+    pub fn next_plane(&mut self, id: StableId) -> &mut Self {
+        self.get().next_plane = id;
+        self
+    }
+    
+    pub fn next_terrain_chunk(&mut self, id: StableId) -> &mut Self {
+        self.get().next_terrain_chunk = id;
+        self
+    }
+    
+    pub fn next_structure(&mut self, id: StableId) -> &mut Self {
+        self.get().next_structure = id;
+        self
+    }
+
+    pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
+        f(&mut self.get().extra);
+        self
+    }
+
+    pub fn entity<F: FnOnce(&mut EntityBuilder)>(&mut self, f: F) -> &mut Self {
+        let eid = {
+            let mut e = self.owner.entity();
+            f(&mut e);
+            e.get().attachment = EntityAttachment::World;
+            e.id()
+        };
+        self.get().child_entities.push(eid);
+        self
+    }
+
+    pub fn child_entity(&mut self, eid: EntityId) -> &mut Self {
+        {
+            let mut e = self.owner.get_entity(eid);
+            assert!(e.get().attachment == EntityAttachment::World);
+        }
+        self.get().child_entities.push(eid);
+        self
+    }
+
+    pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
+        let iid = {
+            let mut i = self.owner.inventory();
+            f(&mut i);
+            i.get().attachment = InventoryAttachment::World;
+            i.id()
+        };
+        self.get().child_inventories.push(iid);
+        self
+    }
+
+    pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
+        {
+            let mut i = self.owner.get_inventory(iid);
+            assert!(i.get().attachment == InventoryAttachment::World);
+        }
+        self.get().child_inventories.push(iid);
+        self
+    }
 }
 
 
