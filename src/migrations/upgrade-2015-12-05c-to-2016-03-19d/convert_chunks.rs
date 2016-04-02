@@ -384,6 +384,35 @@ fn convert_structure_extra(old: &Extra, new: &mut Extra, map: &HashMap<SaveId, A
                     continue;
                 }
             },
+
+            // The rest are just copied for later processing
+            "owner" => {
+                if let View::Value(Value::StableClientId(cid)) = v {
+                    new.set("_owner_cid", Value::StableClientId(cid));
+                    continue;
+                }
+            },
+            "pending_timer" => {
+                if let View::Hash(h) = v {
+                    if let Some(View::Value(Value::Int(i))) = h.get("when") {
+                        new.set("_pending_timer_when", Value::Int(i));
+                        continue;
+                    }
+                }
+            },
+            "start_time" => {
+                if let View::Value(Value::Int(i)) = v {
+                    new.set("_start_time", Value::Int(i));
+                    continue;
+                }
+            },
+            "grow_time" => {
+                if let View::Value(Value::Float(f)) = v {
+                    new.set("_grow_time", Value::Float(f));
+                    continue;
+                }
+            },
+
             _ => {},
         }
         // Only falls through if the key/value was unrecognized.

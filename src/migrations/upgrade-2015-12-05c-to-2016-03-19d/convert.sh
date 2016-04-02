@@ -23,3 +23,4 @@ mkdir "$new/save/"{,clients,planes,terrain_chunks}
 # Additional conversions and post-processing
 ./pin_entities "$new"
 ./convert_world_extra "$old" "$new"
+./convert_structure_extra "$new"
