@@ -561,7 +561,7 @@ def do_cave_entrance(tiles, cave_bottom_dct):
             bb.new('cave_entrance/x0/z0/%s/c%s' % (terrain, name)) \
                     .front(get_front(0, 'left')) \
                     .bottom(cave_bottom_dct[terrain])
-            bb.new('cave_entrance/x0/z1/%s/c%s' % (terrain, name)) \
+            bb.new('cave_entrance/x0/z1/c%s' % name) \
                     .front(get_front(1, 'left')) \
                     .top(top)
 
@@ -570,7 +570,7 @@ def do_cave_entrance(tiles, cave_bottom_dct):
                     .shape('floor') \
                     .front(door_front['center/z0']) \
                     .bottom(cave_bottom_dct[terrain])
-            bb.new('cave_entrance/x1/z1/%s/c%s' % (terrain, name)) \
+            bb.new('cave_entrance/x1/z1/c%s' % name) \
                     .shape('empty') \
                     .front(door_front['center/z1']) \
                     .top(top)
@@ -579,7 +579,7 @@ def do_cave_entrance(tiles, cave_bottom_dct):
             bb.new('cave_entrance/x2/z0/%s/c%s' % (terrain, name)) \
                     .front(get_front(0, 'right')) \
                     .bottom(cave_bottom_dct[terrain])
-            bb.new('cave_entrance/x2/z1/%s/c%s' % (terrain, name)) \
+            bb.new('cave_entrance/x2/z1/c%s' % name) \
                     .front(get_front(1, 'right')) \
                     .top(top)
 

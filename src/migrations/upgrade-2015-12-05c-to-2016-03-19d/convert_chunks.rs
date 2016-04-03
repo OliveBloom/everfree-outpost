@@ -155,16 +155,19 @@ fn build_block_map() -> HashMap<String, String> {
             map.insert(old, new);
 
 
-            for &side in &["left", "right", "center"] {
+            for (x, &side) in ["left", "center", "right"].iter().enumerate() {
                 for &base in &["grass", "dirt"] {
                     let old = format!("cave/entrance/{}/{}/z0/{}", side, i, base);
-                    // TODO
-                    map.insert(old, String::from("empty"));
+                    let new = format!("cave_entrance/x{}/z0/{}/c{}", x,
+                                      repack4_3(i, |x, s| s.push(if x == 1 { 'g' } else { 'c' })),
+                                      repack4_3(i, |x, s| s.push_str(&format!("{}", x))));
+                    map.insert(old, new);
                 }
 
                 let old = format!("cave/entrance/{}/{}/z1", side, i);
-                // TODO
-                map.insert(old, String::from("empty"));
+                let new = format!("cave_entrance/x{}/z1/c{}", x,
+                                  repack4_3(i, |x, s| s.push_str(&format!("{}", x))));
+                map.insert(old, new);
             }
 
             let old = format!("natural_ramp/back/{}", i);
