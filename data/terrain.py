@@ -164,37 +164,6 @@ def chop_cave_front(img):
 
     return parts
 
-def chop_cave_entrance(img):
-    parts = {'left': {}, 'center': {}, 'right': {}}
-    for z in (0, 1):
-        # Left
-        e = img.extract((0, 6 - z))
-        w = img.extract((0, 4 - z))
-        e_half = e.modify(blank_left)
-        w_half = w.modify(blank_right)
-        parts['left'].update({
-            'outer/w/z%d' % z: image2.stack((e_half, w_half)),
-            'inner/w/z%d' % z: e_half,
-            'center/z%d' % z: e,
-            })
-
-        # Right
-        e = img.extract((2, 6 - z))
-        w = img.extract((2, 4 - z))
-        e_half = e.modify(blank_right)
-        w_half = w.modify(blank_left)
-        parts['right'].update({
-            'outer/e/z%d' % z: image2.stack((e_half, w_half)),
-            'inner/e/z%d' % z: e_half,
-            'center/z%d' % z: e,
-            })
-
-        # Center
-        e = img.extract((1, 6 - z))
-        parts['center']['center/z%d' % z] = e
-
-    return parts
-
 # The color used for filled areas inside caves.
 BLACK = (50, 33, 37)
 
@@ -210,53 +179,6 @@ def chop_black():
     parts['empty'] = BLANK_TILE
     add_cross(parts)
     return parts
-
-RAMP_TOP_PARTS = (
-       ('inner/nw',     'half/s',       'inner/ne'),
-       ('outer/se',     None,           'outer/sw'),
-        )
-
-def chop_ramp_top(cave, ramp):
-    def blank_outside(raw):
-        color = (0, 0, 0, 0)
-        raw.paste(color, (0, 0, 16, 48))
-        raw.paste(color, (80, 0, 96, 48))
-        raw.paste(color, (16, 0, 80, 16))
-    ramp = ramp.modify(blank_outside)
-
-    cave_parts = clear_center(cave).chop_grid(BORDER_PARTS)
-
-    parts = ramp.chop_grid(RAMP_TOP_PARTS)
-    parts['half/e'] = image2.stack((
-            parts['outer/se'].modify(blank_left),
-            cave_parts['half/e']))
-    parts['half/w'] = image2.stack((
-            parts['outer/sw'].modify(blank_right),
-            cave_parts['half/w']))
-    return parts
-
-def chop_ramp_front(cave, ramp):
-    cave_parts = chop_cave_front(cave)
-    left_parts = cave_parts.copy()
-    right_parts = cave_parts.copy()
-
-    for z in (0, 1):
-        left_img = ramp.extract((0, 3 - z)).modify(blank_left)
-        for k, v in left_parts.items():
-            if k.endswith('/z%d' % z):
-                left_parts[k] = image2.stack((v, left_img))
-        left_parts['empty/z%d' % z] = left_img
-
-        right_img = ramp.extract((2, 3 - z)).modify(blank_right)
-        for k, v in right_parts.items():
-            if k.endswith('/z%d' % z):
-                right_parts[k] = image2.stack((v, right_img))
-        right_parts['empty/z%d' % z] = right_img
-
-    return {
-            'left': left_parts,
-            'right': right_parts,
-            }
 
 # NB: If this looks backwards, it's because the name describes which parts of
 # the tile are covered by the terrain.  So 'half/n' means the north half is
@@ -465,12 +387,12 @@ CAVE_RAMP_PARTS = tuple(zip(
     CAVE_RAMP_CAPS,
     ))
 
-def do_cave_ramps(tiles):
+def do_cave_ramps(tiles, cave_bottom_dct):
     ramp = tiles('cave-stair.png').chop_grid(CAVE_RAMP_PARTS)
     wall_top = chop_cave_top(tiles('lpc-cave-walls2.png'))
     wall_front = chop_cave_front(tiles('lpc-cave-walls2.png'))
     black = chop_black()
-    cave_bottom = tiles('lpc-base-tiles/dirt2.png').extract((1, 3))
+    cave_bottom = cave_bottom_dct['cccc']
 
     bb = BLOCK.child().shape('solid')
 
@@ -478,6 +400,7 @@ def do_cave_ramps(tiles):
         nw, ne, se, sw = code
         ds = dissect(code, 3)
         name = ''.join(str(x) for x in code)
+        terrain = ''.join(('g' if x == 1 else 'c') for x in code)
 
         def get_front(z, side):
             front_desc = calc_front_desc(ds)
@@ -497,15 +420,21 @@ def do_cave_ramps(tiles):
 
         if ne == 0 and se == 2:
             # Front left
-            bb.new('ramp/xy01/z0/cccc/c%s' % name).front(get_front(0, 'left')) \
-                    .bottom(cave_bottom)
+            if terrain != 'cccc':
+                bb.new('ramp/xy01/z0/cccc/c%s' % name).front(get_front(0, 'left')) \
+                        .bottom(cave_bottom)
+            bb.new('ramp/xy01/z0/%s/c%s' % (terrain, name)).front(get_front(0, 'left')) \
+                    .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy01/z1/c%s' % name).front(get_front(1, 'left')) \
                     .top(get_top('front/left/%s' % ('corner' if sw == 2 else 'edge')))
 
         if nw == 0 and sw == 2:
             # Front right
-            bb.new('ramp/xy21/z0/cccc/c%s' % name).front(get_front(0, 'right')) \
-                    .bottom(cave_bottom)
+            if terrain != 'cccc':
+                bb.new('ramp/xy21/z0/cccc/c%s' % name).front(get_front(0, 'right')) \
+                        .bottom(cave_bottom)
+            bb.new('ramp/xy21/z0/%s/c%s' % (terrain, name)).front(get_front(0, 'right')) \
+                    .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy21/z1/c%s' % name).front(get_front(1, 'right')) \
                     .top(get_top('front/right/%s' % ('corner' if se == 2 else 'edge')))
 
@@ -518,43 +447,141 @@ def do_cave_ramps(tiles):
 
         if se == 0:
             # Back right
-            bb.new('ramp/xy00/z0/cccc/c%s' % name).front(normal_front(0)) \
-                    .bottom(cave_bottom)
+            if terrain != 'cccc':
+                bb.new('ramp/xy00/z0/cccc/c%s' % name).front(normal_front(0)) \
+                        .bottom(cave_bottom)
+            bb.new('ramp/xy00/z0/%s/c%s' % (terrain, name)).front(normal_front(0)) \
+                    .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy00/z1/c%s' % name).front(normal_front(1)) \
                     .top(get_top('back/left'))
 
         if sw == 0:
             # Back left
-            bb.new('ramp/xy20/z0/cccc/c%s' % name).front(normal_front(0)) \
-                    .bottom(cave_bottom)
+            if terrain != 'cccc':
+                bb.new('ramp/xy20/z0/cccc/c%s' % name).front(normal_front(0)) \
+                        .bottom(cave_bottom)
+            bb.new('ramp/xy20/z0/%s/c%s' % (terrain, name)).front(normal_front(0)) \
+                    .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy20/z1/c%s' % name).front(normal_front(1)) \
                     .top(get_top('back/right'))
 
         if sw == 0 and se == 0:
             # Back center
-            bb.new('ramp/xy10/z0/cccc/c%s' % name).front(normal_front(0)) \
-                    .bottom(cave_bottom)
+            if terrain != 'cccc':
+                bb.new('ramp/xy10/z0/cccc/c%s' % name).front(normal_front(0)) \
+                        .bottom(cave_bottom)
+            bb.new('ramp/xy10/z0/%s/c%s' % (terrain, name)).front(normal_front(0)) \
+                    .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy10/z1/c%s' % name).front(normal_front(1)) \
                     .top(get_top('back/center/dirt2'))
 
     bb_ramp = BLOCK.child().shape('ramp_n')
-    bb_ramp.new('ramp/dirt2/z0') \
-            .bottom(image2.stack((
-                cave_bottom,
-                ramp['ramp/dirt2/3'],
-                ))) \
-            .back(ramp['ramp/dirt2/2'])
-    bb_ramp.new('ramp/dirt2/z1') \
-            .bottom(ramp['ramp/dirt2/1']) \
-            .back(ramp['ramp/dirt2/0'])
-
     for terrain in ('grass', 'dirt', 'dirt2'):
+        bb_ramp.new('ramp/%s/z0' % terrain) \
+                .bottom(image2.stack((
+                    cave_bottom,
+                    ramp['ramp/%s/3' % terrain],
+                    ))) \
+                .back(ramp['ramp/%s/2' % terrain])
+        bb_ramp.new('ramp/%s/z1' % terrain) \
+                .bottom(ramp['ramp/%s/1' % terrain]) \
+                .back(ramp['ramp/%s/0' % terrain])
+
         BLOCK.new('ramp/%s/cap0' % terrain) \
                 .shape('floor') \
                 .bottom(ramp['ramp/%s/cap0' % terrain])
         BLOCK.new('ramp/%s/cap1' % terrain) \
                 .shape('empty') \
                 .bottom(ramp['ramp/%s/cap1' % terrain])
+
+
+# Cave entrances are relatively simple.  The three tiles need to have this
+# shape:
+#
+#   x-2-2-x
+#   | | | |
+#   x-1-1-x
+#
+# Aside from the middle block, which is completely custom, there are also
+# tweaks to the left and right blocks: their front faces always show the inner
+# half of the left/right column of the doorway, layered over top of any other
+# front face that may be present.
+
+def chop_cave_entrance(img):
+    img = img.extract((0, 5), (3, 2))
+
+    parts = {}
+
+    parts['left/z1'] = img.extract((0, 0)).modify(blank_left)
+    parts['left/z0'] = img.extract((0, 1)).modify(blank_left)
+
+    parts['center/z1'] = img.extract((1, 0))
+    parts['center/z0'] = img.extract((1, 1))
+
+    parts['right/z1'] = img.extract((2, 0)).modify(blank_right)
+    parts['right/z0'] = img.extract((2, 1)).modify(blank_right)
+
+    return parts
+
+def do_cave_entrance(tiles, cave_bottom_dct):
+    wall_top = chop_cave_top(tiles('lpc-cave-walls2.png'))
+    wall_front = chop_cave_front(tiles('lpc-cave-walls2.png'))
+    door_front = chop_cave_entrance(tiles('lpc-cave-walls2.png'))
+    black = chop_black()
+    cave_bottom = cave_bottom_dct['cccc']
+
+    bb = BLOCK.child().shape('solid')
+
+    for code in iter_codes(3):
+        nw, ne, se, sw = code
+        ds = dissect(code, 3)
+        name = ''.join(str(x) for x in code)
+        terrain = ''.join(('g' if x == 1 else 'c') for x in code)
+
+        def get_front(z, side):
+            front_desc = calc_front_desc(ds)
+            door_tile = door_front['%s/z%d' % (side, z)]
+            if front_desc is not None:
+                base = wall_front['%s/z%d' % (front_desc, z)]
+                if side == 'left':
+                    base = base.modify(blank_right)
+                elif side == 'right':
+                    base = base.modify(blank_left)
+                return image2.stack((base, door_tile))
+            else:
+                return door_tile
+
+        top = image2.stack((
+            black[ds[0]],
+            wall_top[ds[1]],
+            wall_top[ds[2]],
+            ))
+
+        if ne == 2 and se == 1:
+            bb.new('cave_entrance/x0/z0/%s/c%s' % (terrain, name)) \
+                    .front(get_front(0, 'left')) \
+                    .bottom(cave_bottom_dct[terrain])
+            bb.new('cave_entrance/x0/z1/%s/c%s' % (terrain, name)) \
+                    .front(get_front(1, 'left')) \
+                    .top(top)
+
+        if code == (2, 2, 1, 1):
+            bb.new('cave_entrance/x1/z0/%s/c%s' % (terrain, name)) \
+                    .shape('floor') \
+                    .front(door_front['center/z0']) \
+                    .bottom(cave_bottom_dct[terrain])
+            bb.new('cave_entrance/x1/z1/%s/c%s' % (terrain, name)) \
+                    .shape('empty') \
+                    .front(door_front['center/z1']) \
+                    .top(top)
+
+        if nw == 2 and sw == 1:
+            bb.new('cave_entrance/x2/z0/%s/c%s' % (terrain, name)) \
+                    .front(get_front(0, 'right')) \
+                    .bottom(cave_bottom_dct[terrain])
+            bb.new('cave_entrance/x2/z1/%s/c%s' % (terrain, name)) \
+                    .front(get_front(1, 'right')) \
+                    .top(top)
 
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
@@ -648,4 +675,7 @@ def init():
                 .shape('empty' if clear else 'solid') \
                 .top(top).front(front)
 
-    do_cave_ramps(tiles)
+    # Ramps
+    cave_bottom_dct = dict(iter_terrain_floor(collect_layers('gc')))
+    do_cave_ramps(tiles, cave_bottom_dct)
+    do_cave_entrance(tiles, cave_bottom_dct)
