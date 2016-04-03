@@ -171,13 +171,15 @@ fn build_block_map() -> HashMap<String, String> {
             }
 
             let old = format!("natural_ramp/back/{}", i);
-            // TODO
-            map.insert(old, String::from("empty"));
+            let new = format!("cave_z1/c{}",
+                              repack4_3(i, |x, s| s.push_str(&format!("{}", x))));
+            map.insert(old, new);
 
             for &side in &["left", "right"] {
                 let old = format!("natural_ramp/{}/{}/z1", side, i);
-                // TODO
-                map.insert(old, String::from("empty"));
+                let new = format!("cave_z1/c{}",
+                                  repack4_3(i, |x, s| s.push_str(&format!("{}", x))));
+                map.insert(old, new);
             }
         }
 
@@ -195,15 +197,19 @@ fn build_block_map() -> HashMap<String, String> {
         }
 
 
-        for &level in &["z0/grass", "z0/dirt", "z1"] {
-            let old = format!("natural_ramp/ramp/{}", level);
-            // TODO
-            map.insert(old, String::from("empty"));
+        for &terrain in &["grass", "dirt"] {
+            let old = format!("natural_ramp/ramp/z0/{}", terrain);
+            let new = format!("terrain/gggg/v0");
+            map.insert(old, new);
         }
 
+        let old = format!("natural_ramp/ramp/z1");
+        let new = format!("terrain/ccgg/c0011");
+        map.insert(old, new);
+
         let old = format!("natural_ramp/top");
-        // TODO
-        map.insert(old, String::from("empty"));
+        let new = format!("terrain/gggg/e0011");
+        map.insert(old, new);
     }
     map
 }
