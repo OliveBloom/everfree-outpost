@@ -9,8 +9,8 @@ use forest::common::HasPos;
 use forest::context::{Context, HeightDetailPass, TreePositionsPass};
 
 
-const GRID_SIZE: i32 = 64;
-const SPACING: i32 = 4;
+pub const GRID_SIZE: i32 = 64;
+pub const SPACING: i32 = 4;
 
 define_points!(TreePositions: V2; GRID_SIZE as usize);
 

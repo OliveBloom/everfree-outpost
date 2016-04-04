@@ -314,6 +314,50 @@ fn update_cave_detail(dir: &str, summ: &OldSummary, cpos: V2, bundle: &Bundle) {
     }
 }
 
+fn update_ramp_positions(dir: &str, cpos: V2) {
+    use terrain_gen::forest::cave_ramps::{RampPositions, GRID_SIZE};
+
+    let gpos = cpos.div_floor(scalar(GRID_SIZE / CHUNK_SIZE));
+    let offset = cpos - gpos * scalar(GRID_SIZE / CHUNK_SIZE);
+
+    let mut grid = {
+        let f = File::open(&format!("{}/save/summary/cave_ramp_positions/2/{},{}",
+                                    dir, gpos.x, gpos.y)).unwrap();
+        RampPositions::read_from(f).unwrap()
+    };
+
+    let chunk_bounds = (Region::new(scalar(0), scalar(1)) + offset) * scalar(CHUNK_SIZE);
+
+    let mut i = 0;
+    while i < grid.data.len() {
+        let bounds = Region::new(scalar(0), V2::new(3, 4)) + grid.data[i];
+        if bounds.overlaps(chunk_bounds) {
+            grid.data.swap_remove(i);
+        } else {
+            i += 1;
+        }
+    }
+
+
+    {
+        let mut f = File::create(&format!("{}/save/summary/cave_ramp_positions/2/{},{}",
+                                          dir, gpos.x, gpos.y)).unwrap();
+        grid.write_to(f).unwrap();
+    }
+}
+
+fn update_ramps(dir: &str, cpos: V2) {
+    use terrain_gen::forest::cave_ramps::CaveRamps;
+
+    // Write an empty list for this chunk
+    let grid = CaveRamps::alloc();
+    {
+        let mut f = File::create(&format!("{}/save/summary/cave_ramps/2/{},{}",
+                                          dir, cpos.x, cpos.y)).unwrap();
+        grid.write_to(f).unwrap();
+    }
+}
+
 
 
 fn load_height_detail(dir: &str, cpos: V2) -> Box<forest::height_detail::HeightDetail> {
@@ -446,6 +490,8 @@ fn main() {
         update_height_map(new_dir, &summ, cpos);
         update_height_detail(new_dir, &summ, cpos);
         update_cave_detail(new_dir, &summ, cpos, &chunk);
+        update_ramp_positions(new_dir, cpos);
+        update_ramps(new_dir, cpos);
     }
 
     for &cpos in &adjacent {
