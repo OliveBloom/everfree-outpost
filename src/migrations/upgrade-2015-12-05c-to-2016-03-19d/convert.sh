@@ -5,7 +5,7 @@ set -e
 
 old=$(readlink -f "$1")
 new=$(readlink -f "$2")
-#cd "$(dirname "$0")"
+cd "$(dirname "$0")"
 
 export RUST_BACKTRACE=1
 
