@@ -11,6 +11,7 @@ extern crate server_types;
 #[macro_use] extern crate server_util;
 extern crate server_world_types;
 extern crate terrain_gen;
+extern crate terrain_gen_algo;
 
 extern crate save_0_6;
 
@@ -37,6 +38,7 @@ use server_world_types::{Motion, Item};
 use terrain_gen::cache::Summary;
 use terrain_gen::forest;
 use terrain_gen::forest::common::GridLike;
+use terrain_gen_algo::disk_sampler::DiskSampler;
 
 use save_0_6::*;
 
@@ -358,6 +360,48 @@ fn update_ramps(dir: &str, cpos: V2) {
     }
 }
 
+/*
+fn update_trees(dir: &str, summ: &OldSummary, cpos: V2) {
+    use terrain_gen::forest::trees::{TreePositions, Trees, GRID_SIZE};
+
+    let gpos = cpos.div_floor(scalar(GRID_SIZE / CHUNK_SIZE));
+    let offset = cpos - gpos * scalar(GRID_SIZE / CHUNK_SIZE);
+
+    let mut grid = {
+        let f = File::open(&format!("{}/save/summary/tree_positions/2/{},{}",
+                                    dir, gpos.x, gpos.y)).unwrap();
+        TreePositions::read_from(f).unwrap()
+    };
+
+    let chunk_bounds = (Region::new(scalar(0), scalar(1)) + offset) * scalar(CHUNK_SIZE);
+
+    let mut i = 0;
+    while i < grid.data.len() {
+        let bounds = Region::new(scalar(0), V2::new(3, 3)) + grid.data[i];
+        if bounds.overlaps(chunk_bounds) {
+            grid.data.swap_remove(i);
+        } else {
+            i += 1;
+        }
+    }
+
+    for &pos in &summ.tree_offsets {
+        grid.data.push(pos + offset * scalar(CHUNK_SIZE));
+    }
+
+    {
+        let mut f = File::create(&format!("{}/save/summary/tree_positions/2/{},{}",
+                                          dir, gpos.x, gpos.y)).unwrap();
+        grid.write_to(f).unwrap();
+    }
+    {
+        let mut f = File::create(&format!("{}/save/summary/trees/2/{},{}",
+                                          dir, cpos.x, cpos.y)).unwrap();
+        grid.write_to(f).unwrap();
+    }
+}
+*/
+
 
 
 fn load_height_detail(dir: &str, cpos: V2) -> Box<forest::height_detail::HeightDetail> {
@@ -442,10 +486,91 @@ fn create_blended_height_map(dir_path: &str, cpos: V2, preserved: &HashSet<V2>) 
 
 
 
+fn add_tree_positions(dir: &str, summ: &OldSummary, cpos: V2) {
+    use terrain_gen::forest::trees::{TreePositions, GRID_SIZE};
+
+    let gpos = cpos.div_floor(scalar(GRID_SIZE / CHUNK_SIZE));
+    let offset = cpos - gpos * scalar(GRID_SIZE / CHUNK_SIZE);
+
+    let path = format!("{}/save/summary/tree_positions/2/{},{}",
+                       dir, gpos.x, gpos.y);
+    let mut grid =
+        if let Ok(f) = File::open(&path) {
+            TreePositions::read_from(f).unwrap()
+        } else {
+            TreePositions::alloc()
+        };
+
+    for &pos in &summ.tree_offsets {
+        grid.data.push(pos + offset * scalar(CHUNK_SIZE));
+    }
+
+    {
+        let mut f = File::create(&format!("{}/save/summary/tree_positions/2/{},{}",
+                                          dir, gpos.x, gpos.y)).unwrap();
+        grid.write_to(f).unwrap();
+    }
+}
+
+pub fn generate_tree_positions(dir_path: &str, mut rng: XorShiftRng, gpos: V2) {
+    use terrain_gen::forest::trees::{TreePositions, GRID_SIZE, SPACING};
+
+    let mut disk = DiskSampler::new(scalar(3 * GRID_SIZE), SPACING, 2 * SPACING);
+    let mut seen = HashSet::new();
+
+    // Init disk samplers with points from adjacent chunks.
+    for offset in Region::<V2>::new(scalar(-1), scalar(2)).points() {
+        let adj_gpos = gpos + offset;
+        let base = (offset + scalar(1)) * scalar(GRID_SIZE);
+        if let Ok(f) = File::open(&format!("{}/save/summary/tree_positions/2/{},{}",
+                                           dir_path, adj_gpos.x, adj_gpos.y)) {
+            let grid = TreePositions::read_from(f).unwrap();
+            for &pos in &grid.data {
+                if !seen.contains(&(pos + base)) {
+                    disk.add_init_point(pos + base);
+                    seen.insert(pos + base);
+                }
+            }
+        }
+    }
+
+    // Generate and save results
+    disk.generate(&mut rng, 20);
+
+    let mut grid = TreePositions::alloc();
+    let base = scalar::<V2>(GRID_SIZE);
+    let bounds = Region::new(base, base + scalar(GRID_SIZE));
+    for &pos in disk.points() {
+        if !bounds.contains(pos) {
+            continue;
+        }
+        grid.data.push(pos - base);
+    }
+
+    {
+        let mut f = File::create(&format!("{}/save/summary/tree_positions/2/{},{}",
+                                          dir_path, gpos.x, gpos.y)).unwrap();
+        grid.write_to(f).unwrap();
+    }
+}
 
 
 
 
+fn empty_dir(dir: &str) {
+    let mut paths = Vec::new();
+    for ent in fs::read_dir(dir).unwrap() {
+        let ent = ent.unwrap();
+        if !ent.file_type().unwrap().is_file() {
+            continue;
+        }
+        paths.push(ent.path());
+    }
+
+    for p in paths {
+        fs::remove_file(p).unwrap();
+    }
+}
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();
@@ -480,6 +605,12 @@ fn main() {
     // Explicitly drop provider to ensure it writes all the metadata to disk.
     drop(provider);
 
+    // Trees need special handling.  `trees` does not correspond directly to summ.tree_offsets.
+    // Instead, we update `tree_positions`, and delete `trees` so it will be regenerated with
+    // correct values.
+    empty_dir(&format!("{}/save/summary/tree_positions/2", new_dir));
+    empty_dir(&format!("{}/save/summary/trees/2", new_dir));
+
     // Write corrected metadata for each preserved chunk.
     for &cpos in &preserved {
         println!("processing {:?}", cpos);
@@ -492,6 +623,19 @@ fn main() {
         update_cave_detail(new_dir, &summ, cpos, &chunk);
         update_ramp_positions(new_dir, cpos);
         update_ramps(new_dir, cpos);
+        add_tree_positions(new_dir, &summ, cpos);
+    }
+
+    // Finish tree handling
+    let mut tree_chunks = HashSet::new();
+    for &cpos in &preserved {
+        use terrain_gen::forest::trees::GRID_SIZE;
+        tree_chunks.insert(cpos.div_floor(scalar(GRID_SIZE / CHUNK_SIZE)));
+    }
+    println!("generating final tree positions for {} chunks", tree_chunks.len());
+    for &gpos in &tree_chunks {
+        println!("  - trees {:?}", gpos);
+        generate_tree_positions(new_dir, rand::random(), gpos);
     }
 
     for &cpos in &adjacent {

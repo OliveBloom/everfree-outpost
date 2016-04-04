@@ -216,6 +216,11 @@ pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
         });
         // */
 
+    (*ptr).forest.context_mut().points_fold::<TreePositionsPass, _, _>(
+        pid, bounds, (), |(), pos, r| {
+            drawing.add_point(pos - bounds.min, "green");
+        });
+
     {
         let mut do_line = |x, y, color| {
             let x1 = x / pixel_size;
