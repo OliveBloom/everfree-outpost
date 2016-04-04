@@ -360,47 +360,37 @@ fn update_ramps(dir: &str, cpos: V2) {
     }
 }
 
-/*
-fn update_trees(dir: &str, summ: &OldSummary, cpos: V2) {
-    use terrain_gen::forest::trees::{TreePositions, Trees, GRID_SIZE};
+fn update_cave_junk(dir: &str, summ: &OldSummary, cpos: V2) {
+    use terrain_gen::forest::cave_junk::CaveJunk;
 
-    let gpos = cpos.div_floor(scalar(GRID_SIZE / CHUNK_SIZE));
-    let offset = cpos - gpos * scalar(GRID_SIZE / CHUNK_SIZE);
+    for layer in 0 .. 8 {
+        let mut grid = CaveJunk::alloc();
+        grid.data = summ.treasure_offsets[layer].clone();
 
-    let mut grid = {
-        let f = File::open(&format!("{}/save/summary/tree_positions/2/{},{}",
-                                    dir, gpos.x, gpos.y)).unwrap();
-        TreePositions::read_from(f).unwrap()
-    };
-
-    let chunk_bounds = (Region::new(scalar(0), scalar(1)) + offset) * scalar(CHUNK_SIZE);
-
-    let mut i = 0;
-    while i < grid.data.len() {
-        let bounds = Region::new(scalar(0), V2::new(3, 3)) + grid.data[i];
-        if bounds.overlaps(chunk_bounds) {
-            grid.data.swap_remove(i);
-        } else {
-            i += 1;
+        {
+            let f = File::create(&format!("{}/save/summary/cave_junk/2/{},{}/{}",
+                                          dir, cpos.x, cpos.y, layer)).unwrap();
+            grid.write_to(f).unwrap();
         }
     }
-
-    for &pos in &summ.tree_offsets {
-        grid.data.push(pos + offset * scalar(CHUNK_SIZE));
-    }
-
-    {
-        let mut f = File::create(&format!("{}/save/summary/tree_positions/2/{},{}",
-                                          dir, gpos.x, gpos.y)).unwrap();
-        grid.write_to(f).unwrap();
-    }
-    {
-        let mut f = File::create(&format!("{}/save/summary/trees/2/{},{}",
-                                          dir, cpos.x, cpos.y)).unwrap();
-        grid.write_to(f).unwrap();
-    }
 }
-*/
+
+fn update_natural_ramps(dir: &str, summ: &OldSummary, cpos: V2) {
+    let mut f = File::create(&format!("{}/save/summary/2015-12-05c-natural_ramps/2/{},{}",
+                                      dir, cpos.x, cpos.y)).unwrap();
+    f.write_bytes(summ.natural_ramps.len() as u32).unwrap();
+    f.write_bytes_slice(&summ.natural_ramps).unwrap();
+}
+
+fn update_cave_entrances(dir: &str, summ: &OldSummary, cpos: V2) {
+    let mut f = File::create(&format!("{}/save/summary/2015-12-05c-cave_entrances/2/{},{}",
+                                      dir, cpos.x, cpos.y)).unwrap();
+    f.write_bytes(summ.cave_entrances.len() as u32).unwrap();
+    f.write_bytes_slice(&summ.cave_entrances).unwrap();
+}
+
+
+
 
 
 
@@ -611,6 +601,9 @@ fn main() {
     empty_dir(&format!("{}/save/summary/tree_positions/2", new_dir));
     empty_dir(&format!("{}/save/summary/trees/2", new_dir));
 
+    let _ = fs::create_dir_all(&format!("{}/save/summary/2015-12-05c-natural_ramps/2/", new_dir));
+    let _ = fs::create_dir_all(&format!("{}/save/summary/2015-12-05c-cave_entrances/2/", new_dir));
+
     // Write corrected metadata for each preserved chunk.
     for &cpos in &preserved {
         println!("processing {:?}", cpos);
@@ -624,6 +617,9 @@ fn main() {
         update_ramp_positions(new_dir, cpos);
         update_ramps(new_dir, cpos);
         add_tree_positions(new_dir, &summ, cpos);
+        update_cave_junk(new_dir, &summ, cpos);
+        update_natural_ramps(new_dir, &summ, cpos);
+        update_cave_entrances(new_dir, &summ, cpos);
     }
 
     // Finish tree handling
