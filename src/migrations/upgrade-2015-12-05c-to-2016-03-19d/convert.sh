@@ -5,7 +5,9 @@ set -e
 
 old=$(readlink -f "$1")
 new=$(readlink -f "$2")
-cd "$(dirname "$0")"
+#cd "$(dirname "$0")"
+
+export RUST_BACKTRACE=1
 
 [ -d "$new/data" ] || { echo "error: $new/data shoud already exist"; exit 1; }
 rm -rf "$new/save"

@@ -31,6 +31,7 @@ fn build_natural_structure_set() -> HashSet<String> {
     h.insert(String::from("cave_junk/2"));
     h.insert(String::from("chest"));
     h.insert(String::from("dungeon_entrance"));
+    h.insert(String::from("ore_vein/copper"));
     h
 }
 

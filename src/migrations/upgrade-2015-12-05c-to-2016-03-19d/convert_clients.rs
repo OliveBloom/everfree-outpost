@@ -117,6 +117,15 @@ impl AnyId {
 }
 
 
+fn build_item_map() -> HashMap<String, String> {
+    let mut map = HashMap::new();
+    {
+        let mut add = |old, new| map.insert(String::from(old), String::from(new));
+        add("fence_tee", "fence");
+    }
+    map
+}
+
 fn build_anim_map() -> HashMap<String, String> {
     let mut map = HashMap::new();
     for anim in &["stand", "walk", "run"] {
@@ -134,6 +143,7 @@ struct Context<'d: 'b, 'b> {
     id_map: HashMap<SaveId, AnyId>,
     builder: &'b mut Builder<'d>,
 
+    item_map: HashMap<String, String>,
     anim_map: HashMap<String, String>,
 }
 
@@ -143,6 +153,7 @@ impl<'d, 'b> Context<'d, 'b> {
             data: data,
             id_map: HashMap::new(),
             builder: builder,
+            item_map: build_item_map(),
             anim_map: build_anim_map(),
         }
     }
@@ -250,8 +261,9 @@ impl<'d, 'b> Context<'d, 'b> {
                     Item::Empty => {},
                     Item::Special(_, _) => panic!("Item::Special is unsupported"),
                     Item::Bulk(count, item_id) => {
-                        let name = &self.data.item_data.name(item_id);
-                        b.item(idx as u8, name, count);
+                        let name = self.data.item_data.name(item_id);
+                        let new_name = self.item_map.get(name).map(|x| x as &str).unwrap_or(name);
+                        b.item(idx as u8, new_name, count);
                     },
                 }
             }
