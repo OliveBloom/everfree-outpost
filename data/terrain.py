@@ -418,7 +418,7 @@ def do_cave_ramps(tiles, cave_bottom_dct):
                 ramp['top/%s' % side],
                 ))
 
-        if ne == 0 and se == 2:
+        if ne == 0 and se != 0:
             # Front left
             if terrain != 'cccc':
                 bb.new('ramp/xy01/z0/cccc/c%s' % name).front(get_front(0, 'left')) \
@@ -426,9 +426,9 @@ def do_cave_ramps(tiles, cave_bottom_dct):
             bb.new('ramp/xy01/z0/%s/c%s' % (terrain, name)).front(get_front(0, 'left')) \
                     .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy01/z1/c%s' % name).front(get_front(1, 'left')) \
-                    .top(get_top('front/left/%s' % ('corner' if sw == 2 else 'edge')))
+                    .top(get_top('front/left/%s' % ('corner' if sw != 0 else 'edge')))
 
-        if nw == 0 and sw == 2:
+        if nw == 0 and sw != 0:
             # Front right
             if terrain != 'cccc':
                 bb.new('ramp/xy21/z0/cccc/c%s' % name).front(get_front(0, 'right')) \
@@ -436,7 +436,7 @@ def do_cave_ramps(tiles, cave_bottom_dct):
             bb.new('ramp/xy21/z0/%s/c%s' % (terrain, name)).front(get_front(0, 'right')) \
                     .bottom(cave_bottom_dct[terrain])
             bb.new('ramp/xy21/z1/c%s' % name).front(get_front(1, 'right')) \
-                    .top(get_top('front/right/%s' % ('corner' if se == 2 else 'edge')))
+                    .top(get_top('front/right/%s' % ('corner' if se != 0 else 'edge')))
 
         def normal_front(z):
             front_desc = calc_front_desc(ds)
@@ -477,9 +477,11 @@ def do_cave_ramps(tiles, cave_bottom_dct):
 
     bb_ramp = BLOCK.child().shape('ramp_n')
     for terrain in ('grass', 'dirt', 'dirt2'):
+        bottom = cave_bottom if terrain != 'grass' else cave_bottom_dct['gggg']
+
         bb_ramp.new('ramp/%s/z0' % terrain) \
                 .bottom(image2.stack((
-                    cave_bottom,
+                    bottom,
                     ramp['ramp/%s/3' % terrain],
                     ))) \
                 .back(ramp['ramp/%s/2' % terrain])

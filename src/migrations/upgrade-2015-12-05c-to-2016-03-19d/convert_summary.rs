@@ -379,7 +379,11 @@ fn update_natural_ramps(dir: &str, summ: &OldSummary, cpos: V2) {
     let mut f = File::create(&format!("{}/save/summary/2015-12-05c-natural_ramps/2/{},{}",
                                       dir, cpos.x, cpos.y)).unwrap();
     f.write_bytes(summ.natural_ramps.len() as u32).unwrap();
-    f.write_bytes_slice(&summ.natural_ramps).unwrap();
+
+    for &r in &summ.natural_ramps {
+        // Not sure why the offset is necessary, but it makes the ramps spawn in the right places.
+        f.write_bytes(r - V3::new(3, 3, 0)).unwrap();
+    }
 }
 
 fn update_cave_entrances(dir: &str, summ: &OldSummary, cpos: V2) {
