@@ -31,6 +31,7 @@ use server_config::{storage, data};
 use server_extra as extra;
 use server_extra::{Extra, View, ViewMut, Value};
 use server_types::*;
+use server_util::BitSlice;
 use server_util::bytes::{ReadBytes, WriteBytes};
 use server_world_types::{Motion, Item};
 use terrain_gen::cache::Summary;
@@ -89,7 +90,7 @@ fn load_summary(path: &str) -> OldSummary {
 }
 
 
-fn load_bundle(path: &Path) -> Bundle {
+fn load_bundle(path: &str) -> Bundle {
     let mut f = File::open(path).unwrap();
     let mut buf = Vec::new();
     f.read_to_end(&mut buf).unwrap();
@@ -97,7 +98,7 @@ fn load_bundle(path: &Path) -> Bundle {
     flat.unflatten_bundle()
 }
 
-fn save_bundle(path: &Path, b: &Bundle) {
+fn save_bundle(path: &str, b: &Bundle) {
     let mut f = File::create(path).unwrap();
     let mut flat = server_bundle::flat::Flat::new();
     flat.flatten_bundle(b);
@@ -259,6 +260,60 @@ fn update_height_detail(dir: &str, summ: &OldSummary, cpos: V2) {
     }
 }
 
+fn update_cave_detail(dir: &str, summ: &OldSummary, cpos: V2, bundle: &Bundle) {
+    use terrain_gen::forest::cave_detail::CaveDetail;
+
+    let tc = &bundle.terrain_chunks[0];
+    for layer in 0 .. 8 {
+        let mut grid = {
+            let f = File::open(&format!("{}/save/summary/cave_detail/2/{},{}/{}",
+                                        dir, cpos.x, cpos.y, layer)).unwrap();
+            CaveDetail::read_from(f).unwrap()
+        };
+
+        let old_grid = BitSlice::from_bytes(&summ.cave_walls[layer]);
+
+        let bounds = Region::<V2>::new(scalar(0), scalar(17));
+        for i in 0 .. grid.data().len() {
+            grid.data_mut().set(i, old_grid.get(i));
+        }
+
+        let tile_bounds = Region::<V3>::new(scalar(0), scalar(16));
+        let z = layer as i32 * 2;
+        for pos in tile_bounds.reduce().points() {
+            let block_id = tc.blocks[tile_bounds.index(pos.extend(z))];
+            let block_name = &*bundle.blocks[block_id as usize];
+            let last = block_name.split('/').next_back().unwrap();
+            let mut chars = last.chars();
+            if chars.next() != Some('c') {
+                continue;
+            }
+            if let Some('2') = chars.next() {
+                let idx = bounds.index(pos + V2::new(0, 0));
+                grid.data_mut().set(idx, false);
+            }
+            if let Some('2') = chars.next() {
+                let idx = bounds.index(pos + V2::new(1, 0));
+                grid.data_mut().set(idx, false);
+            }
+            if let Some('2') = chars.next() {
+                let idx = bounds.index(pos + V2::new(1, 1));
+                grid.data_mut().set(idx, false);
+            }
+            if let Some('2') = chars.next() {
+                let idx = bounds.index(pos + V2::new(0, 1));
+                grid.data_mut().set(idx, false);
+            }
+        }
+
+        {
+            let mut f = File::create(&format!("{}/save/summary/cave_detail/2/{},{}/{}",
+                                              dir, cpos.x, cpos.y, layer)).unwrap();
+            grid.write_to(f).unwrap();
+        }
+    }
+}
+
 
 
 fn load_height_detail(dir: &str, cpos: V2) -> Box<forest::height_detail::HeightDetail> {
@@ -362,6 +417,9 @@ fn main() {
     let adjacent = make_adjacent_set(&preserved);
     println!("found {} adjacent chunks", adjacent.len());
 
+    let plane = load_bundle(&format!("{}/save/planes/2.plane", new_dir));
+    let saved_chunks = plane.planes[0].saved_chunks.iter().map(|&x| x).collect::<HashMap<_,_>>();
+
 
     let rng: XorShiftRng = rand::random();
 
@@ -383,8 +441,11 @@ fn main() {
         println!("processing {:?}", cpos);
         let summ = load_summary(&format!("{}/save/summary/2/chunk/{},{}.dat",
                                          old_dir, cpos.x, cpos.y));
+        let chunk = load_bundle(&format!("{}/save/terrain_chunks/{:x}.terrain_chunk",
+                                         new_dir, saved_chunks[&cpos].unwrap()));
         update_height_map(new_dir, &summ, cpos);
         update_height_detail(new_dir, &summ, cpos);
+        update_cave_detail(new_dir, &summ, cpos, &chunk);
     }
 
     for &cpos in &adjacent {
