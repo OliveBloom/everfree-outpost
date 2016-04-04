@@ -26,7 +26,7 @@ pub use libterrain_gen_algo as algo;
 
 pub mod worker;
 mod prop;
-mod cache;
+pub mod cache;
 
 pub mod forest;
 pub mod dungeon;

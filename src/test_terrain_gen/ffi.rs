@@ -50,12 +50,14 @@ impl TerrainGen {
         let recipe_json = read_json(storage.open_recipe_data());
         let template_json = read_json(storage.open_template_data());
         let animation_json = read_json(storage.open_animation_data());
+        let sprite_part_json = read_json(storage.open_sprite_part_data());
         let loot_table_json = read_json(storage.open_loot_table_data());
         let data = Box::new(Data::from_json(block_json,
                                             item_json,
                                             recipe_json,
                                             template_json,
                                             animation_json,
+                                            sprite_part_json,
                                             loot_table_json).unwrap());
 
         let mut rng: XorShiftRng = SeedableRng::from_seed([0xe0e0e0e0,
@@ -204,6 +206,7 @@ pub unsafe extern "C" fn generator_test(ptr: *mut TerrainGen,
         });
         // */
 
+    /*
     (*ptr).forest.context_mut().points_fold::<CaveRampsPass, _, _>(
         pid, bounds, (), |(), pos, r| {
             let h = drawing.height_map[bounds.index(pos)];
