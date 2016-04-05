@@ -1,5 +1,6 @@
 #![crate_name = "server_bundle"]
 
+#[cfg(ffi)] extern crate libc;
 extern crate physics;
 extern crate server_config;
 extern crate server_extra;
@@ -11,3 +12,5 @@ pub mod builder;
 pub mod error;
 pub mod flat;
 pub mod types;
+
+#[cfg(ffi)] pub mod ffi;

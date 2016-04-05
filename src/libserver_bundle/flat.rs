@@ -65,9 +65,13 @@ macro_rules! sat32 {
 // NB: size_of::<FileHeader> is 16, a multiple of ALIGNMENT
 #[repr(C)] #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct FileHeader {
+    /// The version of the file format in use for this file (minor part).
     minor: u16,
+    /// The version of the file format in use for this file (major part).
     major: u16,
+    /// Offset (in bytes) of the first `SectionHeader`.
     header_offset: u32,
+    /// Number of `SectionHeader`s in this file.
     header_count: u32,
     _reserved0: u32,
 }
@@ -75,8 +79,12 @@ pub struct FileHeader {
 // NB: size_of::<SectionHeader> is 16, a multiple of ALIGNMENT
 #[repr(C)] #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct SectionHeader {
+    /// Section identifier.  Should be one of the 4-character strings used in the `flat!`
+    /// invocation below.
     tag: [u8; 4],
+    /// Offset (in bytes) of the first item in the section.
     offset: u32,
+    /// Number of items in the section.
     count: u32,
     _reserved0: u32,
 }
@@ -493,7 +501,7 @@ macro_rules! flat {
 }
 
 flat! {
-    // Headers
+    // Headers.  These never actually show up as a `SectionHeader.tag`.
     b"HFil",  file_header: Option<Box<FileHeader>>,
     b"HSec",  section_headers: Vec<SectionHeader>,
 
