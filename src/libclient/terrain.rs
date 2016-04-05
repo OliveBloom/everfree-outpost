@@ -4,7 +4,7 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 use physics::{Shape, ShapeSource};
 use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK};
 
-pub const NUM_LAYERS: usize = 3;
+pub const NUM_LAYERS: usize = 4;
 
 pub type ShapeChunk = [Shape; 1 << (3 * CHUNK_BITS)];
 
