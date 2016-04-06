@@ -3,8 +3,10 @@ use std::mem;
 
 use physics::v3::{V2, scalar, Region};
 
+use ui::UI;
 use ui::geom::Geom;
-use ui::input::KeyAction;
+use ui::input::{KeyAction, EventStatus};
+
 
 pub trait Widget: Sized {
     // All methods operate on `&mut self` so that the widget can cache values internally.
@@ -24,7 +26,7 @@ pub trait Widget: Sized {
     ///
     /// The default implementation calls `OnKeyVisitor::dispatch` to dispatch the event to each
     /// child in turn until one reports that the event has been handled.
-    fn on_key(&mut self, key: KeyAction) -> bool {
+    fn on_key(&mut self, key: KeyAction) -> EventStatus {
         OnKeyVisitor::dispatch(self, key)
     }
 }
@@ -73,18 +75,18 @@ impl Visitor for NullVisitor {
 
 pub struct OnKeyVisitor {
     key: KeyAction,
-    result: bool,
+    result: EventStatus,
 }
 
 impl OnKeyVisitor {
     pub fn new(key: KeyAction) -> OnKeyVisitor {
         OnKeyVisitor {
             key: key,
-            result: false,
+            result: EventStatus::Unhandled,
         }
     }
 
-    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: KeyAction) -> bool {
+    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: KeyAction) -> EventStatus {
         let mut v = OnKeyVisitor::new(key);
         w.walk_layout(&mut v, scalar(0));
         v.result
@@ -93,7 +95,7 @@ impl OnKeyVisitor {
 
 impl Visitor for OnKeyVisitor {
     fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
-        if self.result {
+        if self.result.is_handled() {
             return;
         }
 

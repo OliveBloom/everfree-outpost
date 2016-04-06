@@ -9,6 +9,7 @@
     collections,
     collections_bound,
     core_intrinsics,
+    fnbox,
     )]
 
 #[cfg(asmjs)] #[macro_use] extern crate fakestd as std;

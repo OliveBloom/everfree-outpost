@@ -6,7 +6,7 @@ use physics::v3::{V2, scalar, Region, Align};
 use inventory::Item;
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::KeyAction;
+use ui::input::{KeyAction, EventStatus};
 use ui::item;
 use ui::widget::*;
 
@@ -108,7 +108,7 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyAction) -> bool {
+    fn on_key(&mut self, key: KeyAction) -> EventStatus {
         use ui::input::KeyAction::*;
         let dir =
             match key {
@@ -116,14 +116,14 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
                 MoveDown(amt) =>    Some(V2::new(0,  (amt as i32))),
                 MoveLeft(amt) =>    Some(V2::new(-(amt as i32), 0)),
                 MoveRight(amt) =>   Some(V2::new( (amt as i32), 0)),
-                _ =>            None,
+                _ =>                None,
             };
 
         if let Some(dir) = dir {
             self.state.move_focus(dir, self.dyn.grid_size(), self.dyn.len());
-            return true;
+            return EventStatus::Handled;
         }
 
-        false
+        EventStatus::Unhandled
     }
 }

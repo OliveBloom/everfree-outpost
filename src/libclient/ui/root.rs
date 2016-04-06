@@ -6,7 +6,7 @@ use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::KeyAction;
+use ui::input::{KeyAction, EventStatus};
 use ui::{dialog, dialogs, hotbar};
 use ui::widget::*;
 
@@ -69,11 +69,12 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyAction) -> bool {
+    fn on_key(&mut self, key: KeyAction) -> EventStatus {
         use ui::dialogs::AnyDialog::*;
 
-        if OnKeyVisitor::dispatch(self, key) {
-            return true;
+        let status = OnKeyVisitor::dispatch(self, key);
+        if status.is_handled() {
+            return status;
         }
 
         if let KeyAction::SetHotbar(idx) = key {
@@ -91,10 +92,10 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             // Select the indicated hotbar slot.
             self.state.hotbar.select(idx);
 
-            return true;
+            return EventStatus::Handled;
         }
 
-        false
+        EventStatus::Unhandled
     }
 }
 

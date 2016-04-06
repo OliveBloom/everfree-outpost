@@ -49,7 +49,9 @@ impl UI {
         geom.unwrap()
     }
 
-    pub fn handle_key(&mut self, key: input::KeyAction, invs: &Inventories) -> bool {
+    pub fn handle_key(&mut self,
+                      key: input::KeyAction,
+                      invs: &Inventories) -> input::EventStatus {
         let dyn = root::RootDyn {
             screen_size: V2::new(799, 379),
             inventories: invs,

@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use std::boxed::FnBox;
 
 use gl::GlContext;
 use util;
@@ -19,7 +20,7 @@ use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use ui::UI;
-use ui::input::KeyAction;
+use ui::input::{KeyAction, EventStatus};
 
 
 pub struct Client<'d, GL: GlContext> {
@@ -201,10 +202,20 @@ impl<'d, GL: GlContext> Client<'d, GL> {
     // UI input
 
     pub fn input_key(&mut self, code: u8) -> bool {
-        if let Some(key) = KeyAction::from_code(code) {
-            self.ui.handle_key(key, &self.inventories)
-        } else {
-            false
+        let status =
+            if let Some(key) = KeyAction::from_code(code) {
+                self.ui.handle_key(key, &self.inventories)
+            } else {
+                EventStatus::Unhandled
+            };
+        match status {
+            EventStatus::Unhandled => false,
+            EventStatus::Handled => true,
+            EventStatus::Action(f) => {
+                // TODO: figure out why f(...) doesn't work
+                f.call_box((&mut self.ui,));
+                true
+            },
         }
     }
 

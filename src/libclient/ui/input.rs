@@ -1,3 +1,9 @@
+use std::prelude::v1::*;
+use std::boxed::FnBox;
+
+use ui::UI;
+
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum KeyAction {
     MoveLeft(u8),
@@ -31,6 +37,28 @@ impl KeyAction {
             31 ... 39 => Some(SetHotbar(code as i8 - 31)),
 
             _ => None,
+        }
+    }
+}
+
+
+pub enum EventStatus {
+    Unhandled,
+    Handled,
+    //UseDefault,
+    // TODO: would like to use `&mut Client`, but don't want to thread <GL> all around
+    Action(Box<FnBox(&mut UI)>),
+}
+
+impl EventStatus {
+    pub fn action<F: FnOnce(&mut UI)+'static>(f: F) -> EventStatus {
+        EventStatus::Action(box f)
+    }
+
+    pub fn is_handled(&self) -> bool {
+        match *self {
+            EventStatus::Unhandled => false,
+            _ => true,
         }
     }
 }
