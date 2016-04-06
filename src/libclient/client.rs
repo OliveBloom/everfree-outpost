@@ -208,6 +208,11 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         }
     }
 
+    pub fn open_inventory_dialog(&mut self) {
+        use ui::dialogs::AnyDialog;
+        self.ui.root.dialog.inner = AnyDialog::inventory();
+    }
+
 
     // Physics
 

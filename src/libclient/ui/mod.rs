@@ -18,7 +18,7 @@ mod inventory;
 mod hotbar;
 mod dialog;
 
-mod dialogs;
+pub mod dialogs;    // TODO: make private
 mod root;
 
 

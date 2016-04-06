@@ -163,6 +163,11 @@ pub unsafe extern fn input_key(client: &mut Client, code: u8) -> u8 {
     client.input_key(code) as u8
 }
 
+#[no_mangle]
+pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
+    client.open_inventory_dialog()
+}
+
 
 
 

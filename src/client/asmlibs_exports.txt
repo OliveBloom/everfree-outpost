@@ -18,6 +18,7 @@ inventory_update
 inventory_main_id
 inventory_ability_id
 input_key
+open_inventory_dialog
 load_terrain_chunk
 collide
 find_ceiling

@@ -20,7 +20,7 @@ impl Root {
     pub fn new() -> Root {
         Root {
             hotbar: hotbar::Hotbar::new(),
-            dialog: dialog::Dialog::new(dialogs::AnyDialog::Inventory(dialogs::Inventory::new())),
+            dialog: dialog::Dialog::new(dialogs::AnyDialog::None),
         }
     }
 }

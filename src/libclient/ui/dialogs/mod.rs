@@ -18,6 +18,16 @@ pub enum AnyDialog {
     Inventory(Inventory),
 }
 
+impl AnyDialog {
+    pub fn none() -> AnyDialog {
+        AnyDialog::None
+    }
+
+    pub fn inventory() -> AnyDialog {
+        AnyDialog::Inventory(Inventory::new())
+    }
+}
+
 impl dialog::Inner for AnyDialog {
     fn get_title(&self) -> &str {
         match *self {

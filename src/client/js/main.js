@@ -658,6 +658,7 @@ function setupKeyHandler() {
                     if (item_inv == null) {
                         break;
                     }
+                    /*
                     var inv = item_inv.clone();
                     var ui = new InventoryUIGL(inv);
                     ui_gl.showDialog(ui, 'Inventory');
@@ -676,6 +677,8 @@ function setupKeyHandler() {
                         ui_gl.hideDialog();
                         inv.release();
                     });
+                    */
+                    asm_client.openInventoryDialog();
                     break;
 
                 case 'abilities':
