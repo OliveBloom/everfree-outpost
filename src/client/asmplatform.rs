@@ -1,8 +1,114 @@
 use std::prelude::v1::*;
 use std::cell::{Cell, UnsafeCell};
 use std::mem;
-use client::gl::*;
+use std::str::FromStr;
 
+use client::platform::*;
+use client::platform::gl::*;
+
+
+mod ffi {
+    extern "C" {
+        pub fn asmgl_gen_buffer() -> u32;
+        pub fn asmgl_delete_buffer(name: u32);
+        pub fn asmgl_bind_buffer_array(name: u32);
+        pub fn asmgl_bind_buffer_index(name: u32);
+        pub fn asmgl_buffer_data_alloc(len: usize);
+        pub fn asmgl_buffer_subdata(offset: usize, ptr: *const u8, len: usize);
+
+        pub fn ap_config_get(key_ptr: *const u8,
+                             key_len: usize,
+                             value_len_p: *mut usize) -> *mut u8;
+        pub fn ap_config_set(key_ptr: *const u8,
+                             key_len: usize,
+                             value_ptr: *const u8,
+                             value_len: usize);
+        pub fn ap_config_clear(key_ptr: *const u8,
+                               key_len: usize);
+    }
+}
+
+
+pub struct AsmPlatform {
+    config: AsmConfig,
+    gl: GL,
+}
+
+impl AsmPlatform {
+    pub fn new() -> AsmPlatform {
+        AsmPlatform {
+            config: AsmConfig,
+            gl: GL::new(),
+        }
+    }
+}
+
+impl Platform for AsmPlatform {
+    type GL = GL;
+    fn gl(&mut self) -> &mut GL { &mut self.gl
+    }
+
+    type Config = AsmConfig;
+    fn config(&self) -> &AsmConfig { &self.config }
+    fn config_mut(&mut self) -> &mut AsmConfig { &mut self.config }
+}
+
+
+// Config
+
+pub struct AsmConfig;
+
+impl Config for AsmConfig {
+    fn get_int(&self, key: ConfigKey) -> i64 {
+        match i64::from_str(&self.get_str(key)) {
+            Ok(i) => i,
+            Err(_) => 0,
+        }
+    }
+
+    fn set_int(&mut self, key: ConfigKey, value: i64) {
+        self.set_str(key, &value.to_string());
+    }
+
+    fn get_str(&self, key: ConfigKey) -> String {
+        let key_str = key.to_string();
+        let key_bytes = key_str.as_bytes();
+
+        unsafe {
+            let mut value_len = 0;
+            let value_ptr = ffi::ap_config_get(key_bytes.as_ptr(),
+                                               key_bytes.len(),
+                                               &mut value_len);
+            String::from_raw_parts(value_ptr, value_len, value_len)
+        }
+    }
+
+    fn set_str(&mut self, key: ConfigKey, value: &str) {
+        let key_str = key.to_string();
+        let key_bytes = key_str.as_bytes();
+        let value_bytes = value.as_bytes();
+
+        unsafe {
+            ffi::ap_config_set(key_bytes.as_ptr(),
+                               key_bytes.len(),
+                               value_bytes.as_ptr(),
+                               value_bytes.len());
+        }
+    }
+
+    fn clear(&mut self, key: ConfigKey) {
+        let key_str = key.to_string();
+        let key_bytes = key_str.as_bytes();
+
+        unsafe {
+            ffi::ap_config_clear(key_bytes.as_ptr(),
+                                 key_bytes.len());
+        }
+    }
+}
+
+
+// GlContext
 
 #[unsafe_no_drop_flag]
 struct InnerPtr(*mut (UnsafeCell<Inner>, Cell<usize>));
@@ -64,18 +170,6 @@ impl Inner {
             cur_array_buffer: 0,
             cur_index_buffer: 0,
         }
-    }
-}
-
-
-mod ffi {
-    extern "C" {
-        pub fn asmgl_gen_buffer() -> u32;
-        pub fn asmgl_delete_buffer(name: u32);
-        pub fn asmgl_bind_buffer_array(name: u32);
-        pub fn asmgl_bind_buffer_index(name: u32);
-        pub fn asmgl_buffer_data_alloc(len: usize);
-        pub fn asmgl_buffer_subdata(offset: usize, ptr: *const u8, len: usize);
     }
 }
 

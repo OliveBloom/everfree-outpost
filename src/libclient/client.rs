@@ -1,7 +1,8 @@
 use std::prelude::v1::*;
 use std::boxed::FnBox;
 
-use gl::GlContext;
+use platform::Platform;
+use platform::gl::GlContext;
 use util;
 
 use graphics::types::{BlockChunk, LocalChunks};
@@ -23,8 +24,9 @@ use ui::UI;
 use ui::input::{KeyAction, EventStatus};
 
 
-pub struct Client<'d, GL: GlContext> {
+pub struct Client<'d, P: Platform> {
     data: &'d Data,
+    platform: P,
 
     chunks: Box<LocalChunks>,
     terrain_shape: Box<TerrainShape>,
@@ -33,13 +35,17 @@ pub struct Client<'d, GL: GlContext> {
 
     ui: UI,
 
-    renderer: Renderer<GL>,
+    renderer: Renderer<P::GL>,
 }
 
-impl<'d, GL: GlContext> Client<'d, GL> {
-    pub fn new(data: &'d Data, gl: GL) -> Client<'d, GL> {
+impl<'d, P: Platform> Client<'d, P> {
+    pub fn new(data: &'d Data, platform: P) -> Client<'d, P> {
+        let mut platform = platform;
+        let renderer = Renderer::new(platform.gl());
+
         Client {
             data: data,
+            platform: platform,
 
             chunks: box [[0; 1 << (3 * CHUNK_BITS)]; 1 << (2 * LOCAL_BITS)],
             terrain_shape: box TerrainShape::new(),
@@ -48,7 +54,7 @@ impl<'d, GL: GlContext> Client<'d, GL> {
 
             ui: UI::new(),
 
-            renderer: Renderer::new(gl),
+            renderer: renderer,
         }
     }
 
@@ -270,19 +276,19 @@ impl<'d, GL: GlContext> Client<'d, GL> {
         self.renderer.load_ui_geometry(&geom);
     }
 
-    pub fn get_terrain_geometry_buffer(&self) -> &GL::Buffer {
+    pub fn get_terrain_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
         self.renderer.get_terrain_buffer()
     }
 
-    pub fn get_structure_geometry_buffer(&self) -> &GL::Buffer {
+    pub fn get_structure_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
         self.renderer.get_structure_buffer()
     }
 
-    pub fn get_light_geometry_buffer(&self) -> &GL::Buffer {
+    pub fn get_light_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
         self.renderer.get_light_buffer()
     }
 
-    pub fn get_ui_geometry_buffer(&self) -> &GL::Buffer {
+    pub fn get_ui_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
         self.renderer.get_ui_buffer()
     }
 

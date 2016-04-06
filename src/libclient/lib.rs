@@ -29,7 +29,7 @@ pub mod client;
 pub mod data;
 mod fonts;
 
-pub mod gl;
+pub mod platform;
 
 mod util;
 

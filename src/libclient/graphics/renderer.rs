@@ -5,9 +5,9 @@ use std::slice;
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
-use gl::{GlContext, GlBuffer};
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
+use platform::gl::{GlContext, GlBuffer};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -19,8 +19,6 @@ use super::terrain;
 
 
 pub struct Renderer<GL: GlContext> {
-    #[allow(dead_code)] gl: GL,
-
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
     light_geom: GeomCache<GL, Region<V2>>,
@@ -29,15 +27,13 @@ pub struct Renderer<GL: GlContext> {
 }
 
 impl<GL: GlContext> Renderer<GL> {
-    pub fn new(mut gl: GL) -> Renderer<GL> {
-        let terrain_geom = GeomCache::new(&mut gl);
-        let structure_geom = GeomCache::new(&mut gl);
-        let light_geom = GeomCache::new(&mut gl);
+    pub fn new(gl: &mut GL) -> Renderer<GL> {
+        let terrain_geom = GeomCache::new(gl);
+        let structure_geom = GeomCache::new(gl);
+        let light_geom = GeomCache::new(gl);
         let ui_buffer = gl.create_buffer();
 
         Renderer {
-            gl: gl,
-
             terrain_geom: terrain_geom,
             structure_geom: structure_geom,
             light_geom: light_geom,
