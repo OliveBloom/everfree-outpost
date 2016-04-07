@@ -8,8 +8,8 @@ def build_parser():
     args = argparse.ArgumentParser()
 
     args.add_argument('--mode', required=True,
-            choices=('blocks', 'templates', 'template_parts', 'template_verts',
-                'template_shapes'),
+            choices=('blocks', 'item_defs', 'item_strs',
+                'templates', 'template_parts', 'template_verts', 'template_shapes'),
             help='convert block defs')
 
     args.add_argument('input', metavar='FILE_IN.json',
@@ -88,6 +88,36 @@ def convert_blocks(j):
         b.extend(c.convert(obj))
     return b
 
+def convert_items(j):
+    # Combine strings first
+    idx_map = {}
+    strs = bytearray()
+    defs = bytearray()
+
+    def intern(s):
+        if s not in idx_map:
+            idx_map[s] = len(strs)
+            strs.extend(s.encode('utf-8'))
+        return idx_map[s]
+
+    c = Converter(16, (
+        Field('name_off',       'I',  0,  0),
+        Field('name_len',       'I',  4,  0),
+        Field('ui_name_off',    'I',  8,  0),
+        Field('ui_name_len',    'I', 12,  0),
+        ))
+
+    for obj in j:
+        defs.extend(c.convert({
+            'name_off': intern(obj['name']),
+            'name_len': len(obj['name']),
+            'ui_name_off': intern(obj['ui_name']),
+            'ui_name_len': len(obj['ui_name']),
+            }))
+
+    return defs, strs
+
+
 def convert_templates(j):
     c = Converter(20, (
         Field('size',           'BBB',  0),
@@ -150,6 +180,10 @@ def main():
 
     if args.mode == 'blocks':
         b = convert_blocks(j)
+    elif args.mode == 'item_defs':
+        b, _ = convert_items(j)
+    elif args.mode == 'item_strs':
+        _, b = convert_items(j)
     elif args.mode == 'templates':
         b = convert_templates(j)
     elif args.mode == 'template_parts':

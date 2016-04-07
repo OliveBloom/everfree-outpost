@@ -51,8 +51,8 @@ impl ConfigKey {
 }
 
 pub trait Config {
-    fn get_int(&self, key: ConfigKey) -> i64;
-    fn set_int(&mut self, key: ConfigKey, value: i64);
+    fn get_int(&self, key: ConfigKey) -> i32;
+    fn set_int(&mut self, key: ConfigKey, value: i32);
 
     fn get_str(&self, key: ConfigKey) -> String;
     fn set_str(&mut self, key: ConfigKey, value: &str);

@@ -2,6 +2,8 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
 
+use data::Data;
+use platform::{Config, ConfigKey};
 use ui::atlas;
 use ui::geom::Geom;
 use ui::item;
@@ -65,6 +67,22 @@ impl Hotbar {
             cur_item: -1,
             cur_ability: -1,
         }
+    }
+
+    pub fn init<C: Config>(&mut self, cfg: &C, data: &Data) {
+        for i in 0 .. 9 {
+            let name = cfg.get_str(ConfigKey::HotbarItemName(i as u8));
+            let id = match data.find_item_id(&name) {
+                Some(x) => x,
+                None => continue,
+            };
+            let is_item = cfg.get_int(ConfigKey::HotbarIsItem(i as u8)) != 0;
+            self.slots[i].item_id = id;
+            self.slots[i].is_ability = !is_item;
+        }
+
+        self.cur_item = cfg.get_int(ConfigKey::HotbarActiveItem) as i8;
+        self.cur_ability = cfg.get_int(ConfigKey::HotbarActiveAbility) as i8;
     }
 
     pub fn set_slot(&mut self, idx: i8, item_id: u16, is_ability: bool) {

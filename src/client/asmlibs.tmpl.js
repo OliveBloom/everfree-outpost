@@ -28,6 +28,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_buffer_data_alloc = env.asmgl_buffer_data_alloc;
     var _asmgl_buffer_subdata = env.asmgl_buffer_subdata;
 
+    var _ap_config_get = env.ap_config_get;
+
     var tempRet0 = 0;
 
     function __adjust_stack(offset) {
@@ -139,6 +141,45 @@ var asmlibs_code_raw = function(global, env, buffer) {
             num = (num-1)|0;
         }
         return ret|0;
+    }
+
+    function _memcmp(a, b, num) {
+        a = a|0; b = b|0; num = num|0;
+        var a_byte = 0;
+        var b_byte = 0;
+        if ((a&3) == (b&3)) {
+            while (b & 3) {
+                if ((num|0) == 0) return 0;
+                a_byte = HEAP8[a>>0]|0;
+                b_byte = HEAP8[b>>0]|0;
+                if ((a_byte|0) != (b_byte|0)) {
+                    return (b_byte - a_byte)|0;
+                }
+                a = (a+1)|0;
+                b = (b+1)|0;
+                num = (num-1)|0;
+            }
+            while ((num|0) >= 4) {
+                if ((HEAP32[a>>2]|0) != (HEAP32[b>>2]|0)) {
+                    // Let the later case take care of it.
+                    break;
+                }
+                a = (a+4)|0;
+                b = (b+4)|0;
+                num = (num-4)|0;
+            }
+        }
+        while ((num|0) > 0) {
+            a_byte = HEAP8[a>>0]|0;
+            b_byte = HEAP8[b>>0]|0;
+            if ((a_byte|0) != (b_byte|0)) {
+                return (b_byte - a_byte)|0;
+            }
+            a = (a+1)|0;
+            b = (b+1)|0;
+            num = (num-1)|0;
+        }
+        return 0;
     }
 
     function _llvm_cttz_i32(x) {

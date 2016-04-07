@@ -59,14 +59,14 @@ impl Platform for AsmPlatform {
 pub struct AsmConfig;
 
 impl Config for AsmConfig {
-    fn get_int(&self, key: ConfigKey) -> i64 {
-        match i64::from_str(&self.get_str(key)) {
+    fn get_int(&self, key: ConfigKey) -> i32 {
+        match i32::from_str(&self.get_str(key)) {
             Ok(i) => i,
             Err(_) => 0,
         }
     }
 
-    fn set_int(&mut self, key: ConfigKey, value: i64) {
+    fn set_int(&mut self, key: ConfigKey, value: i32) {
         self.set_str(key, &value.to_string());
     }
 

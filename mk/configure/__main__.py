@@ -303,6 +303,10 @@ if __name__ == '__main__':
         data.binary_defs('$b_data/structure_parts_client.json', 'template_parts'),
         data.binary_defs('$b_data/structure_verts_client.json', 'template_verts'),
         data.binary_defs('$b_data/structure_shapes_client.json', 'template_shapes'),
+        data.binary_defs('$b_data/items_client.json', 'item_defs',
+            out_file='$b_data/item_defs_client.bin'),
+        data.binary_defs('$b_data/items_client.json', 'item_strs',
+            out_file='$b_data/item_strs_client.bin'),
         data.pack(),
         data.credits('$b_data/credits.html'),
 

@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 use std::boxed::FnBox;
 
-use ui::UI;
+use client::ClientObj;
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -47,11 +47,11 @@ pub enum EventStatus {
     Handled,
     //UseDefault,
     // TODO: would like to use `&mut Client`, but don't want to thread <GL> all around
-    Action(Box<FnBox(&mut UI)>),
+    Action(Box<FnBox(&mut ClientObj)>),
 }
 
 impl EventStatus {
-    pub fn action<F: FnOnce(&mut UI)+'static>(f: F) -> EventStatus {
+    pub fn action<F: FnOnce(&mut ClientObj)+'static>(f: F) -> EventStatus {
         EventStatus::Action(box f)
     }
 

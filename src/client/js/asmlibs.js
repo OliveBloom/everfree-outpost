@@ -1,8 +1,10 @@
 var module = window['asmlibs_code'];
 var static_data = window['asmlibs_data'];
 
+var config = require('config');
 var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
+var encodeUtf8 = require('util/misc').encodeUtf8;
 var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
 
 var AsmGl = require('asmgl').AsmGl;
@@ -28,7 +30,7 @@ var HEAP_START = STACK_END;
 
 // External functions
 
-var module_env = function(buffer, asmgl) {
+var module_env = function(asm) {
     var msg_buffer = '';
 
     return ({
@@ -38,7 +40,7 @@ var module_env = function(buffer, asmgl) {
         },
 
         'writeStr': function(ptr, len) {
-            var view = new Uint8Array(buffer, ptr, len);
+            var view = asm._makeView(Uint8Array, ptr, len);
             msg_buffer += decodeUtf8(view);
         },
 
@@ -51,23 +53,42 @@ var module_env = function(buffer, asmgl) {
             return Date.now() & 0xffffffff;
         },
 
+
         'asmgl_gen_buffer': function() {
-            return asmgl.genBuffer();
+            return asm.asmgl.genBuffer();
         },
         'asmgl_delete_buffer': function(name) {
-            asmgl.deleteBuffer(name);
+            asm.asmgl.deleteBuffer(name);
         },
         'asmgl_bind_buffer_array': function(name) {
-            asmgl.bindBufferArray(name);
+            asm.asmgl.bindBufferArray(name);
         },
         'asmgl_bind_buffer_index': function(name) {
-            asmgl.bindBufferIndex(name);
+            asm.asmgl.bindBufferIndex(name);
         },
         'asmgl_buffer_data_alloc': function(len) {
-            asmgl.bufferDataAlloc(len);
+            asm.asmgl.bufferDataAlloc(len);
         },
         'asmgl_buffer_subdata': function(offset, ptr, len) {
-            asmgl.bufferSubdata(offset, new Uint8Array(buffer, ptr, len));
+            asm.asmgl.bufferSubdata(offset, asm._makeView(Uint8Array, ptr, len));
+        },
+
+
+        'ap_config_get': function(key_ptr, key_len, value_len_p) {
+            var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
+            var key = decodeUtf8(key_view);
+            var value = config.rawGet(key);
+
+            var value_utf8 = unescape(encodeURIComponent('' + value));
+            var len = value_utf8.length;
+            var value_view = asm._heapAlloc(Uint8Array, len);
+            for (var i = 0; i < len; ++i) {
+                value_view[i] = value_utf8.charCodeAt(i);
+            }
+
+            var value_len_p_view = asm._makeView(Uint32Array, value_len_p, 4);
+            value_len_p_view[0] = len;
+            return value_view.byteOffset;
         },
 
 
@@ -118,7 +139,7 @@ function DynAsm() {
 
     this.buffer = new ArrayBuffer(next_heap_size(INIT_HEAP_SIZE));
     this._memcpy(STATIC_START, static_data);
-    this._raw = module(window, module_env(this.buffer, this.asmgl), this.buffer);
+    this._raw = module(window, module_env(this), this.buffer);
 
     this._raw['asmlibs_init']();
     this._raw['asmmalloc_init'](HEAP_START, this.buffer.byteLength);
@@ -216,7 +237,7 @@ DynAsm.prototype.initClient = function(gl, assets) {
     // AsmGl must be initialized before calling `client_init`.
     this.asmgl.init(gl);
 
-    var blobs = this._stackAlloc(Int32Array, 5 * 2);
+    var blobs = this._stackAlloc(Int32Array, 7 * 2);
     var idx = 0;
     var this_ = this;
     var load_blob = function(x) {
@@ -228,10 +249,15 @@ DynAsm.prototype.initClient = function(gl, assets) {
     };
 
     load_blob(assets['block_defs_bin']);
+    load_blob(assets['item_defs_bin']);
+    load_blob(assets['item_strs_bin']);
     load_blob(assets['template_defs_bin']);
     load_blob(assets['template_part_defs_bin']);
     load_blob(assets['template_vert_defs_bin']);
     load_blob(assets['template_shape_defs_bin']);
+
+    // Item names get custom handling
+
 
     this.data = this._raw['asmmalloc_alloc'](this.SIZEOF.Data, this.SIZEOF.DataAlignment);
     // NB: takes ownership of `blobs`

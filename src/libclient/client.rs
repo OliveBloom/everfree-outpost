@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 use std::boxed::FnBox;
 
-use platform::Platform;
+use platform::{Platform, PlatformObj};
 use platform::gl::GlContext;
 use util;
 
@@ -43,7 +43,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let mut platform = platform;
         let renderer = Renderer::new(platform.gl());
 
-        Client {
+        let mut c = Client {
             data: data,
             platform: platform,
 
@@ -55,7 +55,11 @@ impl<'d, P: Platform> Client<'d, P> {
             ui: UI::new(),
 
             renderer: renderer,
-        }
+        };
+
+        c.ui.root.init_hotbar(c.platform.config(), &c.data);
+
+        c
     }
 
 
@@ -219,7 +223,7 @@ impl<'d, P: Platform> Client<'d, P> {
             EventStatus::Handled => true,
             EventStatus::Action(f) => {
                 // TODO: figure out why f(...) doesn't work
-                f.call_box((&mut self.ui,));
+                f.call_box((self,));
                 true
             },
         }
@@ -270,8 +274,6 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
 
         // Also refresh the UI buffer.
-        self.ui.root.hotbar.slots[0].item_id = 70;
-        self.ui.root.hotbar.slots[1].item_id = 54;
         let geom = self.ui.generate_geom(&self.inventories);
         self.renderer.load_ui_geometry(&geom);
     }
@@ -304,4 +306,15 @@ impl<'d, P: Platform> Client<'d, P> {
         }
         println!("counter {}", counter);
     }
+}
+
+
+pub trait ClientObj {
+    fn platform(&mut self) -> &mut PlatformObj;
+    fn ui(&mut self) -> &mut UI;
+}
+
+impl<'d, P: Platform> ClientObj for Client<'d, P> {
+    fn platform(&mut self) -> &mut PlatformObj { &mut self.platform }
+    fn ui(&mut self) -> &mut UI { &mut self.ui }
 }

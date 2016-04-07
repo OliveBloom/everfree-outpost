@@ -185,3 +185,24 @@ ConfigItem.prototype.reset = function() {
 ConfigItem.prototype.save = function() {
     localStorage.setItem(this.key, JSON.stringify(this.value));
 };
+
+
+function rawGet(key) {
+    var parts = key.split('.');
+
+    var base_key = parts[0];
+    var base_str = localStorage.getItem(base_key);
+    var obj;
+    if (!base_str) {
+        obj = DEFAULT_CONFIG[base_key];
+    } else {
+        obj = JSON.parse(base_str);
+    }
+
+    for (var i = 1; i < parts.length; ++i) {
+        obj = obj[parts[i]];
+    }
+
+    return obj;
+};
+exports.rawGet = rawGet;

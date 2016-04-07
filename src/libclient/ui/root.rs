@@ -2,8 +2,10 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
 
+use data::Data;
 use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
+use platform::Config;
 use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
@@ -22,6 +24,10 @@ impl Root {
             hotbar: hotbar::Hotbar::new(),
             dialog: dialog::Dialog::new(dialogs::AnyDialog::None),
         }
+    }
+
+    pub fn init_hotbar<C: Config>(&mut self, cfg: &C, data: &Data) {
+        self.hotbar.init(cfg, data);
     }
 }
 

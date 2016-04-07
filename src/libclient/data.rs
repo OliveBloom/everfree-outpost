@@ -7,8 +7,36 @@ use graphics::types::{BlockData, StructureTemplate, TemplatePart, TemplateVertex
 use util;
 
 
+pub struct RawItemDef {
+    pub name_off: usize,
+    pub name_len: usize,
+    pub ui_name_off: usize,
+    pub ui_name_len: usize,
+}
+
+pub struct ItemDef<'a> {
+    def: &'a RawItemDef,
+    strs: &'a str,
+}
+
+impl<'a> ItemDef<'a> {
+    fn slice(&self, off: usize, len: usize) -> &'a str {
+        &self.strs[off .. off + len]
+    }
+
+    pub fn name(&self) -> &'a str {
+        self.slice(self.def.name_off, self.def.name_len)
+    }
+
+    pub fn ui_name(&self) -> &'a str {
+        self.slice(self.def.ui_name_off, self.def.ui_name_len)
+    }
+}
+
 pub struct Data {
     pub blocks: Box<[BlockData]>,
+    item_defs: Box<[RawItemDef]>,
+    item_strs: Box<str>,
     pub templates: Box<[StructureTemplate]>,
     pub template_parts: Box<[TemplatePart]>,
     pub template_verts: Box<[TemplateVertex]>,
@@ -17,12 +45,16 @@ pub struct Data {
 
 impl Data {
     pub fn new(blocks: Box<[BlockData]>,
+               item_defs: Box<[RawItemDef]>,
+               item_strs: Box<str>,
                templates: Box<[StructureTemplate]>,
                template_parts: Box<[TemplatePart]>,
                template_verts: Box<[TemplateVertex]>,
                template_shapes: Box<[Shape]>) -> Data {
         Data {
             blocks: blocks,
+            item_strs: item_strs,
+            item_defs: item_defs,
             templates: templates,
             template_parts: template_parts,
             template_verts: template_verts,
@@ -41,5 +73,26 @@ impl Data {
         let size = util::unpack_v3(t.size);
         let volume = (size.x * size.y * size.z) as usize;
         &self.template_shapes[base .. base + volume]
+    }
+
+    fn make_item_def<'a>(&'a self, raw: &'a RawItemDef) -> ItemDef<'a> {
+        ItemDef {
+            def: raw,
+            strs: &self.item_strs,
+        }
+    }
+
+    pub fn item_def(&self, id: u16) -> ItemDef {
+        self.make_item_def(&self.item_defs[id as usize])
+    }
+
+    pub fn find_item_id(&self, name: &str) -> Option<u16> {
+        for (i, raw) in self.item_defs.iter().enumerate() {
+            let def = self.make_item_def(raw);
+            if name == def.name() {
+                return Some(i as u16);
+            }
+        }
+        None
     }
 }

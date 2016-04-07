@@ -91,8 +91,8 @@ def ui_atlas(out_dir, src_dir):
             out_dir = %out_dir
     ''', **locals())
 
-def binary_defs(src_file, mode):
-    out_file = os.path.splitext(src_file)[0] + '.bin'
+def binary_defs(src_file, mode, out_file=None):
+    out_file = out_file or os.path.splitext(src_file)[0] + '.bin'
 
     return template('''
         build %out_file: gen_binary_defs %src_file $
@@ -127,7 +127,8 @@ def pack():
             'day_night.json',
             'ui_atlas.png', 'ui_atlas.json',
             ) + tuple('%s_client.bin' % f
-                    for f in ('blocks', 'structures', 'structure_parts',
+                    for f in ('blocks', 'item_defs', 'item_strs',
+                        'structures', 'structure_parts',
                         'structure_verts', 'structure_shapes'))
 
     return template('''

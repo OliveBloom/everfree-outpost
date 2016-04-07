@@ -55,15 +55,21 @@ pub unsafe extern fn asmlibs_init() {
 }
 
 #[no_mangle]
-pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 5],
+pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 7],
                                out: *mut Data) {
     let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
-    let templates =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
-    let template_parts =    make_boxed_slice(blobs[2].0 as *mut _, blobs[2].1);
-    let template_verts =    make_boxed_slice(blobs[3].0 as *mut _, blobs[3].1);
-    let template_shapes =   make_boxed_slice(blobs[4].0 as *mut _, blobs[4].1);
+    let item_defs =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
+    let item_strs =         make_boxed_slice(blobs[2].0 as *mut _, blobs[2].1);
+    let templates =         make_boxed_slice(blobs[3].0 as *mut _, blobs[3].1);
+    let template_parts =    make_boxed_slice(blobs[4].0 as *mut _, blobs[4].1);
+    let template_verts =    make_boxed_slice(blobs[5].0 as *mut _, blobs[5].1);
+    let template_shapes =   make_boxed_slice(blobs[6].0 as *mut _, blobs[6].1);
+
+    let item_strs = String::from_utf8(item_strs.into_vec()).unwrap().into_boxed_str();
+
     ptr::write(out, Data::new(
-            blocks, templates, template_parts, template_verts, template_shapes));
+            blocks, item_defs, item_strs,
+            templates, template_parts, template_verts, template_shapes));
 }
 
 #[no_mangle]
