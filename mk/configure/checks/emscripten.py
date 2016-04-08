@@ -5,14 +5,12 @@ from configure.checks.context import ConfigError
 def configure(ctx):
     ctx.detect('emscripten_fastcomp_prefix', 'emscripten-fastcomp installation',
             ('', '/usr', '/usr/local'), chk_fastcomp)
-    ctx.detect('emscripten_passes_prefix', 'rust-emscripten-passes build directory',
-            ('',), chk_plugins, deps=('emscripten_fastcomp_prefix',))
 
 def requirements(ctx):
     if ctx.info.data_only:
         return ()
     else:
-        return ('emscripten_fastcomp_prefix', 'emscripten_passes_prefix')
+        return ('emscripten_fastcomp_prefix',)
 
 
 def chk_fastcomp(ctx, prefix):

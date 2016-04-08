@@ -141,31 +141,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
 
     return ({
         __adjust_stack: __adjust_stack,
-        get_sizes: _get_sizes,
 
-        collide: _collide,
-        set_region_shape: _set_region_shape,
-        refresh_shape_cache: _refresh_shape_cache,
-        find_ceiling: _find_ceiling,
-        floodfill: _floodfill,
-
-        terrain_geom_init: _terrain_geom_init,
-        terrain_geom_reset: _terrain_geom_reset,
-        terrain_geom_generate: _terrain_geom_generate,
-
-        structure_buffer_init: _structure_buffer_init,
-        structure_buffer_insert: _structure_buffer_insert,
-        structure_buffer_remove: _structure_buffer_remove,
-
-        structure_geom_init: _structure_geom_init,
-        structure_geom_reset: _structure_geom_reset,
-        structure_geom_generate: _structure_geom_generate,
-
-        light_geom_init: _light_geom_init,
-        light_geom_reset: _light_geom_reset,
-        light_geom_generate: _light_geom_generate,
-
-        test: _test,
+        // INSERT_EMSCRIPTEN_EXPORTS
     });
 };
 
@@ -180,6 +157,10 @@ window.asmlibs_code = function(global, env, buffer) {
     return asmlibs_code_raw(global, env, buffer);
 };
 
-window.asmlibs_data = new Uint8Array(
+window.asmlibs_data = new Uint8Array([
     // INSERT_EMSCRIPTEN_STATIC
-);
+]);
+
+window.asmlibs_data_size =
+    // INSERT_EMSCRIPTEN_DATA_SIZE
+;
