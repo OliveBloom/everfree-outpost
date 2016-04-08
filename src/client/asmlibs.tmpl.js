@@ -29,6 +29,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_buffer_subdata = env.asmgl_buffer_subdata;
 
     var _ap_config_get = env.ap_config_get;
+    var _ap_config_set = env.ap_config_set;
 
     var tempRet0 = 0;
 

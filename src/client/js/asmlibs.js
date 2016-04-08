@@ -92,6 +92,15 @@ var module_env = function(asm) {
             return value_view.byteOffset;
         },
 
+        'ap_config_set': function(key_ptr, key_len, value_ptr, value_len) {
+            var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
+            var key = decodeUtf8(key_view);
+            var value_view = asm._makeView(Uint8Array, value_ptr, value_len);
+            var value = decodeUtf8(value_view);
+
+            config.rawSet(key, value);
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,

@@ -206,3 +206,39 @@ function rawGet(key) {
     return obj;
 };
 exports.rawGet = rawGet;
+
+function rawSet(key, val) {
+    var parts = key.split('.');
+    var base_key = parts[0];
+
+    if (parts.length > 1) {
+        var base_str = localStorage.getItem(base_key)
+        var base_obj;
+        if (!base_str) {
+            base_obj = DEFAULT_CONFIG[base_key];
+        } else {
+            base_obj = JSON.parse(base_str);
+        }
+
+        var obj = base_obj;
+        for (var i = 1; i < parts.length - 1; ++i) {
+            obj = obj[parts[i]];
+        }
+
+        if (typeof obj[parts[parts.length - 1]] === 'number') {
+            val = +val;
+        }
+        obj[parts[parts.length - 1]] = val;
+
+        localStorage.setItem(base_key, JSON.stringify(base_obj));
+    } else {
+        var val_str;
+        if (typeof DEFAULT_CONFIG[base_key] === 'number') {
+            val_str = JSON.stringify(+val);
+        } else {
+            val_str = JSON.stringify(val);
+        }
+        localStorage.setItem(base_key, val_str);
+    }
+};
+exports.rawSet = rawSet;

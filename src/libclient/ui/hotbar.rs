@@ -135,6 +135,18 @@ impl Hotbar {
 
         V2::new(w, h)
     }
+
+    pub fn config_set_slot(cfg: &mut Config, idx: i8, name: String, is_ability: bool) {
+        cfg.set_str(ConfigKey::HotbarItemName(idx as u8), &name);
+        cfg.set_int(ConfigKey::HotbarIsItem(idx as u8), (!is_ability) as i32);
+    }
+
+    pub fn config_select(cfg: &mut Config, idx: i8, is_ability: bool) {
+        let key =
+            if is_ability { ConfigKey::HotbarActiveAbility }
+            else { ConfigKey::HotbarActiveItem };
+        cfg.set_int(key, idx as i32);
+    }
 }
 
 impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {

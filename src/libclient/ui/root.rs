@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
 
+use client::ClientObj;
 use data::Data;
 use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
@@ -28,6 +29,19 @@ impl Root {
 
     pub fn init_hotbar<C: Config>(&mut self, cfg: &C, data: &Data) {
         self.hotbar.init(cfg, data);
+    }
+
+    fn hotbar_assign(&mut self, idx: i8, item_id: u16, is_ability: bool) -> EventStatus {
+        self.hotbar.set_slot(idx, item_id, is_ability);
+        self.hotbar.select(idx);
+
+        return EventStatus::Action(box move |c: &mut ClientObj| {
+            let name = String::from(c.data().item_def(item_id).name());
+            let platform = c.platform();
+            let cfg = platform.config_mut();
+            hotbar::Hotbar::config_set_slot(cfg, idx, name, is_ability);
+            hotbar::Hotbar::config_select(cfg, idx, is_ability);
+        });
     }
 }
 
@@ -76,7 +90,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     }
 
     fn on_key(&mut self, key: KeyAction) -> EventStatus {
-        use ui::dialogs::AnyDialog::*;
+        use ui::dialogs::AnyDialog::{Inventory};
 
         let status = OnKeyVisitor::dispatch(self, key);
         if status.is_handled() {
@@ -85,20 +99,29 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 
         if let KeyAction::SetHotbar(idx) = key {
             // If the inventory or ability dialog is open, assign the selected item to the hotbar.
-            match self.state.dialog.inner {
-                Inventory(ref inv_dialog) => {
-                    if let Some(inv) = self.dyn.inventories.main_inventory() {
-                        let item_id = inv_dialog.focused_item(inv);
-                        self.state.hotbar.set_slot(idx, item_id, false);
-                    }
-                },
-                _ => {},
+            let opt_assign =
+                match self.state.dialog.inner {
+                    Inventory(ref inv_dialog) => {
+                        if let Some(inv) = self.dyn.inventories.main_inventory() {
+                            Some((inv_dialog.focused_item(inv), false))
+                        } else {
+                            None
+                        }
+                    },
+
+                    _ => None
+                };
+
+            if let Some((item_id, is_ability)) = opt_assign {
+                return self.state.hotbar_assign(idx, item_id, is_ability);
+            } else {
+                // Select the indicated hotbar slot.
+                let is_ability = self.state.hotbar.slots[idx as usize].is_ability;
+                self.state.hotbar.select(idx);
+                return EventStatus::Action(box move |c: &mut ClientObj| {
+                    hotbar::Hotbar::config_select(c.platform().config_mut(), idx, is_ability);
+                });
             }
-
-            // Select the indicated hotbar slot.
-            self.state.hotbar.select(idx);
-
-            return EventStatus::Handled;
         }
 
         EventStatus::Unhandled
