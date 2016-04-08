@@ -7,8 +7,6 @@ from configure.util import join, maybe
 def rules(i):
     fastcomp = lambda p: os.path.join(i.emscripten_fastcomp_prefix, 'bin', p) \
             if i.emscripten_fastcomp_prefix is not None else p
-    passes = lambda p: os.path.join(i.emscripten_passes_prefix, p) \
-            if i.emscripten_passes_prefix is not None else p
 
     compile_base = join('$rustc $in',
             '--out-dir $b_asmjs',
@@ -26,9 +24,6 @@ def rules(i):
         em_llvm_as = %{fastcomp('llvm-as')}
         em_opt = %{fastcomp('opt')}
         em_llc = %{fastcomp('llc')}
-
-        em_pass_remove_overflow_checks = %{passes('RemoveOverflowChecks.so')}
-        em_pass_remove_assume = %{passes('RemoveAssume.so')}
 
 
         # See comment in native.py about this sed command
@@ -58,15 +53,12 @@ def rules(i):
 
         rule asm_optimize_bc
             command = $em_opt $in $
-                -load=$em_pass_remove_overflow_checks $
-                -load=$em_pass_remove_assume $
                 -strip-debug $
                 -internalize -internalize-public-api-list="$$(cat $exports_file)" $
-                -remove-overflow-checks $
-                -remove-assume $
                 -globaldce $
-                -pnacl-abi-simplify-preopt -pnacl-abi-simplify-postopt $
-                -enable-emscripten-cxx-exceptions $
+                -disable-loop-vectorization -disable-slp-vectorization $
+                -vectorize-loops=false -vectorize-slp=false $
+                -vectorize-slp-aggressive=false $
                 -o $out
             description = ASMJS $out
 
@@ -79,16 +71,12 @@ def rules(i):
                 -march=js -filetype=asm $
                 -emscripten-assertions=1 $
                 -emscripten-no-aliasing-function-pointers $
-                -O3 $
+                -O0 $
                 -o $out
             description = ASMJS $out
 
-        rule asm_add_function_tables
-            command = $python3 $root/mk/misc/asmjs_function_tables.py <$in >$out
-            description = ASMJS $out
-
-        rule asm_insert_functions
-            command = $python3 $root/mk/misc/asmjs_insert_functions.py $in >$out
+        rule asm_fill_template
+            command = $python3 $root/mk/misc/asmjs_fill_template.py $in >$out
             description = ASMJS $out
     ''', **locals())
 
@@ -112,8 +100,6 @@ def asmlibs(name, rust_src, rust_deps, exports_file, template_file):
         build %base.opt.bc: asm_optimize_bc %base.bc | %base.exports.txt
             exports_file = %base.exports.txt
         build %base.0.js: asm_generate_js %base.opt.bc
-        build %base.1.js: asm_add_function_tables %base.0.js $
-            | $root/mk/misc/asmjs_function_tables.py
-        build %base.js: asm_insert_functions %template_file %base.1.js $
-            | $root/mk/misc/asmjs_insert_functions.py
+        build %base.js: asm_fill_template %template_file %base.0.js %exports_file $
+            | $root/mk/misc/asmjs_fill_template.py
     ''', base = '$b_asmjs/%s' % name, **locals())

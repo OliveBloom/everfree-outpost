@@ -203,46 +203,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
 
     return ({
         __adjust_stack: __adjust_stack,
-        get_sizes: _get_sizes,
 
-        asmmalloc_init: _asmmalloc_init,
-        asmmalloc_reinit: _asmmalloc_reinit,
-        asmmalloc_max_allocated_address: _asmmalloc_max_allocated_address,
-        asmmalloc_alloc: _asmmalloc_alloc,
-        asmmalloc_free: _asmmalloc_free,
-        asmmalloc_debug_print: _asmmalloc_debug_print,
-
-        asmlibs_init: _asmlibs_init,
-        data_init: _data_init,
-        client_init: _client_init,
-        client_reset: _client_reset,
-
-        load_terrain_chunk: _load_terrain_chunk,
-
-        structure_appear: _structure_appear,
-        structure_gone: _structure_gone,
-        structure_replace: _structure_replace,
-
-        inventory_appear: _inventory_appear,
-        inventory_gone: _inventory_gone,
-        inventory_update: _inventory_update,
-        inventory_main_id: _inventory_main_id,
-        inventory_ability_id: _inventory_ability_id,
-
-        input_key: _input_key,
-        open_inventory_dialog: _open_inventory_dialog,
-
-        collide: _collide,
-        find_ceiling: _find_ceiling,
-        floodfill: _floodfill,
-
-        prepare_geometry: _prepare_geometry,
-        get_terrain_geometry_buffer: _get_terrain_geometry_buffer,
-        get_structure_geometry_buffer: _get_structure_geometry_buffer,
-        get_light_geometry_buffer: _get_light_geometry_buffer,
-        get_ui_geometry_buffer: _get_ui_geometry_buffer,
-
-        client_bench: _client_bench,
+        // INSERT_EMSCRIPTEN_EXPORTS
     });
 };
 
@@ -257,6 +219,10 @@ window.asmlibs_code = function(global, env, buffer) {
     return asmlibs_code_raw(global, env, buffer);
 };
 
-window.asmlibs_data = new Uint8Array(
+window.asmlibs_data = new Uint8Array([
     // INSERT_EMSCRIPTEN_STATIC
-);
+]);
+
+window.asmlibs_data_size =
+    // INSERT_EMSCRIPTEN_DATA_SIZE
+;

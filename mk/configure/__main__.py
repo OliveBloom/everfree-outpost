@@ -42,8 +42,6 @@ def build_parser():
             help='list of --extern flags for locating Rust libraries')
     args.add_argument('--emscripten-fastcomp-prefix', default=None,
             help='path to kripken/emscripten-fastcomp build/install directory')
-    args.add_argument('--emscripten-passes-prefix', default=None,
-            help='path to epdtry/rust-emscripten-passes build directory')
 
     args.add_argument('--rustc',
             help='name of the Rust compiler binary')

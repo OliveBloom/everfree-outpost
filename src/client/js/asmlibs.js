@@ -1,5 +1,6 @@
 var module = window['asmlibs_code'];
 var static_data = window['asmlibs_data'];
+var static_size = window['asmlibs_data_size'];
 
 var config = require('config');
 var Vec = require('util/vec').Vec;
@@ -15,7 +16,7 @@ var AsmGl = require('asmgl').AsmGl;
 // Emscripten puts the first static at address 8 to  avoid storing data at
 // address 0.
 var STATIC_START = 8;  
-var STATIC_SIZE = static_data.byteLength;
+var STATIC_SIZE = static_size;
 var STATIC_END = STATIC_START + STATIC_SIZE;
 
 // Align STACK_START to an 8-byte boundary.

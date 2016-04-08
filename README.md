@@ -3,9 +3,8 @@
 Dependencies:
 
  - rust-lang/rust 1.7.0 (development build)
- - kripken/emscripten-fastcomp 1.34.0-0-gdccd651  (Other Emscripten components
+ - kripken/emscripten-fastcomp 1.36.1  (Other Emscripten components
    are not required)
- - epdtry/rust-emscripten-passes eea6274
  - rust-lang/bitflags f27b6f2
  - rust-lang/rand c6a573f
  - BurntSushi/rust-memchr 0.1.10
