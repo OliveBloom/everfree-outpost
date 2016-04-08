@@ -269,10 +269,10 @@ if __name__ == '__main__':
             asmjs.rlib('client', ('fakestd', 'physics',
                 'client_ui_atlas', 'client_fonts')),
             asmjs.asmlibs('asmlibs',
-                '$root/src/client/asmlibs.rs',
+                '$root/src/asmlibs/lib.rs',
                 ('core', 'collections', 'asmrt', 'asmmalloc', 'physics', 'client'),
-                '$root/src/client/asmlibs_exports.txt',
-                '$root/src/client/asmlibs.tmpl.js'),
+                '$root/src/asmlibs/exports.txt',
+                '$root/src/asmlibs/template.js'),
 
             '# Javascript',
             js.rules(i),

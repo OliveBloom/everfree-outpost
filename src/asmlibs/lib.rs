@@ -35,10 +35,10 @@ use client::graphics::terrain;
 use client::graphics::types as gfx_types;
 use client::ui;
 
-mod asmplatform;
+mod platform;
 
 
-pub type Client<'d> = client::Client<'d, asmplatform::AsmPlatform>;
+pub type Client<'d> = client::Client<'d, platform::AsmPlatform>;
 
 
 // New API
@@ -75,7 +75,7 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 7],
 #[no_mangle]
 pub unsafe extern fn client_init(data_ptr: *const Data,
                                  out: *mut Client) {
-    ptr::write(out, Client::new(&*data_ptr, asmplatform::AsmPlatform::new()));
+    ptr::write(out, Client::new(&*data_ptr, platform::AsmPlatform::new()));
 }
 
 #[no_mangle]
