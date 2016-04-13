@@ -482,8 +482,9 @@ impl gl::Context for GL {
         }
     }
 
-    fn draw(&mut self, args: &mut DrawArgs<Self>) {
-        Shader::draw(args);
+
+    fn draw(shader: &mut Shader, args: &DrawArgs<GL>) {
+        shader.draw(args);
     }
 }
 
@@ -569,23 +570,21 @@ pub struct Shader {
 }
 
 impl Shader {
-    fn draw(args: &mut DrawArgs<GL>) {
-        let mut inner = args.shader.inner.clone();
+    fn draw(&mut self, args: &DrawArgs<GL>) {
+        let mut inner = self.inner.clone();
         inner.run(|ctx| {
-            let sh = &mut *args.shader;
+            assert!(args.uniforms.len() == self.uniforms.len());
+            assert!(args.arrays.len() == self.num_arrays as usize);
+            assert!(args.textures.len() == self.num_textures as usize);
 
-            assert!(args.uniforms.len() == sh.uniforms.len());
-            assert!(args.arrays.len() == sh.num_arrays as usize);
-            assert!(args.textures.len() == sh.num_textures as usize);
+            ctx.bind_shader(self.name);
 
-            ctx.bind_shader(sh.name);
-
-            for (u, v) in sh.uniforms.iter_mut().zip(args.uniforms.iter()) {
+            for (u, v) in self.uniforms.iter_mut().zip(args.uniforms.iter()) {
                 Shader::set_uniform_value(ctx, u, v);
             }
 
-            ctx.set_vertex_attrib_mask(sh.attrib_mask);
-            for a in sh.attribs.iter() {
+            ctx.set_vertex_attrib_mask(self.attrib_mask);
+            for a in self.attribs.iter() {
                 let buf_name = args.arrays[a.array_idx as usize].name;
                 ctx.bind_buffer(BufferTarget::Array, buf_name);
                 ctx.vertex_attrib_buffer(a.location,

@@ -5,6 +5,12 @@ pub trait Context {
 
     type Buffer: Buffer;
     fn create_buffer(&mut self) -> Self::Buffer;
+    fn create_buffer_with_data(&mut self, data: &[u8]) -> Self::Buffer {
+        let mut b = self.create_buffer();
+        b.alloc(data.len());
+        b.load(0, data);
+        b
+    }
 
     type Shader: Shader;
     fn load_shader(&mut self,
@@ -19,26 +25,25 @@ pub trait Context {
     fn load_texture(&mut self, img_name: &str) -> Self::Texture;
     fn texture_import_HACK(&mut self, name: u32, size: (u16, u16)) -> Self::Texture;
 
-    fn draw(&mut self, args: &mut DrawArgs<Self>);
+    // Would be nice to put this method on Shader, but it needs 
+    fn draw(&mut Self::Shader, args: &DrawArgs<Self>);
 }
 
-pub struct DrawArgs<'a, 'b, GL: ?Sized+Context+'a+'b> {
-    pub shader: &'a mut GL::Shader,
-    pub uniforms: &'b [UniformValue<'b>],
-    pub arrays: &'b [&'b GL::Buffer],
-    pub textures: &'b [&'b GL::Texture],
+pub struct DrawArgs<'a, GL: ?Sized+Context+'a> {
+    pub uniforms: &'a [UniformValue<'a>],
+    pub arrays: &'a [&'a GL::Buffer],
+    pub textures: &'a [&'a GL::Texture],
     // TODO: output db
-    pub index_array: Option<&'b GL::Buffer>,
+    pub index_array: Option<&'a GL::Buffer>,
     pub start: usize,
     pub count: usize,
     // TODO: depth test
     // TODO: blend mode
 }
 
-impl<'a, 'b, GL: Context> DrawArgs<'a, 'b, GL> {
-    pub fn new(shader: &'a mut GL::Shader) -> DrawArgs<'a, 'b, GL> {
+impl<'a, GL: Context> DrawArgs<'a, GL> {
+    pub fn new() -> DrawArgs<'a, GL> {
         DrawArgs {
-            shader: shader,
             uniforms: &[],
             arrays: &[],
             textures: &[],
@@ -48,22 +53,22 @@ impl<'a, 'b, GL: Context> DrawArgs<'a, 'b, GL> {
         }
     }
 
-    pub fn uniforms(&mut self, uniforms: &'b [UniformValue<'b>]) -> &mut Self {
+    pub fn uniforms(&mut self, uniforms: &'a [UniformValue<'a>]) -> &mut Self {
         self.uniforms = uniforms;
         self
     }
 
-    pub fn arrays(&mut self, arrays: &'b [&'b GL::Buffer]) -> &mut Self {
+    pub fn arrays(&mut self, arrays: &'a [&'a GL::Buffer]) -> &mut Self {
         self.arrays = arrays;
         self
     }
 
-    pub fn textures(&mut self, textures: &'b [&'b GL::Texture]) -> &mut Self {
+    pub fn textures(&mut self, textures: &'a [&'a GL::Texture]) -> &mut Self {
         self.textures = textures;
         self
     }
 
-    pub fn index_array(&mut self, buffer: &'b GL::Buffer) -> &mut Self {
+    pub fn index_array(&mut self, buffer: &'a GL::Buffer) -> &mut Self {
         self.index_array = Some(buffer);
         self
     }
@@ -75,8 +80,8 @@ impl<'a, 'b, GL: Context> DrawArgs<'a, 'b, GL> {
         self
     }
 
-    pub fn draw(&mut self, gl: &mut GL) {
-        gl.draw(self);
+    pub fn draw(&mut self, shader: &mut GL::Shader) {
+        GL::draw(shader, self);
     }
 }
 

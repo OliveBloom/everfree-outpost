@@ -193,17 +193,24 @@ AsmGl.prototype.loadTexture = function(name, size_out) {
     return name + 1;
 };
 
+AsmGl.prototype.importTextureHACK = function(tex) {
+    var name = insertFree(this.texture_list, tex);
+    return name + 1;
+};
+
 AsmGl.prototype.deleteTexture = function(name) {
     this.texture_list[name - 1] = null;
 };
 
 AsmGl.prototype.activeTexture = function(unit) {
-    this.gl.activeTexture(gl.TEXTURE0 + unit);
+    var gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0 + unit);
 };
 
 AsmGl.prototype.bindTexture = function(name) {
-    var tex = this.gl.texture_list[name - 1];
-    this.gl.bindTexture(gl.TEXTURE_2D, tex);
+    var gl = this.gl;
+    var tex = this.texture_list[name - 1];
+    gl.bindTexture(gl.TEXTURE_2D, tex);
 };
 
 
@@ -217,8 +224,21 @@ AsmGl.prototype.disableVertexAttribArray = function(index) {
     this.gl.disableVertexAttribArray(index);
 };
 
+AsmGl.prototype._attribType = function(ty) {
+    switch (ty) {
+        case 0: return this.gl.UNSIGNED_BYTE;
+        case 1: return this.gl.UNSIGNED_SHORT;
+        case 2: return this.gl.UNSIGNED_INT;
+        case 3: return this.gl.BYTE;
+        case 4: return this.gl.SHORT;
+        case 5: return this.gl.INT;
+        default: throw 'bad attrib type: ' + ty;
+    }
+};
+
 AsmGl.prototype.vertexAttribPointer = function(loc, count, ty, normalize, stride, offset) {
-    this.gl.vertexAttribPointer(loc, count, ty, normalize, stride, offset);
+    var gl_ty = this._attribType(ty);
+    this.gl.vertexAttribPointer(loc, count, gl_ty, normalize, stride, offset);
 };
 
 AsmGl.prototype.drawArraysTriangles = function(start, count) {

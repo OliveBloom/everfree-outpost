@@ -543,6 +543,10 @@ DynAsm.prototype.getUIGeometryBuffer = function() {
 };
 
 
+DynAsm.prototype.testRender = function(tex_name) {
+    return this._raw['test_render'](this.client, tex_name);
+};
+
 DynAsm.prototype.bench = function() {
     return this._raw['client_bench'](this.client);
 };

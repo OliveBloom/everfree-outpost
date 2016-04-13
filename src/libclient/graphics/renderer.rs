@@ -8,6 +8,7 @@ use data::Data;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer};
+use platform::gl::DrawArgs;
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -39,7 +40,15 @@ impl<GL: Context> Renderer<GL> {
 
             ui_buffer: gl.create_buffer(),
 
-            square01_buffer: gl.create_buffer(),
+            square01_buffer: gl.create_buffer_with_data(&[
+                0, 0,
+                0, 1,
+                1, 1,
+
+                0, 0,
+                1, 1,
+                1, 0,
+            ]),
 
             blit_full: gl.load_shader(
                 "blit_fullscreen.vert", "blit_output.frag",
@@ -147,6 +156,15 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn get_ui_buffer(&self) -> &GL::Buffer {
         &self.ui_buffer
+    }
+
+
+    pub fn test_render(&mut self, tex: &GL::Texture) {
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.square01_buffer])
+            .textures(&[tex])
+            .range(0..6)
+            .draw(&mut self.blit_full);
     }
 }
 

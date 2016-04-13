@@ -285,6 +285,12 @@ pub unsafe extern fn get_ui_geometry_buffer(client: &Client,
     buf.name().raw
 }
 
+#[no_mangle]
+pub unsafe extern fn test_render(client: &mut Client,
+                                 tex_name: u32) {
+    client.test_render(tex_name);
+}
+
 
 #[no_mangle]
 pub unsafe extern fn client_bench(client: &mut Client) -> u32 {

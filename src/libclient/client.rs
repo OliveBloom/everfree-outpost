@@ -1,5 +1,6 @@
 use std::prelude::v1::*;
 use std::boxed::FnBox;
+use std::mem;
 
 use platform::{Platform, PlatformObj};
 use platform::gl::Context as GlContext;
@@ -294,6 +295,13 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn get_ui_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
         self.renderer.get_ui_buffer()
+    }
+
+    pub fn test_render(&mut self, tex_name: u32) {
+        self.platform.gl().havoc();
+        let tex = self.platform.gl().texture_import_HACK(tex_name, (1024, 1024));
+        self.renderer.test_render(&tex);
+        mem::forget(tex);
     }
 
 

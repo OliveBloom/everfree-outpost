@@ -471,10 +471,17 @@ Renderer.prototype.render = function(scene) {
     gl.disable(gl.BLEND);
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    /*
     // TODO: move blit_full to a common location
     this.shaders.blit_full.draw(0, 0, 6, {}, {}, {
         'imageTex': this.buffers.fb_final.textures[0],
     });
+    */
+    var asm = this.data._asm;
+    var raw_tex = this.buffers.fb_final.textures[0].texture;
+    var tex_name = asm.asmgl.importTextureHACK(raw_tex);
+    asm.testRender(tex_name);
+    asm.asmgl.deleteTexture(tex_name);
 
     var end_render = Date.now();
     this.prep_time.record(end_prep, end_prep - start_prep);
