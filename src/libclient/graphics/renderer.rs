@@ -7,7 +7,7 @@ use physics::v3::{V2, scalar, Region};
 use data::Data;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
-use platform::gl::{GlContext, GlBuffer};
+use platform::gl::{Context, Buffer};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -18,27 +18,39 @@ use super::structure;
 use super::terrain;
 
 
-pub struct Renderer<GL: GlContext> {
+pub struct Renderer<GL: Context> {
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
     light_geom: GeomCache<GL, Region<V2>>,
 
     ui_buffer: GL::Buffer,
+
+    square01_buffer: GL::Buffer,
+
+    blit_full: GL::Shader,
 }
 
-impl<GL: GlContext> Renderer<GL> {
+impl<GL: Context> Renderer<GL> {
     pub fn new(gl: &mut GL) -> Renderer<GL> {
-        let terrain_geom = GeomCache::new(gl);
-        let structure_geom = GeomCache::new(gl);
-        let light_geom = GeomCache::new(gl);
-        let ui_buffer = gl.create_buffer();
-
         Renderer {
-            terrain_geom: terrain_geom,
-            structure_geom: structure_geom,
-            light_geom: light_geom,
+            terrain_geom: GeomCache::new(gl),
+            structure_geom: GeomCache::new(gl),
+            light_geom: GeomCache::new(gl),
 
-            ui_buffer: ui_buffer,
+            ui_buffer: gl.create_buffer(),
+
+            square01_buffer: gl.create_buffer(),
+
+            blit_full: gl.load_shader(
+                "blit_fullscreen.vert", "blit_output.frag",
+                uniforms! {},
+                arrays! {
+                    [2] attribs! {
+                        posOffset: U8[2] @0,
+                    },
+                },
+                textures! { imageTex, },
+                outputs! { color: 1 }),
         }
     }
 
@@ -139,12 +151,12 @@ impl<GL: GlContext> Renderer<GL> {
 }
 
 
-struct GeomCache<GL: GlContext, K: Eq> {
+struct GeomCache<GL: Context, K: Eq> {
     buffer: GL::Buffer,
     last_key: Option<K>,
 }
 
-impl<GL: GlContext, K: Eq> GeomCache<GL, K> {
+impl<GL: Context, K: Eq> GeomCache<GL, K> {
     pub fn new(gl: &mut GL) -> GeomCache<GL, K> {
         GeomCache {
             buffer: gl.create_buffer(),
@@ -182,7 +194,7 @@ fn load_buffer<GL, G>(buf: &mut GL::Buffer,
                       gen: &mut G,
                       tmp: &mut [G::Vertex],
                       offset: &mut usize)
-        where GL: GlContext, G: GeometryGenerator {
+        where GL: Context, G: GeometryGenerator {
     let mut keep_going = true;
     while keep_going {
         let (len, more) = gen.generate(tmp);

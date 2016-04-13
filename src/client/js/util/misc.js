@@ -207,3 +207,17 @@ exports.element = function(tag, extra, parent) {
 
     return elt;
 };
+
+
+// Insert `x` into the first empty slot of `arr`, or push it onto the end.
+// Returns the index where `x` was inserted.
+exports.insertFree = function(arr, x) {
+    var index = arr.indexOf(null);
+    if (index == -1) {
+        index = arr.length;
+        arr.push(x);
+    } else {
+        arr[index] = x;
+    }
+    return index;
+};

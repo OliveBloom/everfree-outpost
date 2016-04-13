@@ -242,3 +242,24 @@ function rawSet(key, val) {
     }
 };
 exports.rawSet = rawSet;
+
+function rawClear(key, val) {
+    var parts = key.split('.');
+    var base_key = parts[0];
+
+    if (parts.length > 1) {
+        var obj = JSON.parse(localStorage.getItem(base_key));
+        var def = DEFAULT_CONFIG[base_key];
+
+        for (var i = 1; i < parts.length - 1; ++i) {
+            obj = obj[parts[i]];
+            def = def[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = base[parts[parts.length - 1]];
+
+        localStorage.setItem(base_key, JSON.stringify(obj));
+    } else {
+        localStorage.removeItem(base_key);
+    }
+};
+exports.rawClear = rawClear;

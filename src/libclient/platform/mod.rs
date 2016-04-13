@@ -1,10 +1,10 @@
 use std::prelude::v1::*;
 
-pub mod gl;
+#[macro_use] pub mod gl;
 
 
 pub trait Platform {
-    type GL: gl::GlContext;
+    type GL: gl::Context;
     fn gl(&mut self) -> &mut Self::GL;
 
     type Config: Config;

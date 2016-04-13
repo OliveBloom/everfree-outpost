@@ -25,11 +25,11 @@ extern crate physics;
 pub use client::Client;
 pub use data::Data;
 
+#[macro_use] pub mod platform;
+
 pub mod client;
 pub mod data;
 mod fonts;
-
-pub mod platform;
 
 mod util;
 

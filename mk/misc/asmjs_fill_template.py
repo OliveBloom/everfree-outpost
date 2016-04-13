@@ -109,8 +109,8 @@ def main(template_path, asm_path, exports_path):
 
     combined_code = '\n\n'.join((
         substitute_table_sizes(module.code, tables.sizes),
-        tables.tables,
         tables.aborts,
+        tables.tables,
         ))
 
     exports = []

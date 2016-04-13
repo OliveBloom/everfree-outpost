@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 use std::boxed::FnBox;
 
 use platform::{Platform, PlatformObj};
-use platform::gl::GlContext;
+use platform::gl::Context as GlContext;
 use util;
 
 use graphics::types::{BlockChunk, LocalChunks};
@@ -257,6 +257,8 @@ impl<'d, P: Platform> Client<'d, P> {
     // Graphics
 
     pub fn prepare_geometry(&mut self, bounds: Region<V2>) {
+        self.platform.gl().havoc();
+
         // Terrain from the chunk below can cover the current one.
         let terrain_bounds = Region::new(bounds.min - V2::new(0, 0),
                                          bounds.max + V2::new(0, 1));

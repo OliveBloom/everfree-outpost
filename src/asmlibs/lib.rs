@@ -5,6 +5,7 @@
     alloc,
     box_syntax,
     filling_drop,
+    iter_arith,
     oom,
     raw,
     unsafe_no_drop_flag,
@@ -35,10 +36,11 @@ use client::graphics::terrain;
 use client::graphics::types as gfx_types;
 use client::ui;
 
+mod gl;
 mod platform;
 
 
-pub type Client<'d> = client::Client<'d, platform::AsmPlatform>;
+pub type Client<'d> = client::Client<'d, platform::Platform>;
 
 
 // New API
@@ -75,7 +77,7 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 7],
 #[no_mangle]
 pub unsafe extern fn client_init(data_ptr: *const Data,
                                  out: *mut Client) {
-    ptr::write(out, Client::new(&*data_ptr, platform::AsmPlatform::new()));
+    ptr::write(out, Client::new(&*data_ptr, platform::Platform::new()));
 }
 
 #[no_mangle]
@@ -256,7 +258,7 @@ pub unsafe extern fn get_terrain_geometry_buffer(client: &Client,
                                                  len: &mut usize) -> u32 {
     let buf = client.get_terrain_geometry_buffer();
     *len = buf.len();
-    buf.name()
+    buf.name().raw
 }
 
 #[no_mangle]
@@ -264,7 +266,7 @@ pub unsafe extern fn get_structure_geometry_buffer(client: &Client,
                                                    len: &mut usize) -> u32 {
     let buf = client.get_structure_geometry_buffer();
     *len = buf.len();
-    buf.name()
+    buf.name().raw
 }
 
 #[no_mangle]
@@ -272,7 +274,7 @@ pub unsafe extern fn get_light_geometry_buffer(client: &Client,
                                                len: &mut usize) -> u32 {
     let buf = client.get_light_geometry_buffer();
     *len = buf.len();
-    buf.name()
+    buf.name().raw
 }
 
 #[no_mangle]
@@ -280,7 +282,7 @@ pub unsafe extern fn get_ui_geometry_buffer(client: &Client,
                                             len: &mut usize) -> u32 {
     let buf = client.get_ui_geometry_buffer();
     *len = buf.len();
-    buf.name()
+    buf.name().raw
 }
 
 

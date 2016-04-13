@@ -55,6 +55,8 @@ pub use core::{
     u16,
     u32,
     u64,
+    f32,
+    f64,
 };
 
 pub use alloc::{

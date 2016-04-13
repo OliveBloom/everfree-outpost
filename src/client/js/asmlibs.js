@@ -61,19 +61,70 @@ var module_env = function(asm) {
         'asmgl_delete_buffer': function(name) {
             asm.asmgl.deleteBuffer(name);
         },
-        'asmgl_bind_buffer_array': function(name) {
-            asm.asmgl.bindBufferArray(name);
+        'asmgl_bind_buffer': function(target_idx, name) {
+            asm.asmgl.bindBuffer(target_idx, name);
         },
         'asmgl_bind_buffer_index': function(name) {
             asm.asmgl.bindBufferIndex(name);
         },
-        'asmgl_buffer_data_alloc': function(len) {
-            asm.asmgl.bufferDataAlloc(len);
+        'asmgl_buffer_data_alloc': function(target, len) {
+            asm.asmgl.bufferDataAlloc(target, len);
         },
-        'asmgl_buffer_subdata': function(offset, ptr, len) {
-            asm.asmgl.bufferSubdata(offset, asm._makeView(Uint8Array, ptr, len));
+        'asmgl_buffer_subdata': function(target, offset, ptr, len) {
+            var data = asm._makeView(Uint8Array, ptr, len);
+            asm.asmgl.bufferSubdata(target, offset, data);
         },
 
+        'asmgl_load_shader': function(vert_name_ptr, vert_name_len, frag_name_ptr, frag_name_len) {
+            var vert_name = asm._loadString(vert_name_ptr, vert_name_len);
+            var frag_name = asm._loadString(frag_name_ptr, frag_name_len);
+            return asm.asmgl.loadShader(vert_name, frag_name);
+        },
+        'asmgl_delete_shader': function(name) {
+            asm.asmgl.deleteShader(name);
+        },
+        'asmgl_bind_shader': function(name) {
+            asm.asmgl.bindShader(name);
+        },
+        'asmgl_get_uniform_location': function(shader_name, name_ptr, name_len) {
+            var var_name = asm._loadString(name_ptr, name_len);
+            asm.asmgl.getUniformLocation(shader_name, var_name);
+        },
+        'asmgl_get_attrib_location': function(shader_name, name_ptr, name_len) {
+            var var_name = asm._loadString(name_ptr, name_len);
+            asm.asmgl.getAttribLocation(shader_name, var_name);
+        },
+        'asmgl_set_uniform_1i': function(loc, value) {
+            asm.asmgl.setUniform1i(loc, value);
+        },
+
+        'asmgl_load_texture': function(name_ptr, name_len, size_ptr) {
+            var name = asm._loadString(name_ptr, name_len);
+            var size_view = asm._makeView(Uint16Array, size_ptr, 4);
+            return asm.asmgl.loadTexture(name, size_view);
+        },
+        'asmgl_delete_texture': function(name) {
+            asm.asmgl.deleteTexture(name);
+        },
+        'asmgl_active_texture': function(unit) {
+            asm.asmgl.activeTexture(unit);
+        },
+        'asmgl_bind_texture': function(name) {
+            asm.asmgl.bindTexture(name);
+        },
+
+        'asmgl_enable_vertex_attrib_array': function(index) {
+            asm.asmgl.enableVertexAttribArray(index);
+        },
+        'asmgl_disable_vertex_attrib_array': function(index) {
+            asm.asmgl.disableVertexAttribArray(index);
+        },
+        'asmgl_vertex_attrib_pointer': function(loc, count, ty, normalize, stride, offset) {
+            asm.asmgl.vertexAttribPointer(loc, count, ty, normalize, stride, offset);
+        },
+        'asmgl_draw_arrays_triangles': function(start, count) {
+            asm.asmgl.drawArraysTriangles(start, count);
+        },
 
         'ap_config_get': function(key_ptr, key_len, value_len_p) {
             var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
@@ -99,6 +150,13 @@ var module_env = function(asm) {
             var value = decodeUtf8(value_view);
 
             config.rawSet(key, value);
+        },
+
+        'ap_config_clear': function(key_ptr, key_len) {
+            var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
+            var key = decodeUtf8(key_view);
+
+            config.rawClear(key);
         },
 
 
@@ -243,9 +301,14 @@ DynAsm.prototype._memcpy = function(dest_offset, data) {
     }
 };
 
+DynAsm.prototype._loadString = function(ptr, len) {
+    var view = this._makeView(Uint8Array, ptr, len);
+    return decodeUtf8(view);
+};
+
 DynAsm.prototype.initClient = function(gl, assets) {
     // AsmGl must be initialized before calling `client_init`.
-    this.asmgl.init(gl);
+    this.asmgl.init(gl, assets);
 
     var blobs = this._stackAlloc(Int32Array, 7 * 2);
     var idx = 0;

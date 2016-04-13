@@ -19,17 +19,35 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _flush_str = env.flushStr;
     var _now = env.now;
     var Math_imul = global.Math.imul;
+    var nan = global.NaN;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 
     var _asmgl_gen_buffer = env.asmgl_gen_buffer;
     var _asmgl_delete_buffer = env.asmgl_delete_buffer;
-    var _asmgl_bind_buffer_array = env.asmgl_bind_buffer_array;
-    var _asmgl_bind_buffer_index = env.asmgl_bind_buffer_index;
+    var _asmgl_bind_buffer = env.asmgl_bind_buffer;
     var _asmgl_buffer_data_alloc = env.asmgl_buffer_data_alloc;
     var _asmgl_buffer_subdata = env.asmgl_buffer_subdata;
 
+    var _asmgl_load_shader = env.asmgl_load_shader;
+    var _asmgl_delete_shader = env.asmgl_delete_shader;
+    var _asmgl_bind_shader = env.asmgl_bind_shader;
+    var _asmgl_get_uniform_location = env.asmgl_get_uniform_location;
+    var _asmgl_get_attrib_location = env.asmgl_get_attrib_location;
+    var _asmgl_set_uniform_1i = env.asmgl_set_uniform_1i;
+
+    var _asmgl_load_texture = env.asmgl_load_texture;
+    var _asmgl_delete_texture = env.asmgl_delete_texture;
+    var _asmgl_active_texture = env.asmgl_active_texture;
+    var _asmgl_bind_texture = env.asmgl_bind_texture;
+
+    var _asmgl_enable_vertex_attrib_array = env.asmgl_enable_vertex_attrib_array;
+    var _asmgl_disable_vertex_attrib_array = env.asmgl_disable_vertex_attrib_array;
+    var _asmgl_vertex_attrib_pointer = env.asmgl_vertex_attrib_pointer;
+    var _asmgl_draw_arrays_triangles = env.asmgl_draw_arrays_triangles;
+
     var _ap_config_get = env.ap_config_get;
     var _ap_config_set = env.ap_config_set;
+    var _ap_config_clear = env.ap_config_clear;
 
     var tempRet0 = 0;
 
