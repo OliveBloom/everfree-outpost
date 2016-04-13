@@ -846,6 +846,8 @@ function handleEntityUpdate(id, motion, anim) {
     } else {
         prediction.receivedMotion(m, entities[id]);
     }
+
+    asm_client.entityUpdate(id, m, anim);
 }
 
 function handleUnloadChunk(idx) {
@@ -895,6 +897,8 @@ function handleChatUpdate(msg) {
 }
 
 function handleEntityAppear(id, appearance_bits, name) {
+    asm_client.entityAppear(id, appearance_bits, name);
+
     if (id == player_entity) {
         name = '';
     }
@@ -917,6 +921,7 @@ function handleEntityAppear(id, appearance_bits, name) {
 
 function handleEntityGone(id, time) {
     // TODO: actually delay until the specified time
+    asm_client.entityGone(id);
     delete entities[id];
 }
 

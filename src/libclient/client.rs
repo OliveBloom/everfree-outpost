@@ -15,7 +15,9 @@ use physics::{CHUNK_SIZE, CHUNK_BITS};
 use physics::Shape;
 use physics::v3::{V3, V2, scalar, Region};
 
+use Time;
 use data::Data;
+use entity::{Entities, EntityId, Motion};
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use structures::Structures;
@@ -32,6 +34,7 @@ pub struct Client<'d, P: Platform> {
     chunks: Box<LocalChunks>,
     terrain_shape: Box<TerrainShape>,
     structures: Structures,
+    entities: Entities,
     inventories: Inventories,
 
     ui: UI,
@@ -51,6 +54,7 @@ impl<'d, P: Platform> Client<'d, P> {
             chunks: box [[0; 1 << (3 * CHUNK_BITS)]; 1 << (2 * LOCAL_BITS)],
             terrain_shape: box TerrainShape::new(),
             structures: Structures::new(),
+            entities: Entities::new(),
             inventories: Inventories::new(),
 
             ui: UI::new(),
@@ -182,6 +186,27 @@ impl<'d, P: Platform> Client<'d, P> {
         }
     }
 
+    // Entity tracking
+
+    pub fn entity_appear(&mut self,
+                         id: EntityId,
+                         appearance: u32,
+                         name: Option<String>) {
+        self.entities.insert(id, appearance, name);
+    }
+
+    pub fn entity_gone(&mut self,
+                       id: EntityId) {
+        self.entities.remove(id);
+    }
+
+    pub fn entity_update(&mut self,
+                         id: EntityId,
+                         when: Time,
+                         motion: Motion) {
+        self.entities.schedule_update(id, when, motion);
+    }
+
     // Inventory tracking
 
     pub fn inventory_appear(&mut self,
@@ -257,7 +282,7 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Graphics
 
-    pub fn prepare_geometry(&mut self, bounds: Region<V2>) {
+    pub fn prepare_geometry(&mut self, bounds: Region<V2>, now: Time) {
         self.platform.gl().havoc();
 
         // Terrain from the chunk below can cover the current one.
@@ -279,6 +304,14 @@ impl<'d, P: Platform> Client<'d, P> {
         // Also refresh the UI buffer.
         let geom = self.ui.generate_geom(&self.inventories);
         self.renderer.load_ui_geometry(&geom);
+
+
+        self.entities.apply_updates(now);
+        /*
+        for (id, e) in self.entities.iter() {
+            println!("entity {} at {:?}", id, e.pos(now));
+        }
+        */
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {

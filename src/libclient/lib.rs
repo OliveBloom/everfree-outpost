@@ -35,6 +35,11 @@ mod util;
 
 mod terrain;
 mod structures;
+pub mod entity;
 pub mod inventory;
 pub mod graphics;
 pub mod ui;
+
+// TODO: change this to u32 (requires adjustment of server timing so that `now` is not negative
+// just after startup)
+pub type Time = i32;

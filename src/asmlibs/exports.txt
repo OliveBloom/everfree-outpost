@@ -12,6 +12,9 @@ client_reset
 structure_appear
 structure_gone
 structure_replace
+entity_appear
+entity_gone
+entity_update
 inventory_appear
 inventory_gone
 inventory_update

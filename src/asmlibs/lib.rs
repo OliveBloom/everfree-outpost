@@ -128,6 +128,38 @@ pub unsafe extern fn structure_replace(client: &mut Client,
     client.structure_replace(id, template_id, oneshot_start);
 }
 
+// Entities
+
+#[no_mangle]
+pub unsafe extern fn entity_appear(client: &mut Client,
+                                   id: u32,
+                                   appearance: u32,
+                                   name_ptr: *mut u8,
+                                   name_len: usize) {
+    let name =
+        if name_ptr.is_null() {
+            None
+        } else {
+            let name_bytes = make_boxed_slice(name_ptr, name_len).into_vec();
+            Some(String::from_utf8(name_bytes).unwrap())
+        };
+    client.entity_appear(id, appearance, name);
+}
+
+#[no_mangle]
+pub unsafe extern fn entity_gone(client: &mut Client,
+                                 id: u32) {
+    client.entity_gone(id);
+}
+
+#[no_mangle]
+pub unsafe extern fn entity_update(client: &mut Client,
+                                   id: u32,
+                                   when: i32,
+                                   motion: &client::entity::Motion) {
+    client.entity_update(id, when, motion.clone());
+}
+
 // Inventories
 
 #[no_mangle]
@@ -248,9 +280,11 @@ pub unsafe extern fn prepare_geometry(client: &mut Client,
                                       cx0: i32,
                                       cy0: i32,
                                       cx1: i32,
-                                      cy1: i32) {
+                                      cy1: i32,
+                                      now: i32) {
     client.prepare_geometry(Region::new(V2::new(cx0, cy0),
-                                        V2::new(cx1, cy1)));
+                                        V2::new(cx1, cy1)),
+                            now);
 }
 
 #[no_mangle]

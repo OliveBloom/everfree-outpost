@@ -321,6 +321,16 @@ DynAsm.prototype._loadString = function(ptr, len) {
     return decodeUtf8(view);
 };
 
+DynAsm.prototype._allocString = function(s) {
+    var utf8 = unescape(encodeURIComponent('' + s));
+    var len = utf8.length;
+    var view = this._heapAlloc(Uint8Array, len);
+    for (var i = 0; i < len; ++i) {
+        view[i] = utf8.charCodeAt(i);
+    }
+    return view;
+};
+
 DynAsm.prototype.initClient = function(gl, assets) {
     // AsmGl must be initialized before calling `client_init`.
     this.asmgl.init(gl, assets);
@@ -372,6 +382,42 @@ DynAsm.prototype.structureGone = function(id) {
 
 DynAsm.prototype.structureReplace = function(id, template_id, oneshot_start) {
     this._raw['structure_replace'](this.client, id, template_id, oneshot_start);
+};
+
+DynAsm.prototype.entityAppear = function(id, appearance, name) {
+    var name_ptr = 0;
+    var name_len = 0;
+    if (name != null && name.length > 0) {
+        var name_view = this._allocString(name);
+        name_ptr = name_view.byteOffset;
+        name_len = name_view.byteLength;
+    }
+
+    // Library takes ownership of the name allocation.
+    this._raw['entity_appear'](this.client, id, appearance, name_ptr, name_len);
+};
+
+DynAsm.prototype.entityGone = function(id) {
+    this._raw['entity_gone'](this.client, id);
+};
+
+DynAsm.prototype.entityUpdate = function(id, motion, anim) {
+    var arr = this._stackAlloc(Int32Array, 9);
+
+    arr[0] = motion.start_pos.x;
+    arr[1] = motion.start_pos.y;
+    arr[2] = motion.start_pos.z;
+    arr[3] = motion.end_pos.x;
+    arr[4] = motion.end_pos.y;
+    arr[5] = motion.end_pos.z;
+
+    arr[6] = motion.start_time;
+    arr[7] = motion.end_time;
+    arr[8] = anim;
+
+    this._raw['entity_update'](this.client, id, motion.start_time, arr.byteOffset);
+
+    this._stackFree(arr);
 };
 
 DynAsm.prototype.inventoryAppear = function(id, items) {
@@ -508,9 +554,9 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, blocks) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.prepareGeometry = function(cx0, cy0, cx1, cy1) {
+DynAsm.prototype.prepareGeometry = function(cx0, cy0, cx1, cy1, now) {
     this._raw['prepare_geometry'](this.client,
-            cx0, cy0, cx1, cy1);
+            cx0, cy0, cx1, cy1, now);
 };
 
 DynAsm.prototype.getTerrainGeometryBuffer = function() {

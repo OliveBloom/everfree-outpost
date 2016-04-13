@@ -68,7 +68,7 @@ RenderData.prototype.prepare = function(scene) {
     var cy0 = ((pos[1]|0) / CHUNK_PX)|0;
     var cy1 = (((pos[1]|0) + (size[1]|0) + CHUNK_PX) / CHUNK_PX)|0;
 
-    this._asm.prepareGeometry(cx0, cy0, cx1, cy1);
+    this._asm.prepareGeometry(cx0, cy0, cx1, cy1, scene.now);
 };
 
 // Texture object management
