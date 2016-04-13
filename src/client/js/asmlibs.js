@@ -97,6 +97,21 @@ var module_env = function(asm) {
         'asmgl_set_uniform_1i': function(loc, value) {
             asm.asmgl.setUniform1i(loc, value);
         },
+        'asmgl_set_uniform_1f': function(loc, value) {
+            asm.asmgl.setUniform1f(loc, value);
+        },
+        'asmgl_set_uniform_2f': function(loc, ptr) {
+            var view = asm._makeView(Float32Array, ptr, 8);
+            asm.asmgl.setUniform2f(loc, value);
+        },
+        'asmgl_set_uniform_3f': function(loc, ptr) {
+            var view = asm._makeView(Float32Array, ptr, 12);
+            asm.asmgl.setUniform3f(loc, value);
+        },
+        'asmgl_set_uniform_4f': function(loc, ptr) {
+            var view = asm._makeView(Float32Array, ptr, 16);
+            asm.asmgl.setUniform4f(loc, value);
+        },
 
         'asmgl_load_texture': function(name_ptr, name_len, size_ptr) {
             var name = asm._loadString(name_ptr, name_len);

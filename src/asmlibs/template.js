@@ -34,6 +34,10 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_get_uniform_location = env.asmgl_get_uniform_location;
     var _asmgl_get_attrib_location = env.asmgl_get_attrib_location;
     var _asmgl_set_uniform_1i = env.asmgl_set_uniform_1i;
+    var _asmgl_set_uniform_1f = env.asmgl_set_uniform_1f;
+    var _asmgl_set_uniform_2f = env.asmgl_set_uniform_2f;
+    var _asmgl_set_uniform_3f = env.asmgl_set_uniform_3f;
+    var _asmgl_set_uniform_4f = env.asmgl_set_uniform_4f;
 
     var _asmgl_load_texture = env.asmgl_load_texture;
     var _asmgl_delete_texture = env.asmgl_delete_texture;

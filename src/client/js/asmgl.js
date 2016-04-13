@@ -170,6 +170,38 @@ AsmGl.prototype.setUniform1i = function(loc, value) {
     this.gl.uniform1i(handle, value);
 };
 
+AsmGl.prototype.setUniform1f = function(loc, value) {
+    if (loc == -1) {
+        return;
+    }
+    var handle = this.shader_uniform_list[loc];
+    this.gl.uniform1f(handle, value);
+};
+
+AsmGl.prototype.setUniform2f = function(loc, value) {
+    if (loc == -1) {
+        return;
+    }
+    var handle = this.shader_uniform_list[loc];
+    this.gl.uniform2fv(handle, value);
+};
+
+AsmGl.prototype.setUniform3f = function(loc, value) {
+    if (loc == -1) {
+        return;
+    }
+    var handle = this.shader_uniform_list[loc];
+    this.gl.uniform3fv(handle, value);
+};
+
+AsmGl.prototype.setUniform3f = function(loc, value) {
+    if (loc == -1) {
+        return;
+    }
+    var handle = this.shader_uniform_list[loc];
+    this.gl.uniform3fv(handle, value);
+};
+
 
 // Textures
 
