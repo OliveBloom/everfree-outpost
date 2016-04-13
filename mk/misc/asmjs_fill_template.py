@@ -102,13 +102,23 @@ def substitute_table_sizes(code, sizes):
     return code
 
 
+def fix_float_constants(code):
+    # Emscripten generates 'var x = +0;' when it should be 'var x = 0.0;', so
+    # we have to fix it here.
+    # TODO: this handles only a very limited case - emscripten.py has a more
+    # complete version in the 'fix_dot_zero' function
+    return code.replace('= +0', '= 0.0')
+
+
 def main(template_path, asm_path, exports_path):
     with open(asm_path) as f:
         module = read_emscripten_output(f)
     tables = build_tables(module.metadata)
 
+    code = substitute_table_sizes(module.code, tables.sizes)
+    code = fix_float_constants(code)
     combined_code = '\n\n'.join((
-        substitute_table_sizes(module.code, tables.sizes),
+        code,
         tables.aborts,
         tables.tables,
         ))
