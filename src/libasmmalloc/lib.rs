@@ -282,7 +282,9 @@ impl State {
             return obj_addr as *mut u8;
         }
 
+
         // No free block was suitable - we're out of memory!
+        println!("OUT OF MEMORY - unable to find a block of size {}", obj_size);
         ptr::null_mut()
     }
 
@@ -453,6 +455,19 @@ impl State {
             }
         }
     }
+
+    unsafe fn debug_check(&mut self) {
+        for hdr in self.iter_mem().take(10000) {
+            let hdr = *hdr;
+            if hdr as usize == self.sentinel() as usize {
+                return;
+            }
+        }
+
+        println!("HEAP CORRUPTION");
+        self.debug_print();
+        panic!("heap is corrupted - found a cycle");
+    }
 }
 
 
@@ -510,6 +525,7 @@ impl Iterator for MemOrderIter {
 
 #[cfg(asmjs)]
 pub mod __allocator {
+    use core::cmp;
     use core::intrinsics;
     use core::ptr;
 
@@ -549,6 +565,11 @@ pub mod __allocator {
         STATE.debug_print()
     }
 
+    #[no_mangle]
+    pub unsafe extern "C" fn asmmalloc_debug_check() {
+        STATE.debug_check()
+    }
+
 
     // Internal __rust_* API, used by Rust's liballoc
     #[no_mangle]
@@ -567,7 +588,7 @@ pub mod __allocator {
             return ptr::null_mut();
         }
 
-        intrinsics::copy_nonoverlapping(ptr, new, old_size);
+        intrinsics::copy_nonoverlapping(ptr, new, cmp::min(old_size, size));
         STATE.free(ptr);
         new
     }
@@ -604,20 +625,26 @@ fn main() {
     unsafe {
         let addr = buf.as_ptr() as usize;
         state.init(addr, addr + buf.len());
-        let a = state.alloc(16, 4);
-        let b = state.alloc(16, 2);
-        let c = state.alloc(16, 8);
-        let d = state.alloc(16, 8);
-        let e = state.alloc(32, 32);
-        state.debug_print();
-        state.free(a);
-        state.free(c);
-        state.free(e);
-        let e = state.alloc(1048384, 4);
-        state.free(e);
-        state.free(b);
-        state.free(d);
-        state.debug_print(); return;
 
+        state.alloc(29376, 4);
+        state.alloc(1296, 4);
+        state.alloc(1464, 4);
+        state.alloc(7224, 4);
+        state.alloc(5660, 4);
+        state.alloc(6088, 4);
+        state.alloc(72, 4);
+        state.alloc(60, 4);
+        state.alloc(416, 4);
+        state.alloc(60, 4);
+        state.alloc(16, 4);
+        state.alloc(84, 4);
+        state.alloc(52, 4);
+        state.alloc(108, 4);
+        let x = state.alloc(100, 4);
+        state.alloc(88, 4);
+
+        state.debug_print();
+        state.free(x);
+        state.debug_print();
     }
 }

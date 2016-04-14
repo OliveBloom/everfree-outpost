@@ -18,6 +18,7 @@ use physics::v3::{V3, V2, scalar, Region};
 use Time;
 use data::Data;
 use entity::{Entities, EntityId, Motion};
+use graphics::renderer::Scene;
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use structures::Structures;
@@ -330,10 +331,15 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.get_ui_buffer()
     }
 
-    pub fn test_render(&mut self, tex_name: u32) {
+    pub fn test_render(&mut self, opcode: u32, scene: &Scene, tex_name: u32) {
         self.platform.gl().havoc();
         let tex = self.platform.gl().texture_import_HACK(tex_name, (1024, 1024));
-        self.renderer.test_render(&tex);
+        match opcode {
+            0 => self.renderer.render_output(&tex),
+            1 => self.renderer.render_terrain(scene, &tex),
+            2 => self.renderer.render_structures(scene, &tex),
+            _ => println!("bad opcode: {}", opcode),
+        }
         mem::forget(tex);
     }
 

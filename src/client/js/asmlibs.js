@@ -88,11 +88,11 @@ var module_env = function(asm) {
         },
         'asmgl_get_uniform_location': function(shader_name, name_ptr, name_len) {
             var var_name = asm._loadString(name_ptr, name_len);
-            asm.asmgl.getUniformLocation(shader_name, var_name);
+            return asm.asmgl.getUniformLocation(shader_name, var_name);
         },
         'asmgl_get_attrib_location': function(shader_name, name_ptr, name_len) {
             var var_name = asm._loadString(name_ptr, name_len);
-            asm.asmgl.getAttribLocation(shader_name, var_name);
+            return asm.asmgl.getAttribLocation(shader_name, var_name);
         },
         'asmgl_set_uniform_1i': function(loc, value) {
             asm.asmgl.setUniform1i(loc, value);
@@ -102,15 +102,15 @@ var module_env = function(asm) {
         },
         'asmgl_set_uniform_2f': function(loc, ptr) {
             var view = asm._makeView(Float32Array, ptr, 8);
-            asm.asmgl.setUniform2f(loc, value);
+            asm.asmgl.setUniform2f(loc, view);
         },
         'asmgl_set_uniform_3f': function(loc, ptr) {
             var view = asm._makeView(Float32Array, ptr, 12);
-            asm.asmgl.setUniform3f(loc, value);
+            asm.asmgl.setUniform3f(loc, view);
         },
         'asmgl_set_uniform_4f': function(loc, ptr) {
             var view = asm._makeView(Float32Array, ptr, 16);
-            asm.asmgl.setUniform4f(loc, value);
+            asm.asmgl.setUniform4f(loc, view);
         },
 
         'asmgl_load_texture': function(name_ptr, name_len, size_ptr) {
@@ -604,8 +604,21 @@ DynAsm.prototype.getUIGeometryBuffer = function() {
 };
 
 
-DynAsm.prototype.testRender = function(tex_name) {
-    return this._raw['test_render'](this.client, tex_name);
+DynAsm.prototype.testRender = function(opcode, scene, tex_name) {
+    var arr = this._stackAlloc(Float32Array, 8);
+
+    arr[0] = scene.camera_pos[0];
+    arr[1] = scene.camera_pos[1];
+    arr[2] = scene.camera_size[0];
+    arr[3] = scene.camera_size[1];
+    arr[4] = scene.slice_center[0];
+    arr[5] = scene.slice_center[1];
+    arr[6] = scene.slice_z;
+    arr[7] = scene.now;
+
+    this._raw['test_render'](this.client, opcode, arr.byteOffset, tex_name);
+
+    this._stackFree(arr);
 };
 
 DynAsm.prototype.bench = function() {

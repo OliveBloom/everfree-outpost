@@ -429,7 +429,12 @@ impl gl::Context for GL {
             for (i, arr) in arrays.iter().enumerate() {
                 for a in arr.attribs {
                     let loc = ctx.attrib_location(name, a.name);
+                    if loc < 0 {
+                        println!("warning: attrib {} is unused", a.name);
+                        continue;
+                    }
                     assert!(loc < 32);
+
                     attrib_mask |= 1 << loc;
                     attrib_vec.push(Attrib {
                         location: loc,

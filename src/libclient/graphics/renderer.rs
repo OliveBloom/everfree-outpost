@@ -5,10 +5,11 @@ use std::slice;
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
+use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer};
-use platform::gl::DrawArgs;
+use platform::gl::{DrawArgs, UniformValue};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -19,28 +20,14 @@ use super::structure;
 use super::terrain;
 
 
-pub struct Renderer<GL: Context> {
-    terrain_geom: GeomCache<GL, Region<V2>>,
-    structure_geom: GeomCache<GL, Region<V2>>,
-    light_geom: GeomCache<GL, Region<V2>>,
-
-    ui_buffer: GL::Buffer,
-
-    square01_buffer: GL::Buffer,
-
-    blit_full: GL::Shader,
+struct Buffers<GL: Context> {
+    square01: GL::Buffer,
 }
 
-impl<GL: Context> Renderer<GL> {
-    pub fn new(gl: &mut GL) -> Renderer<GL> {
-        Renderer {
-            terrain_geom: GeomCache::new(gl),
-            structure_geom: GeomCache::new(gl),
-            light_geom: GeomCache::new(gl),
-
-            ui_buffer: gl.create_buffer(),
-
-            square01_buffer: gl.create_buffer_with_data(&[
+impl<GL: Context> Buffers<GL> {
+    fn new(gl: &mut GL) -> Buffers<GL> {
+        Buffers {
+            square01: gl.create_buffer_with_data(&[
                 0, 0,
                 0, 1,
                 1, 1,
@@ -49,7 +36,19 @@ impl<GL: Context> Renderer<GL> {
                 1, 1,
                 1, 0,
             ]),
+        }
+    }
+}
 
+struct Shaders<GL: Context> {
+    blit_full: GL::Shader,
+    terrain: GL::Shader,
+    structure: GL::Shader,
+}
+
+impl<GL: Context> Shaders<GL> {
+    fn new(gl: &mut GL) -> Shaders<GL> {
+        Shaders {
             blit_full: gl.load_shader(
                 "blit_fullscreen.vert", "blit_output.frag",
                 uniforms! {},
@@ -60,6 +59,97 @@ impl<GL: Context> Renderer<GL> {
                 },
                 textures! { imageTex, },
                 outputs! { color: 1 }),
+
+            terrain: gl.load_shader(
+                "terrain2.vert", "terrain2.frag",
+                uniforms! {
+                    cameraPos: V2,
+                    cameraSize: V2,
+                    sliceCenter: V2,
+                    sliceZ: Float,
+                },
+                arrays! {
+                    // struct TerrainVertex
+                    [8] attribs! {
+                        corner: U8[2] @0,
+                        blockPos: U8[3] @2,
+                        side: U8[1] @5,
+                        tileCoord: U8[2] @6,
+                    },
+                },
+                textures! {
+                    atlasTex,
+                    cavernTex,
+                },
+                outputs! { color: 2, depth }),
+
+            structure: gl.load_shader(
+                "structure2.vert", "structure2.frag",
+                uniforms! {
+                    cameraPos: V2,
+                    cameraSize: V2,
+                    sliceCenter: V2,
+                    sliceZ: Float,
+                    now: Float,
+                },
+                arrays! {
+                    // struct TerrainVertex
+                    [20] attribs! {
+                        vertOffset: U16[3] @0,
+                        animLength: I8[1] @6,
+                        animRate: U8[1] @7,
+                        blockPos: U8[3] @8,
+                        layer: U8[1] @11,
+                        displayOffset: I16[2] @12,
+                        animOneshotStart: U16[1] @16,
+                        animStep: U16[1] @18,
+                    },
+                },
+                textures! {
+                    sheetTex,
+                    cavernTex,
+                },
+                outputs! { color: 2, depth }),
+        }
+    }
+}
+
+struct Textures<GL: Context> {
+    tile_atlas: GL::Texture,
+    structure_atlas: GL::Texture,
+}
+
+impl<GL: Context> Textures<GL> {
+    fn new(gl: &mut GL) -> Textures<GL> {
+        Textures {
+            tile_atlas: gl.load_texture("tiles"),
+            structure_atlas: gl.load_texture("structures0"),
+        }
+    }
+}
+
+pub struct Renderer<GL: Context> {
+    terrain_geom: GeomCache<GL, Region<V2>>,
+    structure_geom: GeomCache<GL, Region<V2>>,
+    light_geom: GeomCache<GL, Region<V2>>,
+    ui_buffer: GL::Buffer,
+
+    buffers: Buffers<GL>,
+    shaders: Shaders<GL>,
+    textures: Textures<GL>
+}
+
+impl<GL: Context> Renderer<GL> {
+    pub fn new(gl: &mut GL) -> Renderer<GL> {
+        Renderer {
+            terrain_geom: GeomCache::new(gl),
+            structure_geom: GeomCache::new(gl),
+            light_geom: GeomCache::new(gl),
+            ui_buffer: gl.create_buffer(),
+
+            buffers: Buffers::new(gl),
+            shaders: Shaders::new(gl),
+            textures: Textures::new(gl),
         }
     }
 
@@ -159,12 +249,80 @@ impl<GL: Context> Renderer<GL> {
     }
 
 
-    pub fn test_render(&mut self, tex: &GL::Texture) {
+    pub fn render_terrain(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
+        let terrain_buf = self.terrain_geom.buffer();
         DrawArgs::<GL>::new()
-            .arrays(&[&self.square01_buffer])
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                scene.slice_center(),
+                scene.slice_z(),
+            ])
+            .arrays(&[terrain_buf])
+            .textures(&[
+                &self.textures.tile_atlas,
+                &cavern_tex,
+            ])
+            .range(0 .. terrain_buf.len() / mem::size_of::<graphics::terrain::Vertex>())
+            .draw(&mut self.shaders.terrain);
+    }
+
+    pub fn render_structures(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
+        let structure_buf = self.structure_geom.buffer();
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                scene.slice_center(),
+                scene.slice_z(),
+                scene.now(),
+            ])
+            .arrays(&[structure_buf])
+            .textures(&[
+                &self.textures.structure_atlas,
+                &cavern_tex,
+            ])
+            .range(0 .. structure_buf.len() / mem::size_of::<graphics::structure::Vertex>())
+            .draw(&mut self.shaders.structure);
+    }
+
+    pub fn render_output(&mut self, tex: &GL::Texture) {
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
             .textures(&[tex])
             .range(0..6)
-            .draw(&mut self.blit_full);
+            .draw(&mut self.shaders.blit_full);
+    }
+}
+
+
+pub struct Scene {
+    camera_pos: [f32; 2],
+    camera_size: [f32; 2],
+    slice_center: [f32; 2],
+    slice_z: f32,
+    now: f32,
+}
+
+impl Scene {
+    pub fn camera_pos(&self) -> UniformValue {
+        UniformValue::V2(&self.camera_pos)
+    }
+
+    pub fn camera_size(&self) -> UniformValue {
+        UniformValue::V2(&self.camera_size)
+    }
+
+    pub fn slice_center(&self) -> UniformValue {
+        UniformValue::V2(&self.slice_center)
+    }
+
+    pub fn slice_z(&self) -> UniformValue {
+        UniformValue::Float(self.slice_z)
+    }
+
+    pub fn now(&self) -> UniformValue {
+        UniformValue::Float(self.now)
     }
 }
 

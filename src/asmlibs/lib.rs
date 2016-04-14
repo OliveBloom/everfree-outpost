@@ -321,8 +321,10 @@ pub unsafe extern fn get_ui_geometry_buffer(client: &Client,
 
 #[no_mangle]
 pub unsafe extern fn test_render(client: &mut Client,
+                                 opcode: u32,
+                                 scene: &client::graphics::renderer::Scene,
                                  tex_name: u32) {
-    client.test_render(tex_name);
+    client.test_render(opcode, scene, tex_name);
 }
 
 

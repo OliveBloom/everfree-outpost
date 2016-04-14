@@ -275,19 +275,14 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_world.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        var terrain_info = data._asm.getTerrainGeometryBuffer();
-        var buf = terrain_info.buf;
-        var len = terrain_info.len;
-        this_.terrain.draw(fb_idx, 0, len, {}, {'*': buf}, {
-            'cavernTex': data.cavern_map.getTexture(),
-        });
+        var asm = data._asm;
+        var raw_tex = data.cavern_map.getTexture().texture;
+        var tex_name = asm.asmgl.importTextureHACK(raw_tex);
 
-        var structure_info = data._asm.getStructureGeometryBuffer();
-        var buf = structure_info.buf;
-        var len = structure_info.len;
-        this_.structure.draw(fb_idx, 0, len, {}, {'*': buf}, {
-            'cavernTex': data.cavern_map.getTexture(),
-        });
+        asm.testRender(1, scene, tex_name); // terrain
+        asm.testRender(2, scene, tex_name); // structures
+
+        asm.asmgl.deleteTexture(tex_name);
 
         for (var i = 0; i < scene.sprites.length; ++i) {
             var sprite = scene.sprites[i];
@@ -299,12 +294,14 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_shadow.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        /*
         var structure_info = data._asm.getStructureGeometryBuffer();
         var buf = structure_info.buf;
         var len = structure_info.len;
         this_.structure_shadow.draw(fb_idx, 0, len, {}, {'*': buf}, {
             'cavernTex': data.cavern_map.getTexture(),
         });
+        */
     });
 
     gl.disable(gl.DEPTH_TEST);
@@ -480,7 +477,7 @@ Renderer.prototype.render = function(scene) {
     var asm = this.data._asm;
     var raw_tex = this.buffers.fb_final.textures[0].texture;
     var tex_name = asm.asmgl.importTextureHACK(raw_tex);
-    asm.testRender(tex_name);
+    asm.testRender(0, scene, tex_name);
     asm.asmgl.deleteTexture(tex_name);
 
     var end_render = Date.now();

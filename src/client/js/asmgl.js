@@ -83,6 +83,9 @@ function reportShaderErrors(errs, filename) {
 AsmGl.prototype._compileShader = function(type, filename) {
     var gl = this.gl;
     var src = this.assets[filename];
+    src = src.replace(/^#include "(.*)"$/m, function(_, file) {
+        return this.assets[file];
+    });
 
     var s = gl.createShader(type);
     gl.shaderSource(s, src);
@@ -153,7 +156,7 @@ AsmGl.prototype.getUniformLocation = function(shader_name, var_name) {
     } else {
         var loc = insertFree(this.shader_uniform_list, handle);
         // NB: 0 *is* a valid uniform location
-        return handle;
+        return loc;
     }
 };
 
