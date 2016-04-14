@@ -4,7 +4,6 @@ var Asm = require('asmlibs').Asm;
 var getPhysicsHeapSize = require('asmlibs').getPhysicsHeapSize;
 var Motion = require('entity').Motion;
 var ExtraDefs = require('data/extras').ExtraDefs;
-var BlockDef = require('data/chunk').BlockDef;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
 var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
 

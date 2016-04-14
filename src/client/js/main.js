@@ -806,16 +806,8 @@ function handleInit(entity_id, now, cycle_base, cycle_ms) {
 }
 
 function handleTerrainChunk(i, data) {
-    var chunk = chunks[i];
-    var raw_length = rle16Decode(data, chunk._tiles);
-
-    if (raw_length != CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) {
-        console.assert(false,
-                'chunk data contained wrong number of tiles:', raw_length);
-    }
-
     runner.job('load-chunk-' + i, function() {
-        renderer.loadChunk((i / LOCAL_SIZE)|0, (i % LOCAL_SIZE)|0, chunk);
+        renderer.loadChunk((i / LOCAL_SIZE)|0, (i % LOCAL_SIZE)|0, data);
     });
 
     chunkLoaded[i] = true;

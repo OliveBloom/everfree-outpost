@@ -546,9 +546,9 @@ DynAsm.prototype.floodfill = function(pos, radius) {
     return result;
 };
 
-DynAsm.prototype.loadTerrainChunk = function(cx, cy, blocks) {
-    var buf = this._heapAlloc(Uint16Array, blocks.length);
-    buf.set(blocks);
+DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
+    var buf = this._heapAlloc(Uint16Array, data.length);
+    buf.set(data);
     this._raw['load_terrain_chunk'](this.client,
             cx, cy, buf.byteOffset, buf.byteLength);
     this._heapFree(buf);

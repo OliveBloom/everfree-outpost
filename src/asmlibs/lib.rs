@@ -91,11 +91,10 @@ pub unsafe extern fn client_reset(client: &mut Client) {
 pub unsafe extern fn load_terrain_chunk(client: &mut Client,
                                         cx: i32,
                                         cy: i32,
-                                        blocks_ptr: *const u16,
-                                        blocks_byte_len: usize) {
-    assert!(blocks_byte_len == mem::size_of::<gfx_types::BlockChunk>());
-    let blocks = &*(blocks_ptr as *const gfx_types::BlockChunk);
-    client.load_terrain_chunk(V2::new(cx, cy), blocks);
+                                        data_ptr: *const u16,
+                                        data_byte_len: usize) {
+    let data = make_slice(data_ptr, data_byte_len);
+    client.load_terrain_chunk(V2::new(cx, cy), data);
 }
 
 // Structures

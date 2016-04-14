@@ -87,10 +87,11 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Terrain chunk tracking
 
-    pub fn load_terrain_chunk(&mut self, cpos: V2, blocks: &BlockChunk) {
+    pub fn load_terrain_chunk(&mut self, cpos: V2, data: &[u16]) {
         // Update self.chunks
         let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
-        self.chunks[bounds.index(cpos)] = *blocks;
+        let blocks = &mut self.chunks[bounds.index(cpos)];
+        rle16Decode(data, blocks);
 
         // Update self.terrain_shape
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
@@ -368,4 +369,28 @@ impl<'d, P: Platform> ClientObj for Client<'d, P> {
     fn data(&self) -> &Data { &self.data }
     fn platform(&mut self) -> &mut PlatformObj { &mut self.platform }
     fn ui(&mut self) -> &mut UI { &mut self.ui }
+}
+
+
+fn rle16Decode(input: &[u16], output: &mut [u16]) {
+    let mut i = 0;
+    let mut j = 0;
+    while i < input.len() {
+        let x = input[i];
+        i += 1;
+
+        if x & 0xf000 == 0 {
+            output[j] = x;
+            j += 1;
+        } else {
+            let count = x & 0x0fff;
+            let value = input[i];
+            i += 1;
+
+            for _ in 0..count {
+                output[j] = value;
+                j += 1;
+            }
+        }
+    }
 }

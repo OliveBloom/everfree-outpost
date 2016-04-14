@@ -3,7 +3,6 @@ var AsmGraphics = require('asmlibs').AsmGraphics;
 var getRendererHeapSize = require('asmlibs').getRendererHeapSize;
 var getGraphicsHeapSize = require('asmlibs').getGraphicsHeapSize;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
-var BlockDef = require('data/chunk').BlockDef;
 var TemplateDef = require('data/templates').TemplateDef;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
 var TILE_SIZE = require('data/chunk').TILE_SIZE;
@@ -97,8 +96,8 @@ RenderData.prototype.refreshTexture = function(image) {
 
 // Data loading
 
-RenderData.prototype.loadChunk = function(i, j, chunk) {
-    this._asm.loadTerrainChunk(j, i, chunk._tiles);
+RenderData.prototype.loadChunk = function(i, j, data) {
+    this._asm.loadTerrainChunk(j, i, data);
 
     this.cavern_map.invalidate();
 };
