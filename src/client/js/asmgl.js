@@ -83,8 +83,9 @@ function reportShaderErrors(errs, filename) {
 AsmGl.prototype._compileShader = function(type, filename) {
     var gl = this.gl;
     var src = this.assets[filename];
+    var this_ = this;
     src = src.replace(/^#include "(.*)"$/m, function(_, file) {
-        return this.assets[file];
+        return this_.assets[file];
     });
 
     var s = gl.createShader(type);

@@ -255,7 +255,7 @@ function rawClear(key, val) {
             obj = obj[parts[i]];
             def = def[parts[i]];
         }
-        obj[parts[parts.length - 1]] = base[parts[parts.length - 1]];
+        obj[parts[parts.length - 1]] = def[parts[parts.length - 1]];
 
         localStorage.setItem(base_key, JSON.stringify(obj));
     } else {

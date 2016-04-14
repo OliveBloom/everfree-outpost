@@ -213,8 +213,8 @@ function store_vec(view, offset, vec) {
     view[offset + 2] = vec.z;
 }
 
-INIT_HEAP_SIZE = 4 * 1024 * 1024;
-HEAP_PADDING = 256 * 1024;
+var INIT_HEAP_SIZE = 4 * 1024 * 1024;
+var HEAP_PADDING = 256 * 1024;
 
 /** @constructor */
 function DynAsm() {
@@ -309,7 +309,7 @@ DynAsm.prototype._makeView = function(type, offset, bytes) {
 };
 
 DynAsm.prototype._memcpy = function(dest_offset, data) {
-    if (data.constructor !== window.ArrayBuffer) {
+    if (data.constructor !== ArrayBuffer) {
         memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
     } else {
         memcpy(this.buffer, dest_offset, data, 0, data.byteLength);

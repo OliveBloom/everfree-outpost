@@ -1,6 +1,3 @@
-//var SIZEOF = require('asmlibs').SIZEOF;
-// TODO: hack
-var SIZEOF = window.SIZEOF;
 var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
 var TILE_SIZE = require('data/chunk').TILE_SIZE;
 
@@ -12,6 +9,8 @@ var Textures = sb.Textures;
 
 
 function makeShaders(shaders, gl, assets, defs, make_texture) {
+    // TODO: hack
+    var SIZEOF = window.SIZEOF;
     var ctx = new sb.ShaderBuilderContext(gl, assets, defs, make_texture);
 
 
@@ -177,7 +176,7 @@ function makeShaders(shaders, gl, assets, defs, make_texture) {
         .uniformVec2('sheetSize[0]', [item_tex.width / 2, item_tex.height / 2])
         .uniformVec2('sheetSize[1]', [ui_tex.width, ui_tex.height])
         .uniformVec2('sheetSize[2]', [font_tex.width, font_tex.height])
-        .attributes(new SB.Attributes(16)
+        .attributes(new Attributes(16)
                 .field(0, gl.UNSIGNED_SHORT, 2, 'srcPos')
                 .field(4, gl.UNSIGNED_BYTE, 2, 'srcSize')
                 .field(6, gl.UNSIGNED_BYTE, 1, 'sheetAttr')
