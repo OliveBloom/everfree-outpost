@@ -80,9 +80,9 @@ function reportShaderErrors(errs, filename) {
     }
 };
 
-AsmGl.prototype._compileShader = function(type, filename) {
+AsmGl.prototype._compileShader = function(type, filename, defs) {
     var gl = this.gl;
-    var src = this.assets[filename];
+    var src = defs + this.assets[filename];
     var this_ = this;
     src = src.replace(/^#include "(.*)"$/m, function(_, file) {
         return this_.assets[file];
@@ -125,11 +125,11 @@ AsmGl.prototype._linkProgram = function(vert, frag, name) {
     return p;
 };
 
-AsmGl.prototype.loadShader = function(vert_name, frag_name) {
+AsmGl.prototype.loadShader = function(vert_name, frag_name, defs) {
     var gl = this.gl;
 
-    var vert = this._compileShader(gl.VERTEX_SHADER, vert_name);
-    var frag = this._compileShader(gl.FRAGMENT_SHADER, frag_name);
+    var vert = this._compileShader(gl.VERTEX_SHADER, vert_name, defs);
+    var frag = this._compileShader(gl.FRAGMENT_SHADER, frag_name, defs);
     var program = this._linkProgram(vert, frag, vert_name + '+' + frag_name);
     gl.deleteShader(vert);
     gl.deleteShader(frag);

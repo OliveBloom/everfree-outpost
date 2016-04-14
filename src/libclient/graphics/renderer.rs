@@ -44,13 +44,14 @@ struct Shaders<GL: Context> {
     blit_full: GL::Shader,
     terrain: GL::Shader,
     structure: GL::Shader,
+    light_static: GL::Shader,
 }
 
 impl<GL: Context> Shaders<GL> {
     fn new(gl: &mut GL) -> Shaders<GL> {
         Shaders {
             blit_full: gl.load_shader(
-                "blit_fullscreen.vert", "blit_output.frag",
+                "blit_fullscreen.vert", "blit_output.frag", "",
                 uniforms! {},
                 arrays! {
                     [2] attribs! {
@@ -61,7 +62,7 @@ impl<GL: Context> Shaders<GL> {
                 outputs! { color: 1 }),
 
             terrain: gl.load_shader(
-                "terrain2.vert", "terrain2.frag",
+                "terrain2.vert", "terrain2.frag", "",
                 uniforms! {
                     cameraPos: V2,
                     cameraSize: V2,
@@ -69,7 +70,7 @@ impl<GL: Context> Shaders<GL> {
                     sliceZ: Float,
                 },
                 arrays! {
-                    // struct TerrainVertex
+                    // struct terrain::Vertex
                     [8] attribs! {
                         corner: U8[2] @0,
                         blockPos: U8[3] @2,
@@ -84,7 +85,7 @@ impl<GL: Context> Shaders<GL> {
                 outputs! { color: 2, depth }),
 
             structure: gl.load_shader(
-                "structure2.vert", "structure2.frag",
+                "structure2.vert", "structure2.frag", "",
                 uniforms! {
                     cameraPos: V2,
                     cameraSize: V2,
@@ -93,7 +94,7 @@ impl<GL: Context> Shaders<GL> {
                     now: Float,
                 },
                 arrays! {
-                    // struct TerrainVertex
+                    // struct structure::Vertex
                     [20] attribs! {
                         vertOffset: U16[3] @0,
                         animLength: I8[1] @6,
@@ -110,6 +111,29 @@ impl<GL: Context> Shaders<GL> {
                     cavernTex,
                 },
                 outputs! { color: 2, depth }),
+
+            light_static: gl.load_shader(
+                "light2.vert", "light2.frag",
+                defs! {
+                    LIGHT_INPUT: "attribute",
+                },
+                uniforms! {
+                    cameraPos: V2,
+                    cameraSize: V2,
+                },
+                arrays! {
+                    // struct 
+                    [16] attribs! {
+                        corner: U8[2] @0,
+                        center: U16[3] @2,
+                        colorIn: U8[3] (norm) @8,
+                        radiusIn: U16[1] @12,
+                    },
+                },
+                textures! {
+                    depthTex,
+                },
+                outputs! { color: 1 }),
         }
     }
 }
@@ -284,6 +308,21 @@ impl<GL: Context> Renderer<GL> {
             ])
             .range(0 .. structure_buf.len() / mem::size_of::<graphics::structure::Vertex>())
             .draw(&mut self.shaders.structure);
+    }
+
+    pub fn render_static_lights(&mut self, scene: &Scene, depth_tex: &GL::Texture) {
+        let light_buf = self.light_geom.buffer();
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+            ])
+            .arrays(&[light_buf])
+            .textures(&[
+                &depth_tex,
+            ])
+            .range(0 .. light_buf.len() / mem::size_of::<graphics::light::Vertex>())
+            .draw(&mut self.shaders.light_static);
     }
 
     pub fn render_output(&mut self, tex: &GL::Texture) {

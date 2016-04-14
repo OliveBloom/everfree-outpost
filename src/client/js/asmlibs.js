@@ -74,10 +74,14 @@ var module_env = function(asm) {
             asm.asmgl.bufferSubdata(target, offset, data);
         },
 
-        'asmgl_load_shader': function(vert_name_ptr, vert_name_len, frag_name_ptr, frag_name_len) {
+        'asmgl_load_shader': function(
+                vert_name_ptr, vert_name_len,
+                frag_name_ptr, frag_name_len,
+                defs_ptr, defs_len) {
             var vert_name = asm._loadString(vert_name_ptr, vert_name_len);
             var frag_name = asm._loadString(frag_name_ptr, frag_name_len);
-            return asm.asmgl.loadShader(vert_name, frag_name);
+            var defs = asm._loadString(defs_ptr, defs_len);
+            return asm.asmgl.loadShader(vert_name, frag_name, defs);
         },
         'asmgl_delete_shader': function(name) {
             asm.asmgl.deleteShader(name);

@@ -16,6 +16,7 @@ pub trait Context {
     fn load_shader(&mut self,
                    vert_name: &str,
                    frag_name: &str,
+                   defs: &str,
                    uniforms: &[UniformSpec],
                    arrays: &[ArraySpec],
                    textures: &[TextureSpec],
@@ -174,6 +175,18 @@ pub trait Framebuffer {
 
 */
 
+
+macro_rules! def {
+    ($name:ident : $val:expr) => {
+        concat!("#define ", stringify!($name), "    ", $val, "\n")
+    };
+}
+
+macro_rules! defs {
+    ($($name:ident : $val:expr,)*) => {
+        concat!($(def!($name: $val),)*)
+    };
+}
 
 macro_rules! uniform {
     ($name:ident : $ty:ident) => {

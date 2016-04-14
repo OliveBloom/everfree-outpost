@@ -352,6 +352,7 @@ impl<'d, P: Platform> Client<'d, P> {
             0 => self.renderer.render_output(&tex),
             1 => self.renderer.render_terrain(scene, &tex),
             2 => self.renderer.render_structures(scene, &tex),
+            3 => self.renderer.render_static_lights(scene, &tex),
             _ => println!("bad opcode: {}", opcode),
         }
         mem::forget(tex);

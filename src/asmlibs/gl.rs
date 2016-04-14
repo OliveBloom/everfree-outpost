@@ -20,7 +20,9 @@ mod ffi {
         pub fn asmgl_load_shader(vert_name_ptr: *const u8,
                                  vert_name_len: usize,
                                  frag_name_ptr: *const u8,
-                                 frag_name_len: usize) -> u32;
+                                 frag_name_len: usize,
+                                 defs_ptr: *const u8,
+                                 defs_len: usize) -> u32;
         pub fn asmgl_delete_shader(name: u32);
         pub fn asmgl_bind_shader(name: u32);
         pub fn asmgl_get_uniform_location(shader_name: u32,
@@ -229,12 +231,15 @@ impl Inner {
 
     pub fn load_shader(&mut self,
                        vert_name: &str,
-                       frag_name: &str) -> Name<Shader> {
+                       frag_name: &str,
+                       defs: &str) -> Name<Shader> {
         let name = unsafe {
             ffi::asmgl_load_shader(vert_name.as_ptr(),
                                    vert_name.len(),
                                    frag_name.as_ptr(),
-                                   frag_name.len())
+                                   frag_name.len(),
+                                   defs.as_ptr(),
+                                   defs.len())
         };
         assert!(name != 0);
         Name::new(name)
@@ -404,6 +409,7 @@ impl gl::Context for GL {
     fn load_shader(&mut self,
                    vert_name: &str,
                    frag_name: &str,
+                   defs: &str,
                    uniforms: &[gl::UniformSpec],
                    arrays: &[gl::ArraySpec],
                    textures: &[gl::TextureSpec],
@@ -411,7 +417,7 @@ impl gl::Context for GL {
         let inner = self.inner.clone();
 
         self.inner.run(|ctx| {
-            let name = ctx.load_shader(vert_name, frag_name);
+            let name = ctx.load_shader(vert_name, frag_name, defs);
             ctx.bind_shader(name);
 
             let mut uniform_vec = Vec::with_capacity(uniforms.len());

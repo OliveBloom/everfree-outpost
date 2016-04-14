@@ -317,12 +317,11 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_light.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT);
 
-        var light_info = data._asm.getLightGeometryBuffer();
-        var buf = light_info.buf;
-        var len = light_info.len;
-        this_.light_static.draw(fb_idx, 0, len, {}, {'*': buf}, {
-            'depthTex': buffers.fb_world.depth_texture,
-        });
+        var asm = data._asm;
+        var raw_tex = buffers.fb_world.depth_texture.texture;
+        var tex_name = asm.asmgl.importTextureHACK(raw_tex);
+        asm.testRender(3, scene, tex_name); // static lights
+        asm.asmgl.deleteTexture(tex_name);
 
         for (var i = 0; i < scene.lights.length; ++i) {
             var light = scene.lights[i];
