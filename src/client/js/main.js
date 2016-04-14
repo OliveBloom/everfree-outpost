@@ -53,8 +53,6 @@ var UIInput = require('ui_gl/input').UIInput;
 
 var ItemDef = require('data/items').ItemDef;
 var RecipeDef = require('data/recipes').RecipeDef;
-var TemplateDef = require('data/templates').TemplateDef;
-var TemplatePart = require('data/templates').TemplatePart;
 var AnimationDef = require('data/sprites').AnimationDef;
 var SpritePartDef = require('data/sprites').SpritePartDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
@@ -287,16 +285,6 @@ function loadAssets(next) {
             var recipes = assets['recipe_defs'];
             for (var i = 0; i < recipes.length; ++i) {
                 RecipeDef.register(i, recipes[i]);
-            }
-
-            var templates = assets['template_defs'];
-            for (var i = 0; i < templates.length; ++i) {
-                TemplateDef.register(i, templates[i], assets);
-            }
-
-            var template_parts = assets['template_part_defs'];
-            for (var i = 0; i < template_parts.length; ++i) {
-                TemplatePart.register(template_parts[i]);
             }
 
             var animations = assets['animation_defs'];

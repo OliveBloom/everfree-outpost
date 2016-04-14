@@ -3,7 +3,6 @@ var AsmGraphics = require('asmlibs').AsmGraphics;
 var getRendererHeapSize = require('asmlibs').getRendererHeapSize;
 var getGraphicsHeapSize = require('asmlibs').getGraphicsHeapSize;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
-var TemplateDef = require('data/templates').TemplateDef;
 var CHUNK_SIZE = require('consts').CHUNK_SIZE;
 var TILE_SIZE = require('consts').TILE_SIZE;
 var LOCAL_SIZE = require('consts').LOCAL_SIZE;

@@ -33,9 +33,6 @@ def main(src_dir, build_dir, out_file):
 
     add('json', 'item_defs',            build('items_client.json'))
     add('json', 'recipe_defs',          build('recipes_client.json'))
-    add('json', 'template_defs',        build('structures_client.json'))
-    add('json', 'template_part_defs',   build('structure_parts_client.json'))
-    add('json', 'template_vert_defs',   build('structure_verts_client.json'))
     add('json', 'animation_defs',       build('animations_client.json'))
     add('json', 'sprite_part_defs',     build('sprite_parts_client.json'))
     add('json', 'extra_defs',           build('extras_client.json'))
