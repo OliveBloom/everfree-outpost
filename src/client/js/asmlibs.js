@@ -454,6 +454,10 @@ DynAsm.prototype.inputKey = function(code) {
     return this._raw['input_key'](this.client, code);
 };
 
+DynAsm.prototype.inputMouseMove = function(x, y) {
+    return this._raw['input_mouse_move'](this.client, x, y);
+};
+
 DynAsm.prototype.openInventoryDialog = function() {
     return this._raw['open_inventory_dialog'](this.client);
 };
@@ -622,4 +626,18 @@ DynAsm.prototype.testRender = function(opcode, scene, tex_name) {
 
 DynAsm.prototype.bench = function() {
     return this._raw['client_bench'](this.client);
+};
+
+
+function AsmClientInput(asm) {
+    this._asm = asm;
+}
+exports.AsmClientInput = AsmClientInput;
+
+AsmClientInput.prototype.handleMouseMove = function(evt) {
+    var ret = this._asm.inputMouseMove(evt.x, evt.y);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
 };

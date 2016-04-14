@@ -1,9 +1,10 @@
 use std::prelude::v1::*;
 use std::cmp;
 
-use physics::v3::{V2, scalar, Region, Align};
+use physics::v3::{V2, Vn, scalar, Region, Align};
 
 use inventory::Item;
+use ui::Context;
 use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
@@ -82,6 +83,7 @@ pub trait GridDyn: Copy {
     fn grid_size(self) -> V2;
     fn len(self) -> usize;
     fn item(self, i: usize) -> Item;
+    fn active(self) -> bool;
 }
 
 impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
@@ -95,7 +97,10 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
             let dyn = SlotDyn {
                 item: self.dyn.item(idx),
                 status:
-                    if idx == self.state.focus { SlotStatus::Active }
+                    if idx == self.state.focus {
+                        if self.dyn.active() { SlotStatus::Active }
+                        else { SlotStatus::Semiactive }
+                    }
                     else { SlotStatus::Inactive },
             };
 
@@ -121,6 +126,23 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
 
         if let Some(dir) = dir {
             self.state.move_focus(dir, self.dyn.grid_size(), self.dyn.len());
+            return EventStatus::Handled;
+        }
+
+        EventStatus::Unhandled
+    }
+
+    fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
+        let offset = ctx.mouse_pos - rect.min;
+        let slot_pos = offset.div_floor(Slot::size());
+
+        let grid_bounds = Region::sized(self.dyn.grid_size());
+        if !grid_bounds.contains(slot_pos) {
+            return EventStatus::Unhandled;
+        }
+        let idx = grid_bounds.index(slot_pos);
+        if idx < self.dyn.len() {
+            self.state.focus = idx;
             return EventStatus::Handled;
         }
 

@@ -22,15 +22,16 @@ pub mod dialogs;    // TODO: make private
 mod root;
 
 
+
 pub struct UI {
-    //context: Context,
+    context: Context,
     pub root: root::Root,
 }
 
 impl UI {
     pub fn new() -> UI {
         UI {
-            //context: Context::new(),
+            context: Context::new(),
             root: root::Root::new(),
         }
     }
@@ -58,6 +59,36 @@ impl UI {
         };
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         root.on_key(key)
+    }
+
+    pub fn handle_mouse_move(&mut self,
+                             pos: V2,
+                             invs: &Inventories) -> input::EventStatus {
+        let dyn = root::RootDyn {
+            screen_size: V2::new(799, 379),
+            inventories: invs,
+        };
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
+        let rect = Region::sized(root.size());
+
+        self.context.mouse_pos = pos;
+        root.on_mouse_move(&mut self.context, rect)
+    }
+}
+
+pub struct Context {
+    mouse_pos: V2,
+    mouse_down: bool,
+    mouse_down_pos: V2,
+}
+
+impl Context {
+    fn new() -> Context {
+        Context {
+            mouse_pos: scalar(-1),
+            mouse_down: false,
+            mouse_down_pos: scalar(-1),
+        }
     }
 }
 

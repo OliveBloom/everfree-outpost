@@ -67,6 +67,7 @@ var Prediction = require('physics').Prediction;
 var DummyPrediction = require('physics').DummyPrediction;
 
 var DynAsm = require('asmlibs').DynAsm;
+var AsmClientInput = require('asmlibs').AsmClientInput;
 
 var net = require('net');
 var Timing = require('time').Timing;
@@ -200,6 +201,7 @@ function init() {
     ui_gl.calcSize(0, 0);
     input = new Input();
     input.handlers.push(new UIInput(ui_gl));
+    input.handlers.push(new AsmClientInput(asm_client));
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';

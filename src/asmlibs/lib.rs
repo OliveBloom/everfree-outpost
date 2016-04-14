@@ -203,6 +203,13 @@ pub unsafe extern fn input_key(client: &mut Client, code: u8) -> u8 {
 }
 
 #[no_mangle]
+pub unsafe extern fn input_mouse_move(client: &mut Client,
+                                      x: i32,
+                                      y: i32) -> u8 {
+    client.input_mouse_move(V2::new(x, y)) as u8
+}
+
+#[no_mangle]
 pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
     client.open_inventory_dialog()
 }

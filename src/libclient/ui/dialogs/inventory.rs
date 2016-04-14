@@ -74,4 +74,8 @@ impl<'a> inventory::GridDyn for InventoryDyn<'a> {
     fn item(self, i: usize) -> Item {
         self.inv.unwrap().items[i]
     }
+
+    fn active(self) -> bool {
+        true
+    }
 }

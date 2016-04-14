@@ -257,6 +257,19 @@ impl<'d, P: Platform> Client<'d, P> {
         }
     }
 
+    pub fn input_mouse_move(&mut self, pos: V2) -> bool {
+        let status = self.ui.handle_mouse_move(pos, &self.inventories);
+        match status {
+            EventStatus::Unhandled => false,
+            EventStatus::Handled => true,
+            EventStatus::Action(f) => {
+                // TODO: figure out why f(...) doesn't work
+                f.call_box((self,));
+                true
+            },
+        }
+    }
+
     pub fn open_inventory_dialog(&mut self) {
         use ui::dialogs::AnyDialog;
         self.ui.root.dialog.inner = AnyDialog::inventory();
