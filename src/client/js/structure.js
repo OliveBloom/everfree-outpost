@@ -1,6 +1,3 @@
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
-
-
 /** @constructor */
 function Structure(pos, template, render_index) {
     this.pos = pos;

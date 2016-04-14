@@ -1,4 +1,3 @@
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
 var Vec = require('util/vec').Vec;
 
 

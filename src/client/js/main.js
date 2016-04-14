@@ -51,7 +51,6 @@ var InventoryUIGL = require('ui_gl/inventory').InventoryUIGL;
 var Input = require('input').Input;
 var UIInput = require('ui_gl/input').UIInput;
 
-var BlockDef = require('data/chunk').BlockDef;
 var ItemDef = require('data/items').ItemDef;
 var RecipeDef = require('data/recipes').RecipeDef;
 var TemplateDef = require('data/templates').TemplateDef;
@@ -61,10 +60,9 @@ var SpritePartDef = require('data/sprites').SpritePartDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
 var FontMetrics = require('data/fontmetrics').FontMetrics;
 
-var Chunk = require('data/chunk').Chunk;
-var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
-var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
+var CHUNK_SIZE = require('consts').CHUNK_SIZE;
+var TILE_SIZE = require('consts').TILE_SIZE;
+var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
 var Physics = require('physics').Physics;
 var Prediction = require('physics').Prediction;
@@ -146,7 +144,6 @@ var asm_client;
 var entities;
 var player_entity;
 
-var chunks;
 var chunkLoaded;
 var physics;
 var prediction;
@@ -218,7 +215,6 @@ function init() {
     entities = {};
     player_entity = -1;
 
-    chunks = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return new Chunk(); });
     chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
     physics = new Physics(asm_client);
     prediction = Config.motion_prediction.get() ? new Prediction(physics) : new DummyPrediction();
@@ -282,11 +278,6 @@ function loadAssets(next) {
         }, function(assets_) {
             assets = assets_;
             assets['server_info'] = server_info;
-
-            var blocks = assets['block_defs'];
-            for (var i = 0; i < blocks.length; ++i) {
-                BlockDef.register(i, blocks[i]);
-            }
 
             var items = assets['item_defs'];
             for (var i = 0; i < items.length; ++i) {

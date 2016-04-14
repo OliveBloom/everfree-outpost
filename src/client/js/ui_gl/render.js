@@ -2,7 +2,7 @@ var ItemDef = require('data/items').ItemDef;
 var W = require('ui_gl/widget');
 var G = require('graphics/glutil');
 var SB = require('graphics/shaderbuilder');
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
+var TILE_SIZE = require('consts').TILE_SIZE;
 
 /** @constructor */
 function UIRenderContext(gl, assets) {

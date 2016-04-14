@@ -4,8 +4,8 @@ var Asm = require('asmlibs').Asm;
 var getPhysicsHeapSize = require('asmlibs').getPhysicsHeapSize;
 var Motion = require('entity').Motion;
 var ExtraDefs = require('data/extras').ExtraDefs;
-var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
-var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
+var CHUNK_SIZE = require('consts').CHUNK_SIZE;
+var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
 var INT_MAX = 0x7fffffff;
 var INT_MIN = -INT_MAX - 1;

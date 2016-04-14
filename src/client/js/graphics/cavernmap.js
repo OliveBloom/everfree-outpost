@@ -1,5 +1,5 @@
 var Texture = require('graphics/glutil').Texture;
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
+var TILE_SIZE = require('consts').TILE_SIZE;
 
 /** @constructor */
 function CavernMap(gl, radius) {

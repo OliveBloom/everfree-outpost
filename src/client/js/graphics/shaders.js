@@ -1,6 +1,3 @@
-var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
-
 var sb = require('graphics/shaderbuilder');
 var Uniforms = sb.Uniforms;
 var Attributes = sb.Attributes;

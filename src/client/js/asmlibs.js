@@ -6,7 +6,6 @@ var config = require('config');
 var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
 var encodeUtf8 = require('util/misc').encodeUtf8;
-var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
 
 var AsmGl = require('asmgl').AsmGl;
 

@@ -31,7 +31,6 @@ def main(src_dir, build_dir, out_file):
     add('image', 'items_img',   build('items.png'))
     add('image', 'ui_atlas',    build('ui_atlas.png'))
 
-    add('json', 'block_defs',           build('blocks_client.json'))
     add('json', 'item_defs',            build('items_client.json'))
     add('json', 'recipe_defs',          build('recipes_client.json'))
     add('json', 'template_defs',        build('structures_client.json'))
