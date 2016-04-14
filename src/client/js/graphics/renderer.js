@@ -292,14 +292,11 @@ RenderShaders.prototype.renderLayer = function(scene, data, buffers, out_buf) {
     buffers.fb_shadow.use(function(fb_idx) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        /*
-        var structure_info = data._asm.getStructureGeometryBuffer();
-        var buf = structure_info.buf;
-        var len = structure_info.len;
-        this_.structure_shadow.draw(fb_idx, 0, len, {}, {'*': buf}, {
-            'cavernTex': data.cavern_map.getTexture(),
-        });
-        */
+        var asm = data._asm;
+        var raw_tex = data.cavern_map.getTexture().texture;
+        var tex_name = asm.asmgl.importTextureHACK(raw_tex);
+        asm.testRender(4, scene, tex_name); // structures (shadow)
+        asm.asmgl.deleteTexture(tex_name);
     });
 
     gl.disable(gl.DEPTH_TEST);

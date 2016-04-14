@@ -44,6 +44,7 @@ struct Shaders<GL: Context> {
     blit_full: GL::Shader,
     terrain: GL::Shader,
     structure: GL::Shader,
+    structure_shadow: GL::Shader,
     light_static: GL::Shader,
 }
 
@@ -86,6 +87,37 @@ impl<GL: Context> Shaders<GL> {
 
             structure: gl.load_shader(
                 "structure2.vert", "structure2.frag", "",
+                uniforms! {
+                    cameraPos: V2,
+                    cameraSize: V2,
+                    sliceCenter: V2,
+                    sliceZ: Float,
+                    now: Float,
+                },
+                arrays! {
+                    // struct structure::Vertex
+                    [20] attribs! {
+                        vertOffset: U16[3] @0,
+                        animLength: I8[1] @6,
+                        animRate: U8[1] @7,
+                        blockPos: U8[3] @8,
+                        layer: U8[1] @11,
+                        displayOffset: I16[2] @12,
+                        animOneshotStart: U16[1] @16,
+                        animStep: U16[1] @18,
+                    },
+                },
+                textures! {
+                    sheetTex,
+                    cavernTex,
+                },
+                outputs! { color: 2, depth }),
+
+            structure_shadow: gl.load_shader(
+                "structure2.vert", "structure2.frag",
+                defs! {
+                    OUTPOST_SHADOW: "1",
+                },
                 uniforms! {
                     cameraPos: V2,
                     cameraSize: V2,
@@ -291,7 +323,7 @@ impl<GL: Context> Renderer<GL> {
             .draw(&mut self.shaders.terrain);
     }
 
-    pub fn render_structures(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
+    pub fn render_structures(&mut self, scene: &Scene, cavern_tex: &GL::Texture, shadow: bool) {
         let structure_buf = self.structure_geom.buffer();
         DrawArgs::<GL>::new()
             .uniforms(&[
@@ -307,7 +339,8 @@ impl<GL: Context> Renderer<GL> {
                 &cavern_tex,
             ])
             .range(0 .. structure_buf.len() / mem::size_of::<graphics::structure::Vertex>())
-            .draw(&mut self.shaders.structure);
+            .draw(if !shadow { &mut self.shaders.structure }
+                  else { &mut self.shaders.structure_shadow });
     }
 
     pub fn render_static_lights(&mut self, scene: &Scene, depth_tex: &GL::Texture) {
