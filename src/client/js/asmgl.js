@@ -4,17 +4,21 @@ var insertFree = require('util/misc').insertFree;
 /** @constructor */
 function AsmGl() {
     this.gl = null;
+    this.glext_draw_buffers = null;
     this.assets = null;
 
     this.buffer_list = [];
     this.shader_list = [];
     this.shader_uniform_list = [];
     this.texture_list = [];
+    this.framebuffer_list = [];
+    this.renderbuffer_list = [];
 }
 exports.AsmGl = AsmGl;
 
 AsmGl.prototype.init = function(gl, assets) {
     this.gl = gl;
+    this.glext_draw_buffers = gl.getExtension('WEBGL_draw_buffers');
     this.assets = assets;
 };
 
@@ -229,6 +233,28 @@ AsmGl.prototype.loadTexture = function(name, size_out) {
     return name + 1;
 };
 
+AsmGl.prototype.genTexture = function(width, height, is_depth) {
+    var gl = this.gl;
+
+    var tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    if (!is_depth) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0,
+                gl.RGBA, gl.UNSIGNED_BYTE, null);
+    } else {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0,
+                gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+    }
+
+    var name = insertFree(this.texture_list, tex);
+    return name + 1;
+};
+
 AsmGl.prototype.importTextureHACK = function(tex) {
     var name = insertFree(this.texture_list, tex);
     return name + 1;
@@ -247,6 +273,81 @@ AsmGl.prototype.bindTexture = function(name) {
     var gl = this.gl;
     var tex = this.texture_list[name - 1];
     gl.bindTexture(gl.TEXTURE_2D, tex);
+};
+
+
+// Framebuffers
+
+AsmGl.prototype.genFramebuffer = function() {
+    var fb = this.gl.createFramebuffer();
+    var name = insertFree(this.framebuffer_list, fb);
+    return name + 1;
+};
+
+AsmGl.prototype.deleteFramebuffer = function(name) {
+    this.framebuffer_list[name - 1] = null;
+};
+
+AsmGl.prototype.bindFramebuffer = function(name) {
+    var gl = this.gl;
+    var fb = this.framebuffer_list[name - 1];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+};
+
+AsmGl.prototype.genRenderbufferDepth = function(width, height) {
+    var gl = this.gl;
+
+    var rb = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+
+    var name = insertFree(this.renderbuffer_list, rb);
+    return name + 1;
+};
+
+AsmGl.prototype.deleteRenderbuffer = function(name) {
+    this.renderbuffer_list[name - 1] = null;
+};
+
+AsmGl.prototype._fbAttachment = function(att) {
+    if (att >= 0) {
+        return this.gl.COLOR_ATTACHMENT0 + att;
+    } else if (att == -1) {
+        return this.gl.DEPTH_ATTACHMENT;
+    } else {
+        throw 'bad attachment index: ' + att;
+    }
+};
+
+AsmGl.prototype.framebufferTexture = function(tex_name, attachment) {
+    var gl = this.gl;
+
+    var tex = this.texture_list[tex_name - 1];
+    var attach = this._fbAttachment(attachment);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, attach, gl.TEXTURE_2D, tex, 0);
+};
+
+AsmGl.prototype.framebufferRenderbuffer = function(rb_name, attachment) {
+    var gl = this.gl;
+
+    var rb = this.renderbuffer_list[rb_name - 1];
+    var attach = this._fbAttachment(attachment);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, attach, gl.RENDERBUFFER, rb);
+};
+
+AsmGl.prototype.checkFramebufferStatus = function() {
+    var gl = this.gl;
+    var stat = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    return stat == gl.FRAMEBUFFER_COMPLETE;
+};
+
+AsmGl.prototype.drawBuffers = function(num_attachments) {
+    var gl = this.gl;
+    var arr = new Array(num_attachments);
+    for (var i = 0; i < arr.length; ++i) {
+        arr[i] = gl.COLOR_ATTACHMENT0 + i;
+    }
+    this.glext_draw_buffers.drawBuffersWEBGL(arr);
 };
 
 

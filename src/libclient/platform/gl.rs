@@ -26,6 +26,12 @@ pub trait Context {
     fn load_texture(&mut self, img_name: &str) -> Self::Texture;
     fn texture_import_HACK(&mut self, name: u32, size: (u16, u16)) -> Self::Texture;
 
+    type Framebuffer: Framebuffer<Self>;
+    fn create_framebuffer(&mut self,
+                          size: (u16, u16),
+                          color: u8,
+                          depth: DepthBuffer) -> Self::Framebuffer;
+
     // Would be nice to put this method on Shader, but it needs 
     fn draw(&mut Self::Shader, args: &DrawArgs<Self>);
 }
@@ -34,7 +40,7 @@ pub struct DrawArgs<'a, GL: ?Sized+Context+'a> {
     pub uniforms: &'a [UniformValue<'a>],
     pub arrays: &'a [&'a GL::Buffer],
     pub textures: &'a [&'a GL::Texture],
-    // TODO: output db
+    pub output: Option<&'a GL::Framebuffer>,
     pub index_array: Option<&'a GL::Buffer>,
     pub start: usize,
     pub count: usize,
@@ -48,6 +54,7 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
             uniforms: &[],
             arrays: &[],
             textures: &[],
+            output: None,
             index_array: None,
             start: 0,
             count: 0,
@@ -66,6 +73,11 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
 
     pub fn textures(&mut self, textures: &'a [&'a GL::Texture]) -> &mut Self {
         self.textures = textures;
+        self
+    }
+
+    pub fn output(&mut self, output: &'a GL::Framebuffer) -> &mut Self {
+        self.output = Some(output);
         self
     }
 
@@ -160,20 +172,21 @@ pub trait Texture {
     fn size(&self) -> (u16, u16);
 }
 
-/*
-pub trait Framebuffer {
-    fn size(&self) -> (u16, u16);
-
-    type ColorTexture: Texture;
-    fn color_planes_len(&self) -> usize;
-    fn color_plane(&self, index: usize) -> Self::ColorTexture;
-
-    type DepthTexture: Texture;
-    fn has_depth_plane(&self) -> bool;
-    fn depth_plane(&self) -> Self::DepthTexture;
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DepthBuffer {
+    None,
+    Texture,
+    Renderbuffer,
 }
 
-*/
+pub trait Framebuffer<GL: ?Sized+Context> {
+    fn size(&self) -> (u16, u16);
+    fn num_color_planes(&self) -> usize;
+    fn depth_mode(&self) -> DepthBuffer;
+
+    fn color_texture(&self, index: usize) -> &GL::Texture;
+    fn depth_texture(&self) -> &GL::Texture;
+}
 
 
 macro_rules! def {

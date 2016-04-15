@@ -121,6 +121,9 @@ var module_env = function(asm) {
             var size_view = asm._makeView(Uint16Array, size_ptr, 4);
             return asm.asmgl.loadTexture(name, size_view);
         },
+        'asmgl_gen_texture': function(width, height, is_depth) {
+            return asm.asmgl.genTexture(width, height, is_depth);
+        },
         'asmgl_delete_texture': function(name) {
             asm.asmgl.deleteTexture(name);
         },
@@ -129,6 +132,34 @@ var module_env = function(asm) {
         },
         'asmgl_bind_texture': function(name) {
             asm.asmgl.bindTexture(name);
+        },
+
+        'asmgl_gen_framebuffer': function() {
+            return asm.asmgl.genFramebuffer();
+        },
+        'asmgl_delete_framebuffer': function(name) {
+            asm.asmgl.deleteFramebuffer(name);
+        },
+        'asmgl_bind_framebuffer': function(name) {
+            asm.asmgl.bindFramebuffer(name);
+        },
+        'asmgl_gen_renderbuffer_depth': function(width, height) {
+            return asm.asmgl.genRenderbufferDepth(width, height);
+        },
+        'asmgl_delete_renderbuffer': function(name) {
+            asm.asmgl.deleteRenderbuffer(name);
+        },
+        'asmgl_framebuffer_texture': function(tex_name, attachment) {
+            asm.asmgl.framebufferTexture(tex_name, attachment);
+        },
+        'asmgl_framebuffer_renderbuffer': function(rb_name, attachment) {
+            asm.asmgl.framebufferRenderbuffer(rb_name, attachment);
+        },
+        'asmgl_check_framebuffer_status': function() {
+            return asm.asmgl.checkFramebufferStatus();
+        },
+        'asmgl_draw_buffers': function(num_attachments) {
+            asm.asmgl.drawBuffers(num_attachments);
         },
 
         'asmgl_enable_vertex_attrib_array': function(index) {

@@ -9,7 +9,7 @@ use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer};
-use platform::gl::{DrawArgs, UniformValue};
+use platform::gl::{DrawArgs, UniformValue, DepthBuffer};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -197,6 +197,7 @@ pub struct Renderer<GL: Context> {
 
 impl<GL: Context> Renderer<GL> {
     pub fn new(gl: &mut GL) -> Renderer<GL> {
+        gl.create_framebuffer((512, 512), 2, DepthBuffer::Renderbuffer);
         Renderer {
             terrain_geom: GeomCache::new(gl),
             structure_geom: GeomCache::new(gl),

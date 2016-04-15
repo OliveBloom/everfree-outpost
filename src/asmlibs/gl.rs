@@ -40,9 +40,23 @@ mod ffi {
         pub fn asmgl_load_texture(name_ptr: *const u8,
                                   name_len: usize,
                                   size_p: *mut (u16, u16)) -> u32;
+        pub fn asmgl_gen_texture(width: u16, height: u16, is_depth: u8) -> u32;
         pub fn asmgl_delete_texture(name: u32);
         pub fn asmgl_active_texture(unit: usize);
         pub fn asmgl_bind_texture(name: u32);
+
+        pub fn asmgl_gen_framebuffer() -> u32;
+        pub fn asmgl_delete_framebuffer(name: u32);
+        pub fn asmgl_bind_framebuffer(name: u32);
+        pub fn asmgl_gen_renderbuffer_depth(width: u16, height: u16) -> u32;
+        pub fn asmgl_delete_renderbuffer(name: u32);
+        // No use for bind_renderbuffer so far
+        pub fn asmgl_framebuffer_texture(tex_name: u32,
+                                         attachment: i8);
+        pub fn asmgl_framebuffer_renderbuffer(rb_name: u32,
+                                              attachment: i8);
+        pub fn asmgl_check_framebuffer_status() -> u8;
+        pub fn asmgl_draw_buffers(num_attachments: u8);
 
         pub fn asmgl_enable_vertex_attrib_array(loc: i32);
         pub fn asmgl_disable_vertex_attrib_array(loc: i32);
@@ -142,6 +156,8 @@ impl<T> Name<T> {
 const NO_BUFFER: Name<Buffer> = Name { raw: 0, _marker: PhantomData };
 const NO_SHADER: Name<Shader> = Name { raw: 0, _marker: PhantomData };
 const NO_TEXTURE: Name<Texture> = Name { raw: 0, _marker: PhantomData };
+const NO_FRAMEBUFFER: Name<Framebuffer> = Name { raw: 0, _marker: PhantomData };
+const NO_RENDERBUFFER: Name<Renderbuffer> = Name { raw: 0, _marker: PhantomData };
 
 
 // State tracker internals
@@ -162,6 +178,7 @@ struct Inner {
     texture_unit: usize,
     textures: [Name<Texture>; NUM_TEXTURE_UNITS],
     vertex_attrib_mask: u32,
+    framebuffer: Name<Framebuffer>,
 }
 
 impl Inner {
@@ -172,6 +189,7 @@ impl Inner {
             texture_unit: 0,
             textures: [NO_TEXTURE; NUM_TEXTURE_UNITS],
             vertex_attrib_mask: 0,
+            framebuffer: NO_FRAMEBUFFER,
         }
     }
 
@@ -183,6 +201,7 @@ impl Inner {
         self.textures = [NO_TEXTURE; NUM_TEXTURE_UNITS];
         // Setting to 0 isn't perfect, but leaving stuff enabled is better than the opposite.
         self.vertex_attrib_mask = 0;
+        self.framebuffer = NO_FRAMEBUFFER;
     }
 
     // Internal API.  This basically wraps OpenGL, but the implementation does its own caching in
@@ -310,6 +329,17 @@ impl Inner {
         name
     }
 
+    pub fn gen_texture(&mut self, size: (u16, u16), is_depth: bool) -> Name<Texture> {
+        let name = unsafe { ffi::asmgl_gen_texture(size.0, size.1, is_depth as u8) };
+        assert!(name != 0);
+        let name = Name::new(name);
+        // As a side effect, gen_texture also binds the texture to the context,
+        // and sets the current texture image unit to 0.
+        self.texture_unit = 0;
+        self.textures[0] = name;
+        name
+    }
+
     pub fn delete_texture(&mut self, name: Name<Texture>) {
         unsafe { ffi::asmgl_delete_texture(name.raw) };
         for t in &mut self.textures {
@@ -331,6 +361,57 @@ impl Inner {
             unsafe { ffi::asmgl_bind_texture(name.raw) };
             self.textures[unit] = name;
         }
+    }
+
+
+    // Framebuffer objects
+
+    pub fn gen_framebuffer(&mut self) -> Name<Framebuffer> {
+        let name = unsafe { ffi::asmgl_gen_framebuffer() };
+        assert!(name != 0);
+        Name::new(name)
+    }
+
+    pub fn delete_framebuffer(&mut self, name: Name<Framebuffer>) {
+        unsafe { ffi::asmgl_delete_framebuffer(name.raw) };
+        if self.framebuffer == name {
+            self.framebuffer = NO_FRAMEBUFFER;
+        }
+    }
+
+    pub fn bind_framebuffer(&mut self, name: Name<Framebuffer>) {
+        if name != self.framebuffer {
+            unsafe { ffi::asmgl_bind_framebuffer(name.raw) };
+            self.framebuffer = name;
+        }
+    }
+
+    pub fn gen_renderbuffer_depth(&mut self, size: (u16, u16)) -> Name<Renderbuffer> {
+        let name = unsafe { ffi::asmgl_gen_renderbuffer_depth(size.0, size.1) };
+        assert!(name != 0);
+        // This does affect the GL_RENDERBUFFER binding, but we don't actually keep track of that.
+        Name::new(name)
+    }
+
+    pub fn delete_renderbuffer(&mut self, name: Name<Renderbuffer>) {
+        unsafe { ffi::asmgl_delete_renderbuffer(name.raw) };
+    }
+
+    pub fn framebuffer_texture(&mut self,
+                               tex_name: Name<Texture>,
+                               attachment: i8) {
+        unsafe { ffi::asmgl_framebuffer_texture(tex_name.raw, attachment) };
+    }
+
+    pub fn framebuffer_renderbuffer(&mut self,
+                                    rb_name: Name<Renderbuffer>,
+                                    attachment: i8) {
+        unsafe { ffi::asmgl_framebuffer_renderbuffer(rb_name.raw, attachment) };
+    }
+
+    pub fn is_framebuffer_complete(&mut self) -> bool {
+        let status = unsafe { ffi::asmgl_check_framebuffer_status() };
+        status != 0
     }
 
 
@@ -491,6 +572,63 @@ impl gl::Context for GL {
             name: Name::new(name),
             size: size,
         }
+    }
+
+
+    type Framebuffer = Framebuffer;
+
+    fn create_framebuffer(&mut self,
+                          size: (u16, u16),
+                          color: u8,
+                          depth: gl::DepthBuffer) -> Framebuffer {
+        let inner = self.inner.clone();
+        self.inner.run(|ctx| {
+            let name = ctx.gen_framebuffer();
+            ctx.bind_framebuffer(name);
+
+            // Attach color textures
+            let mut color_attach = Vec::with_capacity(color as usize);
+            for i in 0 .. color {
+                let name = ctx.gen_texture(size, false);
+                ctx.framebuffer_texture(name, i as i8);
+                color_attach.push(Texture {
+                    inner: inner.clone(),
+                    name: name,
+                    size: size,
+                });
+            }
+
+            // Attach depth texture/renderbuffer
+            let depth_attach = match depth {
+                gl::DepthBuffer::None => DepthAttachment::None,
+                gl::DepthBuffer::Texture => {
+                    let name = ctx.gen_texture(size, true);
+                    ctx.framebuffer_texture(name, -1);
+                    DepthAttachment::Texture(Texture {
+                        inner: inner.clone(),
+                        name: name,
+                        size: size,
+                    })
+                },
+                gl::DepthBuffer::Renderbuffer => {
+                    let name = ctx.gen_renderbuffer_depth(size);
+                    ctx.framebuffer_renderbuffer(name, -1);
+                    DepthAttachment::Renderbuffer(Renderbuffer {
+                        inner: inner.clone(),
+                        name: name,
+                    })
+                },
+            };
+
+            Framebuffer {
+                inner: inner,
+                name: name,
+
+                size: size,
+                colors: color_attach.into_boxed_slice(),
+                depth: depth_attach,
+            }
+        })
     }
 
 
@@ -691,6 +829,75 @@ impl Drop for Texture {
         let name = self.name;
         self.inner.run(move |ctx| {
             ctx.delete_texture(name);
+        });
+    }
+}
+
+
+enum DepthAttachment {
+    None,
+    Texture(Texture),
+    Renderbuffer(Renderbuffer),
+}
+
+pub struct Framebuffer {
+    inner: InnerPtr,
+    name: Name<Framebuffer>,
+
+    size: (u16, u16),
+    colors: Box<[Texture]>,
+    depth: DepthAttachment,
+}
+
+impl gl::Framebuffer<GL> for Framebuffer {
+    fn size(&self) -> (u16, u16) {
+        self.size
+    }
+
+    fn num_color_planes(&self) -> usize {
+        self.colors.len()
+    }
+
+    fn depth_mode(&self) -> gl::DepthBuffer {
+        match self.depth {
+            DepthAttachment::None => gl::DepthBuffer::None,
+            DepthAttachment::Texture(_) => gl::DepthBuffer::Texture,
+            DepthAttachment::Renderbuffer(_) => gl::DepthBuffer::Renderbuffer,
+        }
+    }
+
+    fn color_texture(&self, index: usize) -> &Texture {
+        &self.colors[index]
+    }
+
+    fn depth_texture(&self) -> &Texture {
+        match self.depth {
+            DepthAttachment::Texture(ref t) => t,
+            _ => panic!("renderbuffer has no depth texture"),
+        }
+    }
+}
+
+impl Drop for Framebuffer {
+    fn drop(&mut self) {
+        let name = self.name;
+        self.inner.run(move |ctx| {
+            ctx.delete_framebuffer(name);
+        });
+    }
+}
+
+
+pub struct Renderbuffer {
+    inner: InnerPtr,
+    name: Name<Renderbuffer>,
+}
+
+impl Drop for Renderbuffer {
+    fn drop(&mut self) {
+        let name = self.name;
+        self.inner.run(move |ctx| {
+            ctx.delete_renderbuffer(name);
         });
     }
 }

@@ -40,9 +40,20 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_set_uniform_4f = env.asmgl_set_uniform_4f;
 
     var _asmgl_load_texture = env.asmgl_load_texture;
+    var _asmgl_gen_texture = env.asmgl_gen_texture;
     var _asmgl_delete_texture = env.asmgl_delete_texture;
     var _asmgl_active_texture = env.asmgl_active_texture;
     var _asmgl_bind_texture = env.asmgl_bind_texture;
+
+    var _asmgl_gen_framebuffer = env.asmgl_gen_framebuffer;
+    var _asmgl_delete_framebuffer = env.asmgl_delete_framebuffer;
+    var _asmgl_bind_framebuffer = env.asmgl_bind_framebuffer;
+    var _asmgl_gen_renderbuffer_depth = env.asmgl_gen_renderbuffer_depth;
+    var _asmgl_delete_renderbuffer = env.asmgl_delete_renderbuffer;
+    var _asmgl_framebuffer_texture = env.asmgl_framebuffer_texture;
+    var _asmgl_framebuffer_renderbuffer = env.asmgl_framebuffer_renderbuffer;
+    var _asmgl_check_framebuffer_status = env.asmgl_check_framebuffer_status;
+    var _asmgl_draw_buffers = env.asmgl_draw_buffers;
 
     var _asmgl_enable_vertex_attrib_array = env.asmgl_enable_vertex_attrib_array;
     var _asmgl_disable_vertex_attrib_array = env.asmgl_disable_vertex_attrib_array;
