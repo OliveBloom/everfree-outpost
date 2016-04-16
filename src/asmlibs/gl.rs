@@ -732,6 +732,12 @@ impl Shader {
                 Shader::set_uniform_value(ctx, u, v);
             }
 
+            if let Some(output) = args.output {
+                ctx.bind_framebuffer(output.name);
+            } else {
+                ctx.bind_framebuffer(NO_FRAMEBUFFER);
+            }
+
             ctx.set_vertex_attrib_mask(self.attrib_mask);
             for a in self.attribs.iter() {
                 let buf_name = args.arrays[a.array_idx as usize].name;

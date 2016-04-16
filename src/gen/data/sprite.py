@@ -1,8 +1,9 @@
-from PIL import Image
+from collections import namedtuple
+import PIL
 
 from outpost_data.core import util
 from outpost_data.core.consts import *
-from outpost_data.core.image2 import Anim
+from outpost_data.core.image2 import Anim, Image
 
 
 # Size of a sheet in frames.
@@ -10,185 +11,128 @@ from outpost_data.core.image2 import Anim
 ANIM_SHEET_SIZE = (16, 16)
 
 
-
-
 class AnimDef:
-    def __init__(self, owner, name, length, rate):
+    def __init__(self, owner, name, length, rate, base=None, func=None):
         self.owner = owner
         self.name = name
         self.length = length
         self.rate = rate
-        self.mirror = False
 
-        self.sheet = None
-        self.offset = None
-
-        self.id = None
-
-    @property
-    def full_name(self):
-        return '%s//%s' % (self.owner.name, self.name)
-
-class DerivedAnimDef:
-    def __init__(self, owner, name, base, func):
-        self.owner = owner
-        self.name = name
         self.base = base
         self.func = func
-
-        # TODO: figure out whether this is a good idea
-        # We do need some way to set self.length to support the check in add_graphics
-        self.length = base.length
-
-        self.id = None
-
-    @property
-    def full_name(self):
-        return '%s//%s' % (self.owner.name, self.name)
-
-class PartDef:
-    def __init__(self, owner, name, optional=False):
-        self.owner = owner
-        self.name = name
-        self.optional = optional
-        self.variants = {}
-
-        self.id = None
-
-    @property
-    def full_name(self):
-        return '%s//%s' % (self.owner.name, self.name)
-
-
-    def _add_variant(self, variant):
-        assert variant.name not in self.variants, \
-                'duplicate variant %r for part %r' % (variant.name, self.full_name)
-        self.variants[variant.name] = variant
-        return variant
-
-    def add_variant(self, name):
-        return self._add_variant(VariantDef(self, name))
-
-    def add_derived_variant(self, name, base, func):
-        assert base.owner.owner is self.owner, \
-                'base for derived variant %r must belong to sprite %r (base = %r)' % \
-                ('%s//%s' % (self.full_name, name), self.owner.name, base.full_name)
-        assert base.func is None, \
-                'base for derived variant %r must not be a derived variant (base = %r)' % \
-                ('%s//%s' % (self.full_name, name), base.full_name)
-        return self._add_variant(VariantDef(self, name, base, func))
-
-    def get_variant(self, name):
-        v = self.variants.get(name)
-        if v is None:
-            raise KeyError('no such variant %r in part %r' % (name, self.full_name))
-        return v
-
-    def iter_variants(self):
-        return self.variants.values()
-
-class VariantDef:
-    def __init__(self, owner, name, base=None, func=None):
-        self.owner = owner
-        self.name = name
-        self.graphics = {}
-        assert (base is None) == (func is None)
-        self.base = base
-        self.func = func
-
-        self.file_name = None
 
         self.id = None
         self.local_id = None
 
     @property
     def full_name(self):
-        return '%s//%s' % (self.owner.full_name, self.name)
+        return '%s//%s' % (self.owner.name, self.name)
 
-    def add_graphics(self, anim_name, anim):
-        anim_def = self.owner.owner.get_anim(anim_name)
-        assert anim.length == anim_def.length, \
-                'animation for %r must match length of %r animation definition (%d != %d)' % \
-                (self.full_name, anim_name, anim.length, anim_def.length)
-        assert anim_name not in self.graphics, \
-                'duplicate graphics for animation %r of variant %r' % \
-                (anim_name, self.full_name)
-        self.graphics[anim_name] = anim
+class LayerDef:
+    def __init__(self, owner, name, base=None, func=None):
+        self.owner = owner
+        self.name = name
 
-    def get_graphics(self, anim_name):
-        g = self.graphics.get(anim_name)
-        if g is None and self.func is not None:
-            sprite = self.owner.owner
-            anim = sprite.get_anim(anim_name)
-            base_g = self.base.get_graphics(anim_name)
-            if base_g is not None:
-                frames = [self.func(self, anim, i, base_g.get_frame(i))
-                        for i in range(base_g.length)]
-                g = Anim(frames, base_g.rate, base_g.oneshot)
-                self.graphics[anim_name] = g
-        return g
+        self.base = base
+        self.func = func
+
+        self.gfx_start = None
+        self.gfx_count = None
+
+        self.id = None
+
+    @property
+    def full_name(self):
+        return '%s//%s' % (self.owner.name, self.name)
+
+class GraphicsDef:
+    def __init__(self, anim):
+        self.anim = anim
+
+        self.base = None
+
+        self.sheet = None
+        self.src_offset = None
+        self.dest_offset = None
+        self.size = None
+        self.mirror = False
+
+        self.id = None
 
 class SpriteDef:
     def __init__(self, name, size):
         self.name = name
         self.size = size
+
+        self.layers = {}
         self.anims = {}
-        self.parts = {}
-
-        self.num_sheets = None
-
-        self.id = None
-
-
-    def _add_anim(self, anim):
-        assert anim.name not in self.anims, \
-                'duplicate animation %r in sprite %r' % (anim.name, self.name)
-        self.anims[anim.name] = anim
-        return anim
+        self.graphics = {}
 
     def add_anim(self, name, length, rate):
-        return self._add_anim(AnimDef(self, name, length, rate))
+        assert name not in self.anims
+        self.anims[name] = AnimDef(self, name, length, rate)
 
-    def add_mirror_anim(self, name, base):
-        return self._add_anim(DerivedAnimDef(self, name, base, gen_mirror_anim))
+    def derive_anim(self, name, base, func):
+        assert name not in self.anims
+        self.anims[name] = AnimDef(self, name, None, None, base, func)
 
     def get_anim(self, name):
-        a = self.anims.get(name)
-        if a is None:
-            raise KeyError('no such animation %r in sprite %r' % (name, self.name))
-        return a
-
-    def iter_anims(self):
-        return self.anims.values()
-
-    def iter_base_anims(self):
-        return (a for a in self.iter_anims() if isinstance(a, AnimDef))
+        return self.anims[name]
 
 
-    def add_part(self, name, optional=False):
-        assert name not in self.parts, \
-                'duplicate part %r in sprite %r' % (name, self.name)
-        part = PartDef(self, name, optional)
-        self.parts[name] = part
-        return part
+    def add_layer(self, name):
+        assert name not in self.layers
+        self.layers[name] = LayerDef(self, name)
 
-    def get_part(self, name):
-        p = self.parts.get(name)
-        if p is None:
-            raise KeyError('no such part %r in sprite %r' % (name, self.name))
-        return p
+    def derive_layer(self, name, base, func):
+        assert name not in self.layers
+        self.layers[name] = LayerDef(self, name, base, func)
 
-    def iter_parts(self):
-        return self.parts.values()
+    def get_layer(self, name):
+        return self.layers[name]
 
 
-def gen_mirror_anim(owner, name, id, base):
-    a = AnimDef(owner, name, base.length, base.rate)
-    a.sheet = base.sheet
-    a.offset = base.offset
-    a.id = id
-    a.mirror = not base.mirror
-    return a
+    def add_graphics(self, layer_name, anim_name, anim):
+        key = (layer_name, anim_name)
+        assert key not in self.graphics
+        self.graphics[key] = GraphicsDef(anim)
+
+    def get_graphics(self, layer_name, anim_name):
+        key = (layer_name, anim_name)
+        if key in self.graphics:
+            return self.graphics[key]
+
+        anim = self.anims[anim_name]
+        layer = self.layers[layer_name]
+
+        # Try to generate it by deriving from another animation
+        if anim.base is not None:
+            orig = self.get_graphics(layer_name, anim.base)
+            if orig is not None:
+                derived = anim.func(layer, anim, orig)
+                self.graphics[key] = derived
+                return derived
+
+        # Try to generate it by deriving from another layer
+        if layer.base is not None:
+            orig = self.get_graphics(layer.base, anim_name)
+            if orig is not None:
+                derived = layer.func(layer, anim, orig)
+                self.graphics[key] = derived
+                return derived
+
+        return None
+
+
+    def iter_layers(self):
+        return (l for l in self.layers.values() if '_dummy' not in l.name)
+
+
+def mirror_anim(layer, anim, orig):
+    gfx = GraphicsDef(None)
+    gfx.base = orig
+    gfx.mirror = not gfx.base.mirror
+    return gfx
 
 
 class FullNameWrapper:
@@ -208,77 +152,89 @@ class FullNameWrapper:
     def id(self, value):
         self.obj.id = value
 
-def process_anims(sprites):
-    for s in sprites:
-        # Place all ordinary animations
-        anims = sorted(s.iter_base_anims(), key=lambda a: a.id)
-        boxes = [(a.length, 1) for a in anims]
-        num_sheets, offsets = util.pack_boxes(ANIM_SHEET_SIZE, boxes)
-        assert num_sheets == 1, \
-                'anims for %r overflowed onto multiple sheets (unsupported)' % s.name
 
-        for a, (sheet_idx, offset) in zip(anims, offsets):
-            a.sheet = sheet_idx
-            a.offset = offset
-
-        # Generate all derived animations
-        for k,v in s.anims.items():
-            if isinstance(v, DerivedAnimDef):
-                new_anim = v.func(s, v.name, v.id, v.base)
-                s.anims[k] = new_anim
-
-    # Return sorted list of all animations (used for JSON output)
-    return sorted((a for s in sprites for a in s.iter_anims()), key=lambda a: a.id)
-
-def process_parts(sprites):
-    return sorted((p for s in sprites for p in s.iter_parts()), key=lambda p: p.id)
-
-def assign_sub_ids(sprites):
+def process(sprites):
     util.assign_ids([FullNameWrapper(a)
-        for s in sprites for a in s.iter_anims()])
-    util.assign_ids([FullNameWrapper(p)
-        for s in sprites for p in s.iter_parts()])
-    util.assign_ids([FullNameWrapper(v)
-        for s in sprites for p in s.iter_parts() for v in p.iter_variants()])
+        for s in sprites for a in s.anims.values()])
+    util.assign_ids([FullNameWrapper(l)
+        for s in sprites for l in s.layers.values()])
 
+    gfx_index = 0
     for s in sprites:
-        for p in s.iter_parts():
-            base = 1 if p.optional else 0
-            for i, v in enumerate(sorted(p.iter_variants(), key=lambda v: v.name)):
-                v.local_id = i + base
+        sorted_anims = sorted(s.anims.values(), key=lambda a: a.id)
+        sorted_layers = sorted(s.iter_layers(), key=lambda l: l.id)
 
+        for i,a in enumerate(sorted_anims):
+            a.local_id = i
 
-def build_variant_sheet(variant):
-    sprite = variant.owner.owner
-    sw, sh = sprite.size
-    def mul(v):
-        x, y = v
-        return (sw * x, sh * y)
+            if a.base is not None:
+                base = s.anims[a.base]
+                a.length = base.length
+                a.rate = base.rate
 
-    # TODO: probably a good idea to condense sheets (in general) to avoid
-    # wasting VRAM on lots of unused transparent pixels
-    img = Image.new('RGBA', mul(ANIM_SHEET_SIZE))
+        # Fill out the remaining slots of s.graphics
+        for l in sorted_layers:
+            for i,a in enumerate(sorted_anims):
+                g = s.get_graphics(l.name, a.name)
+                if g is None:
+                    util.warn('sprite %r: layer %r has no graphics for anim %r' %
+                            (s.name, l.name, a.name))
+                    continue
+                g.id = gfx_index + i
+            l.gfx_start = gfx_index
+            l.gfx_count = len(s.anims)
+            gfx_index += len(s.anims)
 
-    for anim in sprite.iter_anims():
-        g = variant.get_graphics(anim.name)
-        if g is None:
-            continue
-        img.paste(g.flatten().raw().raw(), mul(anim.offset))
+        # Autocrop anims
+        for g in s.graphics.values():
+            if g.base is None:
+                g.anim, g.dest_offset = g.anim.autocrop()
+                g.size = g.anim.px_size
 
-    return img
+def collect_defs(sprites):
+    anims = sorted((a for s in sprites for a in s.anims.values()), key=lambda x: x.id)
+    layers = sorted((l for s in sprites for l in s.iter_layers()), key=lambda x: x.id)
 
-def build_sprite_sheets(sprite):
-    sheets = []
-    for p in sprite.iter_parts():
-        for v in p.iter_variants():
-            sheets.append((v, build_variant_sheet(v)))
-    return sheets
+    num_graphics = max(l.gfx_start + l.gfx_count for l in layers)
+    graphics = [None] * num_graphics
+    for s in sprites:
+        for g in s.graphics.values():
+            if g.id is not None:
+                graphics[g.id] = g
+
+    return (anims, layers, graphics)
 
 def build_sheets(sprites):
-    sheets = []
+    # NB: gfxs only includes non-derived graphics
+    gfxs = sorted((g for s in sprites for g in s.graphics.values()
+        if g.base is None and g.id is not None),
+        key=lambda g: g.id)
+    def size(g):
+        w, h = g.anim.flatten().px_size
+        return ((w + 15) // 16, (h + 15) // 16)
+    boxes = [size(g) for g in gfxs]
+    num_sheets, offsets = util.pack_boxes((2048 // 16, 2048 // 16), boxes)
+
+    for g, (sheet, (off_x, off_y)) in zip(gfxs, offsets):
+        g.sheet = sheet
+        g.src_offset = (off_x * 16, off_y * 16)
+
+    # Update derived graphics
     for s in sprites:
-        sheets.extend(build_sprite_sheets(s))
-    return sheets
+        for g in s.graphics.values():
+            if g.base is not None:
+                g.sheet = g.base.sheet
+                g.src_offset = g.base.src_offset
+                g.dest_offset = g.base.dest_offset
+                g.size = g.base.size
+
+    # Generate sheets
+    return [
+            Image.sheet([(g.anim.flatten(), g.src_offset)
+                for g in gfxs if g.sheet == i],
+                (2048, 2048))
+            for i in range(num_sheets)
+            ]
 
 
 def build_anim_client_json(anims):
@@ -286,9 +242,7 @@ def build_anim_client_json(anims):
         return {
                 'length': a.length,
                 'framerate': a.rate,
-                'mirror': a.mirror,
-                'sheet': a.sheet,
-                'offset': a.offset,
+                'local_id': a.local_id,
                 }
     return list(convert(a) for a in anims)
 
@@ -301,28 +255,30 @@ def build_anim_server_json(anims):
                 }
     return list(convert(a) for a in anims)
 
-def build_part_client_json(parts):
-    def convert(p):
-        variants = [None] * (len(p.variants) + (1 if p.optional else 0))
-        for v in p.iter_variants():
-            variants[v.local_id] = v.id
-        return variants
-    return list(convert(p) for p in parts)
+def build_layer_client_json(layers):
+    def convert(l):
+        return {
+                'start': l.gfx_start,
+                'count': l.gfx_count,
+                }
+    return list(convert(l) for l in layers)
 
-def build_part_server_json(parts):
-    def convert_variant(v):
-        if v is None:
+def build_layer_server_json(layers):
+    def convert(l):
+        return {
+                'name': l.full_name,
+                }
+    return list(convert(l) for l in layers)
+
+def build_graphics_client_json(graphics):
+    def convert(g):
+        if g is None:
             return None
         return {
-                'name': v.name,
-                'global_id': v.id,
+                'sheet': g.sheet,
+                'src_offset': g.src_offset,
+                'dest_offset': g.dest_offset,
+                'size': g.size,
+                'mirror': g.mirror,
                 }
-    def convert(p):
-        variants = [None] * (len(p.variants) + (1 if p.optional else 0))
-        for v in p.iter_variants():
-            variants[v.local_id] = convert_variant(v)
-        return {
-                'name': p.full_name,
-                'variants': variants,
-                }
-    return list(convert(p) for p in parts)
+    return list(convert(g) for g in graphics)

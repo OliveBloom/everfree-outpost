@@ -132,7 +132,8 @@ def pack():
             ) + tuple('%s_client.bin' % f
                     for f in ('blocks', 'item_defs', 'item_strs',
                         'structures', 'structure_parts',
-                        'structure_verts', 'structure_shapes'))
+                        'structure_verts', 'structure_shapes',
+                        'animations', 'sprite_layers', 'sprite_graphics'))
 
     return template('''
         rule build_pack

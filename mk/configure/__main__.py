@@ -305,6 +305,9 @@ if __name__ == '__main__':
             out_file='$b_data/item_defs_client.bin'),
         data.binary_defs('$b_data/items_client.json', 'item_strs',
             out_file='$b_data/item_strs_client.bin'),
+        data.binary_defs('$b_data/animations_client.json', 'animations'),
+        data.binary_defs('$b_data/sprite_layers_client.json', 'sprite_layers'),
+        data.binary_defs('$b_data/sprite_graphics_client.json', 'sprite_graphics'),
         data.pack(),
         data.credits('$b_data/credits.html'),
 

@@ -9,7 +9,8 @@ def build_parser():
 
     args.add_argument('--mode', required=True,
             choices=('blocks', 'item_defs', 'item_strs',
-                'templates', 'template_parts', 'template_verts', 'template_shapes'),
+                'templates', 'template_parts', 'template_verts', 'template_shapes',
+                'animations', 'sprite_layers', 'sprite_graphics'),
             help='convert block defs')
 
     args.add_argument('input', metavar='FILE_IN.json',
@@ -170,6 +171,44 @@ def convert_template_shapes(j):
         b.extend(struct.pack('B', x))
     return b
 
+def convert_animations(j):
+    c = Converter(4, (
+        Field('local_id',       'H',    0),
+        Field('framerate',      'B',    2),
+        Field('length',         'B',    3),
+        ))
+
+    b = bytearray()
+    for obj in j:
+        b.extend(c.convert(obj))
+    return b
+
+def convert_sprite_layers(j):
+    c = Converter(4, (
+        Field('start',          'H',    0),
+        Field('count',          'H',    2),
+        ))
+
+    b = bytearray()
+    for obj in j:
+        b.extend(c.convert(obj))
+    return b
+
+def convert_sprite_graphics(j):
+    c = Converter(14, (
+        Field('src_offset',     'HH',   0),
+        Field('dest_offset',    'HH',   4),
+        Field('size',           'HH',   8),
+        Field('sheet',          'B',   12),
+        Field('mirror',         'B',   13),
+        ))
+
+    b = bytearray()
+    for obj in j:
+        b.extend(c.convert(obj))
+    return b
+
+
 
 def main():
     parser = build_parser()
@@ -192,6 +231,12 @@ def main():
         b = convert_template_verts(j)
     elif args.mode == 'template_shapes':
         b = convert_template_shapes(j)
+    elif args.mode == 'animations':
+        b = convert_animations(j)
+    elif args.mode == 'sprite_layers':
+        b = convert_sprite_layers(j)
+    elif args.mode == 'sprite_graphics':
+        b = convert_sprite_graphics(j)
     else:
         parser.error('must provide flag to indicate input type')
 

@@ -6,6 +6,12 @@ from .sprite import SpriteBuilder
 from .loot_table import LootTableBuilder
 from .extra import ExtraBuilder
 
+__all__ = (
+        'INSTANCES',
+        'BLOCK', 'STRUCTURE', 'ITEM', 'RECIPE', 'SPRITE', 'LOOT_TABLE',
+        'EXTRA',
+        )
+
 
 INSTANCES = dict(
         block = BlockBuilder(),

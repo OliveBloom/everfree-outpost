@@ -36,6 +36,12 @@ class Image(object):
     def from_raw(img):
         return Image(img=CachedImage.from_raw(img))
 
+    @staticmethod
+    def sheet(img_offsets, size=None, unit=1):
+        img_offsets = [(i.raw(), off) for i,off in img_offsets]
+        new_img = CachedImage.sheet(img_offsets, size)
+        return Image(img=new_img, unit=unit)
+
     def raw(self):
         return self._img
 

@@ -65,5 +65,5 @@ def init():
     EXTRA.new('editor_anim').func(gen_editor_anim)
     EXTRA.new('physics_anim_table').func(gen_physics_anim_table)
     EXTRA.new('anim_dir_table').func(gen_anim_dir_table)
-    EXTRA.new('pony_slot_table').func(gen_pony_slot_table)
-    EXTRA.new('pony_bases_table').func(gen_pony_bases_table)
+    #EXTRA.new('pony_slot_table').func(gen_pony_slot_table)
+    #EXTRA.new('pony_bases_table').func(gen_pony_bases_table)
