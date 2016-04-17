@@ -4,6 +4,7 @@ use std::slice;
 
 use physics::v3::{V2, scalar, Region};
 
+use Time;
 use data::Data;
 use entity::Entities;
 use graphics;
@@ -81,6 +82,8 @@ struct Textures<GL: Context> {
     tile_atlas: GL::Texture,
     structure_atlas: GL::Texture,
     sprite_sheet: GL::Texture,
+
+    cavern_map: GL::Texture,
 }
 
 impl<GL: Context> Textures<GL> {
@@ -89,11 +92,15 @@ impl<GL: Context> Textures<GL> {
             tile_atlas: gl.load_texture("tiles"),
             structure_atlas: gl.load_texture("structures0"),
             sprite_sheet: gl.load_texture("sprites0"),
+
+            cavern_map: gl.create_texture((64, 64)),
         }
     }
 }
 
 struct Framebuffers<GL: Context> {
+    size: (u16, u16),
+
     world_color: GL::Texture,
     world_meta: GL::Texture,
     world_depth: GL::Texture,
@@ -116,9 +123,12 @@ impl<GL: Context> Framebuffers<GL> {
                                            Some(Attach::Renderbuffer));
 
         Framebuffers {
+            size: size,
+
             world_color: world_color,
             world_meta: world_meta,
             world_depth: world_depth,
+
             world: world,
             sprite: sprite,
         }
@@ -323,7 +333,15 @@ impl<GL: Context> Renderer<GL> {
             .draw(&mut self.shaders.blit_full);
     }
 
-    pub fn render(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
+    pub fn update_framebuffers(&mut self, gl: &mut GL, scene: &Scene) {
+        let u16_size = (scene.camera_size.x as u16,
+                        scene.camera_size.y as u16);
+        if self.framebuffers.size != u16_size {
+            self.framebuffers = Framebuffers::new(gl, u16_size);
+        }
+    }
+
+    pub fn render(&mut self, scene: &Scene) {
         self.framebuffers.world.clear((0, 0, 0, 0));
         self.framebuffers.sprite.clear((0, 0, 0, 0));
 
@@ -337,7 +355,7 @@ impl<GL: Context> Renderer<GL> {
             .arrays(&[self.terrain_geom.buffer()])
             .textures(&[
                 &self.textures.tile_atlas,
-                &cavern_tex,
+                &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.world)
             .draw(&mut self.shaders.terrain);
@@ -353,7 +371,7 @@ impl<GL: Context> Renderer<GL> {
             .arrays(&[self.structure_geom.buffer()])
             .textures(&[
                 &self.textures.structure_atlas,
-                &cavern_tex,
+                &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.world)
             .draw(&mut self.shaders.structure);
@@ -384,32 +402,36 @@ impl<GL: Context> Renderer<GL> {
 
 
 pub struct Scene {
-    camera_pos: [f32; 2],
-    camera_size: [f32; 2],
-    slice_center: [f32; 2],
-    slice_z: f32,
-    now: f32,
+    pub camera_size: V2,
+    pub camera_pos: V2,
+    pub now: Time,
+
+    pub f_camera_pos: [f32; 2],
+    pub f_camera_size: [f32; 2],
+    pub f_slice_center: [f32; 2],
+    pub f_slice_z: f32,
+    pub f_now: f32,
 }
 
 impl Scene {
     pub fn camera_pos(&self) -> UniformValue {
-        UniformValue::V2(&self.camera_pos)
+        UniformValue::V2(&self.f_camera_pos)
     }
 
     pub fn camera_size(&self) -> UniformValue {
-        UniformValue::V2(&self.camera_size)
+        UniformValue::V2(&self.f_camera_size)
     }
 
     pub fn slice_center(&self) -> UniformValue {
-        UniformValue::V2(&self.slice_center)
+        UniformValue::V2(&self.f_slice_center)
     }
 
     pub fn slice_z(&self) -> UniformValue {
-        UniformValue::Float(self.slice_z)
+        UniformValue::Float(self.f_slice_z)
     }
 
     pub fn now(&self) -> UniformValue {
-        UniformValue::Float(self.now)
+        UniformValue::Float(self.f_now)
     }
 }
 

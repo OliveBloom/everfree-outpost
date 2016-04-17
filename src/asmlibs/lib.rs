@@ -287,55 +287,9 @@ unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
 
 
 #[no_mangle]
-pub unsafe extern fn prepare_geometry(client: &mut Client,
-                                      cx0: i32,
-                                      cy0: i32,
-                                      cx1: i32,
-                                      cy1: i32,
-                                      now: i32) {
-    client.prepare_geometry(Region::new(V2::new(cx0, cy0),
-                                        V2::new(cx1, cy1)),
-                            now);
-}
-
-#[no_mangle]
-pub unsafe extern fn get_terrain_geometry_buffer(client: &Client,
-                                                 len: &mut usize) -> u32 {
-    let buf = client.get_terrain_geometry_buffer();
-    *len = buf.len();
-    buf.name().raw
-}
-
-#[no_mangle]
-pub unsafe extern fn get_structure_geometry_buffer(client: &Client,
-                                                   len: &mut usize) -> u32 {
-    let buf = client.get_structure_geometry_buffer();
-    *len = buf.len();
-    buf.name().raw
-}
-
-#[no_mangle]
-pub unsafe extern fn get_light_geometry_buffer(client: &Client,
-                                               len: &mut usize) -> u32 {
-    let buf = client.get_light_geometry_buffer();
-    *len = buf.len();
-    buf.name().raw
-}
-
-#[no_mangle]
-pub unsafe extern fn get_ui_geometry_buffer(client: &Client,
-                                            len: &mut usize) -> u32 {
-    let buf = client.get_ui_geometry_buffer();
-    *len = buf.len();
-    buf.name().raw
-}
-
-#[no_mangle]
-pub unsafe extern fn test_render(client: &mut Client,
-                                 opcode: u32,
-                                 scene: &client::graphics::renderer::Scene,
-                                 tex_name: u32) {
-    client.test_render(opcode, scene, tex_name);
+pub unsafe extern fn render_frame(client: &mut Client,
+                                 scene: &client::graphics::renderer::Scene) {
+    client.render_frame(scene);
 }
 
 
@@ -368,6 +322,8 @@ pub struct Sizes {
     light_vertex: usize,
     ui_vertex: usize,
 
+    scene: usize,
+
     item: usize,
 }
 
@@ -385,6 +341,8 @@ pub extern fn get_sizes(sizes: &mut Sizes) -> usize {
     sizes.structure_vertex = size_of::<structure::Vertex>();
     sizes.light_vertex = size_of::<light::Vertex>();
     sizes.ui_vertex = size_of::<ui::geom::Vertex>();
+
+    sizes.scene = size_of::<client::graphics::renderer::Scene>();
 
     sizes.item = size_of::<inventory::Item>();
 

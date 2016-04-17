@@ -28,10 +28,5 @@ load_terrain_chunk
 collide
 find_ceiling
 floodfill
-prepare_geometry
-get_terrain_geometry_buffer
-get_structure_geometry_buffer
-get_light_geometry_buffer
-get_ui_geometry_buffer
+render_frame
 client_bench
-test_render

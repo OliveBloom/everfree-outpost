@@ -1110,7 +1110,7 @@ function frame(ac, client_now) {
         predict_now = now;
     }
 
-    debug.frameStart();
+    //debug.frameStart();
     var gl = ac.ctx;
 
     gl.viewport(0, 0, ac.canvas.width, ac.canvas.height);
@@ -1131,9 +1131,9 @@ function frame(ac, client_now) {
         // TODO: another hacky offset
         pos = pony.position(predict_now).add(new Vec(16, 16, 0));
 
-        debug.updateMotions(pony, timing);
+        //debug.updateMotions(pony, timing);
     }
-    debug.updatePos(pos);
+    //debug.updatePos(pos);
 
     var view_width = ac.virtualWidth;
     var view_height = ac.virtualHeight;
@@ -1191,22 +1191,21 @@ function frame(ac, client_now) {
     // TODO: hacky.  The issue here is that cavern_map is mostly a
     // graphics-related thing, but updating it requires access to the
     // PhysicsAsm object.
-    renderer.updateCavernMap(physics._asm, pos);
+    //renderer.updateCavernMap(physics._asm, pos);
 
     s.camera_pos = [camera_pos.x, camera_pos.y];
     s.camera_size = [camera_size.x, camera_size.y];
     s.ambient_color = day_night.getAmbientColor(predict_now);
 
-    ui_gl.calcSize(camera_size.x, camera_size.y);
+    //ui_gl.calcSize(camera_size.x, camera_size.y);
 
     var radius = slice_radius.get(predict_now);
     if (radius > 0 && pony != null) {
         s.slice_frac = radius;
         s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
     }
-    renderer.render(s, function(size, fb) {
-        ui_renderer.render(ui_gl, size, fb);
-    });
+
+    asm_client.renderFrame(s);
 
     if (show_cursor && pony != null) {
         var facing = FACINGS[pony.animId() % FACINGS.length];
@@ -1215,10 +1214,10 @@ function frame(ac, client_now) {
         cursor.draw(camera_pos, camera_size, cursor_pos);
     }
 
-    debug.frameEnd();
-    debug.updateJobs(runner);
-    debug.updateTiming(timing);
-    debug.updateGraphics(renderer);
+    //debug.frameEnd();
+    //debug.updateJobs(runner);
+    //debug.updateTiming(timing);
+    //debug.updateGraphics(renderer);
 }
 
 function debug_player_pos() {

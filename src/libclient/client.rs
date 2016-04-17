@@ -11,7 +11,7 @@ use graphics::types::HAS_LIGHT;
 use graphics::renderer::Renderer;
 
 use physics;
-use physics::{CHUNK_SIZE, CHUNK_BITS};
+use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE};
 use physics::Shape;
 use physics::v3::{V3, V2, scalar, Region};
 
@@ -297,70 +297,42 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Graphics
 
-    pub fn prepare_geometry(&mut self, bounds: Region<V2>, now: Time) {
-        self.platform.gl().havoc();
+    fn prepare(&mut self, scene: &Scene) {
+        let bounds = Region::sized(scene.camera_size) + scene.camera_pos;
+        let chunk_bounds = bounds.div_round_signed(CHUNK_SIZE * TILE_SIZE);
 
         // Terrain from the chunk below can cover the current one.
-        let terrain_bounds = Region::new(bounds.min - V2::new(0, 0),
-                                         bounds.max + V2::new(0, 1));
+        let terrain_bounds = Region::new(chunk_bounds.min - V2::new(0, 0),
+                                         chunk_bounds.max + V2::new(0, 1));
         self.renderer.update_terrain_geometry(&self.data, &self.chunks, terrain_bounds);
 
         // Structures from the chunk below can cover the current one, and also
         // structures from chunks above and to the left can extend into it.
-        let structure_bounds = Region::new(bounds.min - V2::new(1, 1),
-                                           bounds.max + V2::new(0, 1));
+        let structure_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
+                                           chunk_bounds.max + V2::new(0, 1));
         self.renderer.update_structure_geometry(&self.data, &self.structures, structure_bounds);
 
         // Light from any adjacent chunk can extend into the current one.
-        let light_bounds = Region::new(bounds.min - V2::new(1, 1),
-                                       bounds.max + V2::new(1, 1));
+        let light_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
+                                       chunk_bounds.max + V2::new(1, 1));
         self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
+
+        // Entities can extend in any direction from their reference point.
+        let entity_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
+                                        chunk_bounds.max + V2::new(1, 1));
+        self.renderer.update_entity_geometry(&self.data, &self.entities, entity_bounds, scene.now);
 
         // Also refresh the UI buffer.
         let geom = self.ui.generate_geom(&self.inventories);
         self.renderer.load_ui_geometry(&geom);
-
-
-        self.entities.apply_updates(now);
-        /*
-        for (id, e) in self.entities.iter() {
-            println!("entity {} at {:?}", id, e.pos(now));
-        }
-        */
-        let entity_bounds = Region::new(bounds.min - V2::new(1, 1),
-                                        bounds.max + V2::new(1, 1));
-        self.renderer.update_entity_geometry(&self.data, &self.entities, entity_bounds, now);
     }
 
-    pub fn get_terrain_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
-        self.renderer.get_terrain_buffer()
-    }
+    pub fn render_frame(&mut self, scene: &Scene) {
+        self.entities.apply_updates(scene.now);
+        self.prepare(scene);
 
-    pub fn get_structure_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
-        self.renderer.get_structure_buffer()
-    }
-
-    pub fn get_light_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
-        self.renderer.get_light_buffer()
-    }
-
-    pub fn get_ui_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {
-        self.renderer.get_ui_buffer()
-    }
-
-    pub fn test_render(&mut self, opcode: u32, scene: &Scene, tex_name: u32) {
-        self.platform.gl().havoc();
-        let tex = self.platform.gl().texture_import_HACK(tex_name, (1024, 1024));
-        match opcode {
-            0 => self.renderer.render_output(&tex),
-            1 => self.renderer.render_terrain(scene, &tex),
-            2 => self.renderer.render_structures(scene, &tex, false),
-            3 => self.renderer.render_static_lights(scene, &tex),
-            4 => self.renderer.render_structures(scene, &tex, true),
-            5 => self.renderer.render(scene, &tex),
-            _ => println!("bad opcode: {}", opcode),
-        }
-        mem::forget(tex);
+        self.renderer.update_framebuffers(self.platform.gl(), scene);
+        self.renderer.render(scene);
     }
 
 

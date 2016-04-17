@@ -300,7 +300,7 @@ DynAsm.prototype._heapCheck = function() {
 };
 
 DynAsm.prototype._calcSizeof = function() {
-    var EXPECT_SIZES = 9;
+    var EXPECT_SIZES = 10;
     var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
 
     var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
@@ -320,6 +320,8 @@ DynAsm.prototype._calcSizeof = function() {
     result.StructureVertex = next();
     result.LightVertex = next();
     result.UIVertex = next();
+
+    result.Scene = next();
 
     result.Item = next();
 
@@ -607,71 +609,28 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.prepareGeometry = function(cx0, cy0, cx1, cy1, now) {
-    this._raw['prepare_geometry'](this.client,
-            cx0, cy0, cx1, cy1, now);
-};
+DynAsm.prototype.renderFrame = function(scene) {
+    var f32 = this._stackAlloc(Float32Array, this.SIZEOF.Scene / 4);
+    var i32 = new Int32Array(f32.buffer, f32.byteOffset, f32.length);
 
-DynAsm.prototype.getTerrainGeometryBuffer = function() {
-    var len_buf = this._stackAlloc(Int32Array, 1);
-    var name = this._raw['get_terrain_geometry_buffer'](this.client, len_buf.byteOffset);
-    var len = len_buf[0];
-    this._stackFree(len_buf);
-    return {
-        buf: this.asmgl.getBufferWrapper(name),
-        len: len / this.SIZEOF.TerrainVertex,
-    };
-};
+    i32[ 0] = scene.camera_pos[0];
+    i32[ 1] = scene.camera_pos[1];
+    i32[ 2] = scene.camera_size[0];
+    i32[ 3] = scene.camera_size[1];
+    i32[ 4] = scene.now;
 
-DynAsm.prototype.getStructureGeometryBuffer = function() {
-    var len_buf = this._stackAlloc(Int32Array, 1);
-    var name = this._raw['get_structure_geometry_buffer'](this.client, len_buf.byteOffset);
-    var len = len_buf[0];
-    this._stackFree(len_buf);
-    return {
-        buf: this.asmgl.getBufferWrapper(name),
-        len: len / this.SIZEOF.StructureVertex,
-    };
-};
+    f32[ 5] = scene.camera_pos[0];
+    f32[ 6] = scene.camera_pos[1];
+    f32[ 7] = scene.camera_size[0];
+    f32[ 8] = scene.camera_size[1];
+    f32[ 9] = scene.slice_center[0];
+    f32[10] = scene.slice_center[1];
+    f32[11] = scene.slice_z;
+    f32[12] = scene.now;
 
-DynAsm.prototype.getLightGeometryBuffer = function() {
-    var len_buf = this._stackAlloc(Int32Array, 1);
-    var name = this._raw['get_light_geometry_buffer'](this.client, len_buf.byteOffset);
-    var len = len_buf[0];
-    this._stackFree(len_buf);
-    return {
-        buf: this.asmgl.getBufferWrapper(name),
-        len: len / this.SIZEOF.LightVertex,
-    };
-};
+    this._raw['render_frame'](this.client, f32.byteOffset);
 
-DynAsm.prototype.getUIGeometryBuffer = function() {
-    var len_buf = this._stackAlloc(Int32Array, 1);
-    var name = this._raw['get_ui_geometry_buffer'](this.client, len_buf.byteOffset);
-    var len = len_buf[0];
-    this._stackFree(len_buf);
-    return {
-        buf: this.asmgl.getBufferWrapper(name),
-        len: len / this.SIZEOF.UIVertex,
-    };
-};
-
-
-DynAsm.prototype.testRender = function(opcode, scene, tex_name) {
-    var arr = this._stackAlloc(Float32Array, 8);
-
-    arr[0] = scene.camera_pos[0];
-    arr[1] = scene.camera_pos[1];
-    arr[2] = scene.camera_size[0];
-    arr[3] = scene.camera_size[1];
-    arr[4] = scene.slice_center[0];
-    arr[5] = scene.slice_center[1];
-    arr[6] = scene.slice_z;
-    arr[7] = scene.now;
-
-    this._raw['test_render'](this.client, opcode, arr.byteOffset, tex_name);
-
-    this._stackFree(arr);
+    this._stackFree(f32);
 };
 
 DynAsm.prototype.bench = function() {
