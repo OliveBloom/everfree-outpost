@@ -337,6 +337,7 @@ impl<GL: Context> Renderer<GL> {
         let u16_size = (scene.camera_size.x as u16,
                         scene.camera_size.y as u16);
         if self.framebuffers.size != u16_size {
+            println!("adjusting framebuffer size to {:?}", scene.camera_size);
             self.framebuffers = Framebuffers::new(gl, u16_size);
         }
     }
@@ -395,15 +396,16 @@ impl<GL: Context> Renderer<GL> {
         DrawArgs::<GL>::new()
             .arrays(&[&self.buffers.square01])
             .textures(&[&self.framebuffers.world_color])
-            .viewport_size(V2::new(1280, 960))
+            .viewport_size(scene.canvas_size)
             .draw(&mut self.shaders.blit_full);
     }
 }
 
 
 pub struct Scene {
-    pub camera_size: V2,
+    pub canvas_size: V2,
     pub camera_pos: V2,
+    pub camera_size: V2,
     pub now: Time,
 
     pub f_camera_pos: [f32; 2],

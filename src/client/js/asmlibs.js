@@ -613,20 +613,22 @@ DynAsm.prototype.renderFrame = function(scene) {
     var f32 = this._stackAlloc(Float32Array, this.SIZEOF.Scene / 4);
     var i32 = new Int32Array(f32.buffer, f32.byteOffset, f32.length);
 
-    i32[ 0] = scene.camera_pos[0];
-    i32[ 1] = scene.camera_pos[1];
-    i32[ 2] = scene.camera_size[0];
-    i32[ 3] = scene.camera_size[1];
-    i32[ 4] = scene.now;
+    i32[ 0] = scene.canvas_size[0];
+    i32[ 1] = scene.canvas_size[1];
+    i32[ 2] = scene.camera_pos[0];
+    i32[ 3] = scene.camera_pos[1];
+    i32[ 4] = scene.camera_size[0];
+    i32[ 5] = scene.camera_size[1];
+    i32[ 6] = scene.now;
 
-    f32[ 5] = scene.camera_pos[0];
-    f32[ 6] = scene.camera_pos[1];
-    f32[ 7] = scene.camera_size[0];
-    f32[ 8] = scene.camera_size[1];
-    f32[ 9] = scene.slice_center[0];
-    f32[10] = scene.slice_center[1];
-    f32[11] = scene.slice_z;
-    f32[12] = scene.now;
+    f32[ 7] = scene.camera_pos[0];
+    f32[ 8] = scene.camera_pos[1];
+    f32[ 9] = scene.camera_size[0];
+    f32[10] = scene.camera_size[1];
+    f32[11] = scene.slice_center[0];
+    f32[12] = scene.slice_center[1];
+    f32[13] = scene.slice_z;
+    f32[14] = scene.now;
 
     this._raw['render_frame'](this.client, f32.byteOffset);
 

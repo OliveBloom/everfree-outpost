@@ -1193,6 +1193,7 @@ function frame(ac, client_now) {
     // PhysicsAsm object.
     //renderer.updateCavernMap(physics._asm, pos);
 
+    s.canvas_size = [ac.canvas.width, ac.canvas.height];
     s.camera_pos = [camera_pos.x, camera_pos.y];
     s.camera_size = [camera_size.x, camera_size.y];
     s.ambient_color = day_night.getAmbientColor(predict_now);
