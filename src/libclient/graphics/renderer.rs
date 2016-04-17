@@ -48,6 +48,7 @@ struct Shaders<GL: Context> {
     structure: GL::Shader,
     structure_shadow: GL::Shader,
     light_static: GL::Shader,
+    entity: GL::Shader,
 }
 
 impl<GL: Context> Shaders<GL> {
@@ -70,6 +71,8 @@ impl<GL: Context> Shaders<GL> {
             structure_shadow: structure::load_shader(gl, true),
 
             light_static: light::load_shader(gl),
+
+            entity: entity::load_shader(gl),
         }
     }
 }
@@ -77,6 +80,7 @@ impl<GL: Context> Shaders<GL> {
 struct Textures<GL: Context> {
     tile_atlas: GL::Texture,
     structure_atlas: GL::Texture,
+    sprite_sheet: GL::Texture,
 }
 
 impl<GL: Context> Textures<GL> {
@@ -84,6 +88,7 @@ impl<GL: Context> Textures<GL> {
         Textures {
             tile_atlas: gl.load_texture("tiles"),
             structure_atlas: gl.load_texture("structures0"),
+            sprite_sheet: gl.load_texture("sprites0"),
         }
     }
 }
@@ -331,6 +336,22 @@ impl<GL: Context> Renderer<GL> {
             ])
             .output(&self.framebuffers.world)
             .draw(&mut self.shaders.structure);
+
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                //scene.slice_center(),
+                //scene.slice_z(),
+                scene.now(),
+            ])
+            .arrays(&[&self.entity_buffer])
+            .textures(&[
+                &self.textures.sprite_sheet,
+                &cavern_tex,    // TODO: Should actually be the world depth
+            ])
+            .output(&self.framebuffers.world)   // TODO: separate buffer for sprites
+            .draw(&mut self.shaders.entity);
 
         DrawArgs::<GL>::new()
             .arrays(&[&self.buffers.square01])

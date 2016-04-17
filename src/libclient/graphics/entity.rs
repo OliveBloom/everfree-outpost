@@ -5,6 +5,7 @@ use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
 use entity::Entities;
+use platform::gl;
 use terrain::LOCAL_BITS;
 use util;
 
@@ -30,6 +31,35 @@ pub struct Vertex {
     anim_step: u16,
 
     // 24
+}
+
+pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
+    gl.load_shader(
+        "entity2.vert", "entity2.frag", "",
+        uniforms! {
+            camera_pos: V2,
+            camera_size: V2,
+            now: Float,
+        },
+        arrays! {
+            // struct 
+            [24] attribs! {
+                dest_pos: U16[2] @0,
+                src_pos: U16[2] @4,
+                sheet: U8[1] @8,
+                // Combine ref_pos and ref_size_z to avoid exceeding 8 attribs
+                ref_pos_size: U16[4] @10,
+                anim_length: I8[1] @18,
+                anim_rate: U8[1] @19,
+                anim_start: U16[1] @20,
+                anim_step: U16[1] @22,
+            },
+        },
+        textures! {
+            sheetTex,
+            depthTex,
+        },
+        outputs! { color: 1, depth })
 }
 
 
@@ -93,6 +123,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 // Not visible
                 continue;
             }
+            let pos = pos & scalar(LOCAL_PX_MASK);
 
             let num_layers = 1;
             if idx + 6 * num_layers >= buf.len() {
@@ -104,8 +135,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             let g = &self.data.sprite_graphics[(l.gfx_start + a.local_id) as usize];
 
             // Top-left corner of the output rect
-            let dest_x = (pos.x - 48) as u16;
-            let dest_y = (pos.y - pos.z - 80) as u16;
+            let dest_x = (pos.x - 32) as u16;
+            let dest_y = (pos.y - pos.z - 64) as u16;
 
             for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
                 buf[idx] = Vertex {

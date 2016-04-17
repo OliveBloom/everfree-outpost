@@ -464,6 +464,7 @@ Renderer.prototype.render = function(scene) {
     */
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.disable(gl.DEPTH_TEST);
     /*
     // TODO: move blit_full to a common location
     this.shaders.blit_full.draw(0, 0, 6, {}, {}, {

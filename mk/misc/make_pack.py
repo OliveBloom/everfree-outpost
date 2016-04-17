@@ -67,6 +67,8 @@ def main(src_dir, build_dir, out_file):
     add('text', 'structure2.vert',      src('assets/shaders/structure2.vert'))
     add('text', 'light2.frag',          src('assets/shaders/light2.frag'))
     add('text', 'light2.vert',          src('assets/shaders/light2.vert'))
+    add('text', 'entity2.frag',         src('assets/shaders/entity2.frag'))
+    add('text', 'entity2.vert',         src('assets/shaders/entity2.vert'))
     add('text', 'slicing.inc',          src('assets/shaders/slicing.inc'))
 
     add('text', 'ui_blit.vert',         src('assets/shaders/ui_blit.vert'))
@@ -84,8 +86,9 @@ def main(src_dir, build_dir, out_file):
 
     with open(build('sprites_list.json')) as f:
         sprites_list = json.load(f)
-    for i, f in enumerate(sprites_list):
-        add('image', 'sprite_%d' % i , build(os.path.join('sprites', f)))
+    for f in sprites_list:
+        dest, _ = os.path.splitext(os.path.basename(f))
+        add('image', dest, build(os.path.join('sprites', f)))
 
 
     # Generate the pack containing the files added above.
