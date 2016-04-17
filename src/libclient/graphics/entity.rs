@@ -215,14 +215,14 @@ fn for_each_layer<F: FnMut(usize)>(appearance: u32, mut f: F) {
         go(3);
     }
     go(0); // base
-    if horn {
-        go(1);
-    }
     if wings {
         go(2);
     }
     go(4); // eyes
     go(5 + mane as usize);
+    if horn {
+        go(1);
+    }
     go(8 + tail as usize);
     if equip0 != 0 {
         go(11 + equip0 as usize - 1);
