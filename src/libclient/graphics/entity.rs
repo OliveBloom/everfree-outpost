@@ -158,6 +158,13 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 };
                 idx += 1;
             }
+
+            println!("info: {:?}, {} {} {} {}",
+                     buf[0].src_pos,
+                     buf[0].anim_length,
+                     buf[0].anim_rate,
+                     buf[0].anim_start,
+                     buf[0].anim_step);
         }
 
         // Ran out of entites - we're done.

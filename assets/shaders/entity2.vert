@@ -52,27 +52,13 @@ void main(void) {
     gl_Position = vec4(adj_pos, 1.0);
 
 
-    tex_coord = src_pos / SHEET_SIZE;
+    vec2 tex_pos = src_pos;
 
-    /*
-    vec2 texPx = displayOffset + vec2(vertOffset.x, vertOffset.y - vertOffset.z);
-
-    if (animLength != 0.0) {
-        float frame;
-        if (animLength >= 0.0) {
-            frame = mod(floor(now * animRate), animLength);
-        } else {
-            // Compute the delta in milliseconds between `now` and
-            // `animOneshotStart`, in the range -MODULUS/2 .. MODULUS / 2.
-            const float HALF_MOD = ANIM_MODULUS_MS / 2.0;
-            float now_ms = mod(now * 1000.0, ANIM_MODULUS_MS);
-            float delta = mod(now_ms - animOneshotStart + HALF_MOD, ANIM_MODULUS_MS) - HALF_MOD;
-            frame = clamp(floor(delta / 1000.0 * animRate), 0.0, -animLength - 1.0);
-        }
-        texPx.x += frame * animStep;
+    float frame = mod(floor(now * anim_rate), anim_length);
+    // Weird, but it seems like frame == anim_length when it ought to be zero.
+    if (frame < anim_length) {
+        tex_pos.x += frame * anim_step;
     }
 
-    texCoord = texPx / (ATLAS_SIZE * TILE_SIZE);
-    baseZ = blockPos.z;
-    */
+    tex_coord = tex_pos / SHEET_SIZE;
 }

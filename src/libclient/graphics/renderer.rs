@@ -23,6 +23,15 @@ use super::structure;
 use super::terrain;
 
 
+// The `now` value passed to the animation shader must be reduced to fit in a
+// float.  We use the magic number 55440 for this, since it's divisible by
+// every number from 1 to 12 (and most "reasonable" numbers above that).  This
+// is useful because repeating animations will glitch when `now` wraps around
+// unless `length / framerate` divides evenly into the modulus.
+//
+// Note that the shader `now` and ANIM_MODULUS are both in seconds, not ms.
+const ANIM_MODULUS: f64 = 55440.0;
+
 struct Buffers<GL: Context> {
     square01: GL::Buffer,
 }
@@ -346,6 +355,12 @@ impl<GL: Context> Renderer<GL> {
         self.framebuffers.world.clear((0, 0, 0, 0));
         self.framebuffers.sprite.clear((0, 0, 0, 0));
 
+        let mut anim_now = scene.now as f64 / 1000.0 % ANIM_MODULUS;
+        if anim_now < 0.0 {
+            anim_now += ANIM_MODULUS;
+        }
+        let anim_now = anim_now;
+
         DrawArgs::<GL>::new()
             .uniforms(&[
                 scene.camera_pos(),
@@ -367,7 +382,7 @@ impl<GL: Context> Renderer<GL> {
                 scene.camera_size(),
                 scene.slice_center(),
                 scene.slice_z(),
-                scene.now(),
+                UniformValue::Float(anim_now as f32),
             ])
             .arrays(&[self.structure_geom.buffer()])
             .textures(&[
@@ -383,7 +398,7 @@ impl<GL: Context> Renderer<GL> {
                 scene.camera_size(),
                 //scene.slice_center(),
                 //scene.slice_z(),
-                scene.now(),
+                UniformValue::Float(anim_now as f32),
             ])
             .arrays(&[&self.entity_buffer])
             .textures(&[
