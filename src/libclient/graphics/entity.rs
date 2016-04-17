@@ -138,9 +138,14 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             let dest_y = (pos.y - pos.z - 64) as u16;
 
             for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
+                let dest_pos =
+                    if g.mirror == 0 { (dest_x + g.dest_offset.0 + cx * g.size.0,
+                                        dest_y + g.dest_offset.1 + cy * g.size.1) }
+                    else { (dest_x + g.dest_offset.0 + (1 - cx) * g.size.0,
+                            dest_y + g.dest_offset.1 + cy * g.size.1) };
+
                 buf[idx] = Vertex {
-                    dest_pos: (dest_x + g.dest_offset.0 + cx * g.size.0,
-                               dest_y + g.dest_offset.1 + cy * g.size.1),
+                    dest_pos: dest_pos,
                     src_pos: (g.src_offset.0 + cx * g.size.0,
                               g.src_offset.1 + cy * g.size.1),
                     sheet: g.sheet,
@@ -158,13 +163,6 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 };
                 idx += 1;
             }
-
-            println!("info: {:?}, {} {} {} {}",
-                     buf[0].src_pos,
-                     buf[0].anim_length,
-                     buf[0].anim_rate,
-                     buf[0].anim_start,
-                     buf[0].anim_step);
         }
 
         // Ran out of entites - we're done.
