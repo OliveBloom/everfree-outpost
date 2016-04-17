@@ -8,6 +8,7 @@ use physics::CHUNK_SIZE;
 use graphics::ATLAS_SIZE;
 use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
+use platform::gl;
 
 
 /// Vertex attributes for terrain.
@@ -23,6 +24,30 @@ pub struct Vertex {
 impl IntrusiveCorner for Vertex {
     fn corner(&self) -> &(u8, u8) { &self.corner }
     fn corner_mut(&mut self) -> &mut (u8, u8) { &mut self.corner }
+}
+
+pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
+    gl.load_shader(
+        "terrain2.vert", "terrain2.frag", "",
+        uniforms! {
+            cameraPos: V2,
+            cameraSize: V2,
+            sliceCenter: V2,
+            sliceZ: Float,
+        },
+        arrays! {
+            [8] attribs! {
+                corner: U8[2] @0,
+                blockPos: U8[3] @2,
+                side: U8[1] @5,
+                tileCoord: U8[2] @6,
+            },
+        },
+        textures! {
+            atlasTex,
+            cavernTex,
+        },
+        outputs! { color: 2, depth })
 }
 
 

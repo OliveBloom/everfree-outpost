@@ -3,6 +3,7 @@ use std::prelude::v1::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
+use platform::gl;
 use structures::Structures;
 use util;
 
@@ -31,6 +32,31 @@ pub struct Vertex {
 impl IntrusiveCorner for Vertex {
     fn corner(&self) -> &(u8, u8) { &self.corner }
     fn corner_mut(&mut self) -> &mut (u8, u8) { &mut self.corner }
+}
+
+pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
+    gl.load_shader(
+        "light2.vert", "light2.frag",
+        defs! {
+            LIGHT_INPUT: "attribute",
+        },
+        uniforms! {
+            cameraPos: V2,
+            cameraSize: V2,
+        },
+        arrays! {
+            // struct 
+            [16] attribs! {
+                corner: U8[2] @0,
+                center: U16[3] @2,
+                colorIn: U8[3] (norm) @8,
+                radiusIn: U16[1] @12,
+            },
+        },
+        textures! {
+            depthTex,
+        },
+        outputs! { color: 1 })
 }
 
 

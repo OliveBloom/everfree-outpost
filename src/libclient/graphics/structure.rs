@@ -4,6 +4,7 @@ use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
 use data::Data;
+use platform::gl;
 use structures::Structures;
 use terrain::LOCAL_MASK;
 use util;
@@ -28,6 +29,38 @@ pub struct Vertex {
     anim_step: u16,
 
     // 20
+}
+
+pub fn load_shader<GL: gl::Context>(gl: &mut GL, shadow: bool) -> GL::Shader {
+    gl.load_shader(
+        "structure2.vert", "structure2.frag",
+        if !shadow { "" }
+        else { defs! { OUTPOST_SHADOW: "1", } },
+        uniforms! {
+            cameraPos: V2,
+            cameraSize: V2,
+            sliceCenter: V2,
+            sliceZ: Float,
+            now: Float,
+        },
+        arrays! {
+            // struct structure::Vertex
+            [20] attribs! {
+                vertOffset: U16[3] @0,
+                animLength: I8[1] @6,
+                animRate: U8[1] @7,
+                blockPos: U8[3] @8,
+                layer: U8[1] @11,
+                displayOffset: I16[2] @12,
+                animOneshotStart: U16[1] @16,
+                animStep: U16[1] @18,
+            },
+        },
+        textures! {
+            sheetTex,
+            cavernTex,
+        },
+        outputs! { color: 2, depth })
 }
 
 

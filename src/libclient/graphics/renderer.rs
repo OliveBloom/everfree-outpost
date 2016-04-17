@@ -64,110 +64,12 @@ impl<GL: Context> Shaders<GL> {
                 textures! { imageTex, },
                 outputs! { color: 1 }),
 
-            terrain: gl.load_shader(
-                "terrain2.vert", "terrain2.frag", "",
-                uniforms! {
-                    cameraPos: V2,
-                    cameraSize: V2,
-                    sliceCenter: V2,
-                    sliceZ: Float,
-                },
-                arrays! {
-                    // struct terrain::Vertex
-                    [8] attribs! {
-                        corner: U8[2] @0,
-                        blockPos: U8[3] @2,
-                        side: U8[1] @5,
-                        tileCoord: U8[2] @6,
-                    },
-                },
-                textures! {
-                    atlasTex,
-                    cavernTex,
-                },
-                outputs! { color: 2, depth }),
+            terrain: terrain::load_shader(gl),
 
-            structure: gl.load_shader(
-                "structure2.vert", "structure2.frag", "",
-                uniforms! {
-                    cameraPos: V2,
-                    cameraSize: V2,
-                    sliceCenter: V2,
-                    sliceZ: Float,
-                    now: Float,
-                },
-                arrays! {
-                    // struct structure::Vertex
-                    [20] attribs! {
-                        vertOffset: U16[3] @0,
-                        animLength: I8[1] @6,
-                        animRate: U8[1] @7,
-                        blockPos: U8[3] @8,
-                        layer: U8[1] @11,
-                        displayOffset: I16[2] @12,
-                        animOneshotStart: U16[1] @16,
-                        animStep: U16[1] @18,
-                    },
-                },
-                textures! {
-                    sheetTex,
-                    cavernTex,
-                },
-                outputs! { color: 2, depth }),
+            structure: structure::load_shader(gl, false),
+            structure_shadow: structure::load_shader(gl, true),
 
-            structure_shadow: gl.load_shader(
-                "structure2.vert", "structure2.frag",
-                defs! {
-                    OUTPOST_SHADOW: "1",
-                },
-                uniforms! {
-                    cameraPos: V2,
-                    cameraSize: V2,
-                    sliceCenter: V2,
-                    sliceZ: Float,
-                    now: Float,
-                },
-                arrays! {
-                    // struct structure::Vertex
-                    [20] attribs! {
-                        vertOffset: U16[3] @0,
-                        animLength: I8[1] @6,
-                        animRate: U8[1] @7,
-                        blockPos: U8[3] @8,
-                        layer: U8[1] @11,
-                        displayOffset: I16[2] @12,
-                        animOneshotStart: U16[1] @16,
-                        animStep: U16[1] @18,
-                    },
-                },
-                textures! {
-                    sheetTex,
-                    cavernTex,
-                },
-                outputs! { color: 2, depth }),
-
-            light_static: gl.load_shader(
-                "light2.vert", "light2.frag",
-                defs! {
-                    LIGHT_INPUT: "attribute",
-                },
-                uniforms! {
-                    cameraPos: V2,
-                    cameraSize: V2,
-                },
-                arrays! {
-                    // struct 
-                    [16] attribs! {
-                        corner: U8[2] @0,
-                        center: U16[3] @2,
-                        colorIn: U8[3] (norm) @8,
-                        radiusIn: U16[1] @12,
-                    },
-                },
-                textures! {
-                    depthTex,
-                },
-                outputs! { color: 1 }),
+            light_static: light::load_shader(gl),
         }
     }
 }
