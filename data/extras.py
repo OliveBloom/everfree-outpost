@@ -60,10 +60,24 @@ def gen_pony_bases_table(maps):
         result.append(row)
     return result
 
+def gen_pony_layer_table(maps):
+    p = pony(maps)
+    result = []
+    for layer in ('base', 'horn', 'frontwing', 'backwing', 'eyes1',
+            'mane/1', 'mane/2', 'mane/3',
+            'tail/1', 'tail/2', 'tail/3',
+            'hat/party', 'hat/santa', 'hat/witch', 'hat/explorer'):
+        for sex in 'fm':
+            try:
+                l = p.get_layer('%s/%s' % (sex, layer))
+            except KeyError:
+                continue
+            result.append(l.id)
+    return result
+
 def init():
     EXTRA.new('default_anim').func(gen_default_anim)
     EXTRA.new('editor_anim').func(gen_editor_anim)
     EXTRA.new('physics_anim_table').func(gen_physics_anim_table)
     EXTRA.new('anim_dir_table').func(gen_anim_dir_table)
-    #EXTRA.new('pony_slot_table').func(gen_pony_slot_table)
-    #EXTRA.new('pony_bases_table').func(gen_pony_bases_table)
+    EXTRA.new('pony_layer_table').func(gen_pony_layer_table)

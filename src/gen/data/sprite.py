@@ -157,7 +157,7 @@ def process(sprites):
     util.assign_ids([FullNameWrapper(a)
         for s in sprites for a in s.anims.values()])
     util.assign_ids([FullNameWrapper(l)
-        for s in sprites for l in s.layers.values()])
+        for s in sprites for l in s.iter_layers()])
 
     gfx_index = 0
     for s in sprites:

@@ -22,8 +22,7 @@ void main(void) {
 
     vec4 color = texture2D(sheet_tex, tex_coord);
     if (color.a == 0.0) {
-        //discard;
-        gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
+        discard;
     } else {
         gl_FragColor = color;
     }

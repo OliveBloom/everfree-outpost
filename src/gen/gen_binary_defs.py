@@ -10,7 +10,8 @@ def build_parser():
     args.add_argument('--mode', required=True,
             choices=('blocks', 'item_defs', 'item_strs',
                 'templates', 'template_parts', 'template_verts', 'template_shapes',
-                'animations', 'sprite_layers', 'sprite_graphics'),
+                'animations', 'sprite_layers', 'sprite_graphics',
+                'pony_layer_table'),
             help='convert block defs')
 
     args.add_argument('input', metavar='FILE_IN.json',
@@ -208,7 +209,11 @@ def convert_sprite_graphics(j):
         b.extend(c.convert(obj))
     return b
 
-
+def convert_pony_layer_table(j):
+    b = bytearray()
+    for x in j['pony_layer_table']:
+        b.extend(struct.pack('B', x))
+    return b
 
 def main():
     parser = build_parser()
@@ -237,6 +242,8 @@ def main():
         b = convert_sprite_layers(j)
     elif args.mode == 'sprite_graphics':
         b = convert_sprite_graphics(j)
+    elif args.mode == 'pony_layer_table':
+        b = convert_pony_layer_table(j)
     else:
         parser.error('must provide flag to indicate input type')
 

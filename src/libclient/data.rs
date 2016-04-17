@@ -65,6 +65,7 @@ pub struct Data {
     pub animations: Box<[Animation]>,
     pub sprite_layers: Box<[SpriteLayer]>,
     pub sprite_graphics: Box<[SpriteGraphics]>,
+    pub pony_layer_table: Box<[u8]>,
 }
 
 impl Data {
@@ -77,7 +78,8 @@ impl Data {
                template_shapes: Box<[Shape]>,
                animations: Box<[Animation]>,
                sprite_layers: Box<[SpriteLayer]>,
-               sprite_graphics: Box<[SpriteGraphics]>) -> Data {
+               sprite_graphics: Box<[SpriteGraphics]>,
+               pony_layer_table: Box<[u8]>) -> Data {
         Data {
             blocks: blocks,
             item_strs: item_strs,
@@ -89,6 +91,7 @@ impl Data {
             animations: animations,
             sprite_layers: sprite_layers,
             sprite_graphics: sprite_graphics,
+            pony_layer_table: pony_layer_table,
         }
     }
 

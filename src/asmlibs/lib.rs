@@ -57,7 +57,7 @@ pub unsafe extern fn asmlibs_init() {
 }
 
 #[no_mangle]
-pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 10],
+pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 11],
                                out: *mut Data) {
     let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
     let item_defs =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
@@ -69,6 +69,7 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 10],
     let animations =        make_boxed_slice(blobs[7].0 as *mut _, blobs[7].1);
     let sprite_layers =     make_boxed_slice(blobs[8].0 as *mut _, blobs[8].1);
     let sprite_graphics =   make_boxed_slice(blobs[9].0 as *mut _, blobs[9].1);
+    let pony_layer_table =  make_boxed_slice(blobs[10].0 as *mut _, blobs[10].1);
 
     let item_strs = String::from_utf8(item_strs.into_vec()).unwrap().into_boxed_str();
 
@@ -76,6 +77,7 @@ pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 10],
             blocks, item_defs, item_strs,
             templates, template_parts, template_verts, template_shapes,
             animations, sprite_layers, sprite_graphics,
+            pony_layer_table,
             ));
 }
 
