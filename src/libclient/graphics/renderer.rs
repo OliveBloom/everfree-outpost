@@ -10,7 +10,7 @@ use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer};
-use platform::gl::{DrawArgs, UniformValue, DepthBuffer};
+use platform::gl::{DrawArgs, UniformValue, Attach};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -94,13 +94,33 @@ impl<GL: Context> Textures<GL> {
 }
 
 struct Framebuffers<GL: Context> {
+    world_color: GL::Texture,
+    world_meta: GL::Texture,
+    world_depth: GL::Texture,
+
     world: GL::Framebuffer,
+    sprite: GL::Framebuffer,
 }
 
 impl<GL: Context> Framebuffers<GL> {
-    fn new(gl: &mut GL, screen_size: (u16, u16)) -> Framebuffers<GL> {
+    fn new(gl: &mut GL, size: (u16, u16)) -> Framebuffers<GL> {
+        let world_color = gl.create_texture(size);
+        let world_meta = gl.create_texture(size);
+        let world_depth = gl.create_depth_texture(size);
+        let world = gl.create_framebuffer(size,
+                                          &[Attach::Texture(&world_color),
+                                            Attach::Texture(&world_meta) ],
+                                          Some(Attach::Texture(&world_depth)));
+        let sprite = gl.create_framebuffer(size,
+                                           &[Attach::Texture(&world_color)],
+                                           Some(Attach::Renderbuffer));
+
         Framebuffers {
-            world: gl.create_framebuffer(screen_size, 2, DepthBuffer::Texture),
+            world_color: world_color,
+            world_meta: world_meta,
+            world_depth: world_depth,
+            world: world,
+            sprite: sprite,
         }
     }
 }
@@ -305,6 +325,7 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn render(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
         self.framebuffers.world.clear((0, 0, 0, 0));
+        self.framebuffers.sprite.clear((0, 0, 0, 0));
 
         DrawArgs::<GL>::new()
             .uniforms(&[
@@ -348,14 +369,14 @@ impl<GL: Context> Renderer<GL> {
             .arrays(&[&self.entity_buffer])
             .textures(&[
                 &self.textures.sprite_sheet,
-                &cavern_tex,    // TODO: Should actually be the world depth
+                &self.framebuffers.world_depth,
             ])
-            .output(&self.framebuffers.world)   // TODO: separate buffer for sprites
+            .output(&self.framebuffers.sprite)
             .draw(&mut self.shaders.entity);
 
         DrawArgs::<GL>::new()
             .arrays(&[&self.buffers.square01])
-            .textures(&[self.framebuffers.world.color_texture(0)])
+            .textures(&[&self.framebuffers.world_color])
             .viewport_size(V2::new(1280, 960))
             .draw(&mut self.shaders.blit_full);
     }

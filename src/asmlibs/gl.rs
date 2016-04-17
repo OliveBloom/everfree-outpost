@@ -50,7 +50,7 @@ mod ffi {
         pub fn asmgl_gen_framebuffer() -> u32;
         pub fn asmgl_delete_framebuffer(name: u32);
         pub fn asmgl_bind_framebuffer(name: u32);
-        pub fn asmgl_gen_renderbuffer_depth(width: u16, height: u16) -> u32;
+        pub fn asmgl_gen_renderbuffer(width: u16, height: u16, is_depth: u8) -> u32;
         pub fn asmgl_delete_renderbuffer(name: u32);
         // No use for bind_renderbuffer so far
         pub fn asmgl_framebuffer_texture(tex_name: u32,
@@ -394,8 +394,8 @@ impl Inner {
         }
     }
 
-    pub fn gen_renderbuffer_depth(&mut self, size: (u16, u16)) -> Name<Renderbuffer> {
-        let name = unsafe { ffi::asmgl_gen_renderbuffer_depth(size.0, size.1) };
+    pub fn gen_renderbuffer(&mut self, size: (u16, u16), is_depth: bool) -> Name<Renderbuffer> {
+        let name = unsafe { ffi::asmgl_gen_renderbuffer(size.0, size.1, is_depth as u8) };
         assert!(name != 0);
         // This does affect the GL_RENDERBUFFER binding, but we don't actually keep track of that.
         Name::new(name)
@@ -596,6 +596,24 @@ impl gl::Context for GL {
 
     type Texture = Texture;
 
+    fn create_texture(&mut self, size: (u16, u16)) -> Texture {
+        let name = self.inner.run(|ctx| ctx.gen_texture(size, false));
+        Texture {
+            inner: self.inner.clone(),
+            name: name,
+            size: size,
+        }
+    }
+
+    fn create_depth_texture(&mut self, size: (u16, u16)) -> Texture {
+        let name = self.inner.run(|ctx| ctx.gen_texture(size, true));
+        Texture {
+            inner: self.inner.clone(),
+            name: name,
+            size: size,
+        }
+    }
+
     fn load_texture(&mut self, img_name: &str) -> Texture {
         let mut size = (0, 0);
         let name = self.inner.run(|ctx| ctx.load_texture(img_name, &mut size));
@@ -619,54 +637,56 @@ impl gl::Context for GL {
 
     fn create_framebuffer(&mut self,
                           size: (u16, u16),
-                          color: u8,
-                          depth: gl::DepthBuffer) -> Framebuffer {
+                          color: &[gl::Attach<GL>],
+                          depth: Option<gl::Attach<GL>>) -> Framebuffer {
         let inner = self.inner.clone();
         self.inner.run(|ctx| {
             let name = ctx.gen_framebuffer();
             ctx.bind_framebuffer(name);
 
+            let mut renderbuffers = Vec::new();
+
             // Attach color textures
-            let mut color_attach = Vec::with_capacity(color as usize);
-            for i in 0 .. color {
-                let name = ctx.gen_texture(size, false);
-                ctx.framebuffer_texture(name, i as i8);
-                color_attach.push(Texture {
-                    inner: inner.clone(),
-                    name: name,
-                    size: size,
-                });
+            for (i, att) in color.iter().enumerate() {
+                match *att {
+                    gl::Attach::Texture(ref tex) => {
+                        ctx.framebuffer_texture(tex.name, i as i8);
+                    },
+                    gl::Attach::Renderbuffer => {
+                        let name = ctx.gen_renderbuffer(size, false);
+                        ctx.framebuffer_renderbuffer(name, -1);
+                        renderbuffers.push(Renderbuffer {
+                            inner: inner.clone(),
+                            name: name,
+                        });
+                    },
+                }
             }
 
             // Attach depth texture/renderbuffer
-            let depth_attach = match depth {
-                gl::DepthBuffer::None => DepthAttachment::None,
-                gl::DepthBuffer::Texture => {
-                    let name = ctx.gen_texture(size, true);
-                    ctx.framebuffer_texture(name, -1);
-                    DepthAttachment::Texture(Texture {
-                        inner: inner.clone(),
-                        name: name,
-                        size: size,
-                    })
+            match depth {
+                None => {},
+                Some(gl::Attach::Texture(tex)) => {
+                    ctx.framebuffer_texture(tex.name, -1);
                 },
-                gl::DepthBuffer::Renderbuffer => {
-                    let name = ctx.gen_renderbuffer_depth(size);
+                Some(gl::Attach::Renderbuffer) => {
+                    let name = ctx.gen_renderbuffer(size, true);
                     ctx.framebuffer_renderbuffer(name, -1);
-                    DepthAttachment::Renderbuffer(Renderbuffer {
+                    renderbuffers.push(Renderbuffer {
                         inner: inner.clone(),
                         name: name,
-                    })
+                    });
                 },
-            };
+            }
 
             Framebuffer {
                 inner: inner,
                 name: name,
 
                 size: size,
-                colors: color_attach.into_boxed_slice(),
-                depth: depth_attach,
+                num_colors: color.len() as u8,
+                has_depth: depth.is_some(),
+                renderbuffers: renderbuffers.into_boxed_slice(),
             }
         })
     }
@@ -905,19 +925,17 @@ impl Drop for Texture {
 }
 
 
-enum DepthAttachment {
-    None,
-    Texture(Texture),
-    Renderbuffer(Renderbuffer),
-}
-
 pub struct Framebuffer {
     inner: InnerPtr,
     name: Name<Framebuffer>,
 
     size: (u16, u16),
-    colors: Box<[Texture]>,
-    depth: DepthAttachment,
+    num_colors: u8,
+    has_depth: bool,
+
+    // For ownership purposes only.  The RBs are never used once the FB has been constructed, but
+    // we need to keep them somewhere and ensure they get destroyed at an appropriate time.
+    renderbuffers: Box<[Renderbuffer]>,
 }
 
 impl gl::Framebuffer<GL> for Framebuffer {
@@ -925,28 +943,8 @@ impl gl::Framebuffer<GL> for Framebuffer {
         self.size
     }
 
-    fn num_color_planes(&self) -> usize {
-        self.colors.len()
-    }
-
-    fn depth_mode(&self) -> gl::DepthBuffer {
-        match self.depth {
-            DepthAttachment::None => gl::DepthBuffer::None,
-            DepthAttachment::Texture(_) => gl::DepthBuffer::Texture,
-            DepthAttachment::Renderbuffer(_) => gl::DepthBuffer::Renderbuffer,
-        }
-    }
-
-    fn color_texture(&self, index: usize) -> &Texture {
-        &self.colors[index]
-    }
-
-    fn depth_texture(&self) -> &Texture {
-        match self.depth {
-            DepthAttachment::Texture(ref t) => t,
-            _ => panic!("renderbuffer has no depth texture"),
-        }
-    }
+    fn num_color_planes(&self) -> usize { self.num_colors as usize }
+    fn has_depth_buffer(&self) -> bool { self.has_depth }
 
     fn clear(&mut self, color: (u8, u8, u8, u8)) {
         let name = self.name;

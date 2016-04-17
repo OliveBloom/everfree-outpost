@@ -24,14 +24,16 @@ pub trait Context {
                    outputs: OutputSpec) -> Self::Shader;
 
     type Texture: Texture;
+    fn create_texture(&mut self, size: (u16, u16)) -> Self::Texture;
+    fn create_depth_texture(&mut self, size: (u16, u16)) -> Self::Texture;
     fn load_texture(&mut self, img_name: &str) -> Self::Texture;
     fn texture_import_HACK(&mut self, name: u32, size: (u16, u16)) -> Self::Texture;
 
     type Framebuffer: Framebuffer<Self>;
     fn create_framebuffer(&mut self,
                           size: (u16, u16),
-                          color: u8,
-                          depth: DepthBuffer) -> Self::Framebuffer;
+                          color: &[Attach<Self>],
+                          depth: Option<Attach<Self>>) -> Self::Framebuffer;
 
     // Would be nice to put this method on Shader, but it needs 
     fn draw(&mut Self::Shader, args: &DrawArgs<Self>);
@@ -183,19 +185,15 @@ pub trait Texture {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum DepthBuffer {
-    None,
-    Texture,
+pub enum Attach<'a, GL: ?Sized+Context> where GL::Texture: 'a {
+    Texture(&'a GL::Texture),
     Renderbuffer,
 }
 
 pub trait Framebuffer<GL: ?Sized+Context> {
     fn size(&self) -> (u16, u16);
     fn num_color_planes(&self) -> usize;
-    fn depth_mode(&self) -> DepthBuffer;
-
-    fn color_texture(&self, index: usize) -> &GL::Texture;
-    fn depth_texture(&self) -> &GL::Texture;
+    fn has_depth_buffer(&self) -> bool;
 
     fn clear(&mut self, color: (u8, u8, u8, u8));
 }

@@ -143,8 +143,8 @@ var module_env = function(asm) {
         'asmgl_bind_framebuffer': function(name) {
             asm.asmgl.bindFramebuffer(name);
         },
-        'asmgl_gen_renderbuffer_depth': function(width, height) {
-            return asm.asmgl.genRenderbufferDepth(width, height);
+        'asmgl_gen_renderbuffer': function(width, height, is_depth) {
+            return asm.asmgl.genRenderbuffer(width, height, is_depth);
         },
         'asmgl_delete_renderbuffer': function(name) {
             asm.asmgl.deleteRenderbuffer(name);

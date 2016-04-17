@@ -294,12 +294,18 @@ AsmGl.prototype.bindFramebuffer = function(name) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 };
 
-AsmGl.prototype.genRenderbufferDepth = function(width, height) {
+AsmGl.prototype.genRenderbuffer = function(width, height, is_depth) {
     var gl = this.gl;
 
     var rb = gl.createRenderbuffer();
     gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+    if (!is_depth) {
+        // Only crappy RGBA formats are supported in webgl 1.  Fortunately we
+        // don't actually use color renderbuffers at the moment.
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGB5_A1, width, height);
+    } else {
+        gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+    }
 
     var name = insertFree(this.renderbuffer_list, rb);
     return name + 1;

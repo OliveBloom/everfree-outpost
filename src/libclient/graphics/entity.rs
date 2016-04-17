@@ -158,7 +158,6 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 };
                 idx += 1;
             }
-            println!("pos = {:?}", pos);
         }
 
         // Ran out of entites - we're done.
