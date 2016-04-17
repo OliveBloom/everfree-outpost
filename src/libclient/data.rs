@@ -33,6 +33,27 @@ impl<'a> ItemDef<'a> {
     }
 }
 
+
+pub struct Animation {
+    pub local_id: u16,
+    pub framerate: u8,
+    pub length: u8,
+}
+
+pub struct SpriteLayer {
+    pub gfx_start: u16,
+    pub gfx_count: u16,
+}
+
+pub struct SpriteGraphics {
+    pub src_offset: (u16, u16),
+    pub dest_offset: (u16, u16),
+    pub size: (u16, u16),
+    pub sheet: u8,
+    pub mirror: u8,
+}
+
+
 pub struct Data {
     pub blocks: Box<[BlockData]>,
     item_defs: Box<[RawItemDef]>,
@@ -41,6 +62,9 @@ pub struct Data {
     pub template_parts: Box<[TemplatePart]>,
     pub template_verts: Box<[TemplateVertex]>,
     pub template_shapes: Box<[Shape]>,
+    pub animations: Box<[Animation]>,
+    pub sprite_layers: Box<[SpriteLayer]>,
+    pub sprite_graphics: Box<[SpriteGraphics]>,
 }
 
 impl Data {
@@ -50,7 +74,10 @@ impl Data {
                templates: Box<[StructureTemplate]>,
                template_parts: Box<[TemplatePart]>,
                template_verts: Box<[TemplateVertex]>,
-               template_shapes: Box<[Shape]>) -> Data {
+               template_shapes: Box<[Shape]>,
+               animations: Box<[Animation]>,
+               sprite_layers: Box<[SpriteLayer]>,
+               sprite_graphics: Box<[SpriteGraphics]>) -> Data {
         Data {
             blocks: blocks,
             item_strs: item_strs,
@@ -59,6 +86,9 @@ impl Data {
             template_parts: template_parts,
             template_verts: template_verts,
             template_shapes: template_shapes,
+            animations: animations,
+            sprite_layers: sprite_layers,
+            sprite_graphics: sprite_graphics,
         }
     }
 

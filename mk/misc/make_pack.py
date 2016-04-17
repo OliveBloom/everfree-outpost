@@ -47,7 +47,7 @@ def main(src_dir, build_dir, out_file):
     add('binary', 'template_vert_defs_bin',     build('structure_verts_client.bin'))
     add('binary', 'template_shape_defs_bin',    build('structure_shapes_client.bin'))
     add('binary', 'animation_defs_bin',         build('animations_client.bin'))
-    add('binary', 'sprite_layers_defs_bin',     build('sprite_layers_client.bin'))
+    add('binary', 'sprite_layer_defs_bin',      build('sprite_layers_client.bin'))
     add('binary', 'sprite_graphics_defs_bin',   build('sprite_graphics_client.bin'))
 
     add('text', 'sprite.vert',          src('assets/shaders/sprite.vert'))

@@ -327,6 +327,9 @@ impl<'d, P: Platform> Client<'d, P> {
             println!("entity {} at {:?}", id, e.pos(now));
         }
         */
+        let entity_bounds = Region::new(bounds.min - V2::new(1, 1),
+                                        bounds.max + V2::new(1, 1));
+        self.renderer.update_entity_geometry(&self.data, &self.entities, entity_bounds, now);
     }
 
     pub fn get_terrain_geometry_buffer(&self) -> &<P::GL as GlContext>::Buffer {

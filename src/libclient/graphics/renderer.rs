@@ -5,6 +5,7 @@ use std::slice;
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
+use entity::Entities;
 use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
@@ -15,6 +16,7 @@ use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
 use util;
 
+use super::entity;
 use super::light;
 use super::structure;
 use super::terrain;
@@ -200,6 +202,7 @@ pub struct Renderer<GL: Context> {
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
     light_geom: GeomCache<GL, Region<V2>>,
+    entity_buffer: GL::Buffer,
     ui_buffer: GL::Buffer,
 
     buffers: Buffers<GL>,
@@ -214,6 +217,7 @@ impl<GL: Context> Renderer<GL> {
             terrain_geom: GeomCache::new(gl),
             structure_geom: GeomCache::new(gl),
             light_geom: GeomCache::new(gl),
+            entity_buffer: gl.create_buffer(),
             ui_buffer: gl.create_buffer(),
 
             buffers: Buffers::new(gl),
@@ -316,6 +320,18 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn get_ui_buffer(&self) -> &GL::Buffer {
         &self.ui_buffer
+    }
+
+
+    pub fn update_entity_geometry(&mut self,
+                                  data: &Data,
+                                  entities: &Entities,
+                                  bounds: Region<V2>,
+                                  now: i32) {
+        let mut gen = entity::GeomGen::new(entities, data, bounds, now);
+        self.entity_buffer.alloc(gen.count_verts() * mem::size_of::<entity::Vertex>());
+        let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+        load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);
     }
 
 

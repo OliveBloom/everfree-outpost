@@ -381,7 +381,7 @@ DynAsm.prototype.initClient = function(gl, assets) {
     // AsmGl must be initialized before calling `client_init`.
     this.asmgl.init(gl, assets);
 
-    var blobs = this._stackAlloc(Int32Array, 7 * 2);
+    var blobs = this._stackAlloc(Int32Array, 10 * 2);
     var idx = 0;
     var this_ = this;
     var load_blob = function(x) {
@@ -399,6 +399,9 @@ DynAsm.prototype.initClient = function(gl, assets) {
     load_blob(assets['template_part_defs_bin']);
     load_blob(assets['template_vert_defs_bin']);
     load_blob(assets['template_shape_defs_bin']);
+    load_blob(assets['animation_defs_bin']);
+    load_blob(assets['sprite_layer_defs_bin']);
+    load_blob(assets['sprite_graphics_defs_bin']);
 
     // Item names get custom handling
 

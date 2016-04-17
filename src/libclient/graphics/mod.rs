@@ -6,6 +6,7 @@ pub mod types;
 pub mod structure;
 pub mod terrain;
 pub mod light;
+pub mod entity;
 
 
 const ATLAS_SIZE: u16 = 32;
