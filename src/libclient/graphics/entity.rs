@@ -123,7 +123,6 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 // Not visible
                 continue;
             }
-            let pos = pos & scalar(LOCAL_PX_MASK);
 
             let num_layers = 1;
             if idx + 6 * num_layers >= buf.len() {
@@ -159,6 +158,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 };
                 idx += 1;
             }
+            println!("pos = {:?}", pos);
         }
 
         // Ran out of entites - we're done.

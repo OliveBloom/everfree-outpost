@@ -99,24 +99,28 @@ impl ClientInfo {
     }
 
     pub fn local_pos(&self, pos: V3) -> V3 {
+        const BASE: i32 = TILE_SIZE * CHUNK_SIZE * (LOCAL_SIZE / 2);
         const MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
-        let x = (pos.x + self.chunk_offset.0 as i32 * CHUNK_SIZE * TILE_SIZE) & MASK;
-        let y = (pos.y + self.chunk_offset.1 as i32 * CHUNK_SIZE * TILE_SIZE) & MASK;
-        let z = pos.z;
-        V3::new(x, y, z)
+        let chunk_off = V2::new(self.chunk_offset.0 as i32,
+                                self.chunk_offset.1 as i32);
+        let adj_pos = pos.reduce() + chunk_off * scalar(CHUNK_SIZE * TILE_SIZE);
+
+        let delta = adj_pos - scalar(BASE);
+        let masked = delta & scalar(MASK);
+        let local_pos = masked + scalar(BASE);
+
+        local_pos.extend(pos.z)
     }
 
     pub fn local_pos_tuple(&self, pos: V3) -> (u16, u16, u16) {
-        const MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
-        let x = (pos.x + self.chunk_offset.0 as i32 * CHUNK_SIZE * TILE_SIZE) & MASK;
-        let y = (pos.y + self.chunk_offset.1 as i32 * CHUNK_SIZE * TILE_SIZE) & MASK;
-        let z = pos.z;
-        (x as u16, y as u16, z as u16)
+        let local = self.local_pos(pos);
+        (local.x as u16,
+         local.y as u16,
+         local.z as u16)
     }
 
     pub fn local_motion(&self, m: world::Motion) -> msg::Motion {
-        let base = TILE_SIZE * CHUNK_SIZE * LOCAL_SIZE;
-        let start = self.local_pos(m.start_pos) + V3::new(base, base, 0);
+        let start = self.local_pos(m.start_pos);
         let end = start + (m.end_pos - m.start_pos);
 
         msg::Motion {
