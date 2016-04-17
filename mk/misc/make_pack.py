@@ -34,7 +34,6 @@ def main(src_dir, build_dir, out_file):
     add('json', 'item_defs',            build('items_client.json'))
     add('json', 'recipe_defs',          build('recipes_client.json'))
     add('json', 'animation_defs',       build('animations_client.json'))
-    add('json', 'sprite_part_defs',     build('sprite_parts_client.json'))
     add('json', 'extra_defs',           build('extras_client.json'))
     add('json', 'fonts_metrics',        build('fonts_metrics.json'))
     add('json', 'day_night',            build('day_night.json'))

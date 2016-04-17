@@ -103,10 +103,12 @@ def binary_defs(src_file, mode, out_file=None):
 def process():
     data_files = ['%s_%s.json' % (f,s)
             for s in ('server', 'client')
-            for f in ('structures', 'blocks', 'items', 'recipes', 'animations', 'sprite_parts')]
+            for f in ('structures', 'blocks', 'items', 'recipes',
+                'animations', 'sprite_layers')]
     data_files.append('structure_parts_client.json')
     data_files.append('structure_verts_client.json')
     data_files.append('structure_shapes_client.json')
+    data_files.append('sprite_graphics_client.json')
     data_files.append('loot_tables_server.json')
     data_files.append('extras_client.json')
     return template('''

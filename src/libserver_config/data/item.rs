@@ -13,7 +13,7 @@ pub struct ItemData {
 impl ItemData {
     pub fn from_json(json: Json) -> Result<ItemData, ParseError> {
         let items = expect!(json.as_array(),
-                                "found non-array at top level");
+                            "found non-array at top level");
 
         let mut names = Vec::with_capacity(items.len());
         let mut name_to_id = HashMap::new();

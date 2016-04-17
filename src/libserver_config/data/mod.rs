@@ -5,7 +5,7 @@ pub use self::item::ItemData;
 pub use self::recipe::{Recipe, RecipeData};
 pub use self::template::{StructureTemplate, StructureTemplates};
 pub use self::animation::{Animation, AnimationData};
-pub use self::sprite_part::{Variant, SpritePart, SpritePartData};
+pub use self::sprite_layer::SpriteLayerData;
 pub use self::loot_table::LootTables;
 
 
@@ -19,7 +19,7 @@ pub struct Data {
     pub recipes: RecipeData,
     pub structure_templates: StructureTemplates,
     pub animations: AnimationData,
-    pub sprite_parts: SpritePartData,
+    pub sprite_layers: SpriteLayerData,
     pub loot_tables: LootTables,
 }
 
@@ -29,7 +29,7 @@ impl Data {
                      recipe_json: Json,
                      structure_template_json: Json,
                      animation_json: Json,
-                     sprite_part_json: Json,
+                     sprite_layer_json: Json,
                      loot_table_json: Json) -> Result<Data, ParseError> {
         Ok(Data {
             block_data: try!(BlockData::from_json(block_json)),
@@ -37,7 +37,7 @@ impl Data {
             recipes: try!(RecipeData::from_json(recipe_json)),
             structure_templates: try!(StructureTemplates::from_json(structure_template_json)),
             animations: try!(AnimationData::from_json(animation_json)),
-            sprite_parts: try!(SpritePartData::from_json(sprite_part_json)),
+            sprite_layers: try!(SpriteLayerData::from_json(sprite_layer_json)),
             loot_tables: try!(LootTables::from_json(loot_table_json)),
         })
     }
@@ -111,5 +111,5 @@ pub mod item;
 pub mod recipe;
 pub mod template;
 pub mod animation;
-pub mod sprite_part;
+pub mod sprite_layer;
 pub mod loot_table;
