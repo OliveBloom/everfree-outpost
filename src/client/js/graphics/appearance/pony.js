@@ -236,14 +236,17 @@ function PonyAppearance(assets, bits, name) {
     var equip2 = (bits >> 26) & 15;
 
     // TODO: use a SpriteSheet object that contains all the sheet images
-    var base_idx = ExtraDefs.pony_bases_table[stallion][base];
+    var base_idx = 0; //ExtraDefs.pony_bases_table[stallion][base];
 
     function get_image(part_key, local_variant_id, sheet_index) {
+        /*
         var part_idx = ExtraDefs.pony_slot_table[stallion][part_key];
         var part = SpritePartDef.by_id[part_idx];
         var variant_id = part.variants[local_variant_id];
         console.assert(sheet_index == 0, 'multisheet sprites are not supported');
         return variant_id != null ? assets['sprite_' + variant_id] : null;
+        */
+        return null;
     }
 
     this.base_img = get_image('base', base_idx, 0);

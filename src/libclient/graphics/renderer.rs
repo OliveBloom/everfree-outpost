@@ -8,7 +8,7 @@ use data::Data;
 use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
-use platform::gl::{Context, Buffer};
+use platform::gl::{Context, Buffer, Framebuffer};
 use platform::gl::{DrawArgs, UniformValue, DepthBuffer};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
@@ -184,6 +184,18 @@ impl<GL: Context> Textures<GL> {
     }
 }
 
+struct Framebuffers<GL: Context> {
+    world: GL::Framebuffer,
+}
+
+impl<GL: Context> Framebuffers<GL> {
+    fn new(gl: &mut GL, screen_size: (u16, u16)) -> Framebuffers<GL> {
+        Framebuffers {
+            world: gl.create_framebuffer(screen_size, 2, DepthBuffer::Texture),
+        }
+    }
+}
+
 pub struct Renderer<GL: Context> {
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
@@ -192,12 +204,12 @@ pub struct Renderer<GL: Context> {
 
     buffers: Buffers<GL>,
     shaders: Shaders<GL>,
-    textures: Textures<GL>
+    textures: Textures<GL>,
+    framebuffers: Framebuffers<GL>,
 }
 
 impl<GL: Context> Renderer<GL> {
     pub fn new(gl: &mut GL) -> Renderer<GL> {
-        gl.create_framebuffer((512, 512), 2, DepthBuffer::Renderbuffer);
         Renderer {
             terrain_geom: GeomCache::new(gl),
             structure_geom: GeomCache::new(gl),
@@ -207,6 +219,7 @@ impl<GL: Context> Renderer<GL> {
             buffers: Buffers::new(gl),
             shaders: Shaders::new(gl),
             textures: Textures::new(gl),
+            framebuffers: Framebuffers::new(gl, (640, 480)),
         }
     }
 
@@ -364,6 +377,47 @@ impl<GL: Context> Renderer<GL> {
             .arrays(&[&self.buffers.square01])
             .textures(&[tex])
             .range(0..6)
+            .draw(&mut self.shaders.blit_full);
+    }
+
+    pub fn render(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
+        self.framebuffers.world.clear((0, 0, 0, 0));
+
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                scene.slice_center(),
+                scene.slice_z(),
+            ])
+            .arrays(&[self.terrain_geom.buffer()])
+            .textures(&[
+                &self.textures.tile_atlas,
+                &cavern_tex,
+            ])
+            .output(&self.framebuffers.world)
+            .draw(&mut self.shaders.terrain);
+
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                scene.slice_center(),
+                scene.slice_z(),
+                scene.now(),
+            ])
+            .arrays(&[self.structure_geom.buffer()])
+            .textures(&[
+                &self.textures.structure_atlas,
+                &cavern_tex,
+            ])
+            .output(&self.framebuffers.world)
+            .draw(&mut self.shaders.structure);
+
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
+            .textures(&[self.framebuffers.world.color_texture(0)])
+            .viewport_size(V2::new(1280, 960))
             .draw(&mut self.shaders.blit_full);
     }
 }

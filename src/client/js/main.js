@@ -289,16 +289,6 @@ function loadAssets(next) {
                 RecipeDef.register(i, recipes[i]);
             }
 
-            var animations = assets['animation_defs'];
-            for (var i = 0; i < animations.length; ++i) {
-                AnimationDef.register(i, animations[i]);
-            }
-
-            var sprite_parts = assets['sprite_part_defs'];
-            for (var i = 0; i < sprite_parts.length; ++i) {
-                SpritePartDef.register(i, sprite_parts[i]);
-            }
-
             ExtraDefs.init(assets['extra_defs']);
             FontMetrics.init(assets['fonts_metrics']);
 
@@ -539,6 +529,7 @@ function drawPony(ctx, app_info) {
 }
 
 function preloadTextures() {
+    /*
     var textures = ['tiles'];
     for (var i = 0; i < 2; ++i) {
         var parts = ExtraDefs.pony_slot_table[i];
@@ -565,6 +556,7 @@ function preloadTextures() {
             });
         })(textures[i]);
     }
+    */
 }
 
 
@@ -1159,6 +1151,7 @@ function frame(ac, client_now) {
     s.sprites = new Array(entity_ids.length);
     var player_sprite = null;
 
+    /*
     for (var i = 0; i < entity_ids.length; ++i) {
         var entity = entities[entity_ids[i]];
         if (entity_ids[i] != player_entity) {
@@ -1180,6 +1173,7 @@ function frame(ac, client_now) {
             });
         }
     }
+    */
 
 
     if (needs_mask(predict_now, pony)) {

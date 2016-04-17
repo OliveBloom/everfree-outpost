@@ -162,6 +162,18 @@ var module_env = function(asm) {
             asm.asmgl.drawBuffers(num_attachments);
         },
 
+        'asmgl_viewport': function(x, y, w, h) {
+            asm.asmgl.viewport(x, y, w, h);
+        },
+        'asmgl_clear_color': function(r, g, b, a) {
+            asm.asmgl.clearColor(r, g, b, a);
+        },
+        'asmgl_clear_depth': function(d) {
+            asm.asmgl.clearDepth(d);
+        },
+        'asmgl_clear': function() {
+            asm.asmgl.clear();
+        },
         'asmgl_enable_vertex_attrib_array': function(index) {
             asm.asmgl.enableVertexAttribArray(index);
         },

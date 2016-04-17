@@ -46,6 +46,13 @@ function Animation(def, start_time) {
 exports.Animation = Animation;
 
 Animation.prototype.frameInfo = function(now) {
+    return {
+        i: 0,
+        j: 0,
+        sheet: 0,
+        flip: false,
+    };
+
     var delta = now - this.start_time;
     var frame = Math.floor(delta * this.def.fps / 1000) % this.def.length;
 

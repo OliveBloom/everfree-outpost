@@ -1,4 +1,5 @@
 use std::ops::Range;
+use physics::v3::{Region, V2};
 
 pub trait Context {
     fn havoc(&mut self);
@@ -42,8 +43,8 @@ pub struct DrawArgs<'a, GL: ?Sized+Context+'a> {
     pub textures: &'a [&'a GL::Texture],
     pub output: Option<&'a GL::Framebuffer>,
     pub index_array: Option<&'a GL::Buffer>,
-    pub start: usize,
-    pub count: usize,
+    pub range: Option<Range<usize>>,
+    pub viewport: Option<Region<V2>>,
     // TODO: depth test
     // TODO: blend mode
 }
@@ -56,8 +57,8 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
             textures: &[],
             output: None,
             index_array: None,
-            start: 0,
-            count: 0,
+            range: None,
+            viewport: None,
         }
     }
 
@@ -88,8 +89,17 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
 
     pub fn range(&mut self, range: Range<usize>) -> &mut Self {
         assert!(range.end >= range.start);
-        self.start = range.start;
-        self.count = range.end - range.start;
+        self.range = Some(range);
+        self
+    }
+
+    pub fn viewport_size(&mut self, size: V2) -> &mut Self {
+        self.viewport = Some(Region::sized(size));
+        self
+    }
+
+    pub fn viewport(&mut self, bounds: Region<V2>) -> &mut Self {
+        self.viewport = Some(bounds);
         self
     }
 
@@ -186,6 +196,8 @@ pub trait Framebuffer<GL: ?Sized+Context> {
 
     fn color_texture(&self, index: usize) -> &GL::Texture;
     fn depth_texture(&self) -> &GL::Texture;
+
+    fn clear(&mut self, color: (u8, u8, u8, u8));
 }
 
 

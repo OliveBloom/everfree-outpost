@@ -353,6 +353,23 @@ AsmGl.prototype.drawBuffers = function(num_attachments) {
 
 // Drawing
 
+AsmGl.prototype.viewport = function(x, y, w, h) {
+    this.gl.viewport(x, y, w, h);
+};
+
+AsmGl.prototype.clearColor = function(r, g, b, a) {
+    this.gl.clearColor(r, g, b, a);
+};
+
+AsmGl.prototype.clearDepth = function(d) {
+    this.gl.clearDepth(d);
+};
+
+AsmGl.prototype.clear = function() {
+    var gl = this.gl;
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+};
+
 AsmGl.prototype.enableVertexAttribArray = function(index) {
     this.gl.enableVertexAttribArray(index);
 };

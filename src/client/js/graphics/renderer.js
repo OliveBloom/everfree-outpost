@@ -430,6 +430,7 @@ Renderer.prototype.render = function(scene) {
     var gl = this.gl;
     var this_ = this;
 
+    /*
     if (!this.simple_slice) {
         this.shaders.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer0);
         this.shaders_slice.renderLayer(scene, this.data, this.buffers, this.buffers.fb_layer1);
@@ -460,6 +461,7 @@ Renderer.prototype.render = function(scene) {
         });
     });
     gl.disable(gl.BLEND);
+    */
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     /*
@@ -468,11 +470,19 @@ Renderer.prototype.render = function(scene) {
         'imageTex': this.buffers.fb_final.textures[0],
     });
     */
+    //var asm = this.data._asm;
+    //var raw_tex = this.buffers.fb_final.textures[0].texture;
+    //var tex_name = asm.asmgl.importTextureHACK(raw_tex);
+    //asm.testRender(0, scene, tex_name);
+
+
     var asm = this.data._asm;
-    var raw_tex = this.buffers.fb_final.textures[0].texture;
+    var raw_tex = this.data.cavern_map.getTexture().texture;
     var tex_name = asm.asmgl.importTextureHACK(raw_tex);
-    asm.testRender(0, scene, tex_name);
+    asm.testRender(5, scene, tex_name); // render all
     asm.asmgl.deleteTexture(tex_name);
+
+    //asm.asmgl.deleteTexture(tex_name);
 
     var end_render = Date.now();
     this.prep_time.record(end_prep, end_prep - start_prep);

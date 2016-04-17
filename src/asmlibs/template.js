@@ -55,6 +55,10 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_check_framebuffer_status = env.asmgl_check_framebuffer_status;
     var _asmgl_draw_buffers = env.asmgl_draw_buffers;
 
+    var _asmgl_viewport = env.asmgl_viewport;
+    var _asmgl_clear_color = env.asmgl_clear_color;
+    var _asmgl_clear_depth = env.asmgl_clear_depth;
+    var _asmgl_clear = env.asmgl_clear;
     var _asmgl_enable_vertex_attrib_array = env.asmgl_enable_vertex_attrib_array;
     var _asmgl_disable_vertex_attrib_array = env.asmgl_disable_vertex_attrib_array;
     var _asmgl_vertex_attrib_pointer = env.asmgl_vertex_attrib_pointer;

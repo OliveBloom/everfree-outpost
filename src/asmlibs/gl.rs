@@ -6,6 +6,8 @@ use std::marker::PhantomData;
 use std::mem;
 use std::str::FromStr;
 
+use physics::v3::{Region, V2, scalar};
+
 use client::platform::gl;
 use client::platform::gl::{DrawArgs, UniformValue};
 
@@ -58,6 +60,10 @@ mod ffi {
         pub fn asmgl_check_framebuffer_status() -> u8;
         pub fn asmgl_draw_buffers(num_attachments: u8);
 
+        pub fn asmgl_viewport(x: i32, y: i32, w: i32, h: i32);
+        pub fn asmgl_clear_color(r: f32, g: f32, b: f32, a: f32);
+        pub fn asmgl_clear_depth(d: f32);
+        pub fn asmgl_clear();
         pub fn asmgl_enable_vertex_attrib_array(loc: i32);
         pub fn asmgl_disable_vertex_attrib_array(loc: i32);
         pub fn asmgl_vertex_attrib_pointer(loc: i32,
@@ -179,6 +185,7 @@ struct Inner {
     textures: [Name<Texture>; NUM_TEXTURE_UNITS],
     vertex_attrib_mask: u32,
     framebuffer: Name<Framebuffer>,
+    viewport: Region<V2>,
 }
 
 impl Inner {
@@ -190,6 +197,7 @@ impl Inner {
             textures: [NO_TEXTURE; NUM_TEXTURE_UNITS],
             vertex_attrib_mask: 0,
             framebuffer: NO_FRAMEBUFFER,
+            viewport: Region::sized(scalar(0)),
         }
     }
 
@@ -417,6 +425,37 @@ impl Inner {
 
     // Drawing
 
+    pub fn viewport(&mut self, bounds: Region<V2>) {
+        if self.viewport != bounds {
+            unsafe {
+                ffi::asmgl_viewport(bounds.min.x,
+                                    bounds.min.y,
+                                    bounds.size().x,
+                                    bounds.size().y);
+            }
+            self.viewport = bounds;
+        }
+    }
+
+    pub fn clear_color(&mut self, color: (u8, u8, u8, u8)) {
+        unsafe {
+            ffi::asmgl_clear_color(color.0 as f32 / 255.0,
+                                   color.1 as f32 / 255.0,
+                                   color.2 as f32 / 255.0,
+                                   color.3 as f32 / 255.0);
+        }
+    }
+
+    pub fn clear_depth(&mut self, depth: f32) {
+        unsafe {
+            ffi::asmgl_clear_depth(depth);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        unsafe { ffi::asmgl_clear() };
+    }
+
     pub fn set_vertex_attrib_mask(&mut self, mask: u32) {
         let switch = mask ^ self.vertex_attrib_mask;
         if switch == 0 {
@@ -548,6 +587,7 @@ impl gl::Context for GL {
                 uniforms: uniform_vec.into_boxed_slice(),
                 attribs: attrib_vec.into_boxed_slice(),
                 attrib_mask: attrib_mask,
+                array0_size: arrays[0].size,
                 num_arrays: arrays.len() as u8,
                 num_textures: textures.len() as u8,
             }
@@ -714,6 +754,7 @@ pub struct Shader {
     uniforms: Box<[Uniform]>,
     attribs: Box<[Attrib]>,
     attrib_mask: u32,
+    array0_size: usize,
     num_arrays: u8,
     num_textures: u8,
 }
@@ -726,16 +767,15 @@ impl Shader {
             assert!(args.arrays.len() == self.num_arrays as usize);
             assert!(args.textures.len() == self.num_textures as usize);
 
-            ctx.bind_shader(self.name);
+            // Plane-independent setup
 
-            for (u, v) in self.uniforms.iter_mut().zip(args.uniforms.iter()) {
-                Shader::set_uniform_value(ctx, u, v);
-            }
-
-            if let Some(output) = args.output {
-                ctx.bind_framebuffer(output.name);
+            if let Some(viewport) = args.viewport {
+                ctx.viewport(viewport);
+            } else if let Some(output) = args.output {
+                let (w, h) = <Framebuffer as gl::Framebuffer<GL>>::size(output);
+                ctx.viewport(Region::sized(V2::new(w as i32, h as i32)));
             } else {
-                ctx.bind_framebuffer(NO_FRAMEBUFFER);
+                // Dunno what to do.  Just leave it as it was, I guess?
             }
 
             ctx.set_vertex_attrib_mask(self.attrib_mask);
@@ -754,7 +794,32 @@ impl Shader {
                 ctx.bind_texture(i, t.name);
             }
 
-            ctx.draw_triangles(args.start, args.count);
+            let (start, count) =
+                if let Some(ref range) = args.range {
+                    (range.start, range.end - range.start)
+                } else {
+                    (0, args.arrays[0].len() / self.array0_size)
+                };
+
+
+            // Plane-specific setup
+
+            ctx.bind_shader(self.name);
+
+            for (u, v) in self.uniforms.iter_mut().zip(args.uniforms.iter()) {
+                Shader::set_uniform_value(ctx, u, v);
+            }
+
+            if let Some(output) = args.output {
+                ctx.bind_framebuffer(output.name);
+            } else {
+                ctx.bind_framebuffer(NO_FRAMEBUFFER);
+            }
+
+
+            // Draw!
+
+            ctx.draw_triangles(start, count);
         });
     }
 
@@ -881,6 +946,16 @@ impl gl::Framebuffer<GL> for Framebuffer {
             DepthAttachment::Texture(ref t) => t,
             _ => panic!("renderbuffer has no depth texture"),
         }
+    }
+
+    fn clear(&mut self, color: (u8, u8, u8, u8)) {
+        let name = self.name;
+        self.inner.run(|ctx| {
+            ctx.bind_framebuffer(name);
+            ctx.clear_color(color);
+            ctx.clear_depth(0.0);
+            ctx.clear();
+        });
     }
 }
 
