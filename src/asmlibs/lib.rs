@@ -166,6 +166,16 @@ pub unsafe extern fn entity_update(client: &mut Client,
     client.entity_update(id, when, motion.clone());
 }
 
+#[no_mangle]
+pub unsafe extern fn set_pawn_id(client: &mut Client,
+                                 pawn_id: u32) {
+    if pawn_id == -1_i32 as u32 {
+        client.clear_pawn_id();
+    } else {
+        client.set_pawn_id(pawn_id);
+    }
+}
+
 // Inventories
 
 #[no_mangle]
@@ -290,8 +300,15 @@ unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
 
 #[no_mangle]
 pub unsafe extern fn render_frame(client: &mut Client,
-                                 scene: &client::graphics::renderer::Scene) {
-    client.render_frame(scene);
+                                  now: i32) {
+    client.render_frame(now);
+}
+
+#[no_mangle]
+pub unsafe extern fn resize_window(client: &mut Client,
+                                   width: u16,
+                                   height: u16) {
+    client.resize_window((width, height));
 }
 
 

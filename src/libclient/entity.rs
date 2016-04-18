@@ -147,6 +147,10 @@ impl Entities {
         }
     }
 
+    pub fn get(&self, id: EntityId) -> Option<&Entity> {
+        self.map.get(&id)
+    }
+
     pub fn iter(&self) -> Iter {
         self.map.iter()
     }

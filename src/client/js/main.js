@@ -247,6 +247,15 @@ function init() {
 
             asm_client.initClient(canvas.ctx, assets);
 
+            // This should only happen after client init.
+            function doResize() {
+                handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
+                asm_client.resizeWindow(window.innerWidth, window.innerHeight);
+            }
+            window.addEventListener('resize', doResize);
+            doResize();
+
+
             var info = assets['server_info'];
             openConn(info, function() {
                 timing = new Timing(conn);
@@ -393,12 +402,6 @@ function buildUI() {
     keyboard.attach(document);
     input.attach(document);
     setupKeyHandler();
-
-    function doResize() {
-        handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', doResize);
-    doResize();
 
     var key_list = $('key-list');
 
@@ -772,6 +775,7 @@ function handleClose(evt, reason) {
 }
 
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
+    asm_client.setPawnId(entity_id);
     player_entity = entity_id;
     var pst_now = timing.decodeRecv(now);
     day_night.base_time = pst_now - cycle_base;
@@ -1089,6 +1093,7 @@ function frame(ac, client_now) {
 
     var now = timing.visibleNow();
 
+    /*
     // Here's the math on client-side motion prediction.
     //
     //                <<<<<<<
@@ -1150,6 +1155,7 @@ function frame(ac, client_now) {
     var entity_ids = Object.getOwnPropertyNames(entities);
     s.sprites = new Array(entity_ids.length);
     var player_sprite = null;
+    */
 
     /*
     for (var i = 0; i < entity_ids.length; ++i) {
@@ -1176,6 +1182,7 @@ function frame(ac, client_now) {
     */
 
 
+    /*
     if (needs_mask(predict_now, pony)) {
         if (slice_radius.velocity <= 0) {
             slice_radius.setVelocity(predict_now, 2);
@@ -1205,15 +1212,18 @@ function frame(ac, client_now) {
         s.slice_frac = radius;
         s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
     }
+    */
 
-    asm_client.renderFrame(s);
+    asm_client.renderFrame(now);
 
+    /*
     if (show_cursor && pony != null) {
         var facing = FACINGS[pony.animId() % FACINGS.length];
         var cursor_pos = pos.divScalar(TILE_SIZE).add(facing);
         cursor_pos.y -= cursor_pos.z;
         cursor.draw(camera_pos, camera_size, cursor_pos);
     }
+    */
 
     //debug.frameEnd();
     //debug.updateJobs(runner);

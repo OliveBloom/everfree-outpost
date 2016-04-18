@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 use std::mem;
 use std::slice;
 
-use physics::v3::{V2, scalar, Region};
+use physics::v3::{V3, V2, scalar, Region};
 
 use Time;
 use data::Data;
@@ -311,67 +311,6 @@ impl<GL: Context> Renderer<GL> {
     }
 
 
-    pub fn render_terrain(&mut self, scene: &Scene, cavern_tex: &GL::Texture) {
-        let terrain_buf = self.terrain_geom.buffer();
-        DrawArgs::<GL>::new()
-            .uniforms(&[
-                scene.camera_pos(),
-                scene.camera_size(),
-                scene.slice_center(),
-                scene.slice_z(),
-            ])
-            .arrays(&[terrain_buf])
-            .textures(&[
-                &self.textures.tile_atlas,
-                &cavern_tex,
-            ])
-            .range(0 .. terrain_buf.len() / mem::size_of::<graphics::terrain::Vertex>())
-            .draw(&mut self.shaders.terrain);
-    }
-
-    pub fn render_structures(&mut self, scene: &Scene, cavern_tex: &GL::Texture, shadow: bool) {
-        let structure_buf = self.structure_geom.buffer();
-        DrawArgs::<GL>::new()
-            .uniforms(&[
-                scene.camera_pos(),
-                scene.camera_size(),
-                scene.slice_center(),
-                scene.slice_z(),
-                scene.now(),
-            ])
-            .arrays(&[structure_buf])
-            .textures(&[
-                &self.textures.structure_atlas,
-                &cavern_tex,
-            ])
-            .range(0 .. structure_buf.len() / mem::size_of::<graphics::structure::Vertex>())
-            .draw(if !shadow { &mut self.shaders.structure }
-                  else { &mut self.shaders.structure_shadow });
-    }
-
-    pub fn render_static_lights(&mut self, scene: &Scene, depth_tex: &GL::Texture) {
-        let light_buf = self.light_geom.buffer();
-        DrawArgs::<GL>::new()
-            .uniforms(&[
-                scene.camera_pos(),
-                scene.camera_size(),
-            ])
-            .arrays(&[light_buf])
-            .textures(&[
-                &depth_tex,
-            ])
-            .range(0 .. light_buf.len() / mem::size_of::<graphics::light::Vertex>())
-            .draw(&mut self.shaders.light_static);
-    }
-
-    pub fn render_output(&mut self, tex: &GL::Texture) {
-        DrawArgs::<GL>::new()
-            .arrays(&[&self.buffers.square01])
-            .textures(&[tex])
-            .range(0..6)
-            .draw(&mut self.shaders.blit_full);
-    }
-
     pub fn update_framebuffers(&mut self, gl: &mut GL, scene: &Scene) {
         let u16_size = (scene.camera_size.x as u16,
                         scene.camera_size.y as u16);
@@ -482,28 +421,47 @@ pub struct Scene {
     pub f_camera_size: [f32; 2],
     pub f_slice_center: [f32; 2],
     pub f_slice_z: f32,
-    pub f_now: f32,
 }
 
 impl Scene {
-    pub fn camera_pos(&self) -> UniformValue {
+    pub fn new(now: Time,
+               window_size: (u16, u16),
+               view_size: (u16, u16),
+               center: V3) -> Scene {
+        let camera_center = V2::new(center.x, center.y - center.z);
+        let camera_size = V2::new(view_size.0 as i32, view_size.1 as i32);
+        let canvas_size = V2::new(window_size.0 as i32, window_size.1 as i32);
+        let camera_pos = camera_center - camera_size / scalar(2);
+
+        Scene {
+            canvas_size: canvas_size,
+            camera_pos: camera_pos,
+            camera_size: camera_size,
+            now: now,
+
+            f_camera_pos: [camera_pos.x as f32,
+                           camera_pos.y as f32],
+            f_camera_size: [camera_size.x as f32,
+                            camera_size.y as f32],
+            f_slice_center: [0.0, 0.0], // TODO
+            f_slice_z: 0.0, // TODO
+        }
+    }
+
+    fn camera_pos(&self) -> UniformValue {
         UniformValue::V2(&self.f_camera_pos)
     }
 
-    pub fn camera_size(&self) -> UniformValue {
+    fn camera_size(&self) -> UniformValue {
         UniformValue::V2(&self.f_camera_size)
     }
 
-    pub fn slice_center(&self) -> UniformValue {
+    fn slice_center(&self) -> UniformValue {
         UniformValue::V2(&self.f_slice_center)
     }
 
-    pub fn slice_z(&self) -> UniformValue {
+    fn slice_z(&self) -> UniformValue {
         UniformValue::Float(self.f_slice_z)
-    }
-
-    pub fn now(&self) -> UniformValue {
-        UniformValue::Float(self.f_now)
     }
 }
 

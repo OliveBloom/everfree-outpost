@@ -16,6 +16,7 @@ structure_replace
 entity_appear
 entity_gone
 entity_update
+set_pawn_id
 inventory_appear
 inventory_gone
 inventory_update
@@ -29,4 +30,5 @@ collide
 find_ceiling
 floodfill
 render_frame
+resize_window
 client_bench

@@ -1,8 +1,10 @@
 use std::prelude::v1::*;
 use std::boxed::FnBox;
+use std::cmp;
 use std::mem;
 
 use platform::{Platform, PlatformObj};
+use platform::{Config, ConfigKey};
 use platform::gl::Context as GlContext;
 use util;
 
@@ -41,6 +43,10 @@ pub struct Client<'d, P: Platform> {
     ui: UI,
 
     renderer: Renderer<P::GL>,
+
+    pawn_id: Option<EntityId>,
+    window_size: (u16, u16),
+    view_size: (u16, u16),
 }
 
 impl<'d, P: Platform> Client<'d, P> {
@@ -61,6 +67,10 @@ impl<'d, P: Platform> Client<'d, P> {
             ui: UI::new(),
 
             renderer: renderer,
+
+            pawn_id: None,
+            window_size: (640, 480),
+            view_size: (640, 480),
         };
 
         c.ui.root.init_hotbar(c.platform.config(), &c.data);
@@ -78,7 +88,12 @@ impl<'d, P: Platform> Client<'d, P> {
 
         self.terrain_shape.clear();
         self.structures.clear();
+        self.entities.clear();
         self.inventories.clear();
+
+        self.pawn_id = None;
+
+        // TODO: close any open dialog
 
         self.renderer.invalidate_terrain_geometry();
         self.renderer.invalidate_structure_geometry();
@@ -209,6 +224,15 @@ impl<'d, P: Platform> Client<'d, P> {
         self.entities.schedule_update(id, when, motion);
     }
 
+    pub fn set_pawn_id(&mut self,
+                       id: EntityId) {
+        self.pawn_id = Some(id);
+    }
+
+    pub fn clear_pawn_id(&mut self) {
+        self.pawn_id = None;
+    }
+
     // Inventory tracking
 
     pub fn inventory_appear(&mut self,
@@ -327,16 +351,57 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.load_ui_geometry(&geom);
     }
 
-    pub fn render_frame(&mut self, scene: &Scene) {
-        self.entities.apply_updates(scene.now);
-        self.prepare(scene);
+    pub fn render_frame(&mut self, now: Time) {
+        let pos =
+            if let Some(e) = self.pawn_id.and_then(|id| self.entities.get(id)) {
+                e.pos(now)
+            } else {
+                V3::new(4096, 4096, 0)
+            };
+        let scene = Scene::new(now, self.window_size, self.view_size, pos);
 
-        self.renderer.update_framebuffers(self.platform.gl(), scene);
-        self.renderer.render(scene);
+        self.entities.apply_updates(scene.now);
+        self.prepare(&scene);
+
+        self.renderer.update_framebuffers(self.platform.gl(), &scene);
+        self.renderer.render(&scene);
     }
 
 
     // Misc
+
+    pub fn resize_window(&mut self, size: (u16, u16)) {
+        let scale_config = self.platform.config().get_int(ConfigKey::ScaleWorld) as i16;
+        let scale =
+            if scale_config != 0 { scale_config }
+            else { self.calc_scale(size) };
+        println!("set scale to {} ({:?})", scale, size);
+
+        let view_size =
+            if scale > 0 {
+                let shrink = scale as u16;
+                ((size.0 + shrink - 1) / shrink,
+                 (size.1 + shrink - 1) / shrink)
+            } else {
+                let grow = (-scale) as u16;
+                (size.0 * grow,
+                 size.1 * grow)
+            };
+
+        self.window_size = size;
+        self.view_size = view_size;
+    }
+
+    fn calc_scale(&self, size: (u16, u16)) -> i16 {
+        let (w, h) = size;
+        let max_dim = cmp::max(w, h);
+        const TARGET: u16 = 1024;
+        if max_dim > TARGET {
+            ((max_dim + TARGET / 2) / TARGET) as i16
+        } else {
+            -(((TARGET + max_dim / 2) / max_dim) as i16)
+        }
+    }
 
     pub fn bench(&mut self) {
         let mut counter = 0;
