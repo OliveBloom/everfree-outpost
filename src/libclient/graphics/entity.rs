@@ -18,19 +18,19 @@ pub struct Vertex {
     dest_pos: (u16, u16),
     src_pos: (u16, u16),
     sheet: u8,
-    _pad0: u8,
+    color: (u8, u8, u8),
 
-    // 10
+    // 12
     ref_pos: (u16, u16, u16),
     ref_size_z: u16,
 
-    // 18
-    anim_length: i8,
-    anim_rate: u8,
+    // 20
+    anim_length: u16,
+    anim_rate: u16,
     anim_start: u16,
     anim_step: u16,
 
-    // 24
+    // 28
 }
 
 pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
@@ -43,16 +43,15 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
         },
         arrays! {
             // struct 
-            [24] attribs! {
+            [28] attribs! {
                 dest_pos: U16[2] @0,
                 src_pos: U16[2] @4,
                 sheet: U8[1] @8,
+                color: U8[3] (norm) @9,
                 // Combine ref_pos and ref_size_z to avoid exceeding 8 attribs
-                ref_pos_size: U16[4] @10,
-                anim_length: I8[1] @18,
-                anim_rate: U8[1] @19,
-                anim_start: U16[1] @20,
-                anim_step: U16[1] @22,
+                ref_pos_size: U16[4] @12,
+                // Combine all anim properties as well
+                anim_info: U16[4] @20,
             },
         },
         textures! {
@@ -131,7 +130,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
             let a = &self.data.animations[e.motion.anim_id as usize];
 
-            for_each_layer(e.appearance, |layer_table_idx| {
+            for_each_layer(e.appearance, |layer_table_idx, color| {
                 let layer_idx = self.data.pony_layer_table[layer_table_idx];
                 let l = &self.data.sprite_layers[layer_idx as usize];
                 let g = &self.data.sprite_graphics[(l.gfx_start + a.local_id) as usize];
@@ -156,15 +155,16 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         src_pos: (g.src_offset.0 + cx * g.size.0,
                                   g.src_offset.1 + cy * g.size.1),
                         sheet: g.sheet,
-                        _pad0: 0,
+                        color: color,
 
                         ref_pos: (pos.x as u16,
                                   pos.y as u16,
                                   pos.z as u16),
+                        // TODO: hardcoded size
                         ref_size_z: 64,
 
-                        anim_length: a.length as i8,
-                        anim_rate: a.framerate,
+                        anim_length: a.length as u16,
+                        anim_rate: a.framerate as u16,
                         anim_start: (e.motion.start_time % 55440) as u16,
                         anim_step: g.size.0,
                     };
@@ -188,6 +188,8 @@ const EQUIP0_SHIFT: usize = 18;
 const EQUIP1_SHIFT: usize = 22;
 const EQUIP2_SHIFT: usize = 26;
 
+static COLOR_TABLE: [u8; 6] = [0x00, 0x44, 0x88, 0xcc, 0xff, 0xff];
+
 fn count_layers(appearance: u32) -> usize {
     let mut count = 1;  // base
     if appearance & WINGS != 0 { count += 2; }  // frontwing + backwing
@@ -199,7 +201,10 @@ fn count_layers(appearance: u32) -> usize {
     count
 }
 
-fn for_each_layer<F: FnMut(usize)>(appearance: u32, mut f: F) {
+fn for_each_layer<F: FnMut(usize, (u8, u8, u8))>(appearance: u32, mut f: F) {
+    let red = (appearance as usize >> 4) & 3;
+    let green = (appearance as usize >> 2) & 3;
+    let blue = (appearance as usize >> 0) & 3;
     let wings = appearance & WINGS != 0;
     let horn = appearance & HORN != 0;
     let stallion = appearance & STALLION != 0;
@@ -207,24 +212,34 @@ fn for_each_layer<F: FnMut(usize)>(appearance: u32, mut f: F) {
     let tail = (appearance >> TAIL_SHIFT) & 7;
     let equip0 = (appearance >> EQUIP0_SHIFT) & 15;
 
-    let mut go = |x| {
-        f(x * 2 + stallion as usize)
+    let tint0 = (COLOR_TABLE[red + 1],
+                 COLOR_TABLE[green + 1],
+                 COLOR_TABLE[blue + 1]);
+
+    let tint1 = (COLOR_TABLE[red + 2],
+                 COLOR_TABLE[green + 2],
+                 COLOR_TABLE[blue + 2]);
+
+    let white = (0xff, 0xff, 0xff);
+
+    let mut go = |x, color| {
+        f(x * 2 + stallion as usize, color)
     };
 
     if wings {
-        go(3);
+        go(3, tint1);
     }
-    go(0); // base
+    go(0, tint1); // base
     if wings {
-        go(2);
+        go(2, tint1);
     }
-    go(4); // eyes
-    go(5 + mane as usize);
+    go(4, white); // eyes
+    go(5 + mane as usize, tint0);
     if horn {
-        go(1);
+        go(1, tint1);
     }
-    go(8 + tail as usize);
+    go(8 + tail as usize, tint0);
     if equip0 != 0 {
-        go(11 + equip0 as usize - 1);
+        go(11 + equip0 as usize - 1, white);
     }
 }

@@ -17,15 +17,14 @@ uniform float now;  // Seconds
 attribute vec2 dest_pos;
 attribute vec2 src_pos;
 attribute float sheet;
+attribute vec3 color;
 attribute vec4 ref_pos_size;
-attribute float anim_length;
-attribute float anim_rate;
-attribute float anim_start;
-attribute float anim_step;
+attribute vec4 anim_info;
 
 varying vec2 tex_coord;
 varying vec3 ref_pos;
 varying float ref_size_z;
+varying vec3 color_;
 
 
 void main(void) {
@@ -54,6 +53,10 @@ void main(void) {
 
     vec2 tex_pos = src_pos;
 
+    float anim_length = anim_info.x;
+    float anim_rate = anim_info.y;
+    float anim_step = anim_info.w;
+
     float frame = mod(floor(now * anim_rate), anim_length);
     // Weird, but it seems like frame == anim_length when it ought to be zero.
     if (frame < anim_length) {
@@ -61,4 +64,7 @@ void main(void) {
     }
 
     tex_coord = tex_pos / SHEET_SIZE;
+
+
+    color_ = color;
 }

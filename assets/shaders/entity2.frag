@@ -10,6 +10,7 @@ uniform vec2 camera_size;
 varying vec2 tex_coord;
 varying vec3 ref_pos;
 varying float ref_size_z;
+varying vec3 color_;
 
 //#include "slicing.inc"
 
@@ -20,10 +21,10 @@ void main(void) {
 
     // TODO: depth check
 
-    vec4 color = texture2D(sheet_tex, tex_coord);
-    if (color.a == 0.0) {
+    vec4 base_color = texture2D(sheet_tex, tex_coord);
+    if (base_color.a == 0.0) {
         discard;
     } else {
-        gl_FragColor = color;
+        gl_FragColor = base_color * vec4(color_, 1.0);
     }
 }
