@@ -64,6 +64,7 @@ mod ffi {
         pub fn asmgl_clear_color(r: f32, g: f32, b: f32, a: f32);
         pub fn asmgl_clear_depth(d: f32);
         pub fn asmgl_clear();
+        pub fn asmgl_set_depth_test(enabled: u8);
         pub fn asmgl_enable_vertex_attrib_array(loc: i32);
         pub fn asmgl_disable_vertex_attrib_array(loc: i32);
         pub fn asmgl_vertex_attrib_pointer(loc: i32,
@@ -186,6 +187,7 @@ struct Inner {
     vertex_attrib_mask: u32,
     framebuffer: Name<Framebuffer>,
     viewport: Region<V2>,
+    depth_test_enabled: bool,
 }
 
 impl Inner {
@@ -198,6 +200,7 @@ impl Inner {
             vertex_attrib_mask: 0,
             framebuffer: NO_FRAMEBUFFER,
             viewport: Region::sized(scalar(0)),
+            depth_test_enabled: false,
         }
     }
 
@@ -210,6 +213,7 @@ impl Inner {
         // Setting to 0 isn't perfect, but leaving stuff enabled is better than the opposite.
         self.vertex_attrib_mask = 0;
         self.framebuffer = NO_FRAMEBUFFER;
+        self.depth_test_enabled = false;
     }
 
     // Internal API.  This basically wraps OpenGL, but the implementation does its own caching in
@@ -454,6 +458,13 @@ impl Inner {
 
     pub fn clear(&mut self) {
         unsafe { ffi::asmgl_clear() };
+    }
+
+    pub fn set_depth_test(&mut self, enable: bool) {
+        if enable != self.depth_test_enabled {
+            unsafe { ffi::asmgl_set_depth_test(enable as u8) };
+            self.depth_test_enabled = enable;
+        }
     }
 
     pub fn set_vertex_attrib_mask(&mut self, mask: u32) {
@@ -820,6 +831,8 @@ impl Shader {
                 } else {
                     (0, args.arrays[0].len() / self.array0_size)
                 };
+
+            ctx.set_depth_test(args.depth_test);
 
 
             // Plane-specific setup

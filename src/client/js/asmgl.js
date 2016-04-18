@@ -376,6 +376,16 @@ AsmGl.prototype.clear = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 };
 
+AsmGl.prototype.setDepthTest = function(enable) {
+    var gl = this.gl;
+    if (enable) {
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.GEQUAL);
+    } else {
+        gl.disable(gl.DEPTH_TEST);
+    }
+};
+
 AsmGl.prototype.enableVertexAttribArray = function(index) {
     this.gl.enableVertexAttribArray(index);
 };

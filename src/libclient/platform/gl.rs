@@ -47,7 +47,7 @@ pub struct DrawArgs<'a, GL: ?Sized+Context+'a> {
     pub index_array: Option<&'a GL::Buffer>,
     pub range: Option<Range<usize>>,
     pub viewport: Option<Region<V2>>,
-    // TODO: depth test
+    pub depth_test: bool,
     // TODO: blend mode
 }
 
@@ -61,6 +61,7 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
             index_array: None,
             range: None,
             viewport: None,
+            depth_test: false,
         }
     }
 
@@ -102,6 +103,11 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
 
     pub fn viewport(&mut self, bounds: Region<V2>) -> &mut Self {
         self.viewport = Some(bounds);
+        self
+    }
+
+    pub fn depth_test(&mut self) -> &mut Self {
+        self.depth_test = true;
         self
     }
 

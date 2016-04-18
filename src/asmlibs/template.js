@@ -59,6 +59,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_clear_color = env.asmgl_clear_color;
     var _asmgl_clear_depth = env.asmgl_clear_depth;
     var _asmgl_clear = env.asmgl_clear;
+    var _asmgl_set_depth_test = env.asmgl_set_depth_test;
     var _asmgl_enable_vertex_attrib_array = env.asmgl_enable_vertex_attrib_array;
     var _asmgl_disable_vertex_attrib_array = env.asmgl_disable_vertex_attrib_array;
     var _asmgl_vertex_attrib_pointer = env.asmgl_vertex_attrib_pointer;
