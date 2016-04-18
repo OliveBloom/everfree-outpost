@@ -386,6 +386,23 @@ AsmGl.prototype.setDepthTest = function(enable) {
     }
 };
 
+AsmGl.prototype.setBlendMode = function(mode) {
+    var gl = this.gl;
+    switch (mode) {
+        case 0:
+            gl.disable(gl.BLEND);
+            break;
+        case 1:
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            break;
+        case 2:
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.ONE, gl.ONE);
+            break;
+    }
+};
+
 AsmGl.prototype.enableVertexAttribArray = function(index) {
     this.gl.enableVertexAttribArray(index);
 };

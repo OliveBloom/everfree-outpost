@@ -48,7 +48,7 @@ pub struct DrawArgs<'a, GL: ?Sized+Context+'a> {
     pub range: Option<Range<usize>>,
     pub viewport: Option<Region<V2>>,
     pub depth_test: bool,
-    // TODO: blend mode
+    pub blend_mode: BlendMode,
 }
 
 impl<'a, GL: Context> DrawArgs<'a, GL> {
@@ -62,6 +62,7 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
             range: None,
             viewport: None,
             depth_test: false,
+            blend_mode: BlendMode::None,
         }
     }
 
@@ -111,9 +112,21 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
         self
     }
 
+    pub fn blend_mode(&mut self, mode: BlendMode) -> &mut Self {
+        self.blend_mode = mode;
+        self
+    }
+
     pub fn draw(&mut self, shader: &mut GL::Shader) {
         GL::draw(shader, self);
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum BlendMode {
+    None = 0,
+    Alpha = 1,
+    Add = 2,
 }
 
 

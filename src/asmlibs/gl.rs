@@ -65,6 +65,7 @@ mod ffi {
         pub fn asmgl_clear_depth(d: f32);
         pub fn asmgl_clear();
         pub fn asmgl_set_depth_test(enabled: u8);
+        pub fn asmgl_set_blend_mode(mode: u8);
         pub fn asmgl_enable_vertex_attrib_array(loc: i32);
         pub fn asmgl_disable_vertex_attrib_array(loc: i32);
         pub fn asmgl_vertex_attrib_pointer(loc: i32,
@@ -188,6 +189,7 @@ struct Inner {
     framebuffer: Name<Framebuffer>,
     viewport: Region<V2>,
     depth_test_enabled: bool,
+    blend_mode: gl::BlendMode,
 }
 
 impl Inner {
@@ -201,6 +203,7 @@ impl Inner {
             framebuffer: NO_FRAMEBUFFER,
             viewport: Region::sized(scalar(0)),
             depth_test_enabled: false,
+            blend_mode: gl::BlendMode::None,
         }
     }
 
@@ -214,6 +217,7 @@ impl Inner {
         self.vertex_attrib_mask = 0;
         self.framebuffer = NO_FRAMEBUFFER;
         self.depth_test_enabled = false;
+        self.blend_mode = gl::BlendMode::None;
     }
 
     // Internal API.  This basically wraps OpenGL, but the implementation does its own caching in
@@ -464,6 +468,13 @@ impl Inner {
         if enable != self.depth_test_enabled {
             unsafe { ffi::asmgl_set_depth_test(enable as u8) };
             self.depth_test_enabled = enable;
+        }
+    }
+
+    pub fn set_blend_mode(&mut self, mode: gl::BlendMode) {
+        if mode != self.blend_mode {
+            unsafe { ffi::asmgl_set_blend_mode(mode as u8) };
+            self.blend_mode = mode;
         }
     }
 
@@ -833,6 +844,7 @@ impl Shader {
                 };
 
             ctx.set_depth_test(args.depth_test);
+            ctx.set_blend_mode(args.blend_mode);
 
 
             // Plane-specific setup

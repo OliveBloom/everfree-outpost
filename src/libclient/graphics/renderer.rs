@@ -10,8 +10,8 @@ use entity::Entities;
 use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
-use platform::gl::{Context, Buffer, Framebuffer};
-use platform::gl::{DrawArgs, UniformValue, Attach};
+use platform::gl::{Context, Buffer, Framebuffer, Texture};
+use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -54,6 +54,8 @@ impl<GL: Context> Buffers<GL> {
 
 struct Shaders<GL: Context> {
     blit_full: GL::Shader,
+    ui: GL::Shader,
+
     terrain: GL::Shader,
     structure: GL::Shader,
     structure_shadow: GL::Shader,
@@ -75,6 +77,26 @@ impl<GL: Context> Shaders<GL> {
                 textures! { imageTex, },
                 outputs! { color: 1 }),
 
+            ui: gl.load_shader(
+                "ui_blit2.vert", "ui_blit2.frag", "",
+                uniforms! {
+                    screenSize: V2,
+                    sheetSize0: V2,
+                    sheetSize1: V2,
+                    sheetSize2: V2,
+                },
+                arrays! {
+                    [16] attribs! {
+                        srcPos: U16[2] @0,
+                        srcSize: U8[2] @4,
+                        sheetAttr: U8[1] @6,
+                        dest: I16[2] @8,
+                        offset_: U16[2] @12,
+                    },
+                },
+                textures! { sheet0, sheet1, sheet2, },
+                outputs! { color: 1 }),
+
             terrain: terrain::load_shader(gl),
 
             structure: structure::load_shader(gl, false),
@@ -93,6 +115,10 @@ struct Textures<GL: Context> {
     sprite_sheet: GL::Texture,
 
     cavern_map: GL::Texture,
+
+    ui_items: GL::Texture,
+    ui_parts: GL::Texture,
+    ui_fonts: GL::Texture,
 }
 
 impl<GL: Context> Textures<GL> {
@@ -103,6 +129,10 @@ impl<GL: Context> Textures<GL> {
             sprite_sheet: gl.load_texture("sprites0"),
 
             cavern_map: gl.create_texture((64, 64)),
+
+            ui_items: gl.load_texture("items_img"),
+            ui_parts: gl.load_texture("ui_atlas"),
+            ui_fonts: gl.load_texture("fonts"),
         }
     }
 }
@@ -412,11 +442,33 @@ impl<GL: Context> Renderer<GL> {
             .draw(&mut self.shaders.entity);
 
         DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_size(),
+                UniformValue::V2(&size_float(&self.textures.ui_items)),
+                UniformValue::V2(&size_float(&self.textures.ui_parts)),
+                UniformValue::V2(&size_float(&self.textures.ui_fonts)),
+            ])
+            .arrays(&[&self.ui_buffer])
+            .textures(&[
+                &self.textures.ui_items,
+                &self.textures.ui_parts,
+                &self.textures.ui_fonts,
+            ])
+            .output(&self.framebuffers.world)
+            .blend_mode(BlendMode::Alpha)
+            .draw(&mut self.shaders.ui);
+
+        DrawArgs::<GL>::new()
             .arrays(&[&self.buffers.square01])
             .textures(&[&self.framebuffers.world_color])
             .viewport_size(scene.canvas_size)
             .draw(&mut self.shaders.blit_full);
     }
+}
+
+fn size_float<T: Texture>(t: &T) -> [f32; 2] {
+    let (w,h) = t.size();
+    [w as f32, h as f32]
 }
 
 

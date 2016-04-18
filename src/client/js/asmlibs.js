@@ -177,6 +177,9 @@ var module_env = function(asm) {
         'asmgl_set_depth_test': function(enable) {
             asm.asmgl.setDepthTest(enable);
         },
+        'asmgl_set_blend_mode': function(mode) {
+            asm.asmgl.setBlendMode(mode);
+        },
         'asmgl_enable_vertex_attrib_array': function(index) {
             asm.asmgl.enableVertexAttribArray(index);
         },
