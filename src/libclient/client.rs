@@ -26,7 +26,7 @@ use inventory::{Inventories, Item, InventoryId};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
-use ui::UI;
+use ui::{UI, Dyn};
 use ui::input::{KeyAction, EventStatus};
 
 
@@ -263,13 +263,7 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // UI input
 
-    pub fn input_key(&mut self, code: u8) -> bool {
-        let status =
-            if let Some(key) = KeyAction::from_code(code) {
-                self.ui.handle_key(key, &self.inventories)
-            } else {
-                EventStatus::Unhandled
-            };
+    fn process_event_status(&mut self, status: EventStatus) -> bool {
         match status {
             EventStatus::Unhandled => false,
             EventStatus::Handled => true,
@@ -281,17 +275,35 @@ impl<'d, P: Platform> Client<'d, P> {
         }
     }
 
+    fn with_ui_dyn<F: FnOnce(&mut UI, Dyn) -> R, R>(&mut self, f: F) -> R {
+        let dyn = Dyn::new(self.view_size,
+                           &self.inventories);
+        f(&mut self.ui, dyn)
+    }
+
+    pub fn input_key(&mut self, code: u8) -> bool {
+        let status =
+            if let Some(key) = KeyAction::from_code(code) {
+                self.with_ui_dyn(|ui, dyn| ui.handle_key(key, dyn))
+            } else {
+                EventStatus::Unhandled
+            };
+        self.process_event_status(status)
+    }
+
     pub fn input_mouse_move(&mut self, pos: V2) -> bool {
-        let status = self.ui.handle_mouse_move(pos, &self.inventories);
-        match status {
-            EventStatus::Unhandled => false,
-            EventStatus::Handled => true,
-            EventStatus::Action(f) => {
-                // TODO: figure out why f(...) doesn't work
-                f.call_box((self,));
-                true
-            },
-        }
+        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_move(pos, dyn));
+        self.process_event_status(status)
+    }
+
+    pub fn input_mouse_down(&mut self, pos: V2) -> bool {
+        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_down(pos, dyn));
+        self.process_event_status(status)
+    }
+
+    pub fn input_mouse_up(&mut self, pos: V2) -> bool {
+        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_up(pos, dyn));
+        self.process_event_status(status)
     }
 
     pub fn open_inventory_dialog(&mut self) {

@@ -31,10 +31,26 @@ pub trait Widget: Sized {
 
     /// Handle a mouse move event.
     ///
-    /// The default implementation calls `OnMouseMoveVisitor::dispatch` to dispatch the event to
-    /// the child that the mouse is currently over.
+    /// The default implementation calls `MouseEventVisitor::dispatch` to dispatch the event to the
+    /// child that the mouse is currently over.
     fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
         MouseEventVisitor::dispatch(MouseEvent::Move, self, ctx, rect)
+    }
+
+    /// Handle a mouse down event.
+    ///
+    /// The default implementation calls `MouseEventVisitor::dispatch` to dispatch the event to the
+    /// child that the mouse is currently over.
+    fn on_mouse_down(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
+        MouseEventVisitor::dispatch(MouseEvent::Down, self, ctx, rect)
+    }
+
+    /// Handle a mouse up event.
+    ///
+    /// The default implementation calls `MouseEventVisitor::dispatch` to dispatch the event to the
+    /// child that the mouse is currently over.
+    fn on_mouse_up(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
+        MouseEventVisitor::dispatch(MouseEvent::Up, self, ctx, rect)
     }
 }
 
@@ -160,8 +176,8 @@ impl<'a> Visitor for MouseEventVisitor<'a> {
         self.result =
             match self.kind {
                 MouseEvent::Move => w.on_mouse_move(self.ctx, rect),
-                MouseEvent::Down => unimplemented!(),
-                MouseEvent::Up => unimplemented!(),
+                MouseEvent::Down => w.on_mouse_down(self.ctx, rect),
+                MouseEvent::Up => w.on_mouse_up(self.ctx, rect),
             };
     }
 }

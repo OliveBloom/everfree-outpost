@@ -52,29 +52,63 @@ impl UI {
 
     pub fn handle_key(&mut self,
                       key: input::KeyAction,
-                      invs: &Inventories) -> input::EventStatus {
-        let dyn = root::RootDyn {
-            screen_size: V2::new(799, 379),
-            inventories: invs,
-        };
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
+                      dyn: Dyn) -> input::EventStatus {
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
         root.on_key(key)
     }
 
     pub fn handle_mouse_move(&mut self,
                              pos: V2,
-                             invs: &Inventories) -> input::EventStatus {
-        let dyn = root::RootDyn {
-            screen_size: V2::new(799, 379),
-            inventories: invs,
-        };
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
+                             dyn: Dyn) -> input::EventStatus {
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
         let rect = Region::sized(root.size());
 
         self.context.mouse_pos = pos;
         root.on_mouse_move(&mut self.context, rect)
     }
+
+    pub fn handle_mouse_down(&mut self,
+                             pos: V2,
+                             dyn: Dyn) -> input::EventStatus {
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let rect = Region::sized(root.size());
+
+        self.context.mouse_pos = pos;
+        self.context.mouse_down = true;
+        self.context.mouse_down_pos = pos;
+        root.on_mouse_down(&mut self.context, rect)
+    }
+
+    pub fn handle_mouse_up(&mut self,
+                           pos: V2,
+                           dyn: Dyn) -> input::EventStatus {
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let rect = Region::sized(root.size());
+
+        self.context.mouse_pos = pos;
+        self.context.mouse_down = false;
+        root.on_mouse_up(&mut self.context, rect)
+    }
 }
+
+
+pub struct Dyn<'a> {
+    root: root::RootDyn<'a>,
+}
+
+impl<'a> Dyn<'a> {
+    pub fn new(size: (u16, u16),
+               inventories: &'a Inventories) -> Dyn<'a> {
+        Dyn {
+            root: root::RootDyn {
+                screen_size: V2::new(size.0 as i32,
+                                     size.1 as i32),
+                inventories: inventories,
+            },
+        }
+    }
+}
+
 
 pub struct Context {
     mouse_pos: V2,

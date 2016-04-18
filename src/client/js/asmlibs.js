@@ -521,6 +521,14 @@ DynAsm.prototype.inputMouseMove = function(x, y) {
     return this._raw['input_mouse_move'](this.client, x, y);
 };
 
+DynAsm.prototype.inputMouseDown = function(x, y) {
+    return this._raw['input_mouse_down'](this.client, x, y);
+};
+
+DynAsm.prototype.inputMouseUp = function(x, y) {
+    return this._raw['input_mouse_up'](this.client, x, y);
+};
+
 DynAsm.prototype.openInventoryDialog = function() {
     return this._raw['open_inventory_dialog'](this.client);
 };
@@ -640,6 +648,22 @@ exports.AsmClientInput = AsmClientInput;
 
 AsmClientInput.prototype.handleMouseMove = function(evt) {
     var ret = this._asm.inputMouseMove(evt.x, evt.y);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
+};
+
+AsmClientInput.prototype.handleMouseDown = function(evt) {
+    var ret = this._asm.inputMouseDown(evt.x, evt.y);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
+};
+
+AsmClientInput.prototype.handleMouseUp = function(evt) {
+    var ret = this._asm.inputMouseUp(evt.x, evt.y);
     if (!ret) {
         evt.forward();
     }

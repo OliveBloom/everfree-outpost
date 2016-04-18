@@ -24,6 +24,8 @@ inventory_main_id
 inventory_ability_id
 input_key
 input_mouse_move
+input_mouse_down
+input_mouse_up
 open_inventory_dialog
 load_terrain_chunk
 collide

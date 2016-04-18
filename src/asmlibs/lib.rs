@@ -227,6 +227,20 @@ pub unsafe extern fn input_mouse_move(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn input_mouse_down(client: &mut Client,
+                                      x: i32,
+                                      y: i32) -> u8 {
+    client.input_mouse_down(V2::new(x, y)) as u8
+}
+
+#[no_mangle]
+pub unsafe extern fn input_mouse_up(client: &mut Client,
+                                    x: i32,
+                                    y: i32) -> u8 {
+    client.input_mouse_up(V2::new(x, y)) as u8
+}
+
+#[no_mangle]
 pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
     client.open_inventory_dialog()
 }
