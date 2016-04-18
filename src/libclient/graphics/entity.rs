@@ -55,8 +55,8 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
             },
         },
         textures! {
-            sheetTex,
-            depthTex,
+            sheet_tex,
+            depth_tex,
         },
         outputs! { color: 1, depth })
 }
@@ -158,7 +158,9 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         color: color,
 
                         ref_pos: (pos.x as u16,
-                                  pos.y as u16,
+                                  // TODO: hardcoded size
+                                  // TODO: extra hack - shouldn't need this +1
+                                  pos.y as u16 + 1/*32*/,
                                   pos.z as u16),
                         // TODO: hardcoded size
                         ref_size_z: 64,
