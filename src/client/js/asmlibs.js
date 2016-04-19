@@ -226,6 +226,21 @@ var module_env = function(asm) {
             config.rawClear(key);
         },
 
+        'ap_set_cursor': function(cursor) {
+            var str;
+            switch (cursor) {
+                case 0: str = 'auto'; break;
+                case 1: str = 'grabbing'; break;
+                case 2: str = 'not-allowed'; break;
+                default: throw 'bad cursor value: ' + cursor;
+            }
+            document.body.style.cursor = str;
+        },
+
+        'ap_send_move_item': function(src_inv, src_slot, dest_inv, dest_slot, amount) {
+            asm.conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,
@@ -271,6 +286,7 @@ var HEAP_PADDING = 256 * 1024;
 /** @constructor */
 function DynAsm() {
     this.asmgl = new AsmGl();
+    this.conn = null;   // Will be set later, in main.js
 
     this.buffer = new ArrayBuffer(next_heap_size(INIT_HEAP_SIZE));
     this._memcpy(STATIC_START, static_data);

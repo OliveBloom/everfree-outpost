@@ -261,6 +261,7 @@ function init() {
                 timing = new Timing(conn);
                 timing.scheduleUpdates(5, 30);
                 inv_tracker = new InventoryTracker(conn, asm_client);
+                asm_client.conn = conn;
 
                 maybeRegister(info, function() {
                     conn.sendLogin(Config.login_name.get(), Config.login_secret.get());

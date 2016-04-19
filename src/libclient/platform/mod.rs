@@ -1,5 +1,7 @@
 use std::prelude::v1::*;
 
+use inventory::InventoryId;
+
 #[macro_use] pub mod gl;
 
 
@@ -10,6 +12,26 @@ pub trait Platform {
     type Config: Config;
     fn config(&self) -> &Self::Config;
     fn config_mut(&mut self) -> &mut Self::Config;
+
+    fn set_cursor(&mut self, cursor: Cursor);
+
+    fn send_move_item(&mut self,
+                      src_inv: InventoryId,
+                      src_slot: usize,
+                      dest_inv: InventoryId,
+                      dest_slot: usize,
+                      amount: u8);
+}
+
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Cursor {
+    /// Default cursor
+    Normal = 0,
+    /// Used when dragging something
+    Drag = 1,
+    /// Used when dragging something over an invalid drop location
+    DragInvalid = 2,
 }
 
 
@@ -18,6 +40,15 @@ pub trait PlatformObj {
 
     fn config(&self) -> &Config;
     fn config_mut(&mut self) -> &mut Config;
+
+    fn set_cursor(&mut self, cursor: Cursor);
+
+    fn send_move_item(&mut self,
+                      src_inv: InventoryId,
+                      src_slot: usize,
+                      dest_inv: InventoryId,
+                      dest_slot: usize,
+                      amount: u8);
 }
 
 impl<P: Platform> PlatformObj for P {
@@ -27,6 +58,20 @@ impl<P: Platform> PlatformObj for P {
 
     fn config_mut(&mut self) -> &mut Config {
         Platform::config_mut(self)
+    }
+
+
+    fn set_cursor(&mut self, cursor: Cursor) {
+        Platform::set_cursor(self, cursor);
+    }
+
+    fn send_move_item(&mut self,
+                      src_inv: InventoryId,
+                      src_slot: usize,
+                      dest_inv: InventoryId,
+                      dest_slot: usize,
+                      amount: u8) {
+        Platform::send_move_item(self, src_inv, src_slot, dest_inv, dest_slot, amount);
     }
 }
 

@@ -3,8 +3,9 @@ use std::cell::{Cell, UnsafeCell};
 use std::mem;
 use std::str::FromStr;
 
+use client::inventory::InventoryId;
 use client::platform;
-use client::platform::{ConfigKey};
+use client::platform::{ConfigKey, Cursor};
 
 use gl::GL;
 
@@ -20,6 +21,14 @@ mod ffi {
                              value_len: usize);
         pub fn ap_config_clear(key_ptr: *const u8,
                                key_len: usize);
+
+        pub fn ap_set_cursor(cursor: u8);
+
+        pub fn ap_send_move_item(src_inv: u32,
+                                 src_slot: usize,
+                                 dest_inv: u32,
+                                 dest_slot: usize,
+                                 amount: u8);
     }
 }
 
@@ -46,6 +55,21 @@ impl platform::Platform for Platform {
     type Config = Config;
     fn config(&self) -> &Config { &self.config }
     fn config_mut(&mut self) -> &mut Config { &mut self.config }
+
+    fn set_cursor(&mut self, cursor: Cursor) {
+        unsafe { ffi::ap_set_cursor(cursor as u8) };
+    }
+
+    fn send_move_item(&mut self,
+                      src_inv: InventoryId,
+                      src_slot: usize,
+                      dest_inv: InventoryId,
+                      dest_slot: usize,
+                      amount: u8) {
+        unsafe {
+            ffi::ap_send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
+        }
+    }
 }
 
 

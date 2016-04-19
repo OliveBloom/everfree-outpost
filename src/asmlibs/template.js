@@ -69,6 +69,8 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _ap_config_get = env.ap_config_get;
     var _ap_config_set = env.ap_config_set;
     var _ap_config_clear = env.ap_config_clear;
+    var _ap_set_cursor = env.ap_set_cursor;
+    var _ap_send_move_item = env.ap_send_move_item;
 
     var tempRet0 = 0;
 
