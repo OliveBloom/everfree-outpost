@@ -48,6 +48,20 @@ impl UI {
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(&mut root, root_rect);
 
+        if self.context.dragging() {
+            let data = self.context.drag_data.as_ref().unwrap();
+            if let Some(inv) = invs.get(data.src_inv) {
+                if data.src_slot < inv.len() {
+                    let item = inv.items[data.src_slot];
+
+                    let dyn = item::ItemDyn::from_item(item);
+                    let mut disp = widget::WidgetPack::stateless(item::ItemDisplay, dyn);
+                    let disp_rect = Region::sized(disp.size()) + self.context.mouse_pos;
+                    disp.render(&mut geom, disp_rect);
+                }
+            }
+        }
+
         geom.unwrap()
     }
 

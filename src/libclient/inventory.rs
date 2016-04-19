@@ -86,6 +86,10 @@ impl Inventories {
         self.ability_inv_id = None;
     }
 
+    pub fn get(&self, id: InventoryId) -> Option<&Inventory> {
+        self.map.get(&id)
+    }
+
 
     pub fn main_inventory(&self) -> Option<&Inventory> {
         self.main_inv_id.map(|x| &self.map[&x])
