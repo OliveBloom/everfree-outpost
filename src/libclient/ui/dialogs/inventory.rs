@@ -79,7 +79,7 @@ impl<'a> inventory::GridDyn for InventoryDyn<'a> {
         true
     }
 
-    fn drag_src_id(self) -> Option<u32> {
+    fn inv_id(self) -> Option<u32> {
         self.inv.map(|i| i.id)
     }
 }

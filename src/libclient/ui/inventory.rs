@@ -3,8 +3,9 @@ use std::cmp;
 
 use physics::v3::{V2, Vn, scalar, Region, Align};
 
+use client::ClientObj;
 use inventory::Item;
-use ui::Context;
+use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
@@ -84,7 +85,7 @@ pub trait GridDyn: Copy {
     fn len(self) -> usize;
     fn item(self, i: usize) -> Item;
     fn active(self) -> bool;
-    fn drag_src_id(self) -> Option<u32>;
+    fn inv_id(self) -> Option<u32>;
 }
 
 impl<'a, D: GridDyn> WidgetPack<'a, Grid, D> {
@@ -105,7 +106,7 @@ impl<'a, D: GridDyn> WidgetPack<'a, Grid, D> {
     }
 
     fn maybe_start_drag(&self, ctx: &mut Context, idx: usize) {
-        if let Some(src_id) = self.dyn.drag_src_id() {
+        if let Some(src_id) = self.dyn.inv_id() {
             let item = self.dyn.item(idx);
             if item.id != 0 {
                 ctx.drag_item(src_id, idx);
@@ -186,5 +187,25 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
         }
 
         EventStatus::Handled
+    }
+
+    fn on_drop(&mut self, ctx: &mut Context, rect: Region<V2>, data: &DragData) -> EventStatus {
+        let DragData { src_inv, src_slot } = *data;
+        let dest_inv = match self.dyn.inv_id() {
+            Some(x) => x,
+            None => return EventStatus::Unhandled,
+        };
+        let dest_slot = match self.slot_at_offset(ctx.mouse_pos - rect.min) {
+            Some(x) => x,
+            None => return EventStatus::Unhandled,
+        };
+        // Bit of a hack - just move as much as possible.
+        // TODO: change the MoveItem API to take an enum, All / Half / One, and compute the exact
+        // quantity server-side
+        let amount = 255;
+
+        EventStatus::Action(box move |c: &mut ClientObj| {
+            c.platform().send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
+        })
     }
 }

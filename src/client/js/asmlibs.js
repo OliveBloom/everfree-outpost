@@ -238,7 +238,7 @@ var module_env = function(asm) {
         },
 
         'ap_send_move_item': function(src_inv, src_slot, dest_inv, dest_slot, amount) {
-            asm.conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
+            asm.conn.sendMoveItem(src_inv, src_slot, dest_inv, dest_slot, amount);
         },
 
 
