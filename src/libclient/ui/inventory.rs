@@ -84,6 +84,34 @@ pub trait GridDyn: Copy {
     fn len(self) -> usize;
     fn item(self, i: usize) -> Item;
     fn active(self) -> bool;
+    fn drag_src_id(self) -> Option<u32>;
+}
+
+impl<'a, D: GridDyn> WidgetPack<'a, Grid, D> {
+    fn slot_at_offset(&self, offset: V2) -> Option<usize> {
+        let slot_pos = offset.div_floor(Slot::size());
+
+        let grid_bounds = Region::sized(self.dyn.grid_size());
+        if !grid_bounds.contains(slot_pos) {
+            return None;
+        }
+
+        let idx = grid_bounds.index(slot_pos);
+        if idx >= self.dyn.len() {
+            return None;
+        }
+
+        Some(idx)
+    }
+
+    fn maybe_start_drag(&self, ctx: &mut Context, idx: usize) {
+        if let Some(src_id) = self.dyn.drag_src_id() {
+            let item = self.dyn.item(idx);
+            if item.id != 0 {
+                ctx.drag_item(src_id, idx);
+            }
+        }
+    }
 }
 
 impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
@@ -133,19 +161,30 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
     }
 
     fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
-        let offset = ctx.mouse_pos - rect.min;
-        let slot_pos = offset.div_floor(Slot::size());
+        let idx = match self.slot_at_offset(ctx.mouse_pos - rect.min) {
+            Some(x) => x,
+            None => return EventStatus::Unhandled,
+        };
 
-        let grid_bounds = Region::sized(self.dyn.grid_size());
-        if !grid_bounds.contains(slot_pos) {
-            return EventStatus::Unhandled;
-        }
-        let idx = grid_bounds.index(slot_pos);
-        if idx < self.dyn.len() {
-            self.state.focus = idx;
-            return EventStatus::Handled;
+        if ctx.moved_while_down() && !ctx.dragging() {
+            self.maybe_start_drag(ctx, idx);
         }
 
-        EventStatus::Unhandled
+        self.state.focus = idx;
+        EventStatus::Handled
+    }
+
+    fn on_mouse_up(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
+        let idx = match self.slot_at_offset(ctx.mouse_pos - rect.min) {
+            Some(x) => x,
+            None => return EventStatus::Unhandled,
+        };
+
+        if !ctx.moved_while_down() && !ctx.dragging() {
+            // The user clicked without dragging.  Pick up the item.
+            self.maybe_start_drag(ctx, idx);
+        }
+
+        EventStatus::Handled
     }
 }

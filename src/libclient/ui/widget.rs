@@ -3,7 +3,7 @@ use std::mem;
 
 use physics::v3::{V2, scalar, Region};
 
-use ui::{UI, Context};
+use ui::{UI, Context, DragData};
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
 
@@ -51,6 +51,14 @@ pub trait Widget: Sized {
     /// child that the mouse is currently over.
     fn on_mouse_up(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
         MouseEventVisitor::dispatch(MouseEvent::Up, self, ctx, rect)
+    }
+
+    /// Handle a drop event.
+    ///
+    /// The default implementation calls `MouseEventVisitor::dispatch` to dispatch the event to the
+    /// child that the mouse is currently over.
+    fn on_drop(&mut self, ctx: &mut Context, rect: Region<V2>, data: &DragData) -> EventStatus {
+        MouseEventVisitor::dispatch(MouseEvent::Drop(data), self, ctx, rect)
     }
 }
 
@@ -127,24 +135,25 @@ impl Visitor for OnKeyVisitor {
 }
 
 
-pub enum MouseEvent {
+pub enum MouseEvent<'a> {
     Move,
     Down,
     Up,
+    Drop(&'a DragData),
 }
 
-pub struct MouseEventVisitor<'a> {
-    kind: MouseEvent,
-    ctx: &'a mut Context,
+pub struct MouseEventVisitor<'a, 'b> {
+    kind: MouseEvent<'a>,
+    ctx: &'b mut Context,
     rect: Region<V2>,
 
     result: EventStatus,
 }
 
-impl<'a> MouseEventVisitor<'a> {
-    pub fn new(kind: MouseEvent,
-               ctx: &'a mut Context,
-               rect: Region<V2>) -> MouseEventVisitor<'a> {
+impl<'a, 'b> MouseEventVisitor<'a, 'b> {
+    pub fn new(kind: MouseEvent<'a>,
+               ctx: &'b mut Context,
+               rect: Region<V2>) -> MouseEventVisitor<'a, 'b> {
         MouseEventVisitor {
             kind: kind,
             ctx: ctx,
@@ -163,7 +172,7 @@ impl<'a> MouseEventVisitor<'a> {
     }
 }
 
-impl<'a> Visitor for MouseEventVisitor<'a> {
+impl<'a, 'b> Visitor for MouseEventVisitor<'a, 'b> {
     fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
         if self.result.is_handled() {
             return;
@@ -178,6 +187,7 @@ impl<'a> Visitor for MouseEventVisitor<'a> {
                 MouseEvent::Move => w.on_mouse_move(self.ctx, rect),
                 MouseEvent::Down => w.on_mouse_down(self.ctx, rect),
                 MouseEvent::Up => w.on_mouse_up(self.ctx, rect),
+                MouseEvent::Drop(data) => w.on_drop(self.ctx, rect, data),
             };
     }
 }

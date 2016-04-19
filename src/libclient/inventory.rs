@@ -5,7 +5,7 @@ use std::ops::Index;
 
 pub type InventoryId = u32;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Item {
     pub id: u16,
     pub quantity: u8,
@@ -22,11 +22,15 @@ impl Item {
 
 pub struct Inventory {
     pub items: Box<[Item]>,
+    pub id: InventoryId,
 }
 
 impl Inventory {
-    fn new(items: Box<[Item]>) -> Inventory {
-        Inventory { items: items }
+    fn new(id: InventoryId, items: Box<[Item]>) -> Inventory {
+        Inventory {
+            items: items,
+            id: id,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -60,7 +64,7 @@ impl Inventories {
     }
 
     pub fn insert(&mut self, id: InventoryId, items: Box<[Item]>) {
-        self.map.insert(id, Inventory::new(items));
+        self.map.insert(id, Inventory::new(id, items));
     }
 
     pub fn remove(&mut self, id: InventoryId) -> Inventory {

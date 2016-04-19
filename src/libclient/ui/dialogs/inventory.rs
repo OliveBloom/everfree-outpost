@@ -78,4 +78,8 @@ impl<'a> inventory::GridDyn for InventoryDyn<'a> {
     fn active(self) -> bool {
         true
     }
+
+    fn drag_src_id(self) -> Option<u32> {
+        self.inv.map(|i| i.id)
+    }
 }

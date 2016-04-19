@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region};
 
+use inventory::Item;
 use inventory::Inventories;
 
 use self::widget::{Widget, Visitor};
@@ -53,8 +54,18 @@ impl UI {
     pub fn handle_key(&mut self,
                       key: input::KeyAction,
                       dyn: Dyn) -> input::EventStatus {
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
-        root.on_key(key)
+        if !self.context.dragging() {
+            let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+            root.on_key(key)
+        } else {
+            match key {
+                input::KeyAction::Cancel => {
+                    self.context.drag_data = None;
+                },
+                _ => {},
+            }
+            input::EventStatus::Handled
+        }
     }
 
     pub fn handle_mouse_move(&mut self,
@@ -76,7 +87,12 @@ impl UI {
         self.context.mouse_pos = pos;
         self.context.mouse_down = true;
         self.context.mouse_down_pos = pos;
-        root.on_mouse_down(&mut self.context, rect)
+
+        if !self.context.dragging() {
+            root.on_mouse_down(&mut self.context, rect)
+        } else {
+            input::EventStatus::Handled
+        }
     }
 
     pub fn handle_mouse_up(&mut self,
@@ -87,7 +103,13 @@ impl UI {
 
         self.context.mouse_pos = pos;
         self.context.mouse_down = false;
-        root.on_mouse_up(&mut self.context, rect)
+
+        if !self.context.dragging() {
+            root.on_mouse_up(&mut self.context, rect)
+        } else {
+            let data = self.context.drag_data.take().unwrap();
+            root.on_drop(&mut self.context, rect, &data)
+        }
     }
 }
 
@@ -114,6 +136,13 @@ pub struct Context {
     mouse_pos: V2,
     mouse_down: bool,
     mouse_down_pos: V2,
+    drag_data: Option<DragData>,
+}
+
+#[derive(Clone, Debug)]
+pub struct DragData {
+    src_inv: u32,
+    src_slot: usize,
 }
 
 impl Context {
@@ -122,7 +151,25 @@ impl Context {
             mouse_pos: scalar(-1),
             mouse_down: false,
             mouse_down_pos: scalar(-1),
+            drag_data: None,
         }
+    }
+
+    pub fn moved_while_down(&self) -> bool {
+        self.mouse_down && self.mouse_pos != self.mouse_down_pos
+    }
+
+    pub fn dragging(&self) -> bool {
+        self.drag_data.is_some()
+    }
+
+    pub fn drag_item(&mut self, src_inv: u32, src_slot: usize) {
+        let data = DragData {
+            src_inv: src_inv,
+            src_slot: src_slot,
+        };
+        println!("start dragging: {:?}", data);
+        self.drag_data = Some(data);
     }
 }
 
