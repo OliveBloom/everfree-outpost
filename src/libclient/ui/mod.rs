@@ -4,6 +4,7 @@ use physics::v3::{V2, scalar, Region};
 
 use inventory::Item;
 use inventory::Inventories;
+use platform::Cursor;
 
 use self::widget::{Widget, Visitor};
 
@@ -37,20 +38,17 @@ impl UI {
         }
     }
 
-    pub fn generate_geom(&mut self, invs: &Inventories) -> Vec<geom::Vertex> {
+    pub fn generate_geom(&mut self, dyn: Dyn) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();
 
-        let dyn = root::RootDyn {
-            screen_size: V2::new(799, 379),
-            inventories: invs,
-        };
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(&mut root, root_rect);
 
         if self.context.dragging() {
             let data = self.context.drag_data.as_ref().unwrap();
-            if let Some(inv) = invs.get(data.src_inv) {
+            // TODO: kind of a hack, reaching into dyn.root like this
+            if let Some(inv) = root.dyn.inventories.get(data.src_inv) {
                 if data.src_slot < inv.len() {
                     let item = inv.items[data.src_slot];
 
@@ -125,9 +123,26 @@ impl UI {
             root.on_drop(&mut self.context, rect, &data)
         }
     }
+
+    pub fn get_cursor(&mut self, dyn: Dyn) -> Cursor {
+        if !self.context.dragging() {
+            return Cursor::Normal;
+        }
+
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let rect = Region::sized(root.size());
+
+        let data = self.context.drag_data.as_ref().unwrap();
+        if root.check_drop(&self.context, rect, data) {
+            Cursor::Drag
+        } else {
+            Cursor::DragInvalid
+        }
+    }
 }
 
 
+#[derive(Clone, Copy)]
 pub struct Dyn<'a> {
     root: root::RootDyn<'a>,
 }

@@ -79,7 +79,7 @@ def build_tables(metadata):
     aborts = ''
     sizes = {}
 
-    for k, v in metadata['tables'].items():
+    for k, v in sorted(metadata['tables'].items()):
         start = v.index('[')
         end = v.index(']')
         funcs = v[start + 1 : end].split(',')

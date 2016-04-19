@@ -5,6 +5,7 @@ use std::mem;
 
 use platform::{Platform, PlatformObj};
 use platform::{Config, ConfigKey};
+use platform::Cursor;
 use platform::gl::Context as GlContext;
 use util;
 
@@ -47,6 +48,8 @@ pub struct Client<'d, P: Platform> {
     pawn_id: Option<EntityId>,
     window_size: (u16, u16),
     view_size: (u16, u16),
+
+    last_cursor: Cursor,
 }
 
 impl<'d, P: Platform> Client<'d, P> {
@@ -71,6 +74,8 @@ impl<'d, P: Platform> Client<'d, P> {
             pawn_id: None,
             window_size: (640, 480),
             view_size: (640, 480),
+
+            last_cursor: Cursor::Normal,
         };
 
         c.ui.root.init_hotbar(c.platform.config(), &c.data);
@@ -359,8 +364,16 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.update_entity_geometry(&self.data, &self.entities, entity_bounds, scene.now);
 
         // Also refresh the UI buffer.
-        let geom = self.ui.generate_geom(&self.inventories);
+        let (geom, cursor) = self.with_ui_dyn(|ui, dyn| {
+            let geom = ui.generate_geom(dyn);
+            let cursor = ui.get_cursor(dyn);
+            (geom, cursor)
+        });
         self.renderer.load_ui_geometry(&geom);
+        if cursor != self.last_cursor {
+            self.platform.set_cursor(cursor);
+            self.last_cursor = cursor;
+        }
     }
 
     pub fn render_frame(&mut self, now: Time) {
@@ -418,8 +431,8 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn bench(&mut self) {
         let mut counter = 0;
         for i in 0 .. 10000 {
-            let geom = self.ui.generate_geom(&self.inventories);
-            counter += geom.len();
+            //let geom = self.ui.generate_geom(&self.inventories);
+            //counter += geom.len();
             //self.renderer.load_ui_geometry(&geom);
         }
         println!("counter {}", counter);

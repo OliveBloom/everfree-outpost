@@ -60,6 +60,14 @@ pub trait Widget: Sized {
     fn on_drop(&mut self, ctx: &mut Context, rect: Region<V2>, data: &DragData) -> EventStatus {
         MouseEventVisitor::dispatch(MouseEvent::Drop(data), self, ctx, rect)
     }
+
+    /// Check if it's legal to drop the currently-dragged data here.
+    ///
+    /// The default implementation calls `DragVisitor::dispatch` to dispatch the event to the child
+    /// that the mouse is currently over.
+    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, data: &DragData) -> bool {
+        DropCheckVisitor::dispatch(self, ctx, rect, data)
+    }
 }
 
 pub trait Visitor {
@@ -189,5 +197,50 @@ impl<'a, 'b> Visitor for MouseEventVisitor<'a, 'b> {
                 MouseEvent::Up => w.on_mouse_up(self.ctx, rect),
                 MouseEvent::Drop(data) => w.on_drop(self.ctx, rect, data),
             };
+    }
+}
+
+
+pub struct DropCheckVisitor<'a, 'b> {
+    data: &'a DragData,
+    ctx: &'b Context,
+    rect: Region<V2>,
+
+    result: bool,
+}
+
+impl<'a, 'b> DropCheckVisitor<'a, 'b> {
+    pub fn new(ctx: &'b Context,
+               rect: Region<V2>,
+               data: &'a DragData) -> DropCheckVisitor<'a, 'b> {
+        DropCheckVisitor {
+            data: data,
+            ctx: ctx,
+            rect: rect,
+            result: false,
+        }
+    }
+
+    pub fn dispatch<W: ?Sized + Widget>(w: &mut W,
+                                        ctx: &Context,
+                                        rect: Region<V2>,
+                                        data: &DragData) -> bool {
+        let mut v = DropCheckVisitor::new(ctx, rect, data);
+        w.walk_layout(&mut v, rect.min);
+        v.result
+    }
+}
+
+impl<'a, 'b> Visitor for DropCheckVisitor<'a, 'b> {
+    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
+        if self.result {
+            return;
+        }
+
+        if !rect.contains(self.ctx.mouse_pos) {
+            return;
+        }
+
+        self.result = w.check_drop(self.ctx, rect, self.data);
     }
 }

@@ -208,4 +208,9 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
             c.platform().send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
         })
     }
+
+    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, data: &DragData) -> bool {
+        // Just check that the mouse is over an actual slot.
+        self.slot_at_offset(ctx.mouse_pos - rect.min).is_some()
+    }
 }
