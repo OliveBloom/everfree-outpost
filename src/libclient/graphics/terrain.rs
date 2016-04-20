@@ -28,7 +28,11 @@ impl IntrusiveCorner for Vertex {
 
 pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
     gl.load_shader(
-        "terrain2.vert", "terrain2.frag", "",
+        "terrain2.vert", "terrain2.frag",
+        defs! {
+            SLICE_ENABLE: "1",
+            SLICE_SIMPLIFIED: "1",
+        },
         uniforms! {
             cameraPos: V2,
             cameraSize: V2,

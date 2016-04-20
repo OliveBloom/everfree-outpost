@@ -11,8 +11,8 @@ use std::prelude::v1::*;
 
 #[macro_use] extern crate bitflags;
 
-
-use v3::{Vn, V3, scalar};
+use std::collections::VecDeque;
+use v3::{Vn, V3, V2, Region, scalar};
 
 
 pub mod v3;
@@ -181,83 +181,64 @@ pub mod fill_flags {
     }
 }
 
-pub fn floodfill<S>(center: V3,
-                    radius: u8,
+pub fn floodfill<S>(start: V3,
+                    bounds: Region<V2>,
                     chunk: &S,
                     grid: &mut [fill_flags::Flags],
-                    queue: &mut [(u8, u8)])
+                    grid_bounds: Region<V2>)
         where S: ShapeSource {
-    let size = (radius * 2) as usize;
-    assert!(grid.len() == size * size);
-
-    queue[0] = (radius, radius);
-    let mut queue_len = 1;
-    let base = center - V3::new(radius as i32, radius as i32, 0);
-    while queue_len > 0 {
-        queue_len -= 1;
-        let (x, y) = queue[queue_len];
-        let idx = y as usize * size + x as usize;
-
-        let pos = base + V3::new(x as i32, y as i32, 0);
-        if !stop_fill(chunk, pos) {
-            grid[idx].insert(fill_flags::INSIDE);
+    let mut queue = VecDeque::new();
+    queue.push_back(start.reduce());
+    let z = start.z;
+    while let Some(pos) = queue.pop_front() {
+        if !stop_fill(chunk, pos.extend(z)) {
+            grid[grid_bounds.index(pos)].insert(fill_flags::INSIDE);
 
             let mut maybe_enqueue = |x, y| {
-                let idx = y as usize * size + x as usize;
+                let p = pos + V2::new(x, y);
+                if !bounds.contains(p) {
+                    return;
+                }
+                let idx = grid_bounds.index(p);
                 if !grid[idx].contains(fill_flags::ENQUEUED) {
                     grid[idx].insert(fill_flags::ENQUEUED);
-                    queue[queue_len] = (x, y);
-                    queue_len += 1;
+                    queue.push_back(p);
                 }
             };
 
-            if x > 0 {
-                maybe_enqueue(x - 1, y);
-            }
-            if x < size as u8 - 1 {
-                maybe_enqueue(x + 1, y);
-            }
-            if y > 0 {
-                maybe_enqueue(x, y - 1);
-            }
-            if y < size as u8 - 1 {
-                maybe_enqueue(x, y + 1);
-            }
+            maybe_enqueue(-1,  0);
+            maybe_enqueue( 1,  0);
+            maybe_enqueue( 0, -1);
+            maybe_enqueue( 0,  1);
         }
     }
 
-    let inside = |grid: &mut [fill_flags::Flags], idx: usize| {
-        grid[idx].contains(fill_flags::INSIDE)
-    };
-
     // Populate corner-fill flags.
-    for y in 0 .. size {
-        let n_safe = y > 0;
-        let s_safe = y < size - 1;
-        for x in 0 .. size {
-            let w_safe = x > 0;
-            let e_safe = x < size - 1;
+    for pos in grid_bounds.points() {
+        let inside = |grid: &[fill_flags::Flags], dx, dy| {
+            let p = pos + V2::new(dx, dy);
+            bounds.contains(p) &&
+                grid[grid_bounds.index(p)].contains(fill_flags::INSIDE)
+        };
 
-            let idx = y * size + x;
-            if grid[idx].contains(fill_flags::INSIDE) {
-                grid[idx].insert(fill_flags::ALL_CORNERS_INSIDE);
-            } else {
-                let n = n_safe && inside(grid, (y - 1) * size + x);
-                let s = s_safe && inside(grid, (y + 1) * size + x);
-                let w = w_safe && inside(grid, y * size + (x - 1));
-                let e = e_safe && inside(grid, y * size + (x + 1));
+        if inside(grid, 0, 0) {
+            grid[grid_bounds.index(pos)].insert(fill_flags::ALL_CORNERS_INSIDE);
+        } else {
+            let n = inside(grid,  0, -1);
+            let s = inside(grid,  0,  1);
+            let w = inside(grid, -1,  0);
+            let e = inside(grid,  1,  0);
 
-                let nw = n || w || (n_safe && w_safe && inside(grid, (y - 1) * size + (x - 1)));
-                let ne = n || e || (n_safe && e_safe && inside(grid, (y - 1) * size + (x + 1)));
-                let sw = s || w || (s_safe && w_safe && inside(grid, (y + 1) * size + (x - 1)));
-                let se = s || e || (s_safe && e_safe && inside(grid, (y + 1) * size + (x + 1)));
+            let nw = n || w || inside(grid, -1, -1);
+            let ne = n || e || inside(grid,  1, -1);
+            let sw = s || w || inside(grid, -1,  1);
+            let se = s || e || inside(grid,  1,  1);
 
-                grid[idx].insert(
-                    if nw { fill_flags::INSIDE_NW } else { fill_flags::Flags::empty() } |
-                    if ne { fill_flags::INSIDE_NE } else { fill_flags::Flags::empty() } |
-                    if sw { fill_flags::INSIDE_SW } else { fill_flags::Flags::empty() } |
-                    if se { fill_flags::INSIDE_SE } else { fill_flags::Flags::empty() });
-            }
+            grid[grid_bounds.index(pos)].insert(
+                if nw { fill_flags::INSIDE_NW } else { fill_flags::Flags::empty() } |
+                if ne { fill_flags::INSIDE_NE } else { fill_flags::Flags::empty() } |
+                if sw { fill_flags::INSIDE_SW } else { fill_flags::Flags::empty() } |
+                if se { fill_flags::INSIDE_SE } else { fill_flags::Flags::empty() });
         }
     }
 }

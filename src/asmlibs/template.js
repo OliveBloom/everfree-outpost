@@ -44,6 +44,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_delete_texture = env.asmgl_delete_texture;
     var _asmgl_active_texture = env.asmgl_active_texture;
     var _asmgl_bind_texture = env.asmgl_bind_texture;
+    var _asmgl_texture_image = env.asmgl_texture_image;
 
     var _asmgl_gen_framebuffer = env.asmgl_gen_framebuffer;
     var _asmgl_delete_framebuffer = env.asmgl_delete_framebuffer;

@@ -2,7 +2,9 @@ use std::prelude::v1::*;
 use std::mem;
 use std::slice;
 
-use physics::v3::{V3, V2, scalar, Region};
+use physics::fill_flags;
+use physics::TILE_SIZE;
+use physics::v3::{V3, V2, Vn, scalar, Region};
 
 use Time;
 use data::Data;
@@ -128,7 +130,7 @@ impl<GL: Context> Textures<GL> {
             structure_atlas: gl.load_texture("structures0"),
             sprite_sheet: gl.load_texture("sprites0"),
 
-            cavern_map: gl.create_texture((64, 64)),
+            cavern_map: gl.create_luminance_texture((96, 96)),
 
             ui_items: gl.load_texture("items_img"),
             ui_parts: gl.load_texture("ui_atlas"),
@@ -311,6 +313,16 @@ impl<GL: Context> Renderer<GL> {
     }
 
 
+    pub fn load_cavern_map(&mut self, data: &[fill_flags::Flags]) {
+        assert!(mem::size_of::<fill_flags::Flags>() == mem::size_of::<u8>());
+        let raw_data: &[u8] = unsafe {
+            slice::from_raw_parts(data.as_ptr() as *const u8,
+                                  data.len())
+        };
+        self.textures.cavern_map.load(raw_data);
+    }
+
+
     pub fn update_framebuffers(&mut self, gl: &mut GL, scene: &Scene) {
         let u16_size = (scene.camera_size.x as u16,
                         scene.camera_size.y as u16);
@@ -415,6 +427,7 @@ pub struct Scene {
     pub canvas_size: V2,
     pub camera_pos: V2,
     pub camera_size: V2,
+    pub slice_center: V3,
     pub now: Time,
 
     pub f_camera_pos: [f32; 2],
@@ -433,18 +446,22 @@ impl Scene {
         let canvas_size = V2::new(window_size.0 as i32, window_size.1 as i32);
         let camera_pos = camera_center - camera_size / scalar(2);
 
+        let slice_center = center.div_floor(scalar(TILE_SIZE));
+
         Scene {
             canvas_size: canvas_size,
             camera_pos: camera_pos,
             camera_size: camera_size,
+            slice_center: slice_center,
             now: now,
 
             f_camera_pos: [camera_pos.x as f32,
                            camera_pos.y as f32],
             f_camera_size: [camera_size.x as f32,
                             camera_size.y as f32],
-            f_slice_center: [0.0, 0.0], // TODO
-            f_slice_z: 0.0, // TODO
+            f_slice_center: [slice_center.x as f32,
+                             slice_center.y as f32],
+            f_slice_z: slice_center.z as f32,
         }
     }
 

@@ -121,8 +121,8 @@ var module_env = function(asm) {
             var size_view = asm._makeView(Uint16Array, size_ptr, 4);
             return asm.asmgl.loadTexture(name, size_view);
         },
-        'asmgl_gen_texture': function(width, height, is_depth) {
-            return asm.asmgl.genTexture(width, height, is_depth);
+        'asmgl_gen_texture': function(width, height, kind) {
+            return asm.asmgl.genTexture(width, height, kind);
         },
         'asmgl_delete_texture': function(name) {
             asm.asmgl.deleteTexture(name);
@@ -132,6 +132,10 @@ var module_env = function(asm) {
         },
         'asmgl_bind_texture': function(name) {
             asm.asmgl.bindTexture(name);
+        },
+        'asmgl_texture_image': function(width, height, kind, data_ptr, data_len) {
+            var view = asm._makeView(Uint8Array, data_ptr, data_len);
+            asm.asmgl.textureImage(width, height, kind, view);
         },
 
         'asmgl_gen_framebuffer': function() {
@@ -604,31 +608,6 @@ DynAsm.prototype.findCeiling = function(pos) {
     var result = this._raw['find_ceiling'](this.client, vec.byteOffset);
 
     this._stackFree(vec);
-
-    return result;
-};
-
-DynAsm.prototype.floodfill = function(pos, radius) {
-    var size = radius * 2;
-    var len = size * size;
-
-    var pos_buf = this._stackAlloc(Int32Array, 3);
-    store_vec(pos_buf, 0, pos);
-    var grid = this._stackAlloc(Uint8Array, len);
-    grid.fill(0);
-    var queue = this._stackAlloc(Uint8Array, 2 * len);
-
-    this._raw['floodfill'](
-            this.client,
-            pos_buf.byteOffset, radius,
-            grid.byteOffset, len,
-            queue.byteOffset, 2 * len);
-
-    var result = grid.slice();
-
-    this._stackFree(queue);
-    this._stackFree(grid);
-    this._stackFree(pos_buf);
 
     return result;
 };

@@ -34,8 +34,18 @@ pub struct Vertex {
 pub fn load_shader<GL: gl::Context>(gl: &mut GL, shadow: bool) -> GL::Shader {
     gl.load_shader(
         "structure2.vert", "structure2.frag",
-        if !shadow { "" }
-        else { defs! { OUTPOST_SHADOW: "1", } },
+        if !shadow {
+            defs! {
+                SLICE_ENABLE: "1",
+                SLICE_SIMPLIFIED: "1",
+            }
+        } else {
+            defs! {
+                SLICE_ENABLE: "1",
+                SLICE_SIMPLIFIED: "1",
+                OUTPOST_SHADOW: "1",
+            }
+        },
         uniforms! {
             cameraPos: V2,
             cameraSize: V2,

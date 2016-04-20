@@ -327,19 +327,14 @@ impl<'d, P: Platform> Client<'d, P> {
         self.terrain_shape.find_ceiling(pos)
     }
 
-    pub fn floodfill(&self,
-                     pos: V3,
-                     radius: u8,
-                     grid: &mut [physics::fill_flags::Flags],
-                     queue: &mut [(u8, u8)]) {
-        physics::floodfill(pos, radius, &*self.terrain_shape, grid, queue);
-    }
-
 
     // Graphics
 
     fn prepare(&mut self, scene: &Scene) {
+        self.renderer.update_framebuffers(self.platform.gl(), &scene);
+
         let bounds = Region::sized(scene.camera_size) + scene.camera_pos;
+        let tile_bounds = bounds.div_round_signed(TILE_SIZE);
         let chunk_bounds = bounds.div_round_signed(CHUNK_SIZE * TILE_SIZE);
 
         // Terrain from the chunk below can cover the current one.
@@ -374,6 +369,21 @@ impl<'d, P: Platform> Client<'d, P> {
             self.platform.set_cursor(cursor);
             self.last_cursor = cursor;
         }
+
+        // Update the cavern map
+        // TODO: cache this
+        let mut grid = box [physics::fill_flags::Flags::empty(); 96 * 96];
+        let slice_offset = scene.slice_center.reduce() - scalar::<V2>(48);
+        // `grid_bounds` is a region the size of the grid, centered at slice_center.
+        let grid_bounds = Region::sized(scalar(96)) + slice_offset;
+        let slice_bounds = Region::new(tile_bounds.min,
+                                       tile_bounds.max + V2::new(0, 16));
+        physics::floodfill(scene.slice_center,
+                           slice_bounds.intersect(grid_bounds),
+                           &*self.terrain_shape,
+                           &mut *grid,
+                           grid_bounds);
+        self.renderer.load_cavern_map(&*grid);
     }
 
     pub fn render_frame(&mut self, now: Time) {
@@ -388,7 +398,6 @@ impl<'d, P: Platform> Client<'d, P> {
         self.entities.apply_updates(scene.now);
         self.prepare(&scene);
 
-        self.renderer.update_framebuffers(self.platform.gl(), &scene);
         self.renderer.render(&scene);
     }
 

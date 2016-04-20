@@ -278,19 +278,6 @@ pub extern fn find_ceiling(client: &Client,
     client.find_ceiling(*pos >> TILE_BITS)
 }
 
-#[no_mangle]
-pub unsafe extern fn floodfill(client: &Client,
-                               pos: &V3,
-                               radius: u8,
-                               grid_ptr: *mut u8,
-                               grid_byte_len: usize,
-                               queue_ptr: *mut (u8, u8),
-                               queue_byte_len: usize) {
-    let grid = make_slice_mut(grid_ptr as *mut physics::fill_flags::Flags, grid_byte_len);
-    let queue = make_slice_mut(queue_ptr, queue_byte_len);
-    client.floodfill(*pos >> TILE_BITS, radius, grid, queue);
-}
-
 
 // Graphics
 

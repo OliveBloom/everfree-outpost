@@ -233,7 +233,7 @@ AsmGl.prototype.loadTexture = function(name, size_out) {
     return name + 1;
 };
 
-AsmGl.prototype.genTexture = function(width, height, is_depth) {
+AsmGl.prototype.genTexture = function(width, height, kind) {
     var gl = this.gl;
 
     var tex = gl.createTexture();
@@ -243,13 +243,7 @@ AsmGl.prototype.genTexture = function(width, height, is_depth) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    if (!is_depth) {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0,
-                gl.RGBA, gl.UNSIGNED_BYTE, null);
-    } else {
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0,
-                gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
-    }
+    this.textureImage(width, height, kind, null);
 
     var name = insertFree(this.texture_list, tex);
     return name + 1;
@@ -273,6 +267,26 @@ AsmGl.prototype.bindTexture = function(name) {
     var gl = this.gl;
     var tex = this.texture_list[name - 1];
     gl.bindTexture(gl.TEXTURE_2D, tex);
+};
+
+AsmGl.prototype.textureImage = function(width, height, kind, data) {
+    var gl = this.gl;
+    switch (kind) {
+        case 0:
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0,
+                    gl.RGBA, gl.UNSIGNED_BYTE, data);
+            break;
+        case 1:
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, width, height, 0,
+                    gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, data);
+            break;
+        case 2:
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, width, height, 0,
+                    gl.LUMINANCE, gl.UNSIGNED_BYTE, data);
+            break;
+        default:
+            throw 'bad texture kind: ' + kind;
+    }
 };
 
 

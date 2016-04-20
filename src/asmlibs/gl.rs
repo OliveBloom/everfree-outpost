@@ -42,10 +42,15 @@ mod ffi {
         pub fn asmgl_load_texture(name_ptr: *const u8,
                                   name_len: usize,
                                   size_p: *mut (u16, u16)) -> u32;
-        pub fn asmgl_gen_texture(width: u16, height: u16, is_depth: u8) -> u32;
+        pub fn asmgl_gen_texture(width: u16, height: u16, kind: u8) -> u32;
         pub fn asmgl_delete_texture(name: u32);
         pub fn asmgl_active_texture(unit: usize);
         pub fn asmgl_bind_texture(name: u32);
+        pub fn asmgl_texture_image(width: u16,
+                                   height: u16,
+                                   kind: u8,
+                                   data_ptr: *const u8,
+                                   data_len: usize);
 
         pub fn asmgl_gen_framebuffer() -> u32;
         pub fn asmgl_delete_framebuffer(name: u32);
@@ -170,10 +175,19 @@ const NO_RENDERBUFFER: Name<Renderbuffer> = Name { raw: 0, _marker: PhantomData 
 
 // State tracker internals
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum BufferTarget {
     Array = 0,
     ElementArray = 1,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub enum TextureKind {
+    RGBA = 0,
+    Depth = 1,
+    Luminance = 2,
 }
 
 
@@ -345,8 +359,8 @@ impl Inner {
         name
     }
 
-    pub fn gen_texture(&mut self, size: (u16, u16), is_depth: bool) -> Name<Texture> {
-        let name = unsafe { ffi::asmgl_gen_texture(size.0, size.1, is_depth as u8) };
+    pub fn gen_texture(&mut self, size: (u16, u16), kind: TextureKind) -> Name<Texture> {
+        let name = unsafe { ffi::asmgl_gen_texture(size.0, size.1, kind as u8) };
         assert!(name != 0);
         let name = Name::new(name);
         // As a side effect, gen_texture also binds the texture to the context,
@@ -376,6 +390,19 @@ impl Inner {
 
             unsafe { ffi::asmgl_bind_texture(name.raw) };
             self.textures[unit] = name;
+        }
+    }
+
+    pub fn texture_image(&mut self,
+                         size: (u16, u16),
+                         kind: TextureKind,
+                         data: &[u8]) {
+        unsafe {
+            ffi::asmgl_texture_image(size.0,
+                                     size.1,
+                                     kind as u8,
+                                     data.as_ptr(),
+                                     data.len());
         }
     }
 
@@ -528,6 +555,17 @@ impl GL {
     pub fn new() -> GL {
         GL { inner: InnerPtr::new() }
     }
+
+    fn create_texture_impl(&mut self, size: (u16, u16), kind: TextureKind) -> Texture {
+        let name = self.inner.run(|ctx| ctx.gen_texture(size, kind));
+        Texture {
+            inner: self.inner.clone(),
+            name: name,
+            size: size,
+            kind: kind,
+        }
+    }
+
 }
 
 impl gl::Context for GL {
@@ -619,21 +657,15 @@ impl gl::Context for GL {
     type Texture = Texture;
 
     fn create_texture(&mut self, size: (u16, u16)) -> Texture {
-        let name = self.inner.run(|ctx| ctx.gen_texture(size, false));
-        Texture {
-            inner: self.inner.clone(),
-            name: name,
-            size: size,
-        }
+        self.create_texture_impl(size, TextureKind::RGBA)
     }
 
     fn create_depth_texture(&mut self, size: (u16, u16)) -> Texture {
-        let name = self.inner.run(|ctx| ctx.gen_texture(size, true));
-        Texture {
-            inner: self.inner.clone(),
-            name: name,
-            size: size,
-        }
+        self.create_texture_impl(size, TextureKind::Depth)
+    }
+
+    fn create_luminance_texture(&mut self, size: (u16, u16)) -> Texture {
+        self.create_texture_impl(size, TextureKind::Luminance)
     }
 
     fn load_texture(&mut self, img_name: &str) -> Texture {
@@ -643,15 +675,12 @@ impl gl::Context for GL {
             inner: self.inner.clone(),
             name: name,
             size: size,
+            kind: TextureKind::RGBA,
         }
     }
 
     fn texture_import_HACK(&mut self, name: u32, size: (u16, u16)) -> Texture {
-        Texture {
-            inner: self.inner.clone(),
-            name: Name::new(name),
-            size: size,
-        }
+        unimplemented!()
     }
 
 
@@ -932,11 +961,22 @@ pub struct Texture {
     inner: InnerPtr,
     name: Name<Texture>,
     size: (u16, u16),
+    kind: TextureKind,
 }
 
 impl gl::Texture for Texture {
     fn size(&self) -> (u16, u16) {
         self.size
+    }
+
+    fn load(&mut self, data: &[u8]) {
+        let name = self.name;
+        let size = self.size;
+        let kind = self.kind;
+        self.inner.run(|ctx| {
+            ctx.bind_texture(0, name);
+            ctx.texture_image(size, kind, data);
+        });
     }
 }
 

@@ -30,7 +30,6 @@ open_inventory_dialog
 load_terrain_chunk
 collide
 find_ceiling
-floodfill
 render_frame
 resize_window
 client_bench
