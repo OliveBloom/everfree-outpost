@@ -194,34 +194,31 @@ var module_env = function(asm) {
         },
 
         'ap_config_get': function(key_ptr, key_len, value_len_p) {
-            var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
-            var key = decodeUtf8(key_view);
+            var key = asm._loadString(key_ptr, key_len);
             var value = config.rawGet(key);
 
-            var value_utf8 = unescape(encodeURIComponent('' + value));
-            var len = value_utf8.length;
-            var value_view = asm._heapAlloc(Uint8Array, len);
-            for (var i = 0; i < len; ++i) {
-                value_view[i] = value_utf8.charCodeAt(i);
-            }
+            var value_view = asm._allocString(value);
 
             var value_len_p_view = asm._makeView(Uint32Array, value_len_p, 4);
-            value_len_p_view[0] = len;
+            value_len_p_view[0] = value_view.byteLength;
             return value_view.byteOffset;
         },
 
+        'ap_config_get_int': function(key_ptr, key_len) {
+            var key = asm._loadString(key_ptr, key_len);
+            var value = config.rawGet(key);
+            return value|0;
+        },
+
         'ap_config_set': function(key_ptr, key_len, value_ptr, value_len) {
-            var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
-            var key = decodeUtf8(key_view);
-            var value_view = asm._makeView(Uint8Array, value_ptr, value_len);
-            var value = decodeUtf8(value_view);
+            var key = asm._loadString(key_ptr, key_len);
+            var value = asm._loadString(value_ptr, value_len);
 
             config.rawSet(key, value);
         },
 
         'ap_config_clear': function(key_ptr, key_len) {
-            var key_view = asm._makeView(Uint8Array, key_ptr, key_len);
-            var key = decodeUtf8(key_view);
+            var key = asm._loadString(key_ptr, key_len);
 
             config.rawClear(key);
         },

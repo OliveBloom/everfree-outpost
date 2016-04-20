@@ -2,10 +2,13 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
 
+use client::ClientObj;
 use data::Data;
 use platform::{Config, ConfigKey};
+use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
+use ui::input::EventStatus;
 use ui::item;
 use ui::widget::*;
 
@@ -166,7 +169,7 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
                 item_dyn: item::ItemDyn::new(slot.item_id, qty),
                 color:
                     if i as i8 == self.state.cur_item { 1 }
-                    else if i as i8 == self.state.cur_ability { 1 }
+                    else if i as i8 == self.state.cur_ability { 2 }
                     else { 0 },
             };
 
@@ -190,5 +193,41 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
 
         let bar_dest = bar_rect.align(rect, Align::Center, Align::Center);
         geom.draw_ui_tiled(atlas::HOTBAR_BAR, bar_dest);
+    }
+
+    fn on_drop(&mut self, ctx: &mut Context, rect: Region<V2>, data: &DragData) -> EventStatus {
+        let DragData { src_inv, src_slot } = *data;
+
+        let y_off = ctx.mouse_pos.y - rect.min.y;
+        let slot_idx = (y_off - 8) / (Slot::size().y + 1);
+        if slot_idx < 0 || slot_idx >= 9 {
+            return EventStatus::Unhandled;
+        }
+        let slot_idx = slot_idx as i8;
+
+        EventStatus::Action(box move |c: &mut ClientObj| {
+            let is_ability = Some(src_inv) == c.inventories().ability_id();
+            let item_id = match c.inventories().get(src_inv)
+                                 .and_then(|i| i.items.get(src_slot)) {
+                Some(x) => x.id,
+                None => return,
+            };
+
+            c.ui().root.hotbar.set_slot(slot_idx, item_id, is_ability);
+            c.ui().root.hotbar.select(slot_idx);
+
+            let name = String::from(c.data().item_def(item_id).name());
+            Hotbar::config_set_slot(c.platform().config_mut(), slot_idx, name, is_ability);
+            Hotbar::config_select(c.platform().config_mut(), slot_idx, is_ability);
+        })
+    }
+
+    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, data: &DragData) -> bool {
+        let y_off = ctx.mouse_pos.y - rect.min.y;
+        let slot_idx = (y_off - 8) / (Slot::size().y + 1);
+        if slot_idx < 0 || slot_idx >= 9 {
+            return false;
+        }
+        true
     }
 }

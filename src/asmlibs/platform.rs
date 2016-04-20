@@ -15,6 +15,8 @@ mod ffi {
         pub fn ap_config_get(key_ptr: *const u8,
                              key_len: usize,
                              value_len_p: *mut usize) -> *mut u8;
+        pub fn ap_config_get_int(key_ptr: *const u8,
+                                 key_len: usize) -> i32;
         pub fn ap_config_set(key_ptr: *const u8,
                              key_len: usize,
                              value_ptr: *const u8,
@@ -79,9 +81,12 @@ pub struct Config;
 
 impl platform::Config for Config {
     fn get_int(&self, key: ConfigKey) -> i32 {
-        match i32::from_str(&self.get_str(key)) {
-            Ok(i) => i,
-            Err(_) => 0,
+        let key_str = key.to_string();
+        let key_bytes = key_str.as_bytes();
+
+        unsafe {
+            ffi::ap_config_get_int(key_bytes.as_ptr(),
+                                   key_bytes.len())
         }
     }
 

@@ -67,6 +67,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _asmgl_draw_arrays_triangles = env.asmgl_draw_arrays_triangles;
 
     var _ap_config_get = env.ap_config_get;
+    var _ap_config_get_int = env.ap_config_get_int;
     var _ap_config_set = env.ap_config_set;
     var _ap_config_clear = env.ap_config_clear;
     var _ap_set_cursor = env.ap_set_cursor;

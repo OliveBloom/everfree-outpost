@@ -442,12 +442,16 @@ impl<'d, P: Platform> Client<'d, P> {
 
 pub trait ClientObj {
     fn data(&self) -> &Data;
+
+    fn inventories(&self) -> &Inventories;
+
     fn platform(&mut self) -> &mut PlatformObj;
     fn ui(&mut self) -> &mut UI;
 }
 
 impl<'d, P: Platform> ClientObj for Client<'d, P> {
     fn data(&self) -> &Data { &self.data }
+    fn inventories(&self) -> &Inventories { &self.inventories }
     fn platform(&mut self) -> &mut PlatformObj { &mut self.platform }
     fn ui(&mut self) -> &mut UI { &mut self.ui }
 }
