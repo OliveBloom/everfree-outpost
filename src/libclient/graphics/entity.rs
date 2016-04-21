@@ -5,6 +5,7 @@ use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
 use entity::Entities;
+use fonts::{self, FontMetricsExt};
 use platform::gl;
 use terrain::LOCAL_BITS;
 use util;
@@ -101,8 +102,8 @@ impl<'a> GeomGen<'a> {
 
             //let t = &self.data.templates[s.template_id as usize];
             //count += t.vert_count as usize;
-            let num_layers = count_layers(e.appearance);
-            count += 6 * num_layers;
+            let num_quads = count_layers(e.appearance) + name_len(&e.name);
+            count += 6 * num_quads;
         }
         count
     }
@@ -123,21 +124,21 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 continue;
             }
 
-            let num_layers = count_layers(e.appearance);
-            if idx + 6 * num_layers >= buf.len() {
+            let num_quads = count_layers(e.appearance) + name_len(&e.name);
+            if idx + 6 * num_quads >= buf.len() {
                 return (idx, true);
             }
 
             let a = &self.data.animations[e.motion.anim_id as usize];
 
+            // Top-left corner of the output rect
+            let dest_x = (pos.x - 32) as u16;
+            let dest_y = (pos.y - pos.z - 64) as u16;
+
             for_each_layer(e.appearance, |layer_table_idx, color| {
                 let layer_idx = self.data.pony_layer_table[layer_table_idx];
                 let l = &self.data.sprite_layers[layer_idx as usize];
                 let g = &self.data.sprite_graphics[(l.gfx_start + a.local_id) as usize];
-
-                // Top-left corner of the output rect
-                let dest_x = (pos.x - 32) as u16;
-                let dest_y = (pos.y - pos.z - 64) as u16;
 
                 for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
                     let dest_pos =
@@ -173,6 +174,47 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                     idx += 1;
                 }
             });
+
+            if let Some(ref name) = e.name {
+                let name_center_x = dest_x + 48;
+                let name_y = dest_y + 12;
+                let name_x = name_center_x - fonts::NAME.measure_width(name) as u16 / 2;
+                for (char_idx, offset) in fonts::NAME.iter_str(name) {
+                    if let Some(char_idx) = char_idx {
+                        let dx = name_x + offset as u16;
+                        let dy = name_y;
+                        let sx = fonts::NAME.xs[char_idx] as u16;
+                        let sy = 0;
+                        let w = fonts::NAME.widths[char_idx] as u16;
+                        let h = fonts::NAME.height as u16;
+
+                        for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
+                            buf[idx] = Vertex {
+                                dest_pos: (dx + cx * w,
+                                           dy + cy * h),
+                                src_pos: (sx + cx * w,
+                                          sy + cy * h),
+                                sheet: 0,
+                                color: (255, 255, 255),
+
+                                ref_pos: (pos.x as u16,
+                                          // TODO: hardcoded size
+                                          // TODO: extra hack - shouldn't need this +1
+                                          pos.y as u16 + 1/*32*/,
+                                          pos.z as u16),
+                                // TODO: hardcoded size
+                                ref_size_z: 64,
+
+                                anim_length: 1,
+                                anim_rate: 1,
+                                anim_start: 0,
+                                anim_step: 0,
+                            };
+                            idx += 1;
+                        }
+                    }
+                }
+            }
         }
 
         // Ran out of entites - we're done.
@@ -201,6 +243,14 @@ fn count_layers(appearance: u32) -> usize {
     if (appearance >> EQUIP1_SHIFT) & 0xf != 0 { count += 1; }  // equip1
     if (appearance >> EQUIP2_SHIFT) & 0xf != 0 { count += 1; }  // equip2
     count
+}
+
+fn name_len(name: &Option<String>) -> usize {
+    if let Some(ref name) = *name {
+        name.len()
+    } else {
+        0
+    }
 }
 
 fn for_each_layer<F: FnMut(usize, (u8, u8, u8))>(appearance: u32, mut f: F) {
