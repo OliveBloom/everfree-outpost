@@ -111,6 +111,13 @@ def process():
     data_files.append('sprite_graphics_client.json')
     data_files.append('loot_tables_server.json')
     data_files.append('extras_client.json')
+
+    deps = [
+            '$root/src/gen/data_main.py',
+            # Name font is embedded into the sprite sheet
+            '$b_data/fonts/name.png',
+            ]
+
     return template('''
         rule process_data
             command = $python3 $root/src/gen/data_main.py --mods=$mods $
@@ -123,7 +130,7 @@ def process():
                 $b_data/%{name} $
             %end
             $b_data/tiles.png $b_data/items.png: $
-            process_data | $root/src/gen/data_main.py
+            process_data | %{' '.join(deps)}
     ''', **locals())
 
 def pack():

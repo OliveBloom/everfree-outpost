@@ -3,7 +3,7 @@ import json
 import os
 
 
-from . import builder2, files, loader, util
+from . import boxpack, builder2, files, image2, loader, util
 from . import structure, block, item, recipe, sprite, loot_table, extra
 from outpost_data.core.loader import TimeIt
 
@@ -123,7 +123,12 @@ def emit_recipes(output_dir, recipes):
 
 def emit_sprites(output_dir, sprites):
     # Build sheets first, to populate the offset fields
-    sheets = sprite.build_sheets(sprites)
+    packer = boxpack.ImagePacker((2048, 2048), res=16)
+    # Place the name font first so it always sits at (0,0) on sheet 0
+    # TODO: bit of a hack
+    font_off = packer.place([image2.Image.open(os.path.join(output_dir, 'fonts/name.png'))])
+    assert font_off == [(0, (0, 0))]
+    sprite.pack_images(sprites, packer)
     anims, layers, graphics = sprite.collect_defs(sprites)
 
     # Write json
@@ -147,10 +152,10 @@ def emit_sprites(output_dir, sprites):
     if not os.path.isdir(sprite_dir):
         os.mkdir(sprite_dir)
 
-    sprite_list = [None] * len(sheets)
-    for i, img in enumerate(sheets):
+    sprite_list = []
+    for i, img in enumerate(packer.build_sheets()):
         name = 'sprites%d.png' % i
-        sprite_list[i] = name
+        sprite_list.append(name)
         img.raw().raw().save(os.path.join(sprite_dir, name))
 
     write_json(output_dir, 'sprites_list.json', sprite_list)

@@ -232,7 +232,7 @@ class SheetImage(CachedImage):
     def __init__(self, img_offsets, size):
         imgs = tuple(i for i,o in img_offsets)
         offsets = tuple(o for i,o in img_offsets)
-        super(SheetImage, self).__init__(size, (offsets,), imgs)
+        super(SheetImage, self).__init__(size, (offsets, size), imgs)
 
         self.imgs = imgs
         self.offsets = offsets

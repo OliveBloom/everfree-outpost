@@ -204,20 +204,18 @@ def collect_defs(sprites):
 
     return (anims, layers, graphics)
 
-def build_sheets(sprites):
+def pack_images(sprites, packer):
     # NB: gfxs only includes non-derived graphics
     gfxs = sorted((g for s in sprites for g in s.graphics.values()
         if g.base is None and g.id is not None),
         key=lambda g: g.id)
-    def size(g):
-        w, h = g.anim.flatten().px_size
-        return ((w + 15) // 16, (h + 15) // 16)
-    boxes = [size(g) for g in gfxs]
-    num_sheets, offsets = util.pack_boxes((2048 // 16, 2048 // 16), boxes)
 
-    for g, (sheet, (off_x, off_y)) in zip(gfxs, offsets):
+    imgs = [g.anim.flatten() for g in gfxs]
+    offs = packer.place(imgs)
+
+    for g, (sheet, off) in zip(gfxs, offs):
         g.sheet = sheet
-        g.src_offset = (off_x * 16, off_y * 16)
+        g.src_offset = off
 
     # Update derived graphics
     for s in sprites:
@@ -227,14 +225,6 @@ def build_sheets(sprites):
                 g.src_offset = g.base.src_offset
                 g.dest_offset = g.base.dest_offset
                 g.size = g.base.size
-
-    # Generate sheets
-    return [
-            Image.sheet([(g.anim.flatten(), g.src_offset)
-                for g in gfxs if g.sheet == i],
-                (2048, 2048))
-            for i in range(num_sheets)
-            ]
 
 
 def build_anim_client_json(anims):
