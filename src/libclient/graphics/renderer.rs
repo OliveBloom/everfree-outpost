@@ -13,7 +13,7 @@ use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
-use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode};
+use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, Feature, FeatureStatus};
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -150,8 +150,35 @@ struct Framebuffers<GL: Context> {
     sprite: GL::Framebuffer,
 }
 
+fn feature_check_one<GL: Context>(gl: &GL, feature: Feature) -> bool {
+    match gl.check_feature(feature) {
+        FeatureStatus::Unavailable => {
+            error!("required OpenGL feature is unavailable: {:?}", feature);
+            false
+        },
+        FeatureStatus::Emulated => {
+            warn!("OpenGL feature is being emulated (may be slow): {:?}", feature);
+            true
+        },
+        FeatureStatus::Native => {
+            true
+        },
+    }
+}
+
+fn feature_check<GL: Context>(gl: &GL) {
+    assert!(
+        // NB: use & instead of && so that all missing features are reported at once
+        feature_check_one(gl, Feature::DepthTexture) &
+        feature_check_one(gl, Feature::MultiPlaneFramebuffer) &
+        true,
+        "some required OpenGL features are unavailable");
+}
+
 impl<GL: Context> Framebuffers<GL> {
     fn new(gl: &mut GL, size: (u16, u16)) -> Framebuffers<GL> {
+        feature_check(gl);
+
         let world_color = gl.create_texture(size);
         let world_meta = gl.create_texture(size);
         let world_depth = gl.create_depth_texture(size);

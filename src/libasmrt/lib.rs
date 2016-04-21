@@ -20,7 +20,7 @@ mod std {
 extern fn lang_panic_fmt(args: &core::fmt::Arguments,
                         file: &'static str,
                         line: usize) -> ! {
-    raw_println(format_args!("task panicked at {}:{}: {}", file, line, args));
+    raw_println_err(format_args!("task panicked at {}:{}: {}", file, line, args));
     unsafe { core::intrinsics::abort() };
 }
 
@@ -30,7 +30,7 @@ extern fn lang_stack_exhausted() -> ! {
     unsafe {
         let s = "task panicked - stack exhausted";
         write_str(s.as_ptr(), s.len() as i32);
-        flush_str();
+        flush_str_err();
     }
     unsafe { core::intrinsics::abort() };
 }
@@ -47,6 +47,8 @@ extern fn lang_eh_personality() -> ! {
 extern {
     fn write_str(data: *const u8, len: i32);
     fn flush_str();
+    fn flush_str_warn();
+    fn flush_str_err();
 }
 
 struct AsmJsFormatWriter;
@@ -61,6 +63,16 @@ impl fmt::Write for AsmJsFormatWriter {
 pub fn raw_println(args: fmt::Arguments) {
     let _ = fmt::write(&mut AsmJsFormatWriter, args);
     unsafe { flush_str() };
+}
+
+pub fn raw_println_warn(args: fmt::Arguments) {
+    let _ = fmt::write(&mut AsmJsFormatWriter, args);
+    unsafe { flush_str_warn() };
+}
+
+pub fn raw_println_err(args: fmt::Arguments) {
+    let _ = fmt::write(&mut AsmJsFormatWriter, args);
+    unsafe { flush_str_err() };
 }
 
 pub fn raw_print(args: fmt::Arguments) {
@@ -95,6 +107,26 @@ macro_rules! log {
     };
     ($level:expr, $str:expr, $($rest:tt)*) => {
         println!($str, $($rest)*)
+    };
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($str:expr) => {
+        $crate::raw_println_warn(format_args!($str))
+    };
+    ($str:expr, $($rest:tt)*) => {
+        $crate::raw_println_warn(format_args!($str, $($rest)*))
+    };
+}
+
+#[macro_export]
+macro_rules! error {
+    ($str:expr) => {
+        $crate::raw_println_err(format_args!($str))
+    };
+    ($str:expr, $($rest:tt)*) => {
+        $crate::raw_println_err(format_args!($str, $($rest)*))
     };
 }
 

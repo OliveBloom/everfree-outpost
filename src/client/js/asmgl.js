@@ -22,6 +22,9 @@ AsmGl.prototype.init = function(gl, assets) {
     this.assets = assets;
 };
 
+AsmGl.prototype.hasExtension = function(name) {
+    return this.gl.getExtension(name) != null;
+};
 
 // Buffers
 

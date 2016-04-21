@@ -15,6 +15,7 @@
 use std::prelude::v1::*;
 
 extern crate alloc;
+#[macro_use] extern crate bitflags;
 
 extern crate client;
 extern crate physics;

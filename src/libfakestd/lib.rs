@@ -17,13 +17,13 @@ extern crate rustc_unicode;
 #[macro_reexport(format, vec)]
 extern crate collections as collections_;
 
-#[macro_reexport(print, println)]
+#[macro_reexport(print, println, log, warn, error)]
 extern crate asmrt;
 extern crate asmmalloc;     // Pull in the asm.js #[allocator] crate
 
 
 // Needed for macros
-pub use asmrt::{raw_print, raw_println};
+pub use asmrt::{raw_print, raw_println, raw_println_warn, raw_println_err};
 
 
 // The `pub use`s below match the list in libstd/lib.rs

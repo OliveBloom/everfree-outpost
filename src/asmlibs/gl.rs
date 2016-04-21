@@ -13,6 +13,8 @@ use client::platform::gl::{DrawArgs, UniformValue};
 
 mod ffi {
     extern "C" {
+        pub fn asmgl_has_extension(ptr: *const u8, len: usize) -> u8;
+
         pub fn asmgl_gen_buffer() -> u32;
         pub fn asmgl_delete_buffer(name: u32);
         pub fn asmgl_bind_buffer(target: u8, name: u32);
@@ -98,6 +100,13 @@ impl InnerPtr {
         unsafe {
             let ptr = (*self.0).0.get();
             f(&mut *ptr)
+        }
+    }
+
+    fn run_imm<R, F: FnOnce(&Inner) -> R>(&self, f: F) -> R {
+        unsafe {
+            let ptr = (*self.0).0.get();
+            f(&*ptr)
         }
     }
 }
@@ -191,10 +200,46 @@ pub enum TextureKind {
 }
 
 
+mod exts {
+    #![allow(non_upper_case_globals)]
+    bitflags! {
+        pub flags Extensions: u32 {
+            const WEBGL_depth_texture =         0x00000001,
+            const WEBGL_draw_buffers =          0x00000002,
+            const OES_vertex_array_object =     0x00000004,
+        }
+    }
+}
+pub use self::exts::*;
+
+fn check_extension(name: &str) -> bool {
+    unsafe { ffi::asmgl_has_extension(name.as_ptr(), name.len()) != 0 }
+}
+
+fn detect_extensions() -> Extensions {
+    let mut exts = Extensions::empty();
+    macro_rules! check {
+        ($name:ident) => {
+            if check_extension(stringify!($name)) {
+                exts.insert($name);
+            }
+        };
+    };
+
+    check!(WEBGL_depth_texture);
+    check!(WEBGL_draw_buffers);
+    check!(OES_vertex_array_object);
+
+    println!("detected extensions: {:?}", exts);
+    exts
+}
+
+
 // The spec guarantees a minimum of 8, though implementations may provide more.
 pub const NUM_TEXTURE_UNITS: usize = 8;
 
 struct Inner {
+    extensions: Extensions,
     buffers: [Name<Buffer>; 2],
     shader: Name<Shader>,
     texture_unit: usize,
@@ -209,6 +254,7 @@ struct Inner {
 impl Inner {
     fn new() -> Inner {
         Inner {
+            extensions: detect_extensions(),
             buffers: [NO_BUFFER; 2],
             shader: NO_SHADER,
             texture_unit: 0,
@@ -236,6 +282,10 @@ impl Inner {
 
     // Internal API.  This basically wraps OpenGL, but the implementation does its own caching in
     // some places.
+
+    fn has(&self, ext: Extensions) -> bool {
+        self.extensions.contains(ext)
+    }
 
     // Buffer objects
 
@@ -571,6 +621,22 @@ impl GL {
 impl gl::Context for GL {
     fn havoc(&mut self) {
         self.inner.run(|ctx| ctx.havoc());
+    }
+
+    fn check_feature(&self, feature: gl::Feature) -> gl::FeatureStatus {
+        use client::platform::gl::Feature::*;
+        use client::platform::gl::FeatureStatus::*;
+
+        let exts = self.inner.run_imm(|ctx| ctx.extensions);
+
+        match feature {
+            DepthTexture =>
+                if exts.contains(WEBGL_depth_texture) { Native }
+                else { Unavailable },
+            MultiPlaneFramebuffer =>
+                if exts.contains(WEBGL_draw_buffers) { Native }
+                else { Emulated },
+        }
     }
 
     type Buffer = Buffer;

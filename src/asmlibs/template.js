@@ -17,10 +17,14 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _llvm_trap = env.abort;
     var _write_str = env.writeStr;
     var _flush_str = env.flushStr;
+    var _flush_str_warn = env.flushStrWarn;
+    var _flush_str_err = env.flushStrErr;
     var _now = env.now;
     var Math_imul = global.Math.imul;
     var nan = global.NaN;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
+
+    var _asmgl_has_extension = env.asmgl_has_extension;
 
     var _asmgl_gen_buffer = env.asmgl_gen_buffer;
     var _asmgl_delete_buffer = env.asmgl_delete_buffer;

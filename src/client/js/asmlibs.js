@@ -49,10 +49,26 @@ var module_env = function(asm) {
             msg_buffer = '';
         },
 
+        'flushStrWarn': function() {
+            console.warn(msg_buffer);
+            msg_buffer = '';
+        },
+
+        'flushStrErr': function() {
+            console.error(msg_buffer);
+            window.onerror(msg_buffer, '<native code>', 0, 0, null);
+            msg_buffer = '';
+        },
+
         'now': function() {
             return Date.now() & 0xffffffff;
         },
 
+
+        'asmgl_has_extension': function(name_ptr, name_len) {
+            var name = asm._loadString(name_ptr, name_len);
+            return asm.asmgl.hasExtension(name);
+        },
 
         'asmgl_gen_buffer': function() {
             return asm.asmgl.genBuffer();

@@ -3,6 +3,7 @@ use physics::v3::{Region, V2};
 
 pub trait Context {
     fn havoc(&mut self);
+    fn check_feature(&self, feature: Feature) -> FeatureStatus;
 
     type Buffer: Buffer;
     fn create_buffer(&mut self) -> Self::Buffer;
@@ -128,6 +129,20 @@ pub enum BlendMode {
     None = 0,
     Alpha = 1,
     Add = 2,
+}
+
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Feature {
+    DepthTexture,
+    MultiPlaneFramebuffer,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum FeatureStatus {
+    Unavailable,
+    Emulated,
+    Native,
 }
 
 
