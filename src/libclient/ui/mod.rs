@@ -4,6 +4,7 @@ use physics::v3::{V2, scalar, Region};
 
 use inventory::Item;
 use inventory::Inventories;
+use misc;
 use platform::Cursor;
 
 use self::widget::{Widget, Visitor};
@@ -149,12 +150,14 @@ pub struct Dyn<'a> {
 
 impl<'a> Dyn<'a> {
     pub fn new(size: (u16, u16),
-               inventories: &'a Inventories) -> Dyn<'a> {
+               inventories: &'a Inventories,
+               hotbar: &'a misc::Hotbar) -> Dyn<'a> {
         Dyn {
             root: root::RootDyn {
                 screen_size: V2::new(size.0 as i32,
                                      size.1 as i32),
                 inventories: inventories,
+                hotbar: hotbar,
             },
         }
     }

@@ -37,6 +37,8 @@ mod terrain;
 mod structures;
 pub mod entity;
 pub mod inventory;
+mod misc;
+
 pub mod graphics;
 pub mod ui;
 

@@ -6,6 +6,7 @@ use client::ClientObj;
 use data::Data;
 use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
+use misc;
 use platform::Config;
 use ui::atlas;
 use ui::geom::Geom;
@@ -15,33 +16,14 @@ use ui::widget::*;
 
 
 pub struct Root {
-    pub hotbar: hotbar::Hotbar,
     pub dialog: dialog::Dialog<dialogs::AnyDialog>,
 }
 
 impl Root {
     pub fn new() -> Root {
         Root {
-            hotbar: hotbar::Hotbar::new(),
             dialog: dialog::Dialog::new(dialogs::AnyDialog::None),
         }
-    }
-
-    pub fn init_hotbar<C: Config>(&mut self, cfg: &C, data: &Data) {
-        self.hotbar.init(cfg, data);
-    }
-
-    fn hotbar_assign(&mut self, idx: i8, item_id: u16, is_ability: bool) -> EventStatus {
-        self.hotbar.set_slot(idx, item_id, is_ability);
-        self.hotbar.select(idx);
-
-        return EventStatus::Action(box move |c: &mut ClientObj| {
-            let name = String::from(c.data().item_def(item_id).name());
-            let platform = c.platform();
-            let cfg = platform.config_mut();
-            hotbar::Hotbar::config_set_slot(cfg, idx, name, is_ability);
-            hotbar::Hotbar::config_select(cfg, idx, is_ability);
-        });
     }
 }
 
@@ -49,14 +31,17 @@ impl Root {
 pub struct RootDyn<'a> {
     pub screen_size: V2,
     pub inventories: &'a Inventories,
+    pub hotbar: &'a misc::Hotbar,
 }
 
 impl<'a> RootDyn<'a> {
     pub fn new(screen_size: V2,
-               inventories: &'a Inventories) -> RootDyn<'a> {
+               inventories: &'a Inventories,
+               hotbar: &'a misc::Hotbar) -> RootDyn<'a> {
         RootDyn {
             screen_size: screen_size,
             inventories: inventories,
+            hotbar: hotbar,
         }
     }
 }
@@ -69,8 +54,9 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
         {
             // Hotbar
-            let dyn = HotbarDyn::new(self.dyn.inventories.main_inventory());
-            let mut child = WidgetPack::new(&mut self.state.hotbar, dyn);
+            let dyn = HotbarDyn::new(self.dyn.inventories.main_inventory(),
+                                     self.dyn.hotbar);
+            let mut child = WidgetPack::stateless(hotbar::Hotbar, dyn);
             let rect = Region::sized(child.size()) + pos + scalar(1);
             v.visit(&mut child, rect);
         }
@@ -113,13 +99,14 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
                 };
 
             if let Some((item_id, is_ability)) = opt_assign {
-                return self.state.hotbar_assign(idx, item_id, is_ability);
+                return EventStatus::Action(box move |c: &mut ClientObj| {
+                    c.handle_hotbar_assign(idx as u8, item_id, is_ability);
+                    c.handle_hotbar_select(idx as u8);
+                });
             } else {
                 // Select the indicated hotbar slot.
-                let is_ability = self.state.hotbar.slots[idx as usize].is_ability;
-                self.state.hotbar.select(idx);
                 return EventStatus::Action(box move |c: &mut ClientObj| {
-                    hotbar::Hotbar::config_select(c.platform().config_mut(), idx, is_ability);
+                    c.handle_hotbar_select(idx as u8);
                 });
             }
         }
@@ -132,22 +119,42 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 #[derive(Clone, Copy)]
 struct HotbarDyn<'a> {
     inv: Option<&'a Inventory>,
+    state: &'a misc::Hotbar,
 }
 
 impl<'a> HotbarDyn<'a> {
-    fn new(inv: Option<&'a Inventory>) -> HotbarDyn<'a> {
+    fn new(inv: Option<&'a Inventory>,
+           state: &'a misc::Hotbar) -> HotbarDyn<'a> {
         HotbarDyn {
             inv: inv,
+            state: state,
         }
     }
 }
 
 impl<'a> hotbar::HotbarDyn for HotbarDyn<'a> {
-    fn item_count(self, item_id: u16) -> u16 {
-        if let Some(inv) = self.inv {
-            inv.count(item_id)
-        } else {
-            0
+    fn slot_info(self, idx: u8) -> hotbar::SlotInfo {
+        let inv = match self.inv {
+            Some(x) => x,
+            None => return hotbar::SlotInfo {
+                item_id: 0,
+                quantity: None,
+                is_active_item: false,
+                is_active_ability: false,
+            },
+        };
+        let item_id = self.state.item_id(idx);
+        let quantity =
+            if self.state.is_item(idx) { Some(inv.count(item_id)) }
+            else { None };
+        let is_active_item = self.state.active_item_index() == Some(idx);
+        let is_active_ability = self.state.active_ability_index() == Some(idx);
+
+        hotbar::SlotInfo {
+            item_id: item_id,
+            quantity: quantity,
+            is_active_item: is_active_item,
+            is_active_ability: is_active_ability,
         }
     }
 }

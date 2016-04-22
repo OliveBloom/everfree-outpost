@@ -51,81 +51,17 @@ impl<'a> Widget for WidgetPack<'a, Slot, SlotDyn> {
 }
 
 
-#[derive(Clone, Copy)]
-pub struct HotbarSlot {
+pub struct Hotbar;
+
+pub struct SlotInfo {
     pub item_id: u16,
-    pub is_ability: bool,
-}
-
-pub struct Hotbar {
-    pub slots: [HotbarSlot; 9],
-    pub cur_item: i8,
-    pub cur_ability: i8,
-}
-
-impl Hotbar {
-    pub fn new() -> Hotbar {
-        Hotbar {
-            slots: [HotbarSlot { item_id: 0, is_ability: false }; 9],
-            cur_item: -1,
-            cur_ability: -1,
-        }
-    }
-
-    pub fn init<C: Config>(&mut self, cfg: &C, data: &Data) {
-        for i in 0 .. 9 {
-            let name = cfg.get_str(ConfigKey::HotbarItemName(i as u8));
-            let id = match data.find_item_id(&name) {
-                Some(x) => x,
-                None => continue,
-            };
-            let is_item = cfg.get_int(ConfigKey::HotbarIsItem(i as u8)) != 0;
-            self.slots[i].item_id = id;
-            self.slots[i].is_ability = !is_item;
-        }
-
-        self.cur_item = cfg.get_int(ConfigKey::HotbarActiveItem) as i8;
-        self.cur_ability = cfg.get_int(ConfigKey::HotbarActiveAbility) as i8;
-    }
-
-    pub fn set_slot(&mut self, idx: i8, item_id: u16, is_ability: bool) {
-        if idx < 0 || idx >= 9 {
-            return;
-        }
-
-        self.slots[idx as usize] = HotbarSlot {
-            item_id: item_id,
-            is_ability: is_ability,
-        };
-
-        if !is_ability {
-            // Replaced the selected ability with an item
-            if self.cur_ability == idx {
-                self.cur_ability = -1;
-            }
-        } else {
-            // Vice versa
-            if self.cur_item == idx {
-                self.cur_item = -1;
-            }
-        }
-    }
-
-    pub fn select(&mut self, idx: i8) {
-        if idx < 0 || idx >= 9 {
-            return;
-        }
-
-        if !self.slots[idx as usize].is_ability {
-            self.cur_item = idx;
-        } else {
-            self.cur_ability = idx;
-        }
-    }
+    pub quantity: Option<u16>,
+    pub is_active_item: bool,
+    pub is_active_ability: bool,
 }
 
 pub trait HotbarDyn: Copy {
-    fn item_count(self, item_id: u16) -> u16;
+    fn slot_info(self, idx: u8) -> SlotInfo;
 }
 
 impl Hotbar {
@@ -138,18 +74,6 @@ impl Hotbar {
 
         V2::new(w, h)
     }
-
-    pub fn config_set_slot(cfg: &mut Config, idx: i8, name: String, is_ability: bool) {
-        cfg.set_str(ConfigKey::HotbarItemName(idx as u8), &name);
-        cfg.set_int(ConfigKey::HotbarIsItem(idx as u8), (!is_ability) as i32);
-    }
-
-    pub fn config_select(cfg: &mut Config, idx: i8, is_ability: bool) {
-        let key =
-            if is_ability { ConfigKey::HotbarActiveAbility }
-            else { ConfigKey::HotbarActiveItem };
-        cfg.set_int(key, idx as i32);
-    }
 }
 
 impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
@@ -161,15 +85,12 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
         let step = V2::new(0, child_size.y + 1);
 
         for i in 0 .. 9 {
-            let slot = self.state.slots[i];
-            let qty =
-                if slot.is_ability || slot.item_id == 0 { None }
-                else { Some(self.dyn.item_count(slot.item_id)) };
+            let info = self.dyn.slot_info(i);
             let dyn = SlotDyn {
-                item_dyn: item::ItemDyn::new(slot.item_id, qty),
+                item_dyn: item::ItemDyn::new(info.item_id, info.quantity),
                 color:
-                    if i as i8 == self.state.cur_item { 1 }
-                    else if i as i8 == self.state.cur_ability { 2 }
+                    if info.is_active_item { 1 }
+                    else if info.is_active_ability { 2 }
                     else { 0 },
             };
 
@@ -203,22 +124,10 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
         if slot_idx < 0 || slot_idx >= 9 {
             return EventStatus::Unhandled;
         }
-        let slot_idx = slot_idx as i8;
+        let slot_idx = slot_idx as u8;
 
         EventStatus::Action(box move |c: &mut ClientObj| {
-            let is_ability = Some(src_inv) == c.inventories().ability_id();
-            let item_id = match c.inventories().get(src_inv)
-                                 .and_then(|i| i.items.get(src_slot)) {
-                Some(x) => x.id,
-                None => return,
-            };
-
-            c.ui().root.hotbar.set_slot(slot_idx, item_id, is_ability);
-            c.ui().root.hotbar.select(slot_idx);
-
-            let name = String::from(c.data().item_def(item_id).name());
-            Hotbar::config_set_slot(c.platform().config_mut(), slot_idx, name, is_ability);
-            Hotbar::config_select(c.platform().config_mut(), slot_idx, is_ability);
+            c.handle_hotbar_drop(src_inv, src_slot, slot_idx);
         })
     }
 

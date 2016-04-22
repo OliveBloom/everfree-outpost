@@ -24,6 +24,7 @@ use entity::{Entities, EntityId, Motion};
 use graphics::renderer::Scene;
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
+use misc::Misc;
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -40,6 +41,7 @@ pub struct Client<'d, P: Platform> {
     structures: Structures,
     entities: Entities,
     inventories: Inventories,
+    misc: Misc,
 
     ui: UI,
 
@@ -66,6 +68,7 @@ impl<'d, P: Platform> Client<'d, P> {
             structures: Structures::new(),
             entities: Entities::new(),
             inventories: Inventories::new(),
+            misc: Misc::new(),
 
             ui: UI::new(),
 
@@ -78,7 +81,7 @@ impl<'d, P: Platform> Client<'d, P> {
             last_cursor: Cursor::Normal,
         };
 
-        c.ui.root.init_hotbar(c.platform.config(), &c.data);
+        c.misc.hotbar.init(c.platform.config(), &c.data);
 
         c
     }
@@ -282,7 +285,8 @@ impl<'d, P: Platform> Client<'d, P> {
 
     fn with_ui_dyn<F: FnOnce(&mut UI, Dyn) -> R, R>(&mut self, f: F) -> R {
         let dyn = Dyn::new(self.view_size,
-                           &self.inventories);
+                           &self.inventories,
+                           &self.misc.hotbar);
         f(&mut self.ui, dyn)
     }
 
@@ -456,6 +460,13 @@ pub trait ClientObj {
 
     fn platform(&mut self) -> &mut PlatformObj;
     fn ui(&mut self) -> &mut UI;
+
+    fn handle_hotbar_assign(&mut self, idx: u8, item_id: u16, is_ability: bool);
+    fn handle_hotbar_drop(&mut self,
+                          src_inv: InventoryId,
+                          src_slot: usize,
+                          dest_slot: u8);
+    fn handle_hotbar_select(&mut self, idx: u8);
 }
 
 impl<'d, P: Platform> ClientObj for Client<'d, P> {
@@ -463,6 +474,29 @@ impl<'d, P: Platform> ClientObj for Client<'d, P> {
     fn inventories(&self) -> &Inventories { &self.inventories }
     fn platform(&mut self) -> &mut PlatformObj { &mut self.platform }
     fn ui(&mut self) -> &mut UI { &mut self.ui }
+
+    fn handle_hotbar_assign(&mut self, idx: u8, item_id: u16, is_ability: bool) {
+        self.misc.hotbar.set_slot(&self.data,
+                                  self.platform.config_mut(),
+                                  idx,
+                                  item_id,
+                                  is_ability);
+    }
+
+    fn handle_hotbar_drop(&mut self,
+                          src_inv: InventoryId,
+                          src_slot: usize,
+                          dest_slot: u8) {
+        let item_id = match self.inventories.get(src_inv) {
+            Some(x) => x.items[src_slot].id,
+            None => return,
+        };
+        self.handle_hotbar_assign(dest_slot, item_id, false);
+    }
+
+    fn handle_hotbar_select(&mut self, idx: u8) {
+        self.misc.hotbar.select(self.platform.config_mut(), idx);
+    }
 }
 
 
