@@ -114,8 +114,8 @@ impl Hotbar {
     }
 
     pub fn active_ability(&self) -> Option<u16> {
-        if self.cur_item >= 0 && self.cur_item < 9 {
-            let slot = &self.slots[self.cur_item as usize];
+        if self.cur_ability >= 0 && self.cur_ability < 9 {
+            let slot = &self.slots[self.cur_ability as usize];
             if slot.is_ability() {
                 return Some(slot.item_id);
             }
