@@ -16,14 +16,21 @@ function AsmGl() {
 }
 exports.AsmGl = AsmGl;
 
+AsmGl.prototype._getExtension = function(name) {
+    if (Config.debug_block_webgl_extensions.get()[name]) {
+        return null;
+    }
+    return this.gl.getExtension(name);
+};
+
 AsmGl.prototype.init = function(gl, assets) {
     this.gl = gl;
-    this.glext_draw_buffers = gl.getExtension('WEBGL_draw_buffers');
+    this.glext_draw_buffers = this._getExtension('WEBGL_draw_buffers');
     this.assets = assets;
 };
 
 AsmGl.prototype.hasExtension = function(name) {
-    return this.gl.getExtension(name) != null;
+    return this._getExtension(name) != null;
 };
 
 // Buffers

@@ -2,8 +2,10 @@ use std::prelude::v1::*;
 use std::cell::{Cell, UnsafeCell};
 use std::f32;
 use std::fmt;
+use std::iter;
 use std::marker::PhantomData;
 use std::mem;
+use std::slice;
 use std::str::FromStr;
 
 use physics::v3::{Region, V2, scalar};
@@ -595,6 +597,81 @@ impl Inner {
 }
 
 
+enum Multi<T> {
+    One(T),
+    Many(Vec<T>),
+}
+
+impl<T> Multi<T> {
+    fn len(&self) -> usize {
+        match *self {
+            Multi::One(ref x) => 1,
+            Multi::Many(ref xs) => xs.len(),
+        }
+    }
+
+    fn first(&self) -> &T {
+        match *self {
+            Multi::One(ref x) => x,
+            Multi::Many(ref xs) => &xs[0],
+        }
+    }
+
+    fn first_mut(&mut self) -> &mut T {
+        match *self {
+            Multi::One(ref mut x) => x,
+            Multi::Many(ref mut xs) => &mut xs[0],
+        }
+    }
+
+    fn iter(&self) -> MultiIter<T> {
+        match *self {
+            Multi::One(ref x) => MultiIter::One(iter::once(x)),
+            Multi::Many(ref xs) => MultiIter::Many(xs.iter()),
+        }
+    }
+
+    fn iter_mut(&mut self) -> MultiIterMut<T> {
+        match *self {
+            Multi::One(ref mut x) => MultiIterMut::One(iter::once(x)),
+            Multi::Many(ref mut xs) => MultiIterMut::Many(xs.iter_mut()),
+        }
+    }
+}
+
+enum MultiIter<'a, T: 'a> {
+    One(iter::Once<&'a T>),
+    Many(slice::Iter<'a, T>),
+}
+
+impl<'a, T> Iterator for MultiIter<'a, T> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<&'a T> {
+        match *self {
+            MultiIter::One(ref mut x) => x.next(),
+            MultiIter::Many(ref mut x) => x.next(),
+        }
+    }
+}
+
+enum MultiIterMut<'a, T: 'a> {
+    One(iter::Once<&'a mut T>),
+    Many(slice::IterMut<'a, T>),
+}
+
+impl<'a, T> Iterator for MultiIterMut<'a, T> {
+    type Item = &'a mut T;
+    fn next(&mut self) -> Option<&'a mut T> {
+        match *self {
+            MultiIterMut::One(ref mut x) => x.next(),
+            MultiIterMut::Many(ref mut x) => x.next(),
+        }
+    }
+}
+
+
+
+
 // GL
 
 pub struct GL {
@@ -616,6 +693,112 @@ impl GL {
         }
     }
 
+    fn load_shader_(ctx: &mut Inner,
+                    vert_name: &str,
+                    frag_name: &str,
+                    defs: &str,
+                    output_idx: Option<usize>,
+                    uniforms: &[gl::UniformSpec],
+                    arrays: &[gl::ArraySpec],
+                    textures: &[gl::TextureSpec]) -> Shader_ {
+        let name = if let Some(idx) = output_idx {
+            ctx.load_shader(vert_name,
+                            frag_name,
+                            &format!("#define OUTPUT_IDX {}\n{}", idx, defs))
+        } else {
+            ctx.load_shader(vert_name, frag_name, defs)
+        };
+        ctx.bind_shader(name);
+
+        let mut uniform_vec = Vec::with_capacity(uniforms.len());
+        for u in uniforms {
+            let loc = ctx.uniform_location(name, u.name);
+            uniform_vec.push(Uniform {
+                location: loc,
+                last_value: [f32::NAN; 4],
+            });
+        }
+
+        let num_attribs = arrays.iter().map(|a| a.attribs.len()).sum();
+        let mut attrib_vec = Vec::with_capacity(num_attribs);
+        let mut attrib_mask = 0;
+        for (i, arr) in arrays.iter().enumerate() {
+            for a in arr.attribs {
+                let loc = ctx.attrib_location(name, a.name);
+                if loc < 0 {
+                    println!("warning: attrib {} is unused", a.name);
+                    continue;
+                }
+                assert!(loc < 32);
+
+                attrib_mask |= 1 << loc;
+                attrib_vec.push(Attrib {
+                    location: loc,
+                    array_idx: i as u8,
+                    count: a.len,
+                    ty: a.ty,
+                    normalize: a.normalize,
+                    stride: arr.size as u8,
+                    offset: a.offset,
+                });
+            }
+        }
+
+        for (i, t) in textures.iter().enumerate() {
+            // Set the sampler for texture `i` to use texture image unit `i`.
+            let uniform_loc = ctx.uniform_location(name, t.name);
+            ctx.set_uniform_1i(uniform_loc, i as i32);
+        }
+
+        Shader_ {
+            name: name,
+
+            uniforms: uniform_vec.into_boxed_slice(),
+            attribs: attrib_vec.into_boxed_slice(),
+            attrib_mask: attrib_mask,
+        }
+    }
+
+    fn create_framebuffer_<F>(ctx: &mut Inner,
+                              mut save_renderbuffer: F,
+                              size: (u16, u16),
+                              color: &[gl::Attach<GL>],
+                              depth: &Option<gl::Attach<GL>>) -> Framebuffer_
+            where F: FnMut(Name<Renderbuffer>) {
+        let name = ctx.gen_framebuffer();
+        ctx.bind_framebuffer(name);
+
+        // Attach color textures
+        for (i, att) in color.iter().enumerate() {
+            match *att {
+                gl::Attach::Texture(ref tex) => {
+                    ctx.framebuffer_texture(tex.name, i as i8);
+                },
+                gl::Attach::Renderbuffer => {
+                    let rb_name = ctx.gen_renderbuffer(size, false);
+                    ctx.framebuffer_renderbuffer(rb_name, i as i8);
+                    save_renderbuffer(rb_name);
+                },
+            }
+        }
+
+        // Attach depth texture/renderbuffer
+        match *depth {
+            None => {},
+            Some(gl::Attach::Texture(tex)) => {
+                ctx.framebuffer_texture(tex.name, -1);
+            },
+            Some(gl::Attach::Renderbuffer) => {
+                let rb_name = ctx.gen_renderbuffer(size, true);
+                ctx.framebuffer_renderbuffer(rb_name, -1);
+                save_renderbuffer(rb_name);
+            },
+        }
+
+        Framebuffer_ {
+            name: name,
+        }
+    }
 }
 
 impl gl::Context for GL {
@@ -663,56 +846,22 @@ impl gl::Context for GL {
         let inner = self.inner.clone();
 
         self.inner.run(|ctx| {
-            let name = ctx.load_shader(vert_name, frag_name, defs);
-            ctx.bind_shader(name);
-
-            let mut uniform_vec = Vec::with_capacity(uniforms.len());
-            for u in uniforms {
-                let loc = ctx.uniform_location(name, u.name);
-                uniform_vec.push(Uniform {
-                    location: loc,
-                    last_value: [f32::NAN; 4],
-                });
-            }
-
-            let num_attribs = arrays.iter().map(|a| a.attribs.len()).sum();
-            let mut attrib_vec = Vec::with_capacity(num_attribs);
-            let mut attrib_mask = 0;
-            for (i, arr) in arrays.iter().enumerate() {
-                for a in arr.attribs {
-                    let loc = ctx.attrib_location(name, a.name);
-                    if loc < 0 {
-                        println!("warning: attrib {} is unused", a.name);
-                        continue;
-                    }
-                    assert!(loc < 32);
-
-                    attrib_mask |= 1 << loc;
-                    attrib_vec.push(Attrib {
-                        location: loc,
-                        array_idx: i as u8,
-                        count: a.len,
-                        ty: a.ty,
-                        normalize: a.normalize,
-                        stride: arr.size as u8,
-                        offset: a.offset,
-                    });
+            let multi = if ctx.has(WEBGL_draw_buffers) {
+                Multi::One(GL::load_shader_(ctx, vert_name, frag_name, defs, None,
+                                            uniforms, arrays, textures))
+            } else {
+                let mut ss = Vec::with_capacity(outputs.color_planes as usize);
+                for i in 0 .. outputs.color_planes as usize {
+                    ss.push(GL::load_shader_(ctx, vert_name, frag_name, defs, Some(i),
+                                             uniforms, arrays, textures));
                 }
-            }
-
-            for (i, t) in textures.iter().enumerate() {
-                // Set the sampler for texture `i` to use texture image unit `i`.
-                let uniform_loc = ctx.uniform_location(name, t.name);
-                ctx.set_uniform_1i(uniform_loc, i as i32);
-            }
+                Multi::Many(ss)
+            };
 
             Shader {
                 inner: inner,
-                name: name,
+                multi: multi,
 
-                uniforms: uniform_vec.into_boxed_slice(),
-                attribs: attrib_vec.into_boxed_slice(),
-                attrib_mask: attrib_mask,
                 array0_size: arrays[0].size,
                 num_arrays: arrays.len() as u8,
                 num_textures: textures.len() as u8,
@@ -758,47 +907,35 @@ impl gl::Context for GL {
                           depth: Option<gl::Attach<GL>>) -> Framebuffer {
         let inner = self.inner.clone();
         self.inner.run(|ctx| {
-            let name = ctx.gen_framebuffer();
-            ctx.bind_framebuffer(name);
-
             let mut renderbuffers = Vec::new();
 
-            // Attach color textures
-            for (i, att) in color.iter().enumerate() {
-                match *att {
-                    gl::Attach::Texture(ref tex) => {
-                        ctx.framebuffer_texture(tex.name, i as i8);
-                    },
-                    gl::Attach::Renderbuffer => {
-                        let name = ctx.gen_renderbuffer(size, false);
-                        ctx.framebuffer_renderbuffer(name, -1);
-                        renderbuffers.push(Renderbuffer {
-                            inner: inner.clone(),
-                            name: name,
-                        });
-                    },
+            let multi = if ctx.has(WEBGL_draw_buffers) {
+                Multi::One(GL::create_framebuffer_(ctx,
+                                                   |n| renderbuffers.push(Renderbuffer {
+                                                       inner: inner.clone(),
+                                                       name: n,
+                                                   }),
+                                                   size,
+                                                   color,
+                                                   &depth))
+            } else {
+                let mut fbs = Vec::with_capacity(color.len());
+                for i in 0 .. color.len() {
+                    fbs.push(GL::create_framebuffer_(ctx,
+                                                     |n| renderbuffers.push(Renderbuffer {
+                                                         inner: inner.clone(),
+                                                         name: n,
+                                                     }),
+                                                     size,
+                                                     &color[i .. i + 1],
+                                                     &depth))
                 }
-            }
-
-            // Attach depth texture/renderbuffer
-            match depth {
-                None => {},
-                Some(gl::Attach::Texture(tex)) => {
-                    ctx.framebuffer_texture(tex.name, -1);
-                },
-                Some(gl::Attach::Renderbuffer) => {
-                    let name = ctx.gen_renderbuffer(size, true);
-                    ctx.framebuffer_renderbuffer(name, -1);
-                    renderbuffers.push(Renderbuffer {
-                        inner: inner.clone(),
-                        name: name,
-                    });
-                },
-            }
+                Multi::Many(fbs)
+            };
 
             Framebuffer {
                 inner: inner,
-                name: name,
+                multi: multi,
 
                 size: size,
                 num_colors: color.len() as u8,
@@ -886,25 +1023,36 @@ struct Attrib {
 
 pub struct Shader {
     inner: InnerPtr,
-    name: Name<Shader>,
+    multi: Multi<Shader_>,
 
-    uniforms: Box<[Uniform]>,
-    attribs: Box<[Attrib]>,
-    attrib_mask: u32,
     array0_size: usize,
     num_arrays: u8,
     num_textures: u8,
 }
 
+struct Shader_ {
+    name: Name<Shader>,
+
+    uniforms: Box<[Uniform]>,
+    attribs: Box<[Attrib]>,
+    attrib_mask: u32,
+}
+
 impl Shader {
     fn draw(&mut self, args: &DrawArgs<GL>) {
+        assert!(args.arrays.len() == self.num_arrays as usize);
+        assert!(args.textures.len() == self.num_textures as usize);
+
         let mut inner = self.inner.clone();
         inner.run(|ctx| {
-            assert!(args.uniforms.len() == self.uniforms.len());
-            assert!(args.arrays.len() == self.num_arrays as usize);
-            assert!(args.textures.len() == self.num_textures as usize);
-
-            // Plane-independent setup
+            // WEBGL_draw_buffers woraround:
+            // Instead of drawing N color planes of a single framebuffer with a single shader, we
+            // have N single-plane framebuffers and N corresponding shaders.
+            //
+            // The drawing code here is split between Shader and Shader_.  The code in Shader sets
+            // up global state, such as the viewport and blend mode.  Shader_'s code handles the
+            // shader-specific parts, such as uniforms, which may have different locations in the
+            // different shader variants.
 
             if let Some(viewport) = args.viewport {
                 ctx.viewport(viewport);
@@ -913,22 +1061,6 @@ impl Shader {
                 ctx.viewport(Region::sized(V2::new(w as i32, h as i32)));
             } else {
                 // Dunno what to do.  Just leave it as it was, I guess?
-            }
-
-            ctx.set_vertex_attrib_mask(self.attrib_mask);
-            for a in self.attribs.iter() {
-                let buf_name = args.arrays[a.array_idx as usize].name;
-                ctx.bind_buffer(BufferTarget::Array, buf_name);
-                ctx.vertex_attrib_buffer(a.location,
-                                         a.count as usize,
-                                         a.ty,
-                                         a.normalize,
-                                         a.stride as usize,
-                                         a.offset as usize);
-            }
-
-            for (i, t) in args.textures.iter().enumerate() {
-                ctx.bind_texture(i, t.name);
             }
 
             let (start, count) =
@@ -941,26 +1073,57 @@ impl Shader {
             ctx.set_depth_test(args.depth_test);
             ctx.set_blend_mode(args.blend_mode);
 
-
-            // Plane-specific setup
-
-            ctx.bind_shader(self.name);
-
-            for (u, v) in self.uniforms.iter_mut().zip(args.uniforms.iter()) {
-                Shader::set_uniform_value(ctx, u, v);
+            for (i, t) in args.textures.iter().enumerate() {
+                ctx.bind_texture(i, t.name);
             }
+
 
             if let Some(output) = args.output {
-                ctx.bind_framebuffer(output.name);
+                for (s, fb) in self.multi.iter_mut().zip(output.multi.iter()) {
+                    ctx.bind_framebuffer(fb.name);
+                    s.draw(ctx, args, start, count);
+                }
             } else {
+                assert!(self.multi.len() == 1);
                 ctx.bind_framebuffer(NO_FRAMEBUFFER);
+                self.multi.first_mut().draw(ctx, args, start, count);
             }
-
-
-            // Draw!
-
-            ctx.draw_triangles(start, count);
         });
+    }
+}
+
+impl Shader_ {
+    fn draw(&mut self,
+            ctx: &mut Inner,
+            args: &DrawArgs<GL>,
+            start: usize,
+            count: usize) {
+        assert!(args.uniforms.len() == self.uniforms.len());
+
+        // Plane-specific setup
+
+        ctx.bind_shader(self.name);
+
+        for (u, v) in self.uniforms.iter_mut().zip(args.uniforms.iter()) {
+            Shader_::set_uniform_value(ctx, u, v);
+        }
+
+        ctx.set_vertex_attrib_mask(self.attrib_mask);
+        for a in self.attribs.iter() {
+            let buf_name = args.arrays[a.array_idx as usize].name;
+            ctx.bind_buffer(BufferTarget::Array, buf_name);
+            ctx.vertex_attrib_buffer(a.location,
+                                     a.count as usize,
+                                     a.ty,
+                                     a.normalize,
+                                     a.stride as usize,
+                                     a.offset as usize);
+        }
+
+
+        // Draw!
+
+        ctx.draw_triangles(start, count);
     }
 
     fn set_uniform_value(ctx: &mut Inner, u: &mut Uniform, v: &UniformValue) {
@@ -1001,7 +1164,7 @@ impl Shader {
 
 impl gl::Shader for Shader {
     fn uniforms_len(&self) -> usize {
-        self.uniforms.len()
+        self.multi.first().uniforms.len()
     }
 
     fn arrays_len(&self) -> usize {
@@ -1015,9 +1178,11 @@ impl gl::Shader for Shader {
 
 impl Drop for Shader {
     fn drop(&mut self) {
-        let name = self.name;
-        self.inner.run(move |ctx| {
-            ctx.delete_shader(name);
+        let mut inner = self.inner.clone();
+        inner.run(move |ctx| {
+            for s in self.multi.iter() {
+                ctx.delete_shader(s.name);
+            }
         });
     }
 }
@@ -1056,9 +1221,16 @@ impl Drop for Texture {
 }
 
 
+fn iter_names<'a, T>(first: &'a Name<T>,
+                     rest: &'a [Name<T>])
+                     -> iter::Chain<iter::Once<&'a Name<T>>, slice::Iter<'a, Name<T>>> {
+    iter::once(first).chain(rest.iter())
+}
+
+
 pub struct Framebuffer {
     inner: InnerPtr,
-    name: Name<Framebuffer>,
+    multi: Multi<Framebuffer_>,
 
     size: (u16, u16),
     num_colors: u8,
@@ -1067,6 +1239,10 @@ pub struct Framebuffer {
     // For ownership purposes only.  The RBs are never used once the FB has been constructed, but
     // we need to keep them somewhere and ensure they get destroyed at an appropriate time.
     renderbuffers: Box<[Renderbuffer]>,
+}
+
+pub struct Framebuffer_ {
+    name: Name<Framebuffer>,
 }
 
 impl gl::Framebuffer<GL> for Framebuffer {
@@ -1078,21 +1254,25 @@ impl gl::Framebuffer<GL> for Framebuffer {
     fn has_depth_buffer(&self) -> bool { self.has_depth }
 
     fn clear(&mut self, color: (u8, u8, u8, u8)) {
-        let name = self.name;
-        self.inner.run(|ctx| {
-            ctx.bind_framebuffer(name);
+        let mut inner = self.inner.clone();
+        inner.run(|ctx| {
             ctx.clear_color(color);
             ctx.clear_depth(0.0);
-            ctx.clear();
+            for fb in self.multi.iter() {
+                ctx.bind_framebuffer(fb.name);
+                ctx.clear();
+            }
         });
     }
 }
 
 impl Drop for Framebuffer {
     fn drop(&mut self) {
-        let name = self.name;
-        self.inner.run(move |ctx| {
-            ctx.delete_framebuffer(name);
+        let mut inner = self.inner.clone();
+        inner.run(move |ctx| {
+            for fb in self.multi.iter() {
+                ctx.delete_framebuffer(fb.name);
+            }
         });
     }
 }
