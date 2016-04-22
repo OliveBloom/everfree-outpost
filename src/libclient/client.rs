@@ -320,6 +320,14 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::inventory();
     }
 
+    pub fn get_active_item(&self) -> u16 {
+        self.misc.hotbar.active_item().unwrap_or(0)
+    }
+
+    pub fn get_active_ability(&self) -> u16 {
+        self.misc.hotbar.active_ability().unwrap_or(0)
+    }
+
 
     // Physics
 

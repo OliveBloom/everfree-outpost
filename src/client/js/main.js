@@ -685,10 +685,10 @@ function setupKeyHandler() {
                     conn.sendInteract(time);
                     break;
                 case 'use_item':
-                    conn.sendUseItem(time, ui_gl.hotbar.getItem());
+                    conn.sendUseItem(time, asm_client.getActiveItem());
                     break;
                 case 'use_ability':
-                    conn.sendUseAbility(time, ui_gl.hotbar.getAbility());
+                    conn.sendUseAbility(time, asm_client.getActiveAbility());
                     break;
 
                 default:

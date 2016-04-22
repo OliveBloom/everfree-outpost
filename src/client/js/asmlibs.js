@@ -566,6 +566,14 @@ DynAsm.prototype.openInventoryDialog = function() {
     return this._raw['open_inventory_dialog'](this.client);
 };
 
+DynAsm.prototype.getActiveItem = function() {
+    return this._raw['get_active_item'](this.client);
+};
+
+DynAsm.prototype.getActiveAbility = function() {
+    return this._raw['get_active_ability'](this.client);
+};
+
 DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
     var region = this._stackAlloc(Int32Array, 6);
     store_vec(region, 0, base);
