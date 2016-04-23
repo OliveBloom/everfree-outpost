@@ -8,12 +8,13 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 
 use Time;
 use data::Data;
-use entity::Entities;
+use entity::{Entities, EntityId};
 use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
 use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, Feature, FeatureStatus};
+use predict::Predictor;
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -331,9 +332,13 @@ impl<GL: Context> Renderer<GL> {
     pub fn update_entity_geometry(&mut self,
                                   data: &Data,
                                   entities: &Entities,
+                                  predictor: &Predictor,
                                   bounds: Region<V2>,
-                                  now: i32) {
-        let mut gen = entity::GeomGen::new(entities, data, bounds, now);
+                                  now: Time,
+                                  future: Time,
+                                  pawn_id: Option<EntityId>) {
+        let mut gen = entity::GeomGen::new(entities, predictor, data,
+                                           bounds, now, future, pawn_id);
         self.entity_buffer.alloc(gen.count_verts() * mem::size_of::<entity::Vertex>());
         let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
         load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);

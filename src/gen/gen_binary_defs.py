@@ -11,7 +11,7 @@ def build_parser():
             choices=('blocks', 'item_defs', 'item_strs',
                 'templates', 'template_parts', 'template_verts', 'template_shapes',
                 'animations', 'sprite_layers', 'sprite_graphics',
-                'pony_layer_table'),
+                'extras'),
             help='convert block defs')
 
     args.add_argument('input', metavar='FILE_IN.json',
@@ -209,11 +209,53 @@ def convert_sprite_graphics(j):
         b.extend(c.convert(obj))
     return b
 
-def convert_pony_layer_table(j):
+def convert_extras(j):
     b = bytearray()
-    for x in j['pony_layer_table']:
-        b.extend(struct.pack('B', x))
-    return b
+    index = []
+    def section(align=4):
+        if len(index) > 0:
+            # Record end of previous section
+            index.append(len(b))
+        while len(b) % align != 0:
+            b.append(0)
+        index.append(len(b))
+
+    # 0 - pony_layer_table
+    section()
+    b.extend(j['pony_layer_table'])
+
+    # 1 - physics_anim_table
+    section()
+    for row in j['physics_anim_table']:
+        if row is None:
+            b.extend(struct.pack('<H', j['default_anim']) * 8)
+        else:
+            assert len(row) == 8
+            for x in row:
+                b.extend(struct.pack('<H', x))
+
+    # 2 - anim_dir_table
+    section()
+    max_idx = max(int(k) for k in j['anim_dir_table'].keys())
+    lst = [255] * (max_idx + 1)
+    for k,v in j['anim_dir_table'].items():
+        lst[int(k)] = v
+    b.extend(lst)
+
+    # 3 - default_anims
+    section()
+    b.extend(struct.pack('<H', j['default_anim']))
+    b.extend(struct.pack('<H', j['editor_anim']))
+
+    # End of sections
+
+    index.append(len(b))
+
+    header_bytes = struct.pack('<II', len(index) // 2, 0)
+    offset = len(header_bytes) + 4 * len(index)
+    index_bytes = b''.join(struct.pack('<I', x + offset) for x in index)
+
+    return header_bytes + index_bytes + b
 
 def main():
     parser = build_parser()
@@ -242,8 +284,8 @@ def main():
         b = convert_sprite_layers(j)
     elif args.mode == 'sprite_graphics':
         b = convert_sprite_graphics(j)
-    elif args.mode == 'pony_layer_table':
-        b = convert_pony_layer_table(j)
+    elif args.mode == 'extras':
+        b = convert_extras(j)
     else:
         parser.error('must provide flag to indicate input type')
 

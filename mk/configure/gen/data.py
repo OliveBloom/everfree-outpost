@@ -143,7 +143,7 @@ def pack():
                         'structures', 'structure_parts',
                         'structure_verts', 'structure_shapes',
                         'animations', 'sprite_layers', 'sprite_graphics',
-                        'pony_layer_table'))
+                        'extras'))
 
     return template('''
         rule build_pack

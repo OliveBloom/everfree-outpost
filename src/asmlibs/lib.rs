@@ -274,18 +274,12 @@ pub struct CollideResult {
 }
 
 #[no_mangle]
-pub extern fn collide(client: &Client,
-                      input: &CollideArgs,
-                      output: &mut CollideResult) {
-    let (pos, time) = client.collide(input.pos, input.size, input.velocity);
-    output.pos = pos;
-    output.time = time;
-}
-
-#[no_mangle]
-pub extern fn find_ceiling(client: &Client,
-                           pos: &V3) -> i32 {
-    client.find_ceiling(*pos >> TILE_BITS)
+pub extern fn feed_input(client: &mut Client,
+                         time: i32,
+                         dir_x: i32,
+                         dir_y: i32,
+                         dir_z: i32) {
+    client.feed_input(time, V3::new(dir_x, dir_y, dir_z));
 }
 
 
@@ -311,8 +305,9 @@ unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
 
 #[no_mangle]
 pub unsafe extern fn render_frame(client: &mut Client,
-                                  now: i32) {
-    client.render_frame(now);
+                                  now: i32,
+                                  future: i32) {
+    client.render_frame(now, future);
 }
 
 #[no_mangle]

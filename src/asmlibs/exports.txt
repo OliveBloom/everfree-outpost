@@ -30,8 +30,7 @@ open_inventory_dialog
 get_active_item
 get_active_ability
 load_terrain_chunk
-collide
-find_ceiling
+feed_input
 render_frame
 resize_window
 client_bench

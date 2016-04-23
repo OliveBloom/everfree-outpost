@@ -1,4 +1,6 @@
 use std::prelude::v1::*;
+use std::mem;
+use std::slice;
 
 use physics::Shape;
 use physics::v3::V3;
@@ -65,7 +67,7 @@ pub struct Data {
     pub animations: Box<[Animation]>,
     pub sprite_layers: Box<[SpriteLayer]>,
     pub sprite_graphics: Box<[SpriteGraphics]>,
-    pub pony_layer_table: Box<[u8]>,
+    extras: Box<[u8]>,
 }
 
 impl Data {
@@ -79,7 +81,7 @@ impl Data {
                animations: Box<[Animation]>,
                sprite_layers: Box<[SpriteLayer]>,
                sprite_graphics: Box<[SpriteGraphics]>,
-               pony_layer_table: Box<[u8]>) -> Data {
+               extras: Box<[u8]>) -> Data {
         Data {
             blocks: blocks,
             item_strs: item_strs,
@@ -91,7 +93,7 @@ impl Data {
             animations: animations,
             sprite_layers: sprite_layers,
             sprite_graphics: sprite_graphics,
-            pony_layer_table: pony_layer_table,
+            extras: extras,
         }
     }
 
@@ -128,4 +130,39 @@ impl Data {
         }
         None
     }
+
+    fn extras_header(&self) -> (u32, u32) {
+        let hdr = unsafe { cast_bytes(&self.extras[0 .. 8]) };
+        assert!(hdr.len() == 1);
+        hdr[0]
+    }
+
+    fn raw_extra(&self, i: usize) -> &[u8] {
+        let (index_size, _) = self.extras_header();
+        let byte_len = mem::size_of::<(u32, u32)>() * index_size as usize;
+        let index: &[(u32, u32)] = unsafe { cast_bytes(&self.extras[8 .. 8 + byte_len]) };
+        let (start, end) = index[i];
+        &self.extras[start as usize .. end as usize]
+    }
+
+    pub fn pony_layer_table(&self) -> &[u8] {
+        self.raw_extra(PONY_LAYER_TABLE_IDX)
+    }
+
+    pub fn physics_anim_table(&self) -> &[[u16; 8]] {
+        unsafe { cast_bytes(self.raw_extra(PHYSICS_ANIM_TABLE_IDX)) }
+    }
+
+    pub fn anim_dir_table(&self) -> &[u8] {
+        self.raw_extra(ANIM_DIR_TABLE_IDX)
+    }
+}
+
+const PONY_LAYER_TABLE_IDX: usize =     0;
+const PHYSICS_ANIM_TABLE_IDX: usize =   1;
+const ANIM_DIR_TABLE_IDX: usize =       2;
+
+unsafe fn cast_bytes<T>(b: &[u8]) -> &[T] {
+    slice::from_raw_parts(b.as_ptr() as *const T,
+                          b.len() / mem::size_of::<T>())
 }

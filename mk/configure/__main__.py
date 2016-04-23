@@ -308,8 +308,7 @@ if __name__ == '__main__':
         data.binary_defs('$b_data/animations_client.json', 'animations'),
         data.binary_defs('$b_data/sprite_layers_client.json', 'sprite_layers'),
         data.binary_defs('$b_data/sprite_graphics_client.json', 'sprite_graphics'),
-        data.binary_defs('$b_data/extras_client.json', 'pony_layer_table',
-            out_file='$b_data/pony_layer_table_client.bin'),
+        data.binary_defs('$b_data/extras_client.json', 'extras'),
         data.pack(),
         data.credits('$b_data/credits.html'),
 

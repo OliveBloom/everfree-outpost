@@ -4,9 +4,10 @@ use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
-use entity::Entities;
+use entity::{Entities, EntityId, Motion};
 use fonts::{self, FontMetricsExt};
 use platform::gl;
+use predict::Predictor;
 use terrain::LOCAL_BITS;
 use util;
 
@@ -65,9 +66,12 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
 
 pub struct GeomGen<'a> {
     entities: &'a Entities,
+    predictor: &'a Predictor,
     data: &'a Data,
     bounds: Region<V2>,
     now: i32,
+    future: i32,
+    pawn_id: Option<EntityId>,
     next: u32,
 }
 
@@ -75,18 +79,24 @@ const LOCAL_PX_MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
 
 impl<'a> GeomGen<'a> {
     pub fn new(entities: &'a Entities,
+               predictor: &'a Predictor,
                data: &'a Data,
                chunk_bounds: Region<V2>,
-               now: i32) -> GeomGen<'a> {
+               now: i32,
+               future: i32,
+               pawn_id: Option<EntityId>) -> GeomGen<'a> {
         let bounds = chunk_bounds * scalar(CHUNK_SIZE * TILE_SIZE);
         let bounds = Region::new(bounds.min - scalar(128),
                                  bounds.max);
 
         GeomGen {
             entities: entities,
+            predictor: predictor,
             data: data,
             bounds: bounds,
             now: now,
+            future: future,
+            pawn_id: pawn_id,
             next: 0,
         }
     }
@@ -117,8 +127,13 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
         let mut idx = 0;
         for (&id, e) in self.entities.iter_from(self.next) {
             self.next = id;
+            let is_pawn = Some(id) == self.pawn_id;
 
-            let pos = e.pos(self.now);
+            let pos = if !is_pawn {
+                e.pos(self.now)
+            } else {
+                self.predictor.motion().pos(self.future)
+            };
             if !util::contains_wrapped(self.bounds, pos.reduce(), scalar(LOCAL_PX_MASK)) {
                 // Not visible
                 continue;
@@ -129,14 +144,17 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 return (idx, true);
             }
 
-            let a = &self.data.animations[e.motion.anim_id as usize];
+            let anim_id =
+                if !is_pawn { e.motion.anim_id }
+                else { self.predictor.motion().anim_id };
+            let a = &self.data.animations[anim_id as usize];
 
             // Top-left corner of the output rect
             let dest_x = (pos.x - 32) as u16;
             let dest_y = (pos.y - pos.z - 64) as u16;
 
             for_each_layer(e.appearance, |layer_table_idx, color| {
-                let layer_idx = self.data.pony_layer_table[layer_table_idx];
+                let layer_idx = self.data.pony_layer_table()[layer_table_idx];
                 let l = &self.data.sprite_layers[layer_idx as usize];
                 let g = &self.data.sprite_graphics[(l.gfx_start + a.local_id) as usize];
 

@@ -678,6 +678,8 @@ function setupKeyHandler() {
 
         var arrival = timing.nextArrival() + Config.input_delay.get();
         conn.sendInput(timing.encodeSend(arrival), bits);
+
+        asm_client.feedInput(arrival, target_velocity);
     }
 
     function alwaysStop(evt) {
@@ -905,5 +907,6 @@ function frame(ac, client_now) {
     }
 
     var now = timing.visibleNow();
-    asm_client.renderFrame(now);
+    var future = now + timing.ping;
+    asm_client.renderFrame(now, future);
 }

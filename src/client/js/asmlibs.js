@@ -443,7 +443,7 @@ DynAsm.prototype.initClient = function(gl, assets) {
     load_blob(assets['animation_defs_bin']);
     load_blob(assets['sprite_layer_defs_bin']);
     load_blob(assets['sprite_graphics_defs_bin']);
-    load_blob(assets['pony_layer_table_bin']);
+    load_blob(assets['extras_bin']);
 
     // Item names get custom handling
 
@@ -625,15 +625,8 @@ DynAsm.prototype.collide = function(pos, size, velocity) {
     return result;
 };
 
-DynAsm.prototype.findCeiling = function(pos) {
-    var vec = this._stackAlloc(Int32Array, 3);
-    store_vec(vec, 0, pos);
-
-    var result = this._raw['find_ceiling'](this.client, vec.byteOffset);
-
-    this._stackFree(vec);
-
-    return result;
+DynAsm.prototype.feedInput = function(time, dir) {
+    this._raw['feed_input'](this.client, time, dir.x, dir.y, dir.z);
 };
 
 DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
@@ -644,8 +637,8 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.renderFrame = function(now) {
-    this._raw['render_frame'](this.client, now);
+DynAsm.prototype.renderFrame = function(now, future) {
+    this._raw['render_frame'](this.client, now, future);
 };
 
 DynAsm.prototype.resizeWindow = function(width, height) {

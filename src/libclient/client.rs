@@ -25,6 +25,7 @@ use graphics::renderer::Scene;
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use misc::Misc;
+use predict::Predictor;
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -41,6 +42,7 @@ pub struct Client<'d, P: Platform> {
     structures: Structures,
     entities: Entities,
     inventories: Inventories,
+    predictor: Predictor,
     misc: Misc,
 
     ui: UI,
@@ -68,6 +70,7 @@ impl<'d, P: Platform> Client<'d, P> {
             structures: Structures::new(),
             entities: Entities::new(),
             inventories: Inventories::new(),
+            predictor: Predictor::new(),
             misc: Misc::new(),
 
             ui: UI::new(),
@@ -229,7 +232,12 @@ impl<'d, P: Platform> Client<'d, P> {
                          id: EntityId,
                          when: Time,
                          motion: Motion) {
-        self.entities.schedule_update(id, when, motion);
+        self.entities.schedule_update(id, when, motion.clone());
+
+        if Some(id) == self.pawn_id {
+            // TODO: not sure it's correct to apply this instantly
+            self.predictor.canonical_motion(motion);
+        }
     }
 
     pub fn set_pawn_id(&mut self,
@@ -331,18 +339,14 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Physics
 
-    pub fn collide(&self, pos: V3, size: V3, velocity: V3) -> (V3, i32) {
-        physics::collide(&*self.terrain_shape, pos, size, velocity)
-    }
-
-    pub fn find_ceiling(&self, pos: V3) -> i32 {
-        self.terrain_shape.find_ceiling(pos)
+    pub fn feed_input(&mut self, time: Time, dir: V3) {
+        self.predictor.input(time, dir, &*self.terrain_shape, &self.data);
     }
 
 
     // Graphics
 
-    fn prepare(&mut self, scene: &Scene) {
+    fn prepare(&mut self, scene: &Scene, future: Time) {
         self.renderer.update_framebuffers(self.platform.gl(), &scene);
 
         let bounds = Region::sized(scene.camera_size) + scene.camera_pos;
@@ -368,7 +372,13 @@ impl<'d, P: Platform> Client<'d, P> {
         // Entities can extend in any direction from their reference point.
         let entity_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
                                         chunk_bounds.max + V2::new(1, 1));
-        self.renderer.update_entity_geometry(&self.data, &self.entities, entity_bounds, scene.now);
+        self.renderer.update_entity_geometry(&self.data,
+                                             &self.entities,
+                                             &self.predictor,
+                                             entity_bounds,
+                                             scene.now,
+                                             future,
+                                             self.pawn_id);
 
         // Also refresh the UI buffer.
         let (geom, cursor) = self.with_ui_dyn(|ui, dyn| {
@@ -398,17 +408,19 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.load_cavern_map(&*grid);
     }
 
-    pub fn render_frame(&mut self, now: Time) {
+    pub fn render_frame(&mut self, now: Time, future: Time) {
+        self.predictor.update(future, &*self.terrain_shape, &self.data);
+
         let pos =
-            if let Some(e) = self.pawn_id.and_then(|id| self.entities.get(id)) {
-                e.pos(now)
+            if self.pawn_id.is_some() {
+                self.predictor.motion().pos(future)
             } else {
                 V3::new(4096, 4096, 0)
             };
         let scene = Scene::new(now, self.window_size, self.view_size, pos);
 
         self.entities.apply_updates(scene.now);
-        self.prepare(&scene);
+        self.prepare(&scene, future);
 
         self.renderer.render(&scene);
     }
