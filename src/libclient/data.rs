@@ -104,8 +104,6 @@ macro_rules! gen_data {
                                                          header.num_sections as usize);
 
                     for s in sections {
-                        println!("loading section: {:?}, {} * {} @ {:x}",
-                                 s.name, s.item_count, s.item_size, s.offset);
                         match &s.name {
                             b"Strings\0" => {
                                 assert!(s.item_size == 1);

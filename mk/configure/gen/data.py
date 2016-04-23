@@ -123,7 +123,10 @@ def process():
 def binary_defs(out_file):
     out_file = out_file or os.path.splitext(src_file)[0] + '.bin'
 
-    deps = ('$b_data/stamp',)
+    deps = (
+            '$b_data/stamp',
+            '$b_data/day_night.json',
+            )
 
     return template('''
         rule gen_binary_defs

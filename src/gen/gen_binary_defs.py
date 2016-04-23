@@ -289,6 +289,27 @@ class BinaryDefs:
         # XEdtAnim - editor_anim
         self.pack_array(b'XEdtAnim', [j['editor_anim']], '<H')
 
+    def convert_day_night(self):
+        j = self.load('day_night.json')
+
+        cut_0 = 0
+        colors = [(255, 255, 255)]
+        cut_1 = len(colors)
+        colors.extend(reversed(j['sunset']))
+        cut_2 = len(colors)
+        colors.extend(j['sunrise'])
+        cut_3 = len(colors)
+
+        phases = [
+                (j['day_end'],      cut_0,      cut_1),     # day
+                (j['night_start'],  cut_1,      cut_2 - 1), # sunset
+                (j['night_end'],    cut_2 - 1,  cut_2),     # night
+                (24000,             cut_2,      cut_3 - 1), # sunrise
+                ]
+
+        self.pack_array(b'DyNtPhas', phases, '<HBB')
+        self.pack_array(b'DyNtColr', colors, '3B')
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -300,6 +321,7 @@ def main():
     bd.convert_structures()
     bd.convert_sprites()
     bd.convert_extras()
+    bd.convert_day_night()
 
     bd.finish()
 
