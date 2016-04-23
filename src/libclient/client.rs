@@ -125,7 +125,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Update self.terrain_shape
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
                            (cpos * scalar(CHUNK_SIZE)).extend(0);
-        let block_data = &self.data.blocks;
+        let block_data = self.data.blocks();
         self.terrain_shape.set_shape_in_region_by(chunk_bounds, 0, |pos| {
             let b = blocks[chunk_bounds.index(pos)];
             block_data[b as usize].shape
@@ -144,7 +144,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let size = util::unpack_v3(t.size);
         let bounds = Region::new(pos, pos + size);
         let base = t.shape_idx as usize;
-        let shape = &self.data.template_shapes[base .. base + bounds.volume() as usize];
+        let shape = &self.data.template_shapes()[base .. base + bounds.volume() as usize];
         self.terrain_shape.set_shape_in_region(bounds, 1 + t.layer as usize, shape);
     }
 
@@ -166,7 +166,7 @@ impl<'d, P: Platform> Client<'d, P> {
         self.structures.insert(id, pos, template_id, oneshot_start);
 
         // Update self.terrain_cache
-        let t = &self.data.templates[template_id as usize];
+        let t = self.data.template(template_id);
         self.add_structure_shape(t, pos);
 
         // Invalidate cached geometry
@@ -182,7 +182,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let s = self.structures.remove(id);
 
         // Update self.terrain_cache
-        let t = &self.data.templates[s.template_id as usize];
+        let t = self.data.template(s.template_id);
         self.remove_structure_shape(t, s.pos);
 
         // Invalidate cached geometry
@@ -199,9 +199,9 @@ impl<'d, P: Platform> Client<'d, P> {
         let (pos, old_t) = {
             let s = &self.structures[id];
             (s.pos,
-             &self.data.templates[template_id as usize])
+             self.data.template(template_id))
         };
-        let new_t = &self.data.templates[template_id as usize];
+        let new_t = self.data.template(template_id);
 
         // Update self.structures
         self.structures.replace(id, template_id, oneshot_start);

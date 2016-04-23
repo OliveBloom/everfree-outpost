@@ -58,28 +58,11 @@ pub unsafe extern fn asmlibs_init() {
 }
 
 #[no_mangle]
-pub unsafe extern fn data_init(blobs: &[(*mut u8, usize); 11],
+pub unsafe extern fn data_init(blob_ptr: *mut u8,
+                               blob_len: usize,
                                out: *mut Data) {
-    let blocks =            make_boxed_slice(blobs[0].0 as *mut _, blobs[0].1);
-    let item_defs =         make_boxed_slice(blobs[1].0 as *mut _, blobs[1].1);
-    let item_strs =         make_boxed_slice(blobs[2].0 as *mut _, blobs[2].1);
-    let templates =         make_boxed_slice(blobs[3].0 as *mut _, blobs[3].1);
-    let template_parts =    make_boxed_slice(blobs[4].0 as *mut _, blobs[4].1);
-    let template_verts =    make_boxed_slice(blobs[5].0 as *mut _, blobs[5].1);
-    let template_shapes =   make_boxed_slice(blobs[6].0 as *mut _, blobs[6].1);
-    let animations =        make_boxed_slice(blobs[7].0 as *mut _, blobs[7].1);
-    let sprite_layers =     make_boxed_slice(blobs[8].0 as *mut _, blobs[8].1);
-    let sprite_graphics =   make_boxed_slice(blobs[9].0 as *mut _, blobs[9].1);
-    let pony_layer_table =  make_boxed_slice(blobs[10].0 as *mut _, blobs[10].1);
-
-    let item_strs = String::from_utf8(item_strs.into_vec()).unwrap().into_boxed_str();
-
-    ptr::write(out, Data::new(
-            blocks, item_defs, item_strs,
-            templates, template_parts, template_verts, template_shapes,
-            animations, sprite_layers, sprite_graphics,
-            pony_layer_table,
-            ));
+    let blob = make_boxed_slice(blob_ptr, blob_len);
+    ptr::write(out, Data::new(blob));
 }
 
 #[no_mangle]

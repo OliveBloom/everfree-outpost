@@ -426,40 +426,17 @@ DynAsm.prototype.initClient = function(gl, assets) {
     // AsmGl must be initialized before calling `client_init`.
     this.asmgl.init(gl, assets);
 
-    var blobs = this._stackAlloc(Int32Array, 11 * 2);
-    var idx = 0;
-    var this_ = this;
-    var load_blob = function(x) {
-        var len = x.byteLength;
-        var addr = this_._raw['asmmalloc_alloc'](len, 4);
-        this_._memcpy(addr, x);
-        blobs[idx++] = addr;
-        blobs[idx++] = len;
-    };
-
-    load_blob(assets['block_defs_bin']);
-    load_blob(assets['item_defs_bin']);
-    load_blob(assets['item_strs_bin']);
-    load_blob(assets['template_defs_bin']);
-    load_blob(assets['template_part_defs_bin']);
-    load_blob(assets['template_vert_defs_bin']);
-    load_blob(assets['template_shape_defs_bin']);
-    load_blob(assets['animation_defs_bin']);
-    load_blob(assets['sprite_layer_defs_bin']);
-    load_blob(assets['sprite_graphics_defs_bin']);
-    load_blob(assets['extras_bin']);
-
-    // Item names get custom handling
-
+    var blob = assets['client_data'];
+    var len = blob.byteLength;
+    var ptr = this._raw['asmmalloc_alloc'](len, 8);
+    this._memcpy(ptr, blob);
 
     this.data = this._raw['asmmalloc_alloc'](this.SIZEOF.Data, this.SIZEOF.DataAlignment);
-    // NB: takes ownership of `blobs`
-    this._raw['data_init'](blobs.byteOffset, this.data);
+    // NB: takes ownership of `ptr`
+    this._raw['data_init'](ptr, len, this.data);
 
     this.client = this._raw['asmmalloc_alloc'](this.SIZEOF.Client, this.SIZEOF.ClientAlignment);
     this._raw['client_init'](this.data, this.client);
-
-    this._stackFree(blobs);
 };
 
 DynAsm.prototype.resetClient = function() {

@@ -267,7 +267,7 @@ impl<GL: Context> Renderer<GL> {
             let mut vert_count = 0;
             for cpos in bounds.points() {
                 let chunk_idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
-                vert_count += terrain::GeomGen::new(&data.blocks,
+                vert_count += terrain::GeomGen::new(data.blocks(),
                                                     &chunks[chunk_idx],
                                                     cpos).count_verts();
             }
@@ -278,7 +278,7 @@ impl<GL: Context> Renderer<GL> {
             let mut offset = 0;
             for cpos in bounds.points() {
                 let chunk_idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
-                let mut gen = terrain::GeomGen::new(&data.blocks,
+                let mut gen = terrain::GeomGen::new(data.blocks(),
                                                     &chunks[chunk_idx],
                                                     cpos);
                 load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut offset);
@@ -321,7 +321,7 @@ impl<GL: Context> Renderer<GL> {
                                  structures: &Structures,
                                  bounds: Region<V2>) {
         self.light_geom.update(bounds, |buffer, _| {
-            let mut gen = light::GeomGen::new(structures, &data.templates, bounds);
+            let mut gen = light::GeomGen::new(structures, data.templates(), bounds);
             buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
             load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut 0);

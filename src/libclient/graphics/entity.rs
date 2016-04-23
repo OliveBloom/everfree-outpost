@@ -110,8 +110,6 @@ impl<'a> GeomGen<'a> {
                 continue;
             }
 
-            //let t = &self.data.templates[s.template_id as usize];
-            //count += t.vert_count as usize;
             let num_quads = count_layers(e.appearance) + name_len(&e.name);
             count += 6 * num_quads;
         }
@@ -147,7 +145,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             let anim_id =
                 if !is_pawn { e.motion.anim_id }
                 else { self.predictor.motion().anim_id };
-            let a = &self.data.animations[anim_id as usize];
+            let a = self.data.animation(anim_id);
 
             // Top-left corner of the output rect
             let dest_x = (pos.x - 32) as u16;
@@ -155,8 +153,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
             for_each_layer(e.appearance, |layer_table_idx, color| {
                 let layer_idx = self.data.pony_layer_table()[layer_table_idx];
-                let l = &self.data.sprite_layers[layer_idx as usize];
-                let g = &self.data.sprite_graphics[(l.gfx_start + a.local_id) as usize];
+                let l = self.data.sprite_layer(layer_idx);
+                let g = self.data.sprite_graphics_item(l.gfx_start + a.local_id);
 
                 for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
                     let dest_pos =

@@ -104,7 +104,7 @@ impl<'a> GeomGen<'a> {
                 continue;
             }
 
-            let t = &self.data.templates[s.template_id as usize];
+            let t = self.data.template(s.template_id);
             count += t.vert_count as usize;
         }
         count
@@ -120,7 +120,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
         for (&id, s) in self.structures.iter_from(self.next) {
             self.next = id;
 
-            let t = &self.data.templates[s.template_id as usize];
+            let t = self.data.template(s.template_id);
 
             let s_pos = V3::new(s.pos.0 as i32,
                                 s.pos.1 as i32,
@@ -140,10 +140,10 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
             let i0 = t.part_idx as usize;
             let i1 = i0 + t.part_count as usize;
-            for p in &self.data.template_parts[i0 .. i1] {
+            for p in &self.data.template_parts()[i0 .. i1] {
                 let j0 = p.vert_idx as usize;
                 let j1 = j0 + p.vert_count as usize;
-                for v in &self.data.template_verts[j0 .. j1] {
+                for v in &self.data.template_verts()[j0 .. j1] {
                     buf[idx] = Vertex {
                         vert_offset: (v.x, v.y, v.z),
                         anim_length: p.anim_length,

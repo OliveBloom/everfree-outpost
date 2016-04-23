@@ -39,17 +39,7 @@ def main(src_dir, build_dir, out_file):
     add('json', 'day_night',            build('day_night.json'))
     add('json', 'ui_atlas_parts',       build('ui_atlas.json'))
 
-    add('binary', 'block_defs_bin',             build('blocks_client.bin'))
-    add('binary', 'item_defs_bin',              build('item_defs_client.bin'))
-    add('binary', 'item_strs_bin',              build('item_strs_client.bin'))
-    add('binary', 'template_defs_bin',          build('structures_client.bin'))
-    add('binary', 'template_part_defs_bin',     build('structure_parts_client.bin'))
-    add('binary', 'template_vert_defs_bin',     build('structure_verts_client.bin'))
-    add('binary', 'template_shape_defs_bin',    build('structure_shapes_client.bin'))
-    add('binary', 'animation_defs_bin',         build('animations_client.bin'))
-    add('binary', 'sprite_layer_defs_bin',      build('sprite_layers_client.bin'))
-    add('binary', 'sprite_graphics_defs_bin',   build('sprite_graphics_client.bin'))
-    add('binary', 'extras_bin',                 build('extras_client.bin'))
+    add('binary', 'client_data',        build('client_data.bin'))
 
     add('text', 'sprite.vert',          src('assets/shaders/sprite.vert'))
     add('text', 'sprite.frag',          src('assets/shaders/sprite.frag'))

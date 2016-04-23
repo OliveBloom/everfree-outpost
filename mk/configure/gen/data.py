@@ -32,10 +32,6 @@ def rules(i):
             command = $python3 $root/src/gen/gen_server_json.py >$out
             description = GEN $out
 
-        rule gen_binary_defs
-            command = $python3 $root/src/gen/gen_binary_defs.py --mode $mode $in $out
-            description = GEN $out
-
         rule gen_credits
             command = $python3 $root/src/gen/gen_credits.py $root $out $dep_files
             description = GEN $out
@@ -91,15 +87,6 @@ def ui_atlas(out_dir, src_dir):
             out_dir = %out_dir
     ''', **locals())
 
-def binary_defs(src_file, mode, out_file=None):
-    out_file = out_file or os.path.splitext(src_file)[0] + '.bin'
-
-    return template('''
-        build %out_file: gen_binary_defs %src_file $
-            | $root/src/gen/gen_binary_defs.py
-            mode = %mode
-    ''', **locals())
-
 def process():
     data_files = ['%s_%s.json' % (f,s)
             for s in ('server', 'client')
@@ -133,17 +120,29 @@ def process():
             process_data | %{' '.join(deps)}
     ''', **locals())
 
+def binary_defs(out_file):
+    out_file = out_file or os.path.splitext(src_file)[0] + '.bin'
+
+    deps = ('$b_data/stamp',)
+
+    return template('''
+        rule gen_binary_defs
+            command = $python3 $root/src/gen/gen_binary_defs.py $b_data $out
+            description = GEN $out
+            depfile = $out.d
+
+        build %out_file: gen_binary_defs $
+            | $root/src/gen/gen_binary_defs.py $
+              %{' '.join(deps)}
+    ''', **locals())
+
 def pack():
     extra_data = (
             'fonts.png', 'fonts_metrics.json',
             'day_night.json',
             'ui_atlas.png', 'ui_atlas.json',
-            ) + tuple('%s_client.bin' % f
-                    for f in ('blocks', 'item_defs', 'item_strs',
-                        'structures', 'structure_parts',
-                        'structure_verts', 'structure_shapes',
-                        'animations', 'sprite_layers', 'sprite_graphics',
-                        'extras'))
+            'client_data.bin',
+            )
 
     return template('''
         rule build_pack

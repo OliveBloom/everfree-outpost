@@ -1,4 +1,5 @@
 import argparse
+from collections import namedtuple
 import json
 import os
 from pprint import pprint
@@ -7,15 +8,8 @@ import struct
 def build_parser():
     args = argparse.ArgumentParser()
 
-    args.add_argument('--mode', required=True,
-            choices=('blocks', 'item_defs', 'item_strs',
-                'templates', 'template_parts', 'template_verts', 'template_shapes',
-                'animations', 'sprite_layers', 'sprite_graphics',
-                'extras'),
-            help='convert block defs')
-
-    args.add_argument('input', metavar='FILE_IN.json',
-            help='input file (JSON-formatted)')
+    args.add_argument('input', metavar='DATA_DIR',
+            help='input data directory (containing JSON files)')
     args.add_argument('output', metavar='FILE_OUT.bin',
             help='output file (binary-formatted)')
 
@@ -58,6 +52,7 @@ class Converter:
             size += 1
 
         self.code = code
+        self.size = size
 
     def convert(self, obj):
         def extract(f):
@@ -71,226 +66,252 @@ class Converter:
         return struct.pack(self.code, *values)
 
 
-def convert_blocks(j):
-    c = Converter(16, (
-        Field('front',      'H',  0,  0),
-        Field('back',       'H',  2,  0),
-        Field('top',        'H',  4,  0),
-        Field('bottom',     'H',  6,  0),
+Section = namedtuple('Section', ('size', 'count', 'data'))
 
-        Field('light_r',    'B',  8,  0),
-        Field('light_g',    'B',  9,  0),
-        Field('light_b',    'B', 10,  0),
-        Field('shape',      'B', 11,  0),
-        Field('light_radius', 'H', 12,  0),
-        ))
+VER_MAJOR, VER_MINOR = (0, 1)
 
-    b = bytearray()
-    for obj in j:
-        b.extend(c.convert(obj))
-    return b
+class BinaryDefs:
+    def __init__(self, args):
+        self.sections = {}
+        self.args = args
+        self.strings = bytearray()
+        self.string_map = {}
+        self.header = None
 
-def convert_items(j):
-    # Combine strings first
-    idx_map = {}
-    strs = bytearray()
-    defs = bytearray()
+        self.deps = set()
 
-    def intern(s):
-        if s not in idx_map:
-            idx_map[s] = len(strs)
-            strs.extend(s.encode('utf-8'))
-        return idx_map[s]
+    def load(self, path):
+        full_path = os.path.join(self.args.input, path)
+        self.deps.add(full_path)
+        with open(full_path) as f:
+            return json.load(f)
 
-    c = Converter(16, (
-        Field('name_off',       'I',  0,  0),
-        Field('name_len',       'I',  4,  0),
-        Field('ui_name_off',    'I',  8,  0),
-        Field('ui_name_len',    'I', 12,  0),
-        ))
+    def add_section(self, name, data, size, count):
+        assert name not in self.sections
+        assert type(name) is bytes
+        assert len(name) == 8
+        assert len(data) == size * count
+        self.sections[name] = Section(size, count, data)
 
-    for obj in j:
-        defs.extend(c.convert({
-            'name_off': intern(obj['name']),
-            'name_len': len(obj['name']),
-            'ui_name_off': intern(obj['ui_name']),
-            'ui_name_len': len(obj['ui_name']),
-            }))
+    def convert_file(self, name, path, conv, adjust=lambda x: None):
+        j = self.load(path)
+        self.convert_array(name, j, conv, adjust=adjust)
 
-    return defs, strs
+    def convert_array(self, name, arr, conv, adjust=lambda x: None):
+        b = bytearray()
+        for obj in arr:
+            adjust(obj)
+            b.extend(conv.convert(obj))
+        self.add_section(name, b, conv.size, len(arr))
+
+    def pack_file(self, name, path, fmt):
+        j = self.load(path)
+        self.pack_array(name, j, fmt)
+
+    def pack_array(self, name, arr, fmt):
+        b = bytearray()
+        for x in arr:
+            if isinstance(x, (tuple, list)):
+                b.extend(struct.pack(fmt, *x))
+            else:
+                b.extend(struct.pack(fmt, x))
+        self.add_section(name, b, struct.calcsize(fmt), len(arr))
+
+    def intern(self, s):
+        if s not in self.string_map:
+            self.string_map[s] = len(self.strings)
+            self.strings.extend(s.encode('utf-8'))
+        return self.string_map[s]
+
+    def intern_strings(self, obj):
+        for k,v in list(obj.items()):
+            if isinstance(v, str):
+                obj[k + '_off'] = self.intern(v)
+                obj[k + '_len'] = len(v)
 
 
-def convert_templates(j):
-    c = Converter(20, (
-        Field('size',           'BBB',  0),
-        Field('shape_idx',      'H',    4),
-        Field('part_idx',       'H',    6),
-        Field('part_count',     'B',    8),
-        Field('vert_count',     'B',    9),
-        Field('layer',          'B',    10),
-        Field('flags',          'B',    11, 0),
+    def finish(self):
+        self.add_section(b'Strings\0', self.strings, 1, len(self.strings))
 
-        Field('light_pos',      'BBB', 12, (0, 0, 0)),
-        Field('light_color',    'BBB', 15, (0, 0, 0)),
-        Field('light_radius',   'H',   18, 0),
-        ))
+        base_offset = 16 * (1 + len(self.sections))
 
-    b = bytearray()
-    for obj in j:
-        b.extend(c.convert(obj))
-    return b
+        self.header = bytearray()
+        # Header format:
+        #   u16 ver_minor
+        #   u16 ver_major
+        #   u32 num_sections
+        #   u32 _reserved0
+        #   u32 _reserved1
+        self.header.extend(struct.pack('<HHIII',
+            VER_MINOR, VER_MAJOR, len(self.sections), 0, 0))
 
-def convert_template_parts(j):
-    c = Converter(14, (
-        Field('vert_idx',       'H',    0),
-        Field('vert_count',     'H',    2),
-        Field('offset',         'hh',   4),
-        Field('sheet',          'B',    8),
-        Field('flags',          'B',    9, 0),
+        offset = 16 * (1 + len(self.sections))
+        for name, sect in sorted(self.sections.items()):
+            # Section header format:
+            #   u8[8] name
+            #   u32 offset
+            #   u16 item_size
+            #   u16 item_count
+            self.header.extend(struct.pack('<8sIHH',
+                name, offset, sect.size, sect.count))
 
-        Field('anim_length',    'b',   10, 0),
-        Field('anim_rate',      'B',   11, 0),
-        Field('anim_step',      'H',   12, 0),
-        ))
+            # Align to 8 bytes
+            offset = (offset + len(sect.data) + 7) & ~7
 
-    b = bytearray()
-    for obj in j:
-        if 'anim_size' in obj:
-            obj['anim_step'] = obj['anim_size'][0]
-        b.extend(c.convert(obj))
-    return b
+    def chunks(self):
+        yield self.header
 
-def convert_template_verts(j):
-    b = bytearray()
-    for x in j:
-        b.extend(struct.pack('H', x))
-    return b
+        offset = 16 * (1 + len(self.sections))
+        for name, sect in sorted(self.sections.items()):
+            yield sect.data
+            offset += len(sect.data)
 
-def convert_template_shapes(j):
-    b = bytearray()
-    for x in j:
-        b.extend(struct.pack('B', x))
-    return b
+            # Align to 8 bytes
+            adj = -offset & 7
+            if adj > 0:
+                yield b'\0' * adj
+                offset += adj
 
-def convert_animations(j):
-    c = Converter(4, (
-        Field('local_id',       'H',    0),
-        Field('framerate',      'B',    2),
-        Field('length',         'B',    3),
-        ))
 
-    b = bytearray()
-    for obj in j:
-        b.extend(c.convert(obj))
-    return b
+    def convert_blocks(self):
+        c = Converter(16, (
+            Field('front',      'H',  0,  0),
+            Field('back',       'H',  2,  0),
+            Field('top',        'H',  4,  0),
+            Field('bottom',     'H',  6,  0),
 
-def convert_sprite_layers(j):
-    c = Converter(4, (
-        Field('start',          'H',    0),
-        Field('count',          'H',    2),
-        ))
+            Field('light_r',    'B',  8,  0),
+            Field('light_g',    'B',  9,  0),
+            Field('light_b',    'B', 10,  0),
+            Field('shape',      'B', 11,  0),
+            Field('light_radius', 'H', 12,  0),
+            ))
 
-    b = bytearray()
-    for obj in j:
-        b.extend(c.convert(obj))
-    return b
+        self.convert_file(b'Blocks\0\0', 'blocks_client.json', c)
 
-def convert_sprite_graphics(j):
-    c = Converter(14, (
-        Field('src_offset',     'HH',   0),
-        Field('dest_offset',    'HH',   4),
-        Field('size',           'HH',   8),
-        Field('sheet',          'B',   12),
-        Field('mirror',         'B',   13),
-        ))
+    def convert_items(self):
+        c = Converter(16, (
+            Field('name_off',       'I',  0,  0),
+            Field('name_len',       'I',  4,  0),
+            Field('ui_name_off',    'I',  8,  0),
+            Field('ui_name_len',    'I', 12,  0),
+            ))
 
-    b = bytearray()
-    for obj in j:
-        b.extend(c.convert(obj))
-    return b
+        self.convert_file(b'Items\0\0\0', 'items_client.json', c,
+                adjust=self.intern_strings)
 
-def convert_extras(j):
-    b = bytearray()
-    index = []
-    def section(align=4):
-        if len(index) > 0:
-            # Record end of previous section
-            index.append(len(b))
-        while len(b) % align != 0:
-            b.append(0)
-        index.append(len(b))
+    def convert_structures(self):
+        c = Converter(20, (
+            Field('size',           'BBB',  0),
+            Field('shape_idx',      'H',    4),
+            Field('part_idx',       'H',    6),
+            Field('part_count',     'B',    8),
+            Field('vert_count',     'B',    9),
+            Field('layer',          'B',    10),
+            Field('flags',          'B',    11, 0),
 
-    # 0 - pony_layer_table
-    section()
-    b.extend(j['pony_layer_table'])
+            Field('light_pos',      'BBB', 12, (0, 0, 0)),
+            Field('light_color',    'BBB', 15, (0, 0, 0)),
+            Field('light_radius',   'H',   18, 0),
+            ))
+        self.convert_file(b'StrcDefs', 'structures_client.json', c)
 
-    # 1 - physics_anim_table
-    section()
-    for row in j['physics_anim_table']:
-        if row is None:
-            b.extend(struct.pack('<H', j['default_anim']) * 8)
-        else:
-            assert len(row) == 8
-            for x in row:
-                b.extend(struct.pack('<H', x))
+        c = Converter(14, (
+            Field('vert_idx',       'H',    0),
+            Field('vert_count',     'H',    2),
+            Field('offset',         'hh',   4),
+            Field('sheet',          'B',    8),
+            Field('flags',          'B',    9, 0),
 
-    # 2 - anim_dir_table
-    section()
-    max_idx = max(int(k) for k in j['anim_dir_table'].keys())
-    lst = [255] * (max_idx + 1)
-    for k,v in j['anim_dir_table'].items():
-        lst[int(k)] = v
-    b.extend(lst)
+            Field('anim_length',    'b',   10, 0),
+            Field('anim_rate',      'B',   11, 0),
+            Field('anim_step',      'H',   12, 0),
+            ))
+        def adjust(obj):
+            if 'anim_size' in obj:
+                obj['anim_step'] = obj['anim_size'][0]
+        self.convert_file(b'StrcPart', 'structure_parts_client.json', c,
+                adjust=adjust)
 
-    # 3 - default_anims
-    section()
-    b.extend(struct.pack('<H', j['default_anim']))
-    b.extend(struct.pack('<H', j['editor_anim']))
+        raw_arr = self.load('structure_verts_client.json')
+        assert len(raw_arr) % 3 == 0
+        arr = [raw_arr[i : i + 3] for i in range(0, len(raw_arr), 3)]
+        self.pack_array(b'StrcVert', arr, '<3H')
 
-    # End of sections
+        self.pack_file(b'StrcShap', 'structure_shapes_client.json', 'B')
 
-    index.append(len(b))
+    def convert_sprites(self):
+        c = Converter(4, (
+            Field('local_id',       'H',    0),
+            Field('framerate',      'B',    2),
+            Field('length',         'B',    3),
+            ))
+        self.convert_file(b'SprtAnim', 'animations_client.json', c)
 
-    header_bytes = struct.pack('<II', len(index) // 2, 0)
-    offset = len(header_bytes) + 4 * len(index)
-    index_bytes = b''.join(struct.pack('<I', x + offset) for x in index)
+        c = Converter(4, (
+            Field('start',          'H',    0),
+            Field('count',          'H',    2),
+            ))
+        self.convert_file(b'SprtLayr', 'sprite_layers_client.json', c)
 
-    return header_bytes + index_bytes + b
+        c = Converter(14, (
+            Field('src_offset',     'HH',   0),
+            Field('dest_offset',    'HH',   4),
+            Field('size',           'HH',   8),
+            Field('sheet',          'B',   12),
+            Field('mirror',         'B',   13),
+            ))
+        self.convert_file(b'SprtGrfx', 'sprite_graphics_client.json', c)
+
+    def convert_extras(self):
+        j = self.load('extras_client.json')
+
+        # XPonLayr - pony_layer_table
+        self.pack_array(b'XPonLayr', j['pony_layer_table'], 'B')
+
+        # XPhysAnm - physics_anim_table
+        arr = j['physics_anim_table']
+        for i in range(len(arr)):
+            if arr[i] is None:
+                arr[i] = [0] * 8
+        self.pack_array(b'XPhysAnm', arr, '<8H')
+
+        # XAnimDir - anim_dir_table
+        max_idx = max(int(k) for k in j['anim_dir_table'].keys())
+        lst = [255] * (max_idx + 1)
+        for k,v in j['anim_dir_table'].items():
+            lst[int(k)] = v
+        self.pack_array(b'XAnimDir', lst, 'B')
+
+        # XDefAnim - default_anim
+        self.pack_array(b'XDefAnim', [j['default_anim']], '<H')
+
+        # XEdtAnim - editor_anim
+        self.pack_array(b'XEdtAnim', [j['editor_anim']], '<H')
 
 def main():
     parser = build_parser()
     args = parser.parse_args()
 
-    with open(args.input) as f:
-        j = json.load(f)
+    bd = BinaryDefs(args)
 
-    if args.mode == 'blocks':
-        b = convert_blocks(j)
-    elif args.mode == 'item_defs':
-        b, _ = convert_items(j)
-    elif args.mode == 'item_strs':
-        _, b = convert_items(j)
-    elif args.mode == 'templates':
-        b = convert_templates(j)
-    elif args.mode == 'template_parts':
-        b = convert_template_parts(j)
-    elif args.mode == 'template_verts':
-        b = convert_template_verts(j)
-    elif args.mode == 'template_shapes':
-        b = convert_template_shapes(j)
-    elif args.mode == 'animations':
-        b = convert_animations(j)
-    elif args.mode == 'sprite_layers':
-        b = convert_sprite_layers(j)
-    elif args.mode == 'sprite_graphics':
-        b = convert_sprite_graphics(j)
-    elif args.mode == 'extras':
-        b = convert_extras(j)
-    else:
-        parser.error('must provide flag to indicate input type')
+    bd.convert_blocks()
+    bd.convert_items()
+    bd.convert_structures()
+    bd.convert_sprites()
+    bd.convert_extras()
+
+    bd.finish()
 
     with open(args.output, 'wb') as f:
-        f.write(b)
+        for chunk in bd.chunks():
+            f.write(chunk)
+
+    with open(args.output + '.d', 'w') as f:
+        f.write('%s: \\\n' % args.output)
+        for x in sorted(bd.deps):
+            f.write('  %s \\\n' % x)
+        f.write('\n')
 
 if __name__ == '__main__':
     main()

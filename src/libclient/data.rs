@@ -1,6 +1,7 @@
 use std::prelude::v1::*;
 use std::mem;
 use std::slice;
+use std::str;
 
 use physics::Shape;
 use physics::v3::V3;
@@ -56,22 +57,200 @@ pub struct SpriteGraphics {
 }
 
 
-pub struct Data {
-    pub blocks: Box<[BlockData]>,
-    item_defs: Box<[RawItemDef]>,
-    item_strs: Box<str>,
-    pub templates: Box<[StructureTemplate]>,
-    pub template_parts: Box<[TemplatePart]>,
-    pub template_verts: Box<[TemplateVertex]>,
-    pub template_shapes: Box<[Shape]>,
-    pub animations: Box<[Animation]>,
-    pub sprite_layers: Box<[SpriteLayer]>,
-    pub sprite_graphics: Box<[SpriteGraphics]>,
-    extras: Box<[u8]>,
+
+struct FileHeader {
+    minor: u16,
+    major: u16,
+    num_sections: u32,
+    _reserved0: u32,
+    _reserved1: u32,
+}
+
+struct SectionHeader {
+    name: [u8; 8],
+    offset: u32,
+    item_size: u16,
+    item_count: u16,
+}
+
+const SUPPORTED_VERSION: (u16, u16) = (0, 1);
+
+macro_rules! gen_data {
+    ($($name:ident ($sect_name:pat): $ty:ty,)*) => {
+        pub struct Data {
+            raw: Box<[u8]>,
+            strings: *const str,
+
+            $( $name: *const [$ty], )*
+        }
+
+        impl Data {
+            pub fn new(raw: Box<[u8]>) -> Data {
+                let mut strings = None;
+                $( let mut $name: Option<*const [$ty]> = None; )*
+
+                unsafe {
+                    let ptr = raw.as_ptr();
+                    assert!(ptr as usize & 7 == 0,
+                            "raw data allocation must be 8-byte aligned");
+
+                    let header = &*(ptr as *const FileHeader);
+                    let version = (header.major, header.minor);
+                    assert!(version == SUPPORTED_VERSION,
+                            "unsupported data file version (got {:?}, need {:?}",
+                            version, SUPPORTED_VERSION);
+
+                    let sections = slice::from_raw_parts(ptr.offset(16) as *const SectionHeader,
+                                                         header.num_sections as usize);
+
+                    for s in sections {
+                        println!("loading section: {:?}, {} * {} @ {:x}",
+                                 s.name, s.item_count, s.item_size, s.offset);
+                        match &s.name {
+                            b"Strings\0" => {
+                                assert!(s.item_size == 1);
+                                let bytes = slice::from_raw_parts(ptr.offset(s.offset as isize),
+                                                                  s.item_count as usize);
+                                let s = str::from_utf8(bytes).unwrap();
+                                strings = Some(s);
+                            },
+
+                            $(
+                                $sect_name => {
+                                    assert!(s.item_size as usize == mem::size_of::<$ty>());
+                                    $name = Some(slice::from_raw_parts(
+                                        ptr.offset(s.offset as isize) as *const $ty,
+                                        s.item_count as usize));
+                                },
+                            )*
+
+                            _ => {
+                                warn!("unknown data section: {:?}", s.name);
+                            },
+                        }
+                    }
+                }
+
+                Data {
+                    raw: raw,
+                    strings: strings.expect(
+                        concat!("missing section: ", stringify!(b"Strings\0"))),
+                    $( $name: $name.expect(
+                        concat!("missing section: ", stringify!($sect_name))), )*
+                }
+            }
+
+            pub fn strings<'a>(&'a self) -> &'a str {
+                unsafe { &*self.strings }
+            }
+
+            $(
+                pub fn $name<'a>(&'a self) -> &'a [$ty] {
+                    unsafe { &*self.$name }
+                }
+            )*
+        }
+    };
+}
+
+gen_data! {
+    blocks (b"Blocks\0\0"): BlockData,
+    raw_items (b"Items\0\0\0"): RawItemDef,
+
+    templates (b"StrcDefs"): StructureTemplate,
+    template_parts (b"StrcPart"): TemplatePart,
+    template_verts (b"StrcVert"): TemplateVertex,
+    template_shapes (b"StrcShap"): Shape,
+
+    animations (b"SprtAnim"): Animation,
+    sprite_layers (b"SprtLayr"): SpriteLayer,
+    sprite_graphics (b"SprtGrfx"): SpriteGraphics,
+
+    pony_layer_table (b"XPonLayr"): u8,
+    physics_anim_table (b"XPhysAnm"): [u16; 8],
+    anim_dir_table (b"XAnimDir"): u8,
 }
 
 impl Data {
-    pub fn new(blocks: Box<[BlockData]>,
+    pub fn template_size(&self, template_id: u32) -> V3 {
+        let t = &self.templates()[template_id as usize];
+        util::unpack_v3(t.size)
+    }
+
+    pub fn template_shape(&self, template_id: u32) -> &[Shape] {
+        let t = &self.templates()[template_id as usize];
+        let base = t.shape_idx as usize;
+        let size = util::unpack_v3(t.size);
+        let volume = (size.x * size.y * size.z) as usize;
+        &self.template_shapes()[base .. base + volume]
+    }
+
+    fn make_item_def<'a>(&'a self, raw: &'a RawItemDef) -> ItemDef<'a> {
+        ItemDef {
+            def: raw,
+            strs: self.strings(),
+        }
+    }
+
+    pub fn item_def(&self, id: u16) -> ItemDef {
+        self.make_item_def(&self.raw_items()[id as usize])
+    }
+
+    pub fn find_item_id(&self, name: &str) -> Option<u16> {
+        for (i, raw) in self.raw_items().iter().enumerate() {
+            let def = self.make_item_def(raw);
+            if name == def.name() {
+                return Some(i as u16);
+            }
+        }
+        None
+    }
+
+
+    pub fn template(&self, id: u32) -> &StructureTemplate {
+        &self.templates()[id as usize]
+    }
+
+
+    pub fn animation(&self, id: u16) -> &Animation {
+        &self.animations()[id as usize]
+    }
+
+    pub fn sprite_layer(&self, id: u8) -> &SpriteLayer {
+        &self.sprite_layers()[id as usize]
+    }
+
+    pub fn sprite_graphics_item(&self, id: u16) -> &SpriteGraphics {
+        &self.sprite_graphics()[id as usize]
+    }
+}
+
+/*
+
+pub struct Data {
+    raw: Box<[u8]>,
+
+    strings: *const str,
+
+    blocks: *const [BlockData],
+
+    item_defs: *const [RawItemDef],
+
+    templates: *const [StructureTemplate],
+    template_parts: *const [TemplatePart],
+    template_verts: *const [TemplateVertex],
+
+    animations: *const [Animation],
+    sprite_layers: *const [SpriteLayer],
+    sprite_graphics: *const [SpriteGraphics],
+
+    pony_layer_table: *const [u8],
+    physics_anim_table: *const [[u16; 8]],
+    anim_dir_table: *const [u8],
+}
+
+impl Data {
+    pub fn new(raw: Box
                item_defs: Box<[RawItemDef]>,
                item_strs: Box<str>,
                templates: Box<[StructureTemplate]>,
@@ -166,3 +345,4 @@ unsafe fn cast_bytes<T>(b: &[u8]) -> &[T] {
     slice::from_raw_parts(b.as_ptr() as *const T,
                           b.len() / mem::size_of::<T>())
 }
+*/
