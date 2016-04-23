@@ -12,7 +12,6 @@ var AnimCanvas = require('graphics/canvas').AnimCanvas;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
 var PonyAppearance = require('graphics/appearance/pony').PonyAppearance;    
 var Renderer = require('graphics/renderer').Renderer;
-var Cursor = require('graphics/cursor').Cursor;
 var glutil = require('graphics/glutil');
 var Scene = require('graphics/scene').Scene;
 var DayNight = require('graphics/daynight').DayNight;
@@ -61,10 +60,6 @@ var FontMetrics = require('data/fontmetrics').FontMetrics;
 var CHUNK_SIZE = require('consts').CHUNK_SIZE;
 var TILE_SIZE = require('consts').TILE_SIZE;
 var LOCAL_SIZE = require('consts').LOCAL_SIZE;
-
-var Physics = require('physics').Physics;
-var Prediction = require('physics').Prediction;
-var DummyPrediction = require('physics').DummyPrediction;
 
 var DynAsm = require('asmlibs').DynAsm;
 var AsmClientInput = require('asmlibs').AsmClientInput;
@@ -134,21 +129,13 @@ var input;
 var main_menu;
 var debug_menu;
 
-var runner;
 var assets;
 
 
 var asm_client;
 
-var chunkLoaded;
-var physics;
-var prediction;
-
 var renderer = null;
-var ui_renderer = null;
-var cursor;
 var show_cursor = false;
-var slice_radius;
 var day_night;
 var synced = net.SYNC_LOADING;
 
@@ -206,17 +193,10 @@ function init() {
 
     initMenus();
 
-    runner = new BackgroundJobRunner();
     assets = null;
 
-    chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
-    physics = new Physics(asm_client);
-    prediction = Config.motion_prediction.get() ? new Prediction(physics) : new DummyPrediction();
-
     renderer = null;
-    cursor = null;
     show_cursor = false;
-    slice_radius = new TimeVarying(0, 0, 0, 0.9, 0);
     day_night = null;
 
     conn = null;    // Initialized after assets are loaded.
@@ -231,10 +211,7 @@ function init() {
     checkBrowser(dialog, function() {
         loadAssets(function() {
             renderer = new Renderer(canvas.ctx, assets, asm_client);
-            ui_renderer = new UIRenderContext(canvas.ctx, assets);
-            runner.job('preload-textures', preloadTextures);
 
-            cursor = new Cursor(canvas.ctx, assets, TILE_SIZE / 2 + 1);
             day_night = new DayNight(assets);
 
             ui_gl.hotbar.init();
@@ -526,37 +503,6 @@ function drawPony(ctx, app_info) {
     app.getClass().prototype.draw2D(ctx, [0, 0], sprite);
 }
 
-function preloadTextures() {
-    /*
-    var textures = ['tiles'];
-    for (var i = 0; i < 2; ++i) {
-        var parts = ExtraDefs.pony_slot_table[i];
-        var part_names = Object.getOwnPropertyNames(parts);
-        for (var j = 0; j < part_names.length; ++j) {
-            var part_name = part_names[j];
-            var part_id = parts[part_name]
-            var part = SpritePartDef.by_id[part_id];
-
-            if (part.variants.length == 0) {
-                continue;
-            }
-            var variant_id = part.variants[0];
-            if (variant_id != null) {
-                textures.push('sprite_' + variant_id);
-            }
-        }
-    }
-
-    for (var i = 0; i < textures.length; ++i) {
-        (function(key) {
-            runner.subjob(key, function() {
-                renderer.cacheTexture(assets[key]);
-            });
-        })(textures[i]);
-    }
-    */
-}
-
 
 
 var INPUT_LEFT =    0x0001;
@@ -772,11 +718,9 @@ function handleInit(entity_id, now, cycle_base, cycle_ms) {
 }
 
 function handleTerrainChunk(i, data) {
-    runner.job('load-chunk-' + i, function() {
-        renderer.loadChunk((i / LOCAL_SIZE)|0, (i % LOCAL_SIZE)|0, data);
-    });
-
-    chunkLoaded[i] = true;
+    var cx = (i % LOCAL_SIZE)|0;
+    var cy = (i / LOCAL_SIZE)|0;
+    asm_client.loadTerrainChunk(cx, cy, data);
 }
 
 function handleEntityUpdate(id, motion, anim) {
@@ -799,7 +743,6 @@ function handleEntityUpdate(id, motion, anim) {
 }
 
 function handleUnloadChunk(idx) {
-    chunkLoaded[idx] = false;
 }
 
 function handleOpenDialog(idx, args) {
@@ -942,8 +885,6 @@ function handleSyncStatus(new_synced) {
 
 // Reset (nearly) all client-side state to pre-login conditions.
 function resetAll() {
-    var now = timing.visibleNow();
-
     inv_tracker.reset();
     item_inv = null;
     ability_inv = null;
@@ -958,94 +899,11 @@ function resetAll() {
 
 // Rendering
 
-function localSprite(now, entity, camera_mid) {
-    var local_px = CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
-    if (camera_mid == null) {
-        camera_mid = new Vec(local_px, local_px, 0);
-    }
-    var min = camera_mid.subScalar((local_px / 2)|0);
-    var max = camera_mid.addScalar((local_px / 2)|0);
-
-    var sprite = entity.getSprite(now);
-
-    var adjusted = false;
-
-    if (sprite.ref_x < min.x) {
-        entity.translateMotion(new Vec(local_px, 0, 0));
-        adjusted = true;
-    } else if (sprite.ref_x >= max.x) {
-        entity.translateMotion(new Vec(-local_px, 0, 0));
-        adjusted = true;
-    }
-
-    if (sprite.ref_y < min.y) {
-        entity.translateMotion(new Vec(0, local_px, 0));
-        adjusted = true;
-    } else if (sprite.ref_y >= max.y) {
-        entity.translateMotion(new Vec(0, -local_px, 0));
-        adjusted = true;
-    }
-
-    if (adjusted) {
-        sprite = entity.getSprite(now);
-    }
-
-    // TODO: hacky adjustment
-    sprite.ref_x += 16;
-    sprite.ref_y += 32;
-    return sprite;
-}
-
-function checkLocalSprite(sprite, camera_mid) {
-    var local_px = CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
-    if (camera_mid == null) {
-        camera_mid = new Vec(local_px, local_px, 0);
-    }
-    var min = camera_mid.subScalar((local_px / 2)|0);
-    var max = camera_mid.addScalar((local_px / 2)|0);
-
-    // TODO: it's ugly to adjust the Structure object's sprite from here.
-
-    if (sprite.ref_x < min.x) {
-        sprite.ref_x += local_px;
-    } else if (sprite.ref_x >= max.x) {
-        sprite.ref_x -= local_px;
-    }
-
-    if (sprite.ref_y < min.y) {
-        sprite.ref_y += local_px;
-    } else if (sprite.ref_y >= max.y) {
-        sprite.ref_y -= local_px;
-    }
-}
-
-function needs_mask(now, pony) {
-    if (pony == null) {
-        return false;
-    }
-
-    var pos = pony.position(now);
-    var ceiling = physics.findCeiling(pos);
-    return (ceiling < 16);
-}
-
-var FACINGS = [
-    new Vec( 1,  0,  0),
-    new Vec( 1,  1,  0),
-    new Vec( 0,  1,  0),
-    new Vec(-1,  1,  0),
-    new Vec(-1,  0,  0),
-    new Vec(-1, -1,  0),
-    new Vec( 0, -1,  0),
-    new Vec( 1, -1,  0),
-];
-
 function frame(ac, client_now) {
     if (synced != net.SYNC_OK) {
         return;
     }
 
     var now = timing.visibleNow();
-
     asm_client.renderFrame(now);
 }
