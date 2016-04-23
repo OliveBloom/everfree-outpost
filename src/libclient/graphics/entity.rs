@@ -193,7 +193,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 }
             });
 
-            if let Some(ref name) = e.name {
+            if let (false, &Some(ref name)) = (is_pawn, &e.name) {
                 let name_center_x = dest_x + 48;
                 let name_y = dest_y + 12;
                 let name_x = name_center_x - fonts::NAME.measure_width(name) as u16 / 2;
