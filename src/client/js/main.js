@@ -909,4 +909,7 @@ function frame(ac, client_now) {
     var now = timing.visibleNow();
     var future = now + timing.ping;
     asm_client.renderFrame(now, future);
+
+    var frame_time = timing.visibleNow() - now;
+    asm_client.debugRecord(frame_time, timing.ping);
 }

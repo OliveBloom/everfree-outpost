@@ -423,6 +423,8 @@ impl<'d, P: Platform> Client<'d, P> {
             } else {
                 V3::new(4096, 4096, 0)
             };
+        self.debug.pos = pos;
+
         let scene = Scene::new(now, self.window_size, self.view_size, pos);
 
         self.entities.apply_updates(scene.now);
@@ -433,6 +435,11 @@ impl<'d, P: Platform> Client<'d, P> {
 
 
     // Misc
+
+    pub fn debug_record(&mut self, frame_time: Time, ping: u32) {
+        self.debug.record_frame_time(frame_time);
+        self.debug.ping = ping;
+    }
 
     pub fn resize_window(&mut self, size: (u16, u16)) {
         let scale_config = self.platform.config().get_int(ConfigKey::ScaleWorld) as i16;

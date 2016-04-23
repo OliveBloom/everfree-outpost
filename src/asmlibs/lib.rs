@@ -311,6 +311,13 @@ pub unsafe extern fn render_frame(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn debug_record(client: &mut Client,
+                                  frame_time: i32,
+                                  ping: u32) {
+    client.debug_record(frame_time, ping);
+}
+
+#[no_mangle]
 pub unsafe extern fn resize_window(client: &mut Client,
                                    width: u16,
                                    height: u16) {

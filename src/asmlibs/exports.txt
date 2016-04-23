@@ -32,5 +32,6 @@ get_active_ability
 load_terrain_chunk
 feed_input
 render_frame
+debug_record
 resize_window
 client_bench

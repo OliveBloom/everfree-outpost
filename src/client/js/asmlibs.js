@@ -641,6 +641,10 @@ DynAsm.prototype.renderFrame = function(now, future) {
     this._raw['render_frame'](this.client, now, future);
 };
 
+DynAsm.prototype.debugRecord = function(frame_time, ping) {
+    this._raw['debug_record'](this.client, frame_time, ping);
+};
+
 DynAsm.prototype.resizeWindow = function(width, height) {
     this._raw['resize_window'](this.client, width, height);
 };

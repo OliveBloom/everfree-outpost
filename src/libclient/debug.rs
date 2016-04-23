@@ -54,5 +54,11 @@ impl Debug {
         self.cur_frame = (self.cur_frame + 1) % NUM_FRAMES;
         self.last_time = now;
     }
+
+    pub fn record_frame_time(&mut self, time: Time) {
+        self.frame_times[self.cur_frame] =
+            if time > u16::MAX as Time { u16::MAX }
+            else { time as u16 };
+    }
 }
 

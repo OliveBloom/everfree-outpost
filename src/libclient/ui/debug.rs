@@ -68,30 +68,19 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
                 let step = V2::new(0, ROW_HEIGHT);
                 let offset = V2::new(LABEL_WIDTH, 0);
 
-                let row = 0;
-                geom.draw_str(&fonts::NAME, "FPS", rect.min + step * scalar(row));
+                let mut row = |idx, label: &str, value: &str| {
+                    geom.draw_str(&fonts::NAME, label, rect.min + step * scalar(idx));
+                    geom.draw_str(&fonts::NAME, value, rect.min + step * scalar(idx) + offset);
+                };
+
                 let rate = calc_framerate(self.dyn.total_interval);
-                let s = format!("{}.{}", rate / 10, rate % 10);
-                geom.draw_str(&fonts::NAME, &s, rect.min + step * scalar(row) + offset);
-
-                let row = 1;
-                geom.draw_str(&fonts::NAME, "Ping", rect.min + step * scalar(row));
-                let s = format!("{} ms", self.dyn.ping);
-                geom.draw_str(&fonts::NAME, &s, rect.min + step * scalar(row) + offset);
-
-                let row = 2;
-                geom.draw_str(&fonts::NAME, "Pos", rect.min + step * scalar(row));
-                let s = format!("{:?}", self.dyn.pos);
-                geom.draw_str(&fonts::NAME, &s, rect.min + step * scalar(row) + offset);
-
-                let row = 3;
-                geom.draw_str(&fonts::NAME, "Time", rect.min + step * scalar(row));
-                let s = format!("{}.{:03} ({})",
-                                self.dyn.day_time / 1000,
-                                self.dyn.day_time % 1000,
-                                self.dyn.day_phase);
-                geom.draw_str(&fonts::NAME, &s, rect.min + step * scalar(row) + offset);
-
+                row(0, "FPS", &format!("{}.{}", rate / 10, rate % 10));
+                row(1, "Ping", &format!("{} ms", self.dyn.ping));
+                row(2, "Pos", &format!("{:?}", self.dyn.pos));
+                row(3, "Time", &format!("{}.{:03} ({})",
+                                        self.dyn.day_time / 1000,
+                                        self.dyn.day_time % 1000,
+                                        self.dyn.day_phase));
             },
         }
     }
