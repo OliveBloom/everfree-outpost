@@ -21,6 +21,22 @@ pub struct Motion {
     pub anim_id: u16,
 }
 
+impl Motion {
+    pub fn pos(&self, now: Time) -> V3 {
+        let delta = now - self.start_time;
+        let dur = self.end_time - self.start_time;
+        if delta <= 0 {
+            self.start_pos
+        } else if delta >= dur {
+            self.end_pos
+        } else {
+            let offset = (self.end_pos - self.start_pos) *
+                scalar(delta) / scalar(dur);
+            self.start_pos + offset
+        }
+    }
+}
+
 pub struct Entity {
     pub motion: Motion,
     pub appearance: u32,
@@ -30,17 +46,7 @@ pub struct Entity {
 
 impl Entity {
     pub fn pos(&self, now: Time) -> V3 {
-        let delta = now - self.motion.start_time;
-        let dur = self.motion.end_time - self.motion.start_time;
-        if delta <= 0 {
-            return self.motion.start_pos;
-        } else if delta >= dur {
-            return self.motion.end_pos;
-        } else {
-            let offset = (self.motion.end_pos - self.motion.start_pos) *
-                scalar(delta) / scalar(dur);
-            self.motion.start_pos + offset
-        }
+        self.motion.pos(now)
     }
 }
 
