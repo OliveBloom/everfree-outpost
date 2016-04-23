@@ -33,5 +33,6 @@ load_terrain_chunk
 feed_input
 render_frame
 debug_record
+init_day_night
 resize_window
 client_bench

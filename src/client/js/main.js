@@ -136,7 +136,6 @@ var asm_client;
 
 var renderer = null;
 var show_cursor = false;
-var day_night;
 var synced = net.SYNC_LOADING;
 
 var conn;
@@ -197,7 +196,6 @@ function init() {
 
     renderer = null;
     show_cursor = false;
-    day_night = null;
 
     conn = null;    // Initialized after assets are loaded.
     timing = null;  // Initialized after connection is opened.
@@ -211,8 +209,6 @@ function init() {
     checkBrowser(dialog, function() {
         loadAssets(function() {
             renderer = new Renderer(canvas.ctx, assets, asm_client);
-
-            day_night = new DayNight(assets);
 
             ui_gl.hotbar.init();
 
@@ -715,8 +711,7 @@ function handleClose(evt, reason) {
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
     asm_client.setPawnId(entity_id);
     var pst_now = timing.decodeRecv(now);
-    day_night.base_time = pst_now - cycle_base;
-    day_night.cycle_ms = cycle_ms;
+    asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
 }
 
 function handleTerrainChunk(i, data) {
@@ -837,7 +832,7 @@ function handleAbilityInventory(iid) {
 }
 
 function handlePlaneFlags(flags) {
-    day_night.active = (flags == 0);
+    console.warn('unimplemented: handlePlaneFlags');
 }
 
 function handleGetInteractArgs(dialog_id, parts) {

@@ -415,6 +415,9 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn render_frame(&mut self, now: Time, future: Time) {
         self.debug.record_interval(now);
+        let day_time = self.misc.day_night.time_of_day(now);
+        self.debug.day_time = day_time;
+        self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
 
         self.predictor.update(future, &*self.terrain_shape, &self.data);
 
@@ -440,6 +443,10 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn debug_record(&mut self, frame_time: Time, ping: u32) {
         self.debug.record_frame_time(frame_time);
         self.debug.ping = ping;
+    }
+
+    pub fn init_day_night(&mut self, base_time: Time, cycle_ms: Time) {
+        self.misc.day_night.init(base_time, cycle_ms);
     }
 
     pub fn resize_window(&mut self, size: (u16, u16)) {

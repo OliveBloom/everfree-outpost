@@ -243,19 +243,6 @@ pub unsafe extern fn get_active_ability(client: &mut Client) -> u16 {
 
 // Physics
 
-#[derive(Clone, Copy)]
-pub struct CollideArgs {
-    pub pos: V3,
-    pub size: V3,
-    pub velocity: V3,
-}
-
-#[derive(Clone, Copy)]
-pub struct CollideResult {
-    pub pos: V3,
-    pub time: i32,
-}
-
 #[no_mangle]
 pub extern fn feed_input(client: &mut Client,
                          time: i32,
@@ -293,11 +280,20 @@ pub unsafe extern fn render_frame(client: &mut Client,
     client.render_frame(now, future);
 }
 
+// Misc
+
 #[no_mangle]
 pub unsafe extern fn debug_record(client: &mut Client,
                                   frame_time: i32,
                                   ping: u32) {
     client.debug_record(frame_time, ping);
+}
+
+#[no_mangle]
+pub unsafe extern fn init_day_night(client: &mut Client,
+                                    base_time: i32,
+                                    cycle_ms: i32) {
+    client.init_day_night(base_time, cycle_ms);
 }
 
 #[no_mangle]

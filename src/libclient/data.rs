@@ -56,6 +56,12 @@ pub struct SpriteGraphics {
     pub mirror: u8,
 }
 
+pub struct DayNightPhase {
+    pub end_time: u16,
+    pub start_color: u8,
+    pub end_color: u8,
+}
+
 
 
 struct FileHeader {
@@ -163,6 +169,9 @@ gen_data! {
     animations (b"SprtAnim"): Animation,
     sprite_layers (b"SprtLayr"): SpriteLayer,
     sprite_graphics (b"SprtGrfx"): SpriteGraphics,
+
+    day_night_phases (b"DyNtPhas"): DayNightPhase,
+    day_night_colors (b"DyNtColr"): (u8, u8, u8),
 
     pony_layer_table (b"XPonLayr"): u8,
     physics_anim_table (b"XPhysAnm"): [u16; 8],
