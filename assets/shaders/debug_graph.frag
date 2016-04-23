@@ -22,7 +22,7 @@ void main(void) {
         return;
     }
 
-    float frac = 1.0 - pixel_pos.y / graph_size.y;
+    float frac = 1.0 - floor(pixel_pos.y) / graph_size.y;
     float cutoff = frac * log(MAX_TIME);
     if (log(time) > cutoff) {
         gl_FragColor = RED;
