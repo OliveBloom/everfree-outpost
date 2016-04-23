@@ -39,6 +39,7 @@ pub mod entity;
 pub mod inventory;
 mod misc;
 mod predict;
+mod debug;
 
 pub mod graphics;
 pub mod ui;

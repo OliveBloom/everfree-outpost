@@ -20,6 +20,7 @@ use physics::v3::{V3, V2, scalar, Region};
 
 use Time;
 use data::Data;
+use debug::Debug;
 use entity::{Entities, EntityId, Motion};
 use graphics::renderer::Scene;
 use graphics::types::StructureTemplate;
@@ -44,6 +45,7 @@ pub struct Client<'d, P: Platform> {
     inventories: Inventories,
     predictor: Predictor,
     misc: Misc,
+    debug: Debug,
 
     ui: UI,
 
@@ -72,6 +74,7 @@ impl<'d, P: Platform> Client<'d, P> {
             inventories: Inventories::new(),
             predictor: Predictor::new(),
             misc: Misc::new(),
+            debug: Debug::new(),
 
             ui: UI::new(),
 
@@ -294,7 +297,8 @@ impl<'d, P: Platform> Client<'d, P> {
     fn with_ui_dyn<F: FnOnce(&mut UI, Dyn) -> R, R>(&mut self, f: F) -> R {
         let dyn = Dyn::new(self.view_size,
                            &self.inventories,
-                           &self.misc.hotbar);
+                           &self.misc.hotbar,
+                           &self.debug);
         f(&mut self.ui, dyn)
     }
 
@@ -409,6 +413,8 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn render_frame(&mut self, now: Time, future: Time) {
+        self.debug.record_interval(now);
+
         self.predictor.update(future, &*self.terrain_shape, &self.data);
 
         let pos =

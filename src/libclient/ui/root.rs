@@ -4,6 +4,7 @@ use physics::v3::{V2, scalar, Region, Align};
 
 use client::ClientObj;
 use data::Data;
+use debug::Debug as DebugDyn;
 use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
 use misc;
@@ -11,18 +12,20 @@ use platform::Config;
 use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
-use ui::{dialog, dialogs, hotbar};
+use ui::{dialog, dialogs, hotbar, debug};
 use ui::widget::*;
 
 
 pub struct Root {
     pub dialog: dialog::Dialog<dialogs::AnyDialog>,
+    pub debug: debug::Debug,
 }
 
 impl Root {
     pub fn new() -> Root {
         Root {
             dialog: dialog::Dialog::new(dialogs::AnyDialog::None),
+            debug: debug::Debug::new(),
         }
     }
 }
@@ -32,16 +35,20 @@ pub struct RootDyn<'a> {
     pub screen_size: V2,
     pub inventories: &'a Inventories,
     pub hotbar: &'a misc::Hotbar,
+    pub debug: &'a DebugDyn,
 }
 
 impl<'a> RootDyn<'a> {
-    pub fn new(screen_size: V2,
+    pub fn new(screen_size: (u16, u16),
                inventories: &'a Inventories,
-               hotbar: &'a misc::Hotbar) -> RootDyn<'a> {
+               hotbar: &'a misc::Hotbar,
+               debug: &'a DebugDyn) -> RootDyn<'a> {
         RootDyn {
-            screen_size: screen_size,
+            screen_size: V2::new(screen_size.0 as i32,
+                                 screen_size.1 as i32),
             inventories: inventories,
             hotbar: hotbar,
+            debug: debug,
         }
     }
 }
@@ -70,6 +77,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             let rect = child_rect.align(self_rect, Align::Center, Align::Center);
             v.visit(&mut child, rect);
         }
+
+        {
+            // Debug pane
+            let mut child = WidgetPack::new(&mut self.state.debug, self.dyn.debug);
+            let base = pos + V2::new(self.dyn.screen_size.x - child.size().x, 0);
+            let rect = Region::sized(child.size()) + base;
+            v.visit(&mut child, rect);
+        }
+
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {

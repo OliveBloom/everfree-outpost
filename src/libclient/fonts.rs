@@ -18,12 +18,12 @@ impl FontMetricsExt for FontMetrics {
         let c = c as u8;
 
         let mut low = 0;
-        let mut high = self.spans.len() - 1;
-        while low <= high {
+        let mut high = self.spans.len();
+        while low < high {
             let mid = (low + high) / 2;
             let s = &self.spans[mid];
             if c < s.min {
-                high = mid - 1;
+                high = mid;
             } else if c >= s.max {
                 low = mid + 1;
             } else {

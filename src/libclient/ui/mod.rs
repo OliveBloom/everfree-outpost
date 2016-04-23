@@ -20,6 +20,7 @@ mod item;
 mod inventory;
 mod hotbar;
 mod dialog;
+mod debug;
 
 pub mod dialogs;    // TODO: make private
 mod root;
@@ -42,13 +43,13 @@ impl UI {
     pub fn generate_geom(&mut self, dyn: Dyn) -> Vec<geom::Vertex> {
         let mut geom = geom::Geom::new();
 
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let root_rect = Region::sized(root.size());
         RenderVisitor::new(&mut geom).visit(&mut root, root_rect);
 
         if self.context.dragging() {
             let data = self.context.drag_data.as_ref().unwrap();
-            // TODO: kind of a hack, reaching into dyn.root like this
+            // TODO: kind of a hack, reaching into root.dyn like this
             if let Some(inv) = root.dyn.inventories.get(data.src_inv) {
                 if data.src_slot < inv.len() {
                     let item = inv.items[data.src_slot];
@@ -68,7 +69,7 @@ impl UI {
                       key: input::KeyAction,
                       dyn: Dyn) -> input::EventStatus {
         if !self.context.dragging() {
-            let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+            let mut root = widget::WidgetPack::new(&mut self.root, dyn);
             root.on_key(key)
         } else {
             match key {
@@ -84,7 +85,7 @@ impl UI {
     pub fn handle_mouse_move(&mut self,
                              pos: V2,
                              dyn: Dyn) -> input::EventStatus {
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
         self.context.mouse_pos = pos;
@@ -94,7 +95,7 @@ impl UI {
     pub fn handle_mouse_down(&mut self,
                              pos: V2,
                              dyn: Dyn) -> input::EventStatus {
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
         self.context.mouse_pos = pos;
@@ -111,7 +112,7 @@ impl UI {
     pub fn handle_mouse_up(&mut self,
                            pos: V2,
                            dyn: Dyn) -> input::EventStatus {
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
         self.context.mouse_pos = pos;
@@ -130,7 +131,7 @@ impl UI {
             return Cursor::Normal;
         }
 
-        let mut root = widget::WidgetPack::new(&mut self.root, dyn.root);
+        let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
         let data = self.context.drag_data.as_ref().unwrap();
@@ -143,25 +144,7 @@ impl UI {
 }
 
 
-#[derive(Clone, Copy)]
-pub struct Dyn<'a> {
-    root: root::RootDyn<'a>,
-}
-
-impl<'a> Dyn<'a> {
-    pub fn new(size: (u16, u16),
-               inventories: &'a Inventories,
-               hotbar: &'a misc::Hotbar) -> Dyn<'a> {
-        Dyn {
-            root: root::RootDyn {
-                screen_size: V2::new(size.0 as i32,
-                                     size.1 as i32),
-                inventories: inventories,
-                hotbar: hotbar,
-            },
-        }
-    }
-}
+pub use self::root::RootDyn as Dyn;
 
 
 pub struct Context {
