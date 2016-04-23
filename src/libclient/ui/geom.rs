@@ -18,9 +18,21 @@ pub struct Vertex {
     offset: (u16, u16),
 }
 
+pub enum Special {
+    DebugFrameGraph {
+        rect: Region<V2>,
+        cur: u8,
+        last: u8,
+        last_time: u16,
+        last_interval: u16,
+    },
+}
+
 pub struct Geom {
     geom: Vec<Vertex>,
+    special: Vec<Special>,
 }
+
 
 /// Size in pixels of each item.
 const ITEM_SIZE: u16 = 16;
@@ -35,6 +47,7 @@ impl Geom {
     pub fn new() -> Geom {
         Geom {
             geom: Vec::new(),
+            special: Vec::new(),
         }
     }
 
@@ -107,7 +120,11 @@ impl Geom {
         }
     }
 
-    pub fn unwrap(self) -> Vec<Vertex> {
-        self.geom
+    pub fn special(&mut self, special: Special) {
+        self.special.push(special)
+    }
+
+    pub fn unwrap(self) -> (Vec<Vertex>, Vec<Special>) {
+        (self.geom, self.special)
     }
 }

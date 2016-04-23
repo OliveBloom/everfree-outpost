@@ -40,7 +40,7 @@ impl UI {
         }
     }
 
-    pub fn generate_geom(&mut self, dyn: Dyn) -> Vec<geom::Vertex> {
+    pub fn generate_geom(&mut self, dyn: Dyn) -> (Vec<geom::Vertex>, Vec<geom::Special>) {
         let mut geom = geom::Geom::new();
 
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);

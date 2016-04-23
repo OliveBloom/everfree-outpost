@@ -218,6 +218,7 @@ pub trait Shader {
 pub trait Texture {
     fn size(&self) -> (u16, u16);
     fn load(&mut self, data: &[u8]);
+    fn load_partial(&mut self, rect: Region<V2>, data: &[u8]);
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

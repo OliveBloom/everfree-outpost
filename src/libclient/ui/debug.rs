@@ -7,7 +7,7 @@ use fonts::{self, FontMetricsExt};
 use platform::{Config, ConfigKey};
 use ui::{Context, DragData};
 use ui::atlas;
-use ui::geom::Geom;
+use ui::geom::{Geom, Special};
 use ui::input::EventStatus;
 use ui::item;
 use ui::widget::*;
@@ -37,7 +37,7 @@ const LABEL_WIDTH: i32 = 32;
 const ROW_WIDTH: i32 = 128;
 const CONTENT_WIDTH: i32 = ROW_WIDTH - LABEL_WIDTH;
 const ROW_HEIGHT: i32 = 10;
-const GRAPH_HEIGHT: i32 = 16;
+const GRAPH_HEIGHT: i32 = 20;
 
 impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
     fn size(&mut self) -> V2 {
@@ -68,19 +68,34 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
                 let step = V2::new(0, ROW_HEIGHT);
                 let offset = V2::new(LABEL_WIDTH, 0);
 
-                let mut row = |idx, label: &str, value: &str| {
-                    geom.draw_str(&fonts::NAME, label, rect.min + step * scalar(idx));
-                    geom.draw_str(&fonts::NAME, value, rect.min + step * scalar(idx) + offset);
-                };
+                {
+                    let mut row = |idx, label: &str, value: &str| {
+                        let pos = rect.min + step * scalar(idx);
+                        geom.draw_str(&fonts::NAME, label, pos);
+                        geom.draw_str(&fonts::NAME, value, pos + offset);
+                    };
 
-                let rate = calc_framerate(self.dyn.total_interval);
-                row(0, "FPS", &format!("{}.{}", rate / 10, rate % 10));
-                row(1, "Ping", &format!("{} ms", self.dyn.ping));
-                row(2, "Pos", &format!("{:?}", self.dyn.pos));
-                row(3, "Time", &format!("{}.{:03} ({})",
-                                        self.dyn.day_time / 1000,
-                                        self.dyn.day_time % 1000,
-                                        self.dyn.day_phase));
+                    let rate = calc_framerate(self.dyn.total_interval);
+                    row(0, "FPS", &format!("{}.{}", rate / 10, rate % 10));
+                    row(1, "Ping", &format!("{} ms", self.dyn.ping));
+                    row(2, "Pos", &format!("{:?}", self.dyn.pos));
+                    row(3, "Time", &format!("{}.{:03} ({})",
+                                            self.dyn.day_time / 1000,
+                                            self.dyn.day_time % 1000,
+                                            self.dyn.day_phase));
+                }
+
+                let graph_pos = rect.min + step * scalar(4);
+                let graph_rect = Region::sized(V2::new(ROW_WIDTH, GRAPH_HEIGHT)) + graph_pos;
+                let idx = self.dyn.cur_frame;
+                let last = (idx + debug::NUM_FRAMES - 1) % debug::NUM_FRAMES;
+                geom.special(Special::DebugFrameGraph {
+                    rect: graph_rect,
+                    cur: idx as u8,
+                    last: last as u8,
+                    last_time: self.dyn.frame_times[last],
+                    last_interval: self.dyn.frame_intervals[last],
+                });
             },
         }
     }

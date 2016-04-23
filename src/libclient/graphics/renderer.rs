@@ -8,6 +8,7 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 
 use Time;
 use data::Data;
+use debug;
 use entity::{Entities, EntityId};
 use graphics;
 use graphics::GeometryGenerator;
@@ -64,6 +65,8 @@ struct Shaders<GL: Context> {
     structure_shadow: GL::Shader,
     light_static: GL::Shader,
     entity: GL::Shader,
+
+    debug_graph: GL::Shader,
 }
 
 impl<GL: Context> Shaders<GL> {
@@ -108,6 +111,22 @@ impl<GL: Context> Shaders<GL> {
             light_static: light::load_shader(gl),
 
             entity: entity::load_shader(gl),
+
+            debug_graph: gl.load_shader(
+                "debug_graph.vert", "debug_graph.frag", "",
+                uniforms! {
+                    screen_size: V2,
+                    graph_pos: V2,
+                    graph_size: V2,
+                    cur_index: Float,
+                },
+                arrays! {
+                    [2] attribs! {
+                        corner: U8[2] @0,
+                    },
+                },
+                textures! { data_tex, },
+                outputs! { color: 1 }),
         }
     }
 }
@@ -118,6 +137,7 @@ struct Textures<GL: Context> {
     sprite_sheet: GL::Texture,
 
     cavern_map: GL::Texture,
+    debug_graph_data: GL::Texture,
 
     ui_items: GL::Texture,
     ui_parts: GL::Texture,
@@ -132,6 +152,7 @@ impl<GL: Context> Textures<GL> {
             sprite_sheet: gl.load_texture("sprites0"),
 
             cavern_map: gl.create_luminance_texture((96, 96)),
+            debug_graph_data: gl.create_texture((debug::NUM_FRAMES as u16, 1)),
 
             ui_items: gl.load_texture("items_img"),
             ui_parts: gl.load_texture("ui_atlas"),
@@ -210,6 +231,7 @@ pub struct Renderer<GL: Context> {
     light_geom: GeomCache<GL, Region<V2>>,
     entity_buffer: GL::Buffer,
     ui_buffer: GL::Buffer,
+    ui_special: Vec<ui::geom::Special>,
 
     buffers: Buffers<GL>,
     shaders: Shaders<GL>,
@@ -225,6 +247,7 @@ impl<GL: Context> Renderer<GL> {
             light_geom: GeomCache::new(gl),
             entity_buffer: gl.create_buffer(),
             ui_buffer: gl.create_buffer(),
+            ui_special: Vec::new(),
 
             buffers: Buffers::new(gl),
             shaders: Shaders::new(gl),
@@ -322,6 +345,10 @@ impl<GL: Context> Renderer<GL> {
 
         self.ui_buffer.alloc(byte_len);
         self.ui_buffer.load(0, bytes);
+    }
+
+    pub fn set_ui_special(&mut self, special: Vec<ui::geom::Special>) {
+        self.ui_special = special;
     }
 
     pub fn get_ui_buffer(&self) -> &GL::Buffer {
@@ -424,6 +451,17 @@ impl<GL: Context> Renderer<GL> {
             .depth_test()
             .draw(&mut self.shaders.entity);
 
+        self.render_ui(scene);
+
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
+            .textures(&[&self.framebuffers.world_color])
+            .viewport_size(scene.canvas_size)
+            .draw(&mut self.shaders.blit_full);
+    }
+
+    fn render_ui(&mut self, scene: &Scene) {
+        // Main UI rendering
         DrawArgs::<GL>::new()
             .uniforms(&[
                 scene.camera_size(),
@@ -441,12 +479,37 @@ impl<GL: Context> Renderer<GL> {
             .blend_mode(BlendMode::Alpha)
             .draw(&mut self.shaders.ui);
 
-        DrawArgs::<GL>::new()
-            .arrays(&[&self.buffers.square01])
-            .textures(&[&self.framebuffers.world_color])
-            .viewport_size(scene.canvas_size)
-            .draw(&mut self.shaders.blit_full);
+        // Handle special parts
+        for s in &self.ui_special {
+            use ui::geom::Special::*;
+            match *s {
+                DebugFrameGraph { rect, cur, last, last_time, last_interval } => {
+                    let bytes = [(last_time & 0xff) as u8,
+                                 (last_time >> 8) as u8,
+                                 (last_interval & 0xff) as u8,
+                                 (last_interval >> 8) as u8];
+                    let tex_rect = Region::<V2>::sized(scalar(1)) + V2::new(last as i32, 0);
+                    self.textures.debug_graph_data.load_partial(tex_rect, &bytes);
+
+                    DrawArgs::<GL>::new()
+                        .uniforms(&[
+                            scene.camera_size(),
+                            UniformValue::V2(&v2_float(rect.min)),
+                            UniformValue::V2(&v2_float(rect.size())),
+                            UniformValue::Float(cur as f32),
+                        ])
+                        .arrays(&[&self.buffers.square01])
+                        .textures(&[&self.textures.debug_graph_data])
+                        .output(&self.framebuffers.world)
+                        .draw(&mut self.shaders.debug_graph);
+                }
+            }
+        }
     }
+}
+
+fn v2_float(v: V2) -> [f32; 2] {
+    [v.x as f32, v.y as f32]
 }
 
 fn size_float<T: Texture>(t: &T) -> [f32; 2] {

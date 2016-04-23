@@ -55,6 +55,13 @@ mod ffi {
                                    kind: u8,
                                    data_ptr: *const u8,
                                    data_len: usize);
+        pub fn asmgl_texture_subimage(x: u16,
+                                      y: u16,
+                                      width: u16,
+                                      height: u16,
+                                      kind: u8,
+                                      data_ptr: *const u8,
+                                      data_len: usize);
 
         pub fn asmgl_gen_framebuffer() -> u32;
         pub fn asmgl_delete_framebuffer(name: u32);
@@ -455,6 +462,22 @@ impl Inner {
                                      kind as u8,
                                      data.as_ptr(),
                                      data.len());
+        }
+    }
+
+    pub fn texture_subimage(&mut self,
+                            offset: (u16, u16),
+                            size: (u16, u16),
+                            kind: TextureKind,
+                            data: &[u8]) {
+        unsafe {
+            ffi::asmgl_texture_subimage(offset.0,
+                                        offset.1,
+                                        size.0,
+                                        size.1,
+                                        kind as u8,
+                                        data.as_ptr(),
+                                        data.len());
         }
     }
 
@@ -1207,6 +1230,22 @@ impl gl::Texture for Texture {
         self.inner.run(|ctx| {
             ctx.bind_texture(0, name);
             ctx.texture_image(size, kind, data);
+        });
+    }
+
+    fn load_partial(&mut self, rect: Region<V2>, data: &[u8]) {
+        let name = self.name;
+        let off = rect.min;
+        let size = rect.size();
+        let kind = self.kind;
+        self.inner.run(|ctx| {
+            ctx.bind_texture(0, name);
+            ctx.texture_subimage((off.x as u16,
+                                  off.y as u16),
+                                 (size.x as u16,
+                                  size.y as u16),
+                                 kind,
+                                 data);
         });
     }
 }

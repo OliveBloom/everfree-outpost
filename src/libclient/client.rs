@@ -385,12 +385,13 @@ impl<'d, P: Platform> Client<'d, P> {
                                              self.pawn_id);
 
         // Also refresh the UI buffer.
-        let (geom, cursor) = self.with_ui_dyn(|ui, dyn| {
-            let geom = ui.generate_geom(dyn);
+        let (geom, special, cursor) = self.with_ui_dyn(|ui, dyn| {
+            let (geom, special) = ui.generate_geom(dyn);
             let cursor = ui.get_cursor(dyn);
-            (geom, cursor)
+            (geom, special, cursor)
         });
         self.renderer.load_ui_geometry(&geom);
+        self.renderer.set_ui_special(special);
         if cursor != self.last_cursor {
             self.platform.set_cursor(cursor);
             self.last_cursor = cursor;

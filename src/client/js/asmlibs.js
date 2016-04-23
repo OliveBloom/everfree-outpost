@@ -153,6 +153,10 @@ var module_env = function(asm) {
             var view = asm._makeView(Uint8Array, data_ptr, data_len);
             asm.asmgl.textureImage(width, height, kind, view);
         },
+        'asmgl_texture_subimage': function(x, y, width, height, kind, data_ptr, data_len) {
+            var view = asm._makeView(Uint8Array, data_ptr, data_len);
+            asm.asmgl.textureSubimage(x, y, width, height, kind, view);
+        },
 
         'asmgl_gen_framebuffer': function() {
             return asm.asmgl.genFramebuffer();

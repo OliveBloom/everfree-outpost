@@ -299,6 +299,26 @@ AsmGl.prototype.textureImage = function(width, height, kind, data) {
     }
 };
 
+AsmGl.prototype.textureSubimage = function(off_x, off_y, width, height, kind, data) {
+    var gl = this.gl;
+    switch (kind) {
+        case 0:
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, off_x, off_y, width, height,
+                    gl.RGBA, gl.UNSIGNED_BYTE, data);
+            break;
+        case 1:
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, off_x, off_y, width, height,
+                    gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, data);
+            break;
+        case 2:
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, off_x, off_y, width, height,
+                    gl.LUMINANCE, gl.UNSIGNED_BYTE, data);
+            break;
+        default:
+            throw 'bad texture kind: ' + kind;
+    }
+};
+
 
 // Framebuffers
 

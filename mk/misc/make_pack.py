@@ -72,6 +72,9 @@ def main(src_dir, build_dir, out_file):
     add('text', 'entity2.vert',         src('assets/shaders/entity2.vert'))
     add('text', 'slicing.inc',          src('assets/shaders/slicing.inc'))
 
+    add('text', 'debug_graph.vert',     src('assets/shaders/debug_graph.vert'))
+    add('text', 'debug_graph.frag',     src('assets/shaders/debug_graph.frag'))
+
     add('text', 'ui_blit.vert',         src('assets/shaders/ui_blit.vert'))
     add('text', 'ui_blit.frag',         src('assets/shaders/ui_blit.frag'))
     add('text', 'ui_blit_tiled.vert',   src('assets/shaders/ui_blit_tiled.vert'))

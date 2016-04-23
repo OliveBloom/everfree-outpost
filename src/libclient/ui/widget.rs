@@ -4,7 +4,7 @@ use std::mem;
 use physics::v3::{V2, scalar, Region};
 
 use ui::{UI, Context, DragData};
-use ui::geom::Geom;
+use ui::geom::{Geom, Special};
 use ui::input::{KeyAction, EventStatus};
 
 
