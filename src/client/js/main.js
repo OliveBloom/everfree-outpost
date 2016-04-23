@@ -140,9 +140,6 @@ var assets;
 
 var asm_client;
 
-var entities;
-var player_entity;
-
 var chunkLoaded;
 var physics;
 var prediction;
@@ -211,9 +208,6 @@ function init() {
 
     runner = new BackgroundJobRunner();
     assets = null;
-
-    entities = {};
-    player_entity = -1;
 
     chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
     physics = new Physics(asm_client);
@@ -738,11 +732,6 @@ function setupKeyHandler() {
 
         var arrival = timing.nextArrival() + Config.input_delay.get();
         conn.sendInput(timing.encodeSend(arrival), bits);
-
-        if (player_entity != null && entities[player_entity] != null) {
-            var pony = entities[player_entity];
-            prediction.predict(arrival, pony, target_velocity);
-        }
     }
 
     function alwaysStop(evt) {
@@ -777,7 +766,6 @@ function handleClose(evt, reason) {
 
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
     asm_client.setPawnId(entity_id);
-    player_entity = entity_id;
     var pst_now = timing.decodeRecv(now);
     day_night.base_time = pst_now - cycle_base;
     day_night.cycle_ms = cycle_ms;
@@ -792,10 +780,6 @@ function handleTerrainChunk(i, data) {
 }
 
 function handleEntityUpdate(id, motion, anim) {
-    if (entities[id] == null) {
-        return;
-    }
-
     var m = new Motion(motion.start_pos);
     m.end_pos = motion.end_pos;
 
@@ -810,12 +794,6 @@ function handleEntityUpdate(id, motion, anim) {
     }
 
     m.anim_id = anim;
-
-    if (id != player_entity) {
-        entities[id].queueMotion(m);
-    } else {
-        prediction.receivedMotion(m, entities[id]);
-    }
 
     asm_client.entityUpdate(id, m, anim);
 }
@@ -868,31 +846,11 @@ function handleChatUpdate(msg) {
 
 function handleEntityAppear(id, appearance_bits, name) {
     asm_client.entityAppear(id, appearance_bits, name);
-
-    if (id == player_entity) {
-        name = '';
-    }
-    var app = new PonyAppearance(assets, appearance_bits, name);
-    if (entities[id] != null) {
-        entities[id].setAppearance(app);
-    } else {
-        entities[id] = new Entity(
-                app,
-                new Animation(AnimationDef.by_id[ExtraDefs.default_anim], 0),
-                new Vec(0, 0, 0));
-    }
-
-    if ((appearance_bits & (1 << 9)) != 0) {
-        entities[id].setLight(200, [100, 180, 255]);
-    } else {
-        entities[id].setLight(0, null);
-    }
 }
 
 function handleEntityGone(id, time) {
     // TODO: actually delay until the specified time
     asm_client.entityGone(id);
-    delete entities[id];
 }
 
 function handleStructureAppear(id, template_id, x, y, z) {
@@ -994,11 +952,6 @@ function resetAll() {
         dialog.hide();
     }
 
-    Object.getOwnPropertyNames(entities).forEach(function(id) {
-        handleEntityGone(id, now);
-    });
-    player_entity = -1;
-
     asm_client.resetClient();
 }
 
@@ -1094,148 +1047,5 @@ function frame(ac, client_now) {
 
     var now = timing.visibleNow();
 
-    /*
-    // Here's the math on client-side motion prediction.
-    //
-    //                <<<<<<<
-    //   Server ----- A --- C --------
-    //                 \   / \
-    //                  \ /   \
-    //   Client -------- B --- D -----
-    //
-    // `A` is the latest visible time.  For the player entity only, we have a
-    // predicted motion (starting at time C) based on the inputs we last sent
-    // to the server (at time B).  We want to display that predicted motion
-    // now, as if it started at time A instead of C.  To be consistent, we
-    // always do this translation, drawing the player entity as we expect it to
-    // appear `timing.ping` msec in the future instead of how it actually is.
-    var predict_now;
-    if (Config.motion_prediction.get()) {
-        predict_now = now + timing.ping;
-    } else {
-        predict_now = now;
-    }
-
-    //debug.frameStart();
-    var gl = ac.ctx;
-
-    gl.viewport(0, 0, ac.canvas.width, ac.canvas.height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    var pos = new Vec(4096, 4096, 0);
-    var pony = null;
-    if (player_entity >= 0 && entities[player_entity] != null) {
-        pony = entities[player_entity];
-
-        var motion_end = pony.motionEndTime(predict_now);
-        if (motion_end <= predict_now) {
-            prediction.refreshMotion(predict_now, pony);
-        }
-
-        // Make sure the camera remains within the middle of the local space.
-        localSprite(predict_now, pony, null);
-        // TODO: another hacky offset
-        pos = pony.position(predict_now).add(new Vec(16, 16, 0));
-
-        //debug.updateMotions(pony, timing);
-    }
-    //debug.updatePos(pos);
-
-    var view_width = ac.virtualWidth;
-    var view_height = ac.virtualHeight;
-
-    var camera_size = new Vec(view_width, view_height, 0);
-    var camera_pos = pos.sub(camera_size.divScalar(2));
-    camera_pos.y -= camera_pos.z;
-
-
-    var s = new Scene();
-    s.now = now;
-
-
-    var entity_ids = Object.getOwnPropertyNames(entities);
-    s.sprites = new Array(entity_ids.length);
-    var player_sprite = null;
-    */
-
-    /*
-    for (var i = 0; i < entity_ids.length; ++i) {
-        var entity = entities[entity_ids[i]];
-        if (entity_ids[i] != player_entity) {
-            s.sprites[i] = localSprite(now, entity, pos);
-        } else {
-            s.sprites[i] = localSprite(predict_now, entity, pos);
-            player_sprite = s.sprites[i];
-        }
-
-        var light = entity.getLight();
-        if (light != null) {
-            s.lights.push({
-                pos: new Vec(
-                    s.sprites[i].ref_x,
-                    s.sprites[i].ref_y,
-                    s.sprites[i].ref_z),
-                color: light.color,
-                radius: light.radius,
-            });
-        }
-    }
-    */
-
-
-    /*
-    if (needs_mask(predict_now, pony)) {
-        if (slice_radius.velocity <= 0) {
-            slice_radius.setVelocity(predict_now, 2);
-        }
-        var slice_center = pos.divScalar(TILE_SIZE);
-        s.slice_center = [slice_center.x, slice_center.y];
-    } else {
-        if (slice_radius.velocity >= 0) {
-            slice_radius.setVelocity(predict_now, -2);
-        }
-    }
-
-    // TODO: hacky.  The issue here is that cavern_map is mostly a
-    // graphics-related thing, but updating it requires access to the
-    // PhysicsAsm object.
-    //renderer.updateCavernMap(physics._asm, pos);
-
-    s.canvas_size = [ac.canvas.width, ac.canvas.height];
-    s.camera_pos = [camera_pos.x, camera_pos.y];
-    s.camera_size = [camera_size.x, camera_size.y];
-    s.ambient_color = day_night.getAmbientColor(predict_now);
-
-    //ui_gl.calcSize(camera_size.x, camera_size.y);
-
-    var radius = slice_radius.get(predict_now);
-    if (radius > 0 && pony != null) {
-        s.slice_frac = radius;
-        s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
-    }
-    */
-
     asm_client.renderFrame(now);
-
-    /*
-    if (show_cursor && pony != null) {
-        var facing = FACINGS[pony.animId() % FACINGS.length];
-        var cursor_pos = pos.divScalar(TILE_SIZE).add(facing);
-        cursor_pos.y -= cursor_pos.z;
-        cursor.draw(camera_pos, camera_size, cursor_pos);
-    }
-    */
-
-    //debug.frameEnd();
-    //debug.updateJobs(runner);
-    //debug.updateTiming(timing);
-    //debug.updateGraphics(renderer);
-}
-
-function debug_player_pos() {
-    var e = entities[player_entity];
-    if (e == null) {
-        return null;
-    }
-    return e.position(timing.visibleNow());
 }
