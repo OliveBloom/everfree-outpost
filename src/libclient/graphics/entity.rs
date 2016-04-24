@@ -239,16 +239,18 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 }
 
 
-const WINGS: u32 = 1 << 6;
-const HORN: u32 = 1 << 7;
-const STALLION: u32 = 1 << 8;
-const MANE_SHIFT: usize = 10;
-const TAIL_SHIFT: usize = 13;
-const EQUIP0_SHIFT: usize = 18;
-const EQUIP1_SHIFT: usize = 22;
-const EQUIP2_SHIFT: usize = 26;
+// TODO: find a better place for these
+pub const WINGS: u32 = 1 << 6;
+pub const HORN: u32 = 1 << 7;
+pub const STALLION: u32 = 1 << 8;
+pub const LIGHT: u32 = 1 << 9;
+pub const MANE_SHIFT: usize = 10;
+pub const TAIL_SHIFT: usize = 13;
+pub const EQUIP0_SHIFT: usize = 18;
+pub const EQUIP1_SHIFT: usize = 22;
+pub const EQUIP2_SHIFT: usize = 26;
 
-static COLOR_TABLE: [u8; 6] = [0x00, 0x44, 0x88, 0xcc, 0xff, 0xff];
+pub static COLOR_TABLE: [u8; 6] = [0x00, 0x44, 0x88, 0xcc, 0xff, 0xff];
 
 fn count_layers(appearance: u32) -> usize {
     let mut count = 1;  // base

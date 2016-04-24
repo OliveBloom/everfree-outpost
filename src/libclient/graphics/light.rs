@@ -3,13 +3,17 @@ use std::prelude::v1::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
+use entity::{Entities, EntityId, Motion};
 use platform::gl;
+use predict::Predictor;
 use structures::Structures;
 use util;
 
+use Time;
 use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
 use graphics::LOCAL_BITS;
+use graphics::entity;
 use graphics::types::{StructureTemplate, HAS_LIGHT};
 
 
@@ -60,18 +64,18 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
 }
 
 
-pub struct GeomGen<'a> {
+pub struct StructureGeomGen<'a> {
     structures: &'a Structures,
     templates: &'a [StructureTemplate],
     bounds: Region<V2>,
     next: u32,
 }
 
-impl<'a> GeomGen<'a> {
+impl<'a> StructureGeomGen<'a> {
     pub fn new(structures: &'a Structures,
                templates: &'a [StructureTemplate],
-               bounds: Region<V2>) -> GeomGen<'a> {
-        GeomGen {
+               bounds: Region<V2>) -> StructureGeomGen<'a> {
+        StructureGeomGen {
             structures: structures,
             templates: templates,
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
@@ -106,7 +110,7 @@ impl<'a> GeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator for GeomGen<'a> {
+impl<'a> GeometryGenerator for StructureGeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate(&mut self, buf: &mut [Vertex]) -> (usize, bool) {
@@ -157,6 +161,110 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
         }
 
         // Ran out of structures - we're done.
+        (idx, false)
+    }
+}
+
+
+pub struct EntityGeomGen<'a> {
+    predictor: &'a Predictor,
+    entities: &'a Entities,
+    bounds: Region<V2>,
+    now: Time,
+    future: Time,
+    pawn_id: Option<EntityId>,
+    next: u32,
+}
+
+impl<'a> EntityGeomGen<'a> {
+    pub fn new(entities: &'a Entities,
+               predictor: &'a Predictor,
+               bounds: Region<V2>,
+               now: Time,
+               future: Time,
+               pawn_id: Option<EntityId>) -> EntityGeomGen<'a> {
+        EntityGeomGen {
+            entities: entities,
+            predictor: predictor,
+            bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
+            now: now,
+            future: future,
+            pawn_id: pawn_id,
+            next: 0,
+        }
+    }
+
+    pub fn count_verts(&self) -> usize {
+        let mut count = 0;
+        for (_, e) in self.entities.iter() {
+            if e.appearance & entity::LIGHT == 0 {
+                continue;
+            }
+
+            let pos = e.pos(self.now);
+            // TODO: hard-coded constant based on entity size
+            let center = pos + V3::new(16, 16, 48);
+
+            const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
+            if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
+                continue;
+            }
+
+            count += 6;
+        }
+        count
+    }
+}
+
+impl<'a> GeometryGenerator for EntityGeomGen<'a> {
+    type Vertex = Vertex;
+
+    fn generate(&mut self, buf: &mut [Vertex]) -> (usize, bool) {
+        let mut idx = 0;
+        for (&id, e) in self.entities.iter_from(self.next) {
+            self.next = id;
+            let is_pawn = Some(id) == self.pawn_id;
+
+            if e.appearance & entity::LIGHT == 0 {
+                continue;
+            }
+
+            let pos = if !is_pawn {
+                e.pos(self.now)
+            } else {
+                self.predictor.motion().pos(self.future)
+            };
+
+            // TODO: hard-coded constant based on entity size
+            let center = pos + V3::new(16, 16, 48);
+
+            const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
+            if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
+                continue;
+            }
+
+            if remaining_quads(buf, idx) < 1 {
+                // No more space in buffer.
+                return (idx, true);
+            }
+
+            emit_quad(buf, &mut idx, Vertex {
+                corner: (0, 0),
+                // Give the position of the front corner of the entity, since the quad should
+                // cover the front plane.
+                center: (center.x as u16,
+                         center.y as u16,
+                         center.z as u16),
+
+                color: (100, 180, 255),
+                radius: 200,
+
+                _pad1: 0,
+                _pad2: 0,
+            });
+        }
+
+        // Ran out of entities - we're done.
         (idx, false)
     }
 }

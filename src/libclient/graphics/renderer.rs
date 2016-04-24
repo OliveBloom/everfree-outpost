@@ -279,6 +279,7 @@ pub struct Renderer<GL: Context> {
     structure_geom: GeomCache<GL, Region<V2>>,
     structure_light_geom: GeomCache<GL, Region<V2>>,
     entity_buffer: GL::Buffer,
+    entity_light_buffer: GL::Buffer,
     ui_buffer: GL::Buffer,
     ui_special: Vec<ui::geom::Special>,
 
@@ -295,6 +296,7 @@ impl<GL: Context> Renderer<GL> {
             structure_geom: GeomCache::new(gl),
             structure_light_geom: GeomCache::new(gl),
             entity_buffer: gl.create_buffer(),
+            entity_light_buffer: gl.create_buffer(),
             ui_buffer: gl.create_buffer(),
             ui_special: Vec::new(),
 
@@ -363,7 +365,7 @@ impl<GL: Context> Renderer<GL> {
                                            structures: &Structures,
                                            bounds: Region<V2>) {
         self.structure_light_geom.update(bounds, |buffer, _| {
-            let mut gen = light::GeomGen::new(structures, data.templates(), bounds);
+            let mut gen = light::StructureGeomGen::new(structures, data.templates(), bounds);
             buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
             load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut 0);
@@ -398,11 +400,21 @@ impl<GL: Context> Renderer<GL> {
                                   now: Time,
                                   future: Time,
                                   pawn_id: Option<EntityId>) {
-        let mut gen = entity::GeomGen::new(entities, predictor, data,
-                                           bounds, now, future, pawn_id);
-        self.entity_buffer.alloc(gen.count_verts() * mem::size_of::<entity::Vertex>());
-        let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-        load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);
+        {
+            let mut gen = entity::GeomGen::new(entities, predictor, data,
+                                               bounds, now, future, pawn_id);
+            self.entity_buffer.alloc(gen.count_verts() * mem::size_of::<entity::Vertex>());
+            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+            load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);
+        }
+
+        {
+            let mut gen = light::EntityGeomGen::new(entities, predictor,
+                                                    bounds, now, future, pawn_id);
+            self.entity_light_buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
+            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+            load_buffer::<GL, _>(&mut self.entity_light_buffer, &mut gen, &mut tmp, &mut 0);
+        }
     }
 
 
@@ -542,6 +554,19 @@ impl<GL: Context> Renderer<GL> {
                 scene.camera_size(),
             ])
             .arrays(&[self.structure_light_geom.buffer()])
+            .textures(&[
+                &self.framebuffers.world_depth,
+            ])
+            .output(&self.framebuffers.light)
+            .blend_mode(BlendMode::Add)
+            .draw(&mut self.shaders.light_static);
+
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+            ])
+            .arrays(&[&self.entity_light_buffer])
             .textures(&[
                 &self.framebuffers.world_depth,
             ])
