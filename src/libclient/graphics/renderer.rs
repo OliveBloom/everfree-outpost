@@ -488,14 +488,15 @@ impl<GL: Context> Renderer<GL> {
             .uniforms(&[
                 scene.camera_pos(),
                 scene.camera_size(),
-                //scene.slice_center(),
-                //scene.slice_z(),
+                scene.slice_center(),
+                scene.slice_z(),
                 UniformValue::Float(0.0),
             ])
             .arrays(&[&self.entity_buffer])
             .textures(&[
                 &self.textures.sprite_sheet,
                 &self.framebuffers.world_depth,
+                &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.sprite)
             .viewport_size(scene.camera_size)
