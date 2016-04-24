@@ -14,4 +14,9 @@ def sit(client, args):
 
 @chat.command()
 def sleep(client, args):
-    client.pawn().set_anim(DATA.animation_id('pony//sleep'))
+    e = client.pawn()
+    dir_ = facing_to_dir(e.facing())
+    if dir_ in range(3, 6):
+        e.set_anim(DATA.animation_id('pony//sleep-4'))
+    else:
+        e.set_anim(DATA.animation_id('pony//sleep-0'))

@@ -34,6 +34,7 @@ MOTIONS = [
         Motion('stand', 0, 0, 1,  1),
         Motion('walk',  1, 0, 6,  8),
         Motion('run',   3, 0, 6, 12),
+        Motion('sit',   0, 1, 1,  1),
         ]
 
 SPRITE_SIZE = (96, 96)
