@@ -30,6 +30,7 @@ def rules(i):
 
         # The `sed` invocations below are hacks to handle nondeterministic
         # depfile line order from rustc.
+        # NB: If you remove the sed commands here, also remove the ones in asmjs.py
         rule rustc_native_bin
             command = %rustc_base --crate-type=bin $rustflags_lto $rustflags $
                 && sed -i -e '\\,^$out: ,p;d' $b_native/$crate_name.d

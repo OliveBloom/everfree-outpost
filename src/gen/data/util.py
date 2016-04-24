@@ -7,6 +7,7 @@ import sys
 
 from PIL import Image
 
+from .boxpack import BoxPacker
 from .consts import *
 
 
@@ -72,62 +73,13 @@ def warn(s):
     sys.stderr.write('warning: ' + s + '\n')
 
 
-class Page(object):
-    def __init__(self, size):
-        self.w, self.h = size
-        self.in_use = 0
-        self.avail_area = self.w * self.h
-
-    def place(self, box):
-        w, h = box
-
-        base_mask = (1 << w) - 1
-        mask = 0
-        for i in range(h):
-            mask |= base_mask << (i * self.w)
-
-        for y in range(0, self.h - h + 1):
-            base_i = y * self.w
-            for x in range(0, self.w - w + 1):
-                i = base_i + x
-                if (mask << i) & self.in_use == 0:
-                    self.in_use |= mask << i
-                    self.avail_area -= w * h
-                    return (x, y)
-
-        return None
-
-def pack_boxes(page_size, boxes):
+def pack_boxes(page_size, boxes, res=1):
     """Pack a list of boxes (`(w, h)` pairs) into pages of size `page_size`
     (`(page_w, page_h)`).  Returns the number of generated pages and a list
     containing `(page_idx, (x, y))` for each input box."""
-    def key(b):
-        i, (w, h) = b
-        return (w * h, h, w)
-    # Sort by decreasing size.
-    boxes = sorted(enumerate(boxes), key=key, reverse=True)
-    result = [None] * len(boxes)
-
-    pages = [Page(page_size)]
-    for i, box in boxes:
-        w,h = box
-        for j, p in reversed(list(enumerate(pages))):
-            if p.avail_area < w * h:
-                continue
-            pos = p.place(box)
-            if pos is not None:
-                result[i] = (j, pos)
-                break
-        else:
-            # The loop didn't `break`, so the box didn't fit on any existing page.
-            pages.append(Page(page_size))
-            pos = pages[-1].place(box)
-            assert pos is not None, \
-                    'box is too large to fit on a page (%s > %s)' % (box, page_size)
-            result[i] = (len(pages) - 1, pos)
-
-    assert not any(r is None for r in result)
-    return len(pages), result
+    p = BoxPacker(page_size, res=res)
+    offsets = p.place(boxes)
+    return p.num_pages(), offsets
 
 def pack_boxes_uniform(page_size, n):
     """Like `pack_boxes`, but for `n` boxes each of size `(1, 1)`."""

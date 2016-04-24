@@ -2,6 +2,7 @@
 // world.
 /** @constructor */
 function Scene() {
+    this.canvas_size = [100, 100];
     this.camera_pos = [0, 0];
     this.camera_size = [100, 100];
     this.sprites = null;

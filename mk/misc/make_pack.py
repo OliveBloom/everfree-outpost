@@ -31,18 +31,15 @@ def main(src_dir, build_dir, out_file):
     add('image', 'items_img',   build('items.png'))
     add('image', 'ui_atlas',    build('ui_atlas.png'))
 
-    add('json', 'block_defs',           build('blocks_client.json'))
     add('json', 'item_defs',            build('items_client.json'))
     add('json', 'recipe_defs',          build('recipes_client.json'))
-    add('json', 'template_defs',        build('structures_client.json'))
-    add('json', 'template_part_defs',   build('structure_parts_client.json'))
-    add('json', 'template_vert_defs',   build('structure_verts_client.json'))
     add('json', 'animation_defs',       build('animations_client.json'))
-    add('json', 'sprite_part_defs',     build('sprite_parts_client.json'))
     add('json', 'extra_defs',           build('extras_client.json'))
     add('json', 'fonts_metrics',        build('fonts_metrics.json'))
     add('json', 'day_night',            build('day_night.json'))
     add('json', 'ui_atlas_parts',       build('ui_atlas.json'))
+
+    add('binary', 'client_data',        build('client_data.bin'))
 
     add('text', 'sprite.vert',          src('assets/shaders/sprite.vert'))
     add('text', 'sprite.frag',          src('assets/shaders/sprite.frag'))
@@ -61,12 +58,19 @@ def main(src_dir, build_dir, out_file):
     add('text', 'structure2.vert',      src('assets/shaders/structure2.vert'))
     add('text', 'light2.frag',          src('assets/shaders/light2.frag'))
     add('text', 'light2.vert',          src('assets/shaders/light2.vert'))
+    add('text', 'entity2.frag',         src('assets/shaders/entity2.frag'))
+    add('text', 'entity2.vert',         src('assets/shaders/entity2.vert'))
     add('text', 'slicing.inc',          src('assets/shaders/slicing.inc'))
+
+    add('text', 'debug_graph.vert',     src('assets/shaders/debug_graph.vert'))
+    add('text', 'debug_graph.frag',     src('assets/shaders/debug_graph.frag'))
 
     add('text', 'ui_blit.vert',         src('assets/shaders/ui_blit.vert'))
     add('text', 'ui_blit.frag',         src('assets/shaders/ui_blit.frag'))
     add('text', 'ui_blit_tiled.vert',   src('assets/shaders/ui_blit_tiled.vert'))
     add('text', 'ui_blit_tiled.frag',   src('assets/shaders/ui_blit_tiled.frag'))
+    add('text', 'ui_blit2.vert',        src('assets/shaders/ui_blit2.vert'))
+    add('text', 'ui_blit2.frag',        src('assets/shaders/ui_blit2.frag'))
 
 
     with open(build('structures_list.json')) as f:
@@ -76,8 +80,9 @@ def main(src_dir, build_dir, out_file):
 
     with open(build('sprites_list.json')) as f:
         sprites_list = json.load(f)
-    for i, f in enumerate(sprites_list):
-        add('image', 'sprite_%d' % i , build(os.path.join('sprites', f)))
+    for f in sprites_list:
+        dest, _ = os.path.splitext(os.path.basename(f))
+        add('image', dest, build(os.path.join('sprites', f)))
 
 
     # Generate the pack containing the files added above.

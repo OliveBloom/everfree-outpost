@@ -29,6 +29,9 @@ NEED_RUST_LIBS = (
 
 NEED_RUST_LIB_SRC = (
         'core',
+        'alloc',
+        'rustc_unicode',
+        'collections',
         'bitflags',
         # If you extend this, also add a new check in configure()
         )
@@ -44,6 +47,9 @@ def configure(ctx):
         configure_lib(ctx, lib)
 
     configure_lib_src(ctx, 'core', ctx.args.rust_home, 'src/libcore')
+    configure_lib_src(ctx, 'alloc', ctx.args.rust_home, 'src/liballoc')
+    configure_lib_src(ctx, 'rustc_unicode', ctx.args.rust_home, 'src/librustc_unicode')
+    configure_lib_src(ctx, 'collections', ctx.args.rust_home, 'src/libcollections')
     configure_lib_src(ctx, 'bitflags', ctx.args.bitflags_home)
 
     ctx.copy_arg('rust_extra_libdir', 'Rust extra library directory')

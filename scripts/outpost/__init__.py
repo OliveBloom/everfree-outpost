@@ -5,6 +5,7 @@ from . import cave
 from . import chat
 from . import chest
 from . import crops
+from . import emote
 from . import hat
 from . import misc
 from . import sign

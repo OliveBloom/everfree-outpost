@@ -12,7 +12,6 @@ var AnimCanvas = require('graphics/canvas').AnimCanvas;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
 var PonyAppearance = require('graphics/appearance/pony').PonyAppearance;    
 var Renderer = require('graphics/renderer').Renderer;
-var Cursor = require('graphics/cursor').Cursor;
 var glutil = require('graphics/glutil');
 var Scene = require('graphics/scene').Scene;
 var DayNight = require('graphics/daynight').DayNight;
@@ -51,24 +50,19 @@ var InventoryUIGL = require('ui_gl/inventory').InventoryUIGL;
 var Input = require('input').Input;
 var UIInput = require('ui_gl/input').UIInput;
 
-var BlockDef = require('data/chunk').BlockDef;
 var ItemDef = require('data/items').ItemDef;
 var RecipeDef = require('data/recipes').RecipeDef;
-var TemplateDef = require('data/templates').TemplateDef;
-var TemplatePart = require('data/templates').TemplatePart;
 var AnimationDef = require('data/sprites').AnimationDef;
 var SpritePartDef = require('data/sprites').SpritePartDef;
 var ExtraDefs = require('data/extras').ExtraDefs;
 var FontMetrics = require('data/fontmetrics').FontMetrics;
 
-var Chunk = require('data/chunk').Chunk;
-var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
-var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
+var CHUNK_SIZE = require('consts').CHUNK_SIZE;
+var TILE_SIZE = require('consts').TILE_SIZE;
+var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
-var Physics = require('physics').Physics;
-var Prediction = require('physics').Prediction;
-var DummyPrediction = require('physics').DummyPrediction;
+var DynAsm = require('asmlibs').DynAsm;
+var AsmClientInput = require('asmlibs').AsmClientInput;
 
 var net = require('net');
 var Timing = require('time').Timing;
@@ -135,25 +129,12 @@ var input;
 var main_menu;
 var debug_menu;
 
-var runner;
 var assets;
 
 
-var entities;
-var player_entity;
-var structures;
-
-var chunks;
-var chunkLoaded;
-var physics;
-var prediction;
+var asm_client;
 
 var renderer = null;
-var ui_renderer = null;
-var cursor;
-var show_cursor = false;
-var slice_radius;
-var day_night;
 var synced = net.SYNC_LOADING;
 
 var conn;
@@ -185,11 +166,13 @@ function init() {
                 'rendering in fallback mode');
     }
 
+    asm_client = new DynAsm();
+
     ui_div = util.element('div', ['ui-container']);
     debug = new DebugMonitor();
     window.DEBUG = debug;
     banner = new Banner();
-    keyboard = new Keyboard();
+    keyboard = new Keyboard(asm_client);
     dnd = new DNDState(keyboard);
     dialog = new Dialog(keyboard);
     chat = new ChatWindow();
@@ -200,6 +183,7 @@ function init() {
     ui_gl.calcSize(0, 0);
     input = new Input();
     input.handlers.push(new UIInput(ui_gl));
+    input.handlers.push(new AsmClientInput(asm_client));
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -207,23 +191,9 @@ function init() {
 
     initMenus();
 
-    runner = new BackgroundJobRunner();
     assets = null;
 
-    entities = {};
-    player_entity = -1;
-    structures = {};
-
-    chunks = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return new Chunk(); });
-    chunkLoaded = buildArray(LOCAL_SIZE * LOCAL_SIZE, function() { return false; });
-    physics = new Physics();
-    prediction = Config.motion_prediction.get() ? new Prediction(physics) : new DummyPrediction();
-
     renderer = null;
-    cursor = null;
-    show_cursor = false;
-    slice_radius = new TimeVarying(0, 0, 0, 0.9, 0);
-    day_night = null;
 
     conn = null;    // Initialized after assets are loaded.
     timing = null;  // Initialized after connection is opened.
@@ -236,22 +206,27 @@ function init() {
 
     checkBrowser(dialog, function() {
         loadAssets(function() {
-            renderer = new Renderer(canvas.ctx, assets);
-            renderer.initData(BlockDef.by_id, TemplateDef.by_id,
-                    TemplatePart.by_index, assets['template_vert_defs']);
-            ui_renderer = new UIRenderContext(canvas.ctx, assets);
-            runner.job('preload-textures', preloadTextures);
-
-            cursor = new Cursor(canvas.ctx, assets, TILE_SIZE / 2 + 1);
-            day_night = new DayNight(assets);
+            renderer = new Renderer(canvas.ctx, assets, asm_client);
 
             ui_gl.hotbar.init();
+
+            asm_client.initClient(canvas.ctx, assets);
+
+            // This should only happen after client init.
+            function doResize() {
+                handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
+                asm_client.resizeWindow(window.innerWidth, window.innerHeight);
+            }
+            window.addEventListener('resize', doResize);
+            doResize();
+
 
             var info = assets['server_info'];
             openConn(info, function() {
                 timing = new Timing(conn);
                 timing.scheduleUpdates(5, 30);
-                inv_tracker = new InventoryTracker(conn);
+                inv_tracker = new InventoryTracker(conn, asm_client);
+                asm_client.conn = conn;
 
                 maybeRegister(info, function() {
                     conn.sendLogin(Config.login_name.get(), Config.login_secret.get());
@@ -279,11 +254,6 @@ function loadAssets(next) {
             assets = assets_;
             assets['server_info'] = server_info;
 
-            var blocks = assets['block_defs'];
-            for (var i = 0; i < blocks.length; ++i) {
-                BlockDef.register(i, blocks[i]);
-            }
-
             var items = assets['item_defs'];
             for (var i = 0; i < items.length; ++i) {
                 ItemDef.register(i, items[i]);
@@ -292,26 +262,6 @@ function loadAssets(next) {
             var recipes = assets['recipe_defs'];
             for (var i = 0; i < recipes.length; ++i) {
                 RecipeDef.register(i, recipes[i]);
-            }
-
-            var templates = assets['template_defs'];
-            for (var i = 0; i < templates.length; ++i) {
-                TemplateDef.register(i, templates[i], assets);
-            }
-
-            var template_parts = assets['template_part_defs'];
-            for (var i = 0; i < template_parts.length; ++i) {
-                TemplatePart.register(template_parts[i]);
-            }
-
-            var animations = assets['animation_defs'];
-            for (var i = 0; i < animations.length; ++i) {
-                AnimationDef.register(i, animations[i]);
-            }
-
-            var sprite_parts = assets['sprite_part_defs'];
-            for (var i = 0; i < sprite_parts.length; ++i) {
-                SpritePartDef.register(i, sprite_parts[i]);
             }
 
             ExtraDefs.init(assets['extra_defs']);
@@ -418,12 +368,6 @@ function buildUI() {
     keyboard.attach(document);
     input.attach(document);
     setupKeyHandler();
-
-    function doResize() {
-        handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', doResize);
-    doResize();
 
     var key_list = $('key-list');
 
@@ -540,46 +484,15 @@ function saveAppearance(a) {
 }
 
 function drawPony(ctx, app_info) {
-    var bits = calcAppearance(app_info);
-    var app = new PonyAppearance(assets, bits, '');
-    var anim_def = AnimationDef.by_id[ExtraDefs.editor_anim];
-    var frame = new Animation(anim_def, 0).frameInfo(0);
-    var sprite = app.buildSprite(new Vec(0, 0, 0), frame);
-    sprite.setRefPosition(sprite.anchor_x, sprite.anchor_y, 0);
+    var app = calcAppearance(app_info);
+    asm_client.ponyeditRender(app);
 
     ctx.clearRect(0, 0, 96, 96);
-    // TODO: hack.  relies on the fact that PonyAppearanceClass.draw2D doesn't
-    // refer to `this`
-    app.getClass().prototype.draw2D(ctx, [0, 0], sprite);
-}
-
-function preloadTextures() {
-    var textures = ['tiles'];
-    for (var i = 0; i < 2; ++i) {
-        var parts = ExtraDefs.pony_slot_table[i];
-        var part_names = Object.getOwnPropertyNames(parts);
-        for (var j = 0; j < part_names.length; ++j) {
-            var part_name = part_names[j];
-            var part_id = parts[part_name]
-            var part = SpritePartDef.by_id[part_id];
-
-            if (part.variants.length == 0) {
-                continue;
-            }
-            var variant_id = part.variants[0];
-            if (variant_id != null) {
-                textures.push('sprite_' + variant_id);
-            }
-        }
-    }
-
-    for (var i = 0; i < textures.length; ++i) {
-        (function(key) {
-            runner.subjob(key, function() {
-                renderer.cacheTexture(assets[key]);
-            });
-        })(textures[i]);
-    }
+    var size = Math.round(96 * canvas.canvas.width / canvas.virtualWidth);
+    var extra = Math.round(40 * canvas.canvas.width / canvas.virtualWidth);
+    var cx = ((canvas.canvas.width - size) / 2)|0;
+    var cy = ((canvas.canvas.height - size - extra) / 2)|0;
+    ctx.drawImage(canvas.canvas, cx, cy, size, size, 0, 0, 96, 96);
 }
 
 
@@ -629,10 +542,6 @@ function setupKeyHandler() {
                     $('key-list').classList.toggle('hidden', !show);
                     break;
                 case 'debug_show_panel':
-                    var setting = (Config.debug_show_panel.get() + 1) % 3;
-                    Config.debug_show_panel.set(setting);
-                    ui_gl.fps.toggle(setting == 1);
-                    debug.container.classList.toggle('hidden', setting != 2);
                     break;
                 case 'debug_test':
                     window.hideUI = !window.hideUI;
@@ -647,53 +556,21 @@ function setupKeyHandler() {
                     dialog.show(main_menu);
                     break;
                 case 'toggle_cursor':
-                    show_cursor = !show_cursor;
+                    asm_client.toggleCursor();
                     break;
 
                 case 'inventory':
                     if (item_inv == null) {
                         break;
                     }
-                    var inv = item_inv.clone();
-                    var ui = new InventoryUIGL(inv);
-                    ui_gl.showDialog(ui, 'Inventory');
-
-                    ui.addListener('transfer',
-                        function(from_inv, from_slot, to_inv, to_slot, amount) {
-                            conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
-                        });
-
-                    ui.addListener('set_hotbar', function(idx, item_id) {
-                        ui_gl.hotbar.setSlot(idx, item_id, true);
-                        ui_gl.hotbar.selectSlot(idx);
-                    });
-
-                    ui.addListener('cancel', function() {
-                        ui_gl.hideDialog();
-                        inv.release();
-                    });
+                    asm_client.openInventoryDialog();
                     break;
 
                 case 'abilities':
                     if (ability_inv == null) {
                         break;
                     }
-                    var inv = ability_inv.clone();
-                    var ui = new InventoryUI(dnd, inv, 'Abilities');
-                    dialog.show(ui);
-                    ui.ontransfer = function(from_inv, from_slot, to_inv, to_slot, amount) {
-                        conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
-                    };
-
-                    ui.enableSelect(ui_gl.hotbar.getAbility(), function(idx, new_id) {
-                        ui_gl.hotbar.setSlot(idx, new_id,  false);
-                        ui_gl.hotbar.selectSlot(idx);
-                    });
-
-                    ui.oncancel = function() {
-                        dialog.hide();
-                        inv.release();
-                    };
+                    asm_client.openAbilityDialog();
                     break;
 
                 // Commands to the server
@@ -701,10 +578,10 @@ function setupKeyHandler() {
                     conn.sendInteract(time);
                     break;
                 case 'use_item':
-                    conn.sendUseItem(time, ui_gl.hotbar.getItem());
+                    conn.sendUseItem(time, asm_client.getActiveItem());
                     break;
                 case 'use_ability':
-                    conn.sendUseAbility(time, ui_gl.hotbar.getAbility());
+                    conn.sendUseAbility(time, asm_client.getActiveAbility());
                     break;
 
                 default:
@@ -755,10 +632,7 @@ function setupKeyHandler() {
         var arrival = timing.nextArrival() + Config.input_delay.get();
         conn.sendInput(timing.encodeSend(arrival), bits);
 
-        if (player_entity != null && entities[player_entity] != null) {
-            var pony = entities[player_entity];
-            prediction.predict(arrival, pony, target_velocity);
-        }
+        asm_client.feedInput(arrival, target_velocity);
     }
 
     function alwaysStop(evt) {
@@ -792,34 +666,18 @@ function handleClose(evt, reason) {
 }
 
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
-    player_entity = entity_id;
+    asm_client.setPawnId(entity_id);
     var pst_now = timing.decodeRecv(now);
-    day_night.base_time = pst_now - cycle_base;
-    day_night.cycle_ms = cycle_ms;
+    asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
 }
 
 function handleTerrainChunk(i, data) {
-    var chunk = chunks[i];
-    var raw_length = rle16Decode(data, chunk._tiles);
-
-    if (raw_length != CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) {
-        console.assert(false,
-                'chunk data contained wrong number of tiles:', raw_length);
-    }
-
-    runner.job('load-chunk-' + i, function() {
-        physics.loadChunk((i / LOCAL_SIZE)|0, (i % LOCAL_SIZE)|0, chunk._tiles);
-        renderer.loadChunk((i / LOCAL_SIZE)|0, (i % LOCAL_SIZE)|0, chunk);
-    });
-
-    chunkLoaded[i] = true;
+    var cx = (i % LOCAL_SIZE)|0;
+    var cy = (i / LOCAL_SIZE)|0;
+    asm_client.loadTerrainChunk(cx, cy, data);
 }
 
 function handleEntityUpdate(id, motion, anim) {
-    if (entities[id] == null) {
-        return;
-    }
-
     var m = new Motion(motion.start_pos);
     m.end_pos = motion.end_pos;
 
@@ -835,15 +693,10 @@ function handleEntityUpdate(id, motion, anim) {
 
     m.anim_id = anim;
 
-    if (id != player_entity) {
-        entities[id].queueMotion(m);
-    } else {
-        prediction.receivedMotion(m, entities[id]);
-    }
+    asm_client.entityUpdate(id, m, anim);
 }
 
 function handleUnloadChunk(idx) {
-    chunkLoaded[idx] = false;
 }
 
 function handleOpenDialog(idx, args) {
@@ -889,62 +742,27 @@ function handleChatUpdate(msg) {
 }
 
 function handleEntityAppear(id, appearance_bits, name) {
-    if (id == player_entity) {
-        name = '';
-    }
-    var app = new PonyAppearance(assets, appearance_bits, name);
-    if (entities[id] != null) {
-        entities[id].setAppearance(app);
-    } else {
-        entities[id] = new Entity(
-                app,
-                new Animation(AnimationDef.by_id[ExtraDefs.default_anim], 0),
-                new Vec(0, 0, 0));
-    }
-
-    if ((appearance_bits & (1 << 9)) != 0) {
-        entities[id].setLight(200, [100, 180, 255]);
-    } else {
-        entities[id].setLight(0, null);
-    }
+    asm_client.entityAppear(id, appearance_bits, name);
 }
 
 function handleEntityGone(id, time) {
     // TODO: actually delay until the specified time
-    delete entities[id];
+    asm_client.entityGone(id);
 }
 
 function handleStructureAppear(id, template_id, x, y, z) {
     var now = timing.visibleNow();
-    var template = TemplateDef.by_id[template_id];
-
-    var idx = renderer.addStructure(now, id, x, y, z, template);
-
-    var pos = new Vec(x, y, z).divScalar(TILE_SIZE);
-
-    structures[id] = new Structure(pos, template, idx);
-    physics.addStructure(structures[id]);
+    renderer.addStructure(now, id, x, y, z, template_id);
 }
 
 function handleStructureGone(id, time) {
     // TODO: pay attention to the time
-    if (structures[id] != null) {
-        physics.removeStructure(structures[id]);
-
-        var new_id = renderer.removeStructure(structures[id]);
-        // Structure `new_id` has been moved to the slot just vacated by `id`.
-        structures[new_id].render_index = structures[id].render_index;
-    }
-    delete structures[id];
+    renderer.removeStructure(id);
 }
 
 function handleStructureReplace(id, template_id) {
-    if (structures[id] != null) {
-        var now = timing.visibleNow();
-        var pos = structures[id].pos.mulScalar(TILE_SIZE);
-        handleStructureGone(id, now);
-        handleStructureAppear(id, template_id, pos.x, pos.y, pos.z);
-    }
+    var now = timing.visibleNow();
+    renderer.replaceStructure(now, id, template_id);
 }
 
 function handleMainInventory(iid) {
@@ -956,6 +774,8 @@ function handleMainInventory(iid) {
     if (Config.show_inventory_updates.get()) {
         inv_update_list.attach(item_inv.clone());
     }
+
+    asm_client.inventoryMainId(iid);
 }
 
 function handleAbilityInventory(iid) {
@@ -964,10 +784,12 @@ function handleAbilityInventory(iid) {
     }
     ability_inv = inv_tracker.get(iid);
     ui_gl.hotbar.attachAbilities(ability_inv.clone());
+
+    asm_client.inventoryAbilityId(iid);
 }
 
 function handlePlaneFlags(flags) {
-    day_night.active = (flags == 0);
+    asm_client.setPlaneFlags(flags);
 }
 
 function handleGetInteractArgs(dialog_id, parts) {
@@ -1017,8 +839,6 @@ function handleSyncStatus(new_synced) {
 
 // Reset (nearly) all client-side state to pre-login conditions.
 function resetAll() {
-    var now = timing.visibleNow();
-
     inv_tracker.reset();
     item_inv = null;
     ability_inv = null;
@@ -1027,100 +847,11 @@ function resetAll() {
         dialog.hide();
     }
 
-    Object.getOwnPropertyNames(entities).forEach(function(id) {
-        handleEntityGone(id, now);
-    });
-    player_entity = -1;
-
-    Object.getOwnPropertyNames(structures).forEach(function(id) {
-        handleStructureGone(id, now);
-    });
+    asm_client.resetClient();
 }
 
 
 // Rendering
-
-function localSprite(now, entity, camera_mid) {
-    var local_px = CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
-    if (camera_mid == null) {
-        camera_mid = new Vec(local_px, local_px, 0);
-    }
-    var min = camera_mid.subScalar((local_px / 2)|0);
-    var max = camera_mid.addScalar((local_px / 2)|0);
-
-    var sprite = entity.getSprite(now);
-
-    var adjusted = false;
-
-    if (sprite.ref_x < min.x) {
-        entity.translateMotion(new Vec(local_px, 0, 0));
-        adjusted = true;
-    } else if (sprite.ref_x >= max.x) {
-        entity.translateMotion(new Vec(-local_px, 0, 0));
-        adjusted = true;
-    }
-
-    if (sprite.ref_y < min.y) {
-        entity.translateMotion(new Vec(0, local_px, 0));
-        adjusted = true;
-    } else if (sprite.ref_y >= max.y) {
-        entity.translateMotion(new Vec(0, -local_px, 0));
-        adjusted = true;
-    }
-
-    if (adjusted) {
-        sprite = entity.getSprite(now);
-    }
-
-    // TODO: hacky adjustment
-    sprite.ref_x += 16;
-    sprite.ref_y += 32;
-    return sprite;
-}
-
-function checkLocalSprite(sprite, camera_mid) {
-    var local_px = CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
-    if (camera_mid == null) {
-        camera_mid = new Vec(local_px, local_px, 0);
-    }
-    var min = camera_mid.subScalar((local_px / 2)|0);
-    var max = camera_mid.addScalar((local_px / 2)|0);
-
-    // TODO: it's ugly to adjust the Structure object's sprite from here.
-
-    if (sprite.ref_x < min.x) {
-        sprite.ref_x += local_px;
-    } else if (sprite.ref_x >= max.x) {
-        sprite.ref_x -= local_px;
-    }
-
-    if (sprite.ref_y < min.y) {
-        sprite.ref_y += local_px;
-    } else if (sprite.ref_y >= max.y) {
-        sprite.ref_y -= local_px;
-    }
-}
-
-function needs_mask(now, pony) {
-    if (pony == null) {
-        return false;
-    }
-
-    var pos = pony.position(now);
-    var ceiling = physics.findCeiling(pos);
-    return (ceiling < 16);
-}
-
-var FACINGS = [
-    new Vec( 1,  0,  0),
-    new Vec( 1,  1,  0),
-    new Vec( 0,  1,  0),
-    new Vec(-1,  1,  0),
-    new Vec(-1,  0,  0),
-    new Vec(-1, -1,  0),
-    new Vec( 0, -1,  0),
-    new Vec( 1, -1,  0),
-];
 
 function frame(ac, client_now) {
     if (synced != net.SYNC_OK) {
@@ -1128,141 +859,9 @@ function frame(ac, client_now) {
     }
 
     var now = timing.visibleNow();
+    var future = now + timing.ping;
+    asm_client.renderFrame(now, future);
 
-    // Here's the math on client-side motion prediction.
-    //
-    //                <<<<<<<
-    //   Server ----- A --- C --------
-    //                 \   / \
-    //                  \ /   \
-    //   Client -------- B --- D -----
-    //
-    // `A` is the latest visible time.  For the player entity only, we have a
-    // predicted motion (starting at time C) based on the inputs we last sent
-    // to the server (at time B).  We want to display that predicted motion
-    // now, as if it started at time A instead of C.  To be consistent, we
-    // always do this translation, drawing the player entity as we expect it to
-    // appear `timing.ping` msec in the future instead of how it actually is.
-    var predict_now;
-    if (Config.motion_prediction.get()) {
-        predict_now = now + timing.ping;
-    } else {
-        predict_now = now;
-    }
-
-    debug.frameStart();
-    var gl = ac.ctx;
-
-    gl.viewport(0, 0, ac.canvas.width, ac.canvas.height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    var pos = new Vec(4096, 4096, 0);
-    var pony = null;
-    if (player_entity >= 0 && entities[player_entity] != null) {
-        pony = entities[player_entity];
-
-        var motion_end = pony.motionEndTime(predict_now);
-        if (motion_end <= predict_now) {
-            prediction.refreshMotion(predict_now, pony);
-        }
-
-        // Make sure the camera remains within the middle of the local space.
-        localSprite(predict_now, pony, null);
-        // TODO: another hacky offset
-        pos = pony.position(predict_now).add(new Vec(16, 16, 0));
-
-        debug.updateMotions(pony, timing);
-    }
-    debug.updatePos(pos);
-
-    var view_width = ac.virtualWidth;
-    var view_height = ac.virtualHeight;
-
-    var camera_size = new Vec(view_width, view_height, 0);
-    var camera_pos = pos.sub(camera_size.divScalar(2));
-    camera_pos.y -= camera_pos.z;
-
-
-    var s = new Scene();
-    s.now = now;
-
-
-    var entity_ids = Object.getOwnPropertyNames(entities);
-    s.sprites = new Array(entity_ids.length);
-    var player_sprite = null;
-
-    for (var i = 0; i < entity_ids.length; ++i) {
-        var entity = entities[entity_ids[i]];
-        if (entity_ids[i] != player_entity) {
-            s.sprites[i] = localSprite(now, entity, pos);
-        } else {
-            s.sprites[i] = localSprite(predict_now, entity, pos);
-            player_sprite = s.sprites[i];
-        }
-
-        var light = entity.getLight();
-        if (light != null) {
-            s.lights.push({
-                pos: new Vec(
-                    s.sprites[i].ref_x,
-                    s.sprites[i].ref_y,
-                    s.sprites[i].ref_z),
-                color: light.color,
-                radius: light.radius,
-            });
-        }
-    }
-
-
-    if (needs_mask(predict_now, pony)) {
-        if (slice_radius.velocity <= 0) {
-            slice_radius.setVelocity(predict_now, 2);
-        }
-        var slice_center = pos.divScalar(TILE_SIZE);
-        s.slice_center = [slice_center.x, slice_center.y];
-    } else {
-        if (slice_radius.velocity >= 0) {
-            slice_radius.setVelocity(predict_now, -2);
-        }
-    }
-
-    // TODO: hacky.  The issue here is that cavern_map is mostly a
-    // graphics-related thing, but updating it requires access to the
-    // PhysicsAsm object.
-    renderer.updateCavernMap(physics._asm, pos);
-
-    s.camera_pos = [camera_pos.x, camera_pos.y];
-    s.camera_size = [camera_size.x, camera_size.y];
-    s.ambient_color = day_night.getAmbientColor(predict_now);
-
-    ui_gl.calcSize(camera_size.x, camera_size.y);
-
-    var radius = slice_radius.get(predict_now);
-    if (radius > 0 && pony != null) {
-        s.slice_frac = radius;
-        s.slice_z = (pony.position(predict_now).z / TILE_SIZE)|0;
-    }
-    renderer.render(s, function(size, fb) {
-        ui_renderer.render(ui_gl, size, fb);
-    });
-
-    if (show_cursor && pony != null) {
-        var facing = FACINGS[pony.animId() % FACINGS.length];
-        var cursor_pos = pos.divScalar(TILE_SIZE).add(facing);
-        cursor_pos.y -= cursor_pos.z;
-        cursor.draw(camera_pos, camera_size, cursor_pos);
-    }
-
-    debug.frameEnd();
-    debug.updateJobs(runner);
-    debug.updateTiming(timing);
-    debug.updateGraphics(renderer);
-}
-
-function debug_player_pos() {
-    var e = entities[player_entity];
-    if (e == null) {
-        return null;
-    }
-    return e.position(timing.visibleNow());
+    var frame_time = timing.visibleNow() - now;
+    asm_client.debugRecord(frame_time, timing.ping);
 }

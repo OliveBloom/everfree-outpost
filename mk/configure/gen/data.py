@@ -16,7 +16,7 @@ def rules(i):
 
         rule stack_fonts
             command = $python3 $root/src/gen/stack_fonts.py $
-                $out_img $out_metrics $in
+                $out_img $out_metrics $out_rust $in
             description = GEN $out_img
 
         rule process_day_night
@@ -52,9 +52,10 @@ def font(basename, src_img, charset_args='--first-char=0x21', extra_args=''):
 def font_stack(out_base, in_basenames):
     out_img = out_base + '.png'
     out_metrics = out_base + '_metrics.json'
+    out_rust = out_base + '_metrics.rs'
 
     return template('''
-        build %out_img %out_metrics: stack_fonts $
+        build %out_img %out_metrics %out_rust: stack_fonts $
             %for name in in_basenames
                 $b_data/fonts/%name.png $
                 $b_data/fonts/%{name}_metrics.json $
@@ -62,6 +63,7 @@ def font_stack(out_base, in_basenames):
             | $root/src/gen/stack_fonts.py
             out_img = %out_img
             out_metrics = %out_metrics
+            out_rust = %out_rust
     ''', **locals())
 
 def server_json(out_json):
@@ -77,7 +79,9 @@ def day_night(out_json, src_img):
 
 def ui_atlas(out_dir, src_dir):
     return template('''
-        build %out_dir/ui_atlas.png %out_dir/ui_atlas.json: gen_ui_atlas $
+        build %out_dir/ui_atlas.png $
+            %out_dir/ui_atlas.json $
+            %out_dir/ui_atlas.rs: gen_ui_atlas $
             | $root/src/gen/gen_ui_atlas.py %src_dir
             in_dir = %src_dir
             out_dir = %out_dir
@@ -86,9 +90,21 @@ def ui_atlas(out_dir, src_dir):
 def process():
     data_files = ['%s_%s.json' % (f,s)
             for s in ('server', 'client')
-            for f in ('structures', 'blocks', 'items', 'recipes', 'animations', 'sprite_parts')]
+            for f in ('structures', 'blocks', 'items', 'recipes',
+                'animations', 'sprite_layers')]
+    data_files.append('structure_parts_client.json')
+    data_files.append('structure_verts_client.json')
+    data_files.append('structure_shapes_client.json')
+    data_files.append('sprite_graphics_client.json')
     data_files.append('loot_tables_server.json')
     data_files.append('extras_client.json')
+
+    deps = [
+            '$root/src/gen/data_main.py',
+            # Name font is embedded into the sprite sheet
+            '$b_data/fonts/name.png',
+            ]
+
     return template('''
         rule process_data
             command = $python3 $root/src/gen/data_main.py --mods=$mods $
@@ -101,7 +117,26 @@ def process():
                 $b_data/%{name} $
             %end
             $b_data/tiles.png $b_data/items.png: $
-            process_data | $root/src/gen/data_main.py
+            process_data | %{' '.join(deps)}
+    ''', **locals())
+
+def binary_defs(out_file):
+    out_file = out_file or os.path.splitext(src_file)[0] + '.bin'
+
+    deps = (
+            '$b_data/stamp',
+            '$b_data/day_night.json',
+            )
+
+    return template('''
+        rule gen_binary_defs
+            command = $python3 $root/src/gen/gen_binary_defs.py $b_data $out
+            description = GEN $out
+            depfile = $out.d
+
+        build %out_file: gen_binary_defs $
+            | $root/src/gen/gen_binary_defs.py $
+              %{' '.join(deps)}
     ''', **locals())
 
 def pack():
@@ -109,6 +144,7 @@ def pack():
             'fonts.png', 'fonts_metrics.json',
             'day_night.json',
             'ui_atlas.png', 'ui_atlas.json',
+            'client_data.bin',
             )
 
     return template('''

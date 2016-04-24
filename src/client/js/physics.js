@@ -4,9 +4,8 @@ var Asm = require('asmlibs').Asm;
 var getPhysicsHeapSize = require('asmlibs').getPhysicsHeapSize;
 var Motion = require('entity').Motion;
 var ExtraDefs = require('data/extras').ExtraDefs;
-var BlockDef = require('data/chunk').BlockDef;
-var CHUNK_SIZE = require('data/chunk').CHUNK_SIZE;
-var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
+var CHUNK_SIZE = require('consts').CHUNK_SIZE;
+var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
 var INT_MAX = 0x7fffffff;
 var INT_MIN = -INT_MAX - 1;
@@ -15,38 +14,12 @@ var DURATION_MAX = 0xffff;
 
 
 /** @constructor */
-function Physics() {
+function Physics(asm) {
     var chunk_total = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
     var local_total = LOCAL_SIZE * LOCAL_SIZE;
-    this._asm = new Asm(getPhysicsHeapSize());
+    this._asm = asm;
 }
 exports.Physics = Physics;
-
-Physics.prototype.loadChunk = function(ci, cj, tiles) {
-    var view = this._asm.shapeLayerView(ci * LOCAL_SIZE + cj, -1);
-    console.assert(tiles.length == view.length,
-            'expected ' + view.length + ' tiles, but got ' + tiles.length);
-
-    for (var i = 0; i < tiles.length; ++i) {
-        view[i] = BlockDef.by_id[tiles[i]].shape;
-    }
-
-    var base = new Vec(cj * CHUNK_SIZE,
-                       ci * CHUNK_SIZE,
-                       0);
-    var size = new Vec(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE);
-    this._asm.refreshShapeLayers(base, size);
-};
-
-Physics.prototype.addStructure = function(structure) {
-    var template = structure.template;
-    this._asm.setRegionShape(structure.pos, template.size, template.layer, template.shape);
-};
-
-Physics.prototype.removeStructure = function(structure) {
-    var template = structure.template;
-    this._asm.clearRegionShape(structure.pos, template.size, template.layer);
-};
 
 Physics.prototype.computeForecast = function(now, entity, target_velocity) {
     var start_pos = entity.position(now);
@@ -85,10 +58,6 @@ Physics.prototype.computeForecast = function(now, entity, target_velocity) {
     }
 
     return motion;
-};
-
-Physics.prototype.findCeiling = function(pos) {
-    return this._asm.findCeiling(pos);
 };
 
 

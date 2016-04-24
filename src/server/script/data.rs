@@ -163,41 +163,24 @@ define_python_class! {
         }
 
 
-        fn sprite_part_count(&this) -> usize {
-            this.sprite_parts.len()
+        fn sprite_layer_count(&this) -> usize {
+            this.sprite_layers.len()
         }
 
-        fn sprite_part_by_name(&this, name: String) -> PyResult<u32> {
-            Ok(pyunwrap!(this.sprite_parts.find_id(&name),
-                         key_error, "no such sprite part: {:?}", name))
+        fn sprite_layer_by_name(&this, name: String) -> PyResult<u32> {
+            Ok(pyunwrap!(this.sprite_layers.find_id(&name),
+                         key_error, "no such sprite layer: {:?}", name))
         }
 
-        fn get_sprite_part_by_name(&this, name: String) -> Option<u32> {
-            this.sprite_parts.find_id(&name)
+        fn get_sprite_layer_by_name(&this, name: String) -> Option<u32> {
+            this.sprite_layers.find_id(&name)
         }
 
-        fn sprite_part_name(&this, id: u32) -> PyResult<PyBox> {
-            let p = pyunwrap!(this.sprite_parts.get_part(id),
-                              runtime_error, "no sprite part with that ID");
-            Pack::pack(&p.name as &str)
+        fn sprite_layer_name(&this, id: u32) -> PyResult<PyBox> {
+            let l = pyunwrap!(this.sprite_layers.get_name(id),
+                              runtime_error, "no sprite layer with that ID");
+            Pack::pack(l)
         }
-
-        fn sprite_part_variant_id(&this, id: u32, variant_name: String) -> PyResult<u32> {
-            let p = pyunwrap!(this.sprite_parts.get_part(id),
-                              runtime_error, "no sprite part with that ID");
-            Ok(pyunwrap!(p.find_id(&variant_name),
-                         key_error, "no such sprite part variant: {:?}", variant_name))
-        }
-
-        fn get_sprite_part_variant_id(&this,
-                                      id: u32,
-                                      variant_name: String) -> PyResult<Option<u32>> {
-            let p = pyunwrap!(this.sprite_parts.get_part(id),
-                              runtime_error, "no sprite part with that ID");
-            Ok(p.find_id(&variant_name))
-        }
-
-
     }
 }
 

@@ -6,7 +6,7 @@ var GlObject = require('graphics/glutil').GlObject;
 var uniform = require('graphics/glutil').uniform;
 var attribute = require('graphics/glutil').attribute;
 
-var TILE_SIZE = require('data/chunk').TILE_SIZE;
+var TILE_SIZE = require('consts').TILE_SIZE;
 
 
 /** @constructor */

@@ -248,9 +248,9 @@ Texture.prototype.initDepth = function(width, height) {
 
 
 /** @constructor */
-function Buffer(gl) {
+function Buffer(gl, handle) {
     this.gl = gl;
-    this.buffer = gl.createBuffer();
+    this.buffer = handle || gl.createBuffer();
 }
 exports.Buffer = Buffer;
 

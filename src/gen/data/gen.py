@@ -3,7 +3,7 @@ import json
 import os
 
 
-from . import builder2, files, loader, util
+from . import boxpack, builder2, files, image2, loader, util
 from . import structure, block, item, recipe, sprite, loot_table, extra
 from outpost_data.core.loader import TimeIt
 
@@ -48,7 +48,7 @@ def postprocess(defs):
 
     recipe.resolve_item_ids(defs.recipes, id_maps.items)
     recipe.resolve_structure_ids(defs.recipes, id_maps.structures)
-    sprite.assign_sub_ids(defs.sprites)
+    sprite.process(defs.sprites)
     loot_table.resolve_object_ids(defs.loot_tables, id_maps)
 
     def_dicts = Defs(*({obj.name: obj for obj in x} for x in defs))
@@ -59,9 +59,10 @@ def write_json(output_dir, basename, j):
         json.dump(j, f)
 
 def emit_structures(output_dir, structures):
-    # Final processing to assign array slots to parts and vertices
+    # Final processing to assign array slots to parts, vertices, and shapes
     parts = structure.collect_parts(structures)
     verts = structure.collect_verts(parts)
+    shapes = structure.collect_shapes(structures)
 
     # Handle sheet images
     for f in os.listdir(output_dir):
@@ -82,6 +83,9 @@ def emit_structures(output_dir, structures):
 
     write_json(output_dir, 'structure_verts_client.json',
             structure.build_verts_json(verts))
+
+    write_json(output_dir, 'structure_shapes_client.json',
+            structure.build_shapes_json(shapes))
 
     # Emit actual structure json
     write_json(output_dir, 'structures_server.json',
@@ -118,32 +122,41 @@ def emit_recipes(output_dir, recipes):
             recipe.build_client_json(recipes))
 
 def emit_sprites(output_dir, sprites):
-    anims = sprite.process_anims(sprites)
-    parts = sprite.process_parts(sprites)
+    # Build sheets first, to populate the offset fields
+    packer = boxpack.ImagePacker((2048, 2048), res=16)
+    # Place the name font first so it always sits at (0,0) on sheet 0
+    # TODO: bit of a hack
+    font_off = packer.place([image2.Image.open(os.path.join(output_dir, 'fonts/name.png'))])
+    assert font_off == [(0, (0, 0))]
+    sprite.pack_images(sprites, packer)
+    anims, layers, graphics = sprite.collect_defs(sprites)
 
+    # Write json
     write_json(output_dir, 'animations_server.json',
             sprite.build_anim_server_json(anims))
 
     write_json(output_dir, 'animations_client.json',
             sprite.build_anim_client_json(anims))
 
-    write_json(output_dir, 'sprite_parts_client.json',
-            sprite.build_part_client_json(parts))
+    write_json(output_dir, 'sprite_layers_client.json',
+            sprite.build_layer_client_json(layers))
 
-    write_json(output_dir, 'sprite_parts_server.json',
-            sprite.build_part_server_json(parts))
+    write_json(output_dir, 'sprite_layers_server.json',
+            sprite.build_layer_server_json(layers))
 
+    write_json(output_dir, 'sprite_graphics_client.json',
+            sprite.build_graphics_client_json(graphics))
 
+    # Save sheets
     sprite_dir = os.path.join(output_dir, 'sprites')
     if not os.path.isdir(sprite_dir):
         os.mkdir(sprite_dir)
 
-    sheets = sprite.build_sheets(sprites)
-    sprite_list = [None] * len(sheets)
-    for v, img in sheets:
-        name = v.full_name.replace('/', '_') + '.png'
-        sprite_list[v.id] = name
-        img.save(os.path.join(sprite_dir, name))
+    sprite_list = []
+    for i, img in enumerate(packer.build_sheets()):
+        name = 'sprites%d.png' % i
+        sprite_list.append(name)
+        img.raw().raw().save(os.path.join(sprite_dir, name))
 
     write_json(output_dir, 'sprites_list.json', sprite_list)
 

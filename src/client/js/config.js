@@ -185,3 +185,81 @@ ConfigItem.prototype.reset = function() {
 ConfigItem.prototype.save = function() {
     localStorage.setItem(this.key, JSON.stringify(this.value));
 };
+
+
+function rawGet(key) {
+    var parts = key.split('.');
+
+    var base_key = parts[0];
+    var base_str = localStorage.getItem(base_key);
+    var obj;
+    if (!base_str) {
+        obj = DEFAULT_CONFIG[base_key];
+    } else {
+        obj = JSON.parse(base_str);
+    }
+
+    for (var i = 1; i < parts.length; ++i) {
+        obj = obj[parts[i]];
+    }
+
+    return obj;
+};
+exports.rawGet = rawGet;
+
+function rawSet(key, val) {
+    var parts = key.split('.');
+    var base_key = parts[0];
+
+    if (parts.length > 1) {
+        var base_str = localStorage.getItem(base_key)
+        var base_obj;
+        if (!base_str) {
+            base_obj = DEFAULT_CONFIG[base_key];
+        } else {
+            base_obj = JSON.parse(base_str);
+        }
+
+        var obj = base_obj;
+        for (var i = 1; i < parts.length - 1; ++i) {
+            obj = obj[parts[i]];
+        }
+
+        if (typeof obj[parts[parts.length - 1]] === 'number') {
+            val = +val;
+        }
+        obj[parts[parts.length - 1]] = val;
+
+        localStorage.setItem(base_key, JSON.stringify(base_obj));
+    } else {
+        var val_str;
+        if (typeof DEFAULT_CONFIG[base_key] === 'number') {
+            val_str = JSON.stringify(+val);
+        } else {
+            val_str = JSON.stringify(val);
+        }
+        localStorage.setItem(base_key, val_str);
+    }
+};
+exports.rawSet = rawSet;
+
+function rawClear(key, val) {
+    var parts = key.split('.');
+    var base_key = parts[0];
+
+    if (parts.length > 1) {
+        var obj = JSON.parse(localStorage.getItem(base_key));
+        var def = DEFAULT_CONFIG[base_key];
+
+        for (var i = 1; i < parts.length - 1; ++i) {
+            obj = obj[parts[i]];
+            def = def[parts[i]];
+        }
+        obj[parts[parts.length - 1]] = def[parts[parts.length - 1]];
+
+        localStorage.setItem(base_key, JSON.stringify(obj));
+    } else {
+        localStorage.removeItem(base_key);
+    }
+};
+exports.rawClear = rawClear;

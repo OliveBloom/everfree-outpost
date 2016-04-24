@@ -1,9 +1,9 @@
 The entity `appearance` field is currently a 32-bit integer.  The bits are allocated as follows:
 
     Color of the pony.  Both the body and the mane/tail are tinted this color.
-     0 -  1:    Red
+     0 -  1:    Blue
      2 -  3:    Green
-     4 -  5:    Blue
+     4 -  5:    Red
      6:         Wings.  1 if the pony has wings.
      7:         Horn.  1 if the pony has a horn.
      8:         Stallion.  1 if the pony is a stallion, 0 if a mare.

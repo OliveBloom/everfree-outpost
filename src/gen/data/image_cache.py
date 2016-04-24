@@ -113,7 +113,10 @@ class CachedImage(object):
         return SheetImage(img_offsets, size)
 
     def get_bounds(self):
-        b = self.compute(lambda i: i.getbbox())
+        # NB: we only consider the alpha channel when finding the bounds.  This
+        # means pixels with zero alpha but non-zero color will be considered
+        # empty.
+        b = self.compute(lambda i: i.split()[3].getbbox())
         if b is None:
             return (0, 0, 0, 0)
         else:
@@ -229,7 +232,7 @@ class SheetImage(CachedImage):
     def __init__(self, img_offsets, size):
         imgs = tuple(i for i,o in img_offsets)
         offsets = tuple(o for i,o in img_offsets)
-        super(SheetImage, self).__init__(size, (offsets,), imgs)
+        super(SheetImage, self).__init__(size, (offsets, size), imgs)
 
         self.imgs = imgs
         self.offsets = offsets

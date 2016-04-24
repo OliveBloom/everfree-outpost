@@ -45,14 +45,17 @@ HAT_BASE = 18
 HAT_BITS = 4
 HAT_MASK = _mask(HAT_BASE, HAT_BITS)
 
+HAT_TABLE = [None, 'hat/party', 'hat/santa', 'hat/witch', 'hat/explorer']
+
 def set_hat(e, name):
     old_a = e.appearance()
 
-    sex = 'm' if old_a & STALLION_BIT else 'f'
-    if name is not None:
-        hat_id = DATA.sprite_part('pony//%s/equip0' % sex).variant_id(name)
-    else:
-        hat_id = 0
+    hat_id = HAT_TABLE.index(name)
+    #sex = 'm' if old_a & STALLION_BIT else 'f'
+    #if name is not None:
+    #    hat_id = DATA.sprite_part('pony//%s/equip0' % sex).variant_id(name)
+    #else:
+    #    hat_id = 0
 
     new_a = (old_a & ~HAT_MASK) | (hat_id << HAT_BASE)
     e.set_appearance(new_a)

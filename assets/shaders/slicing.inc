@@ -1,6 +1,5 @@
 const float TILE_SIZE = 32.0;
-const float CAVERN_MAP_RADIUS = 32.0;
-const float CAVERN_MAP_SIZE = CAVERN_MAP_RADIUS * 2.0 + 4.0;
+const float CAVERN_MAP_SIZE = 96.0;
 const float CAVERN_CUTOFF = 1.5 / 255.0;
 
 const int BIT_INSIDE =      0x02;

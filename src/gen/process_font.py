@@ -71,6 +71,18 @@ def get_glyph_boxes(img):
 
     return boxes
 
+def build_code_boxes(args, boxes):
+    if args.char_list is None:
+        first_char = int(args.first_char, 0)
+        last_char = first_char + len(boxes)
+        codes = range(first_char, last_char)
+    else:
+        first_char = min(ord(c) for c in args.char_list)
+        last_char = max(ord(c) for c in args.char_list) + 1
+        codes = (ord(c) for c in args.char_list)
+
+    return {code: box for code, box in zip(codes, boxes)}
+
 def adjust_palette(img):
     """Adjust the image's palette so that the background is black and the
     glyphs are white."""
@@ -89,44 +101,35 @@ def adjust_palette(img):
             palette[i * 3 : i * 3 + 3] = [255, 255, 255]
     img.putpalette(palette)
 
-def build_mask(src, boxes, margin_x, margin_y):
-    out_w = sum(x1 - x0 + margin_x for x0,y0,x1,y1 in boxes)
-    out_h = max(y1 - y0 + margin_x for x0,y0,x1,y1 in boxes)
-
-    out = Image.new('L', (out_w, out_h))
-    x_pos = 0
-    for (x0, y0, x1, y1) in boxes:
-        glyph = src.crop((x0, y0, x1, y1))
-        out.paste(glyph, (x_pos, 0))
-        x_pos += x1 - x0 + margin_x
-
-    return out
-
-def build_metrics(args, boxes, margin_x, margin_y):
-    if args.char_list is None:
-        first_char = int(args.first_char, 0)
-        last_char = first_char + len(boxes)
-        codes = range(first_char, last_char)
-    else:
-        first_char = min(ord(c) for c in args.char_list)
-        last_char = max(ord(c) for c in args.char_list) + 1
-        codes = (ord(c) for c in args.char_list)
-    num_chars = last_char - first_char
+def build_metrics(boxes, margin_x, margin_y):
+    first_char = min(boxes.keys())
+    last_char = max(boxes.keys())
+    num_chars = last_char - first_char + 1
 
     xs = [0] * num_chars
     y = 0
     widths = [0] * num_chars
     height = 0
 
+    spans = [[first_char, first_char, 0]]
+    xs2 = []
+    widths2 = []
+
     cur_x = 0
-    for code, (x0,y0,x1,y1) in zip(codes, boxes):
+    for index, (code, (x0,y0,x1,y1)) in enumerate(sorted(boxes.items())):
         xs[code - first_char] = cur_x
+        xs2.append(cur_x)
 
         w = x1 - x0 + margin_x
         widths[code - first_char] = w
+        widths2.append(w)
         cur_x += w
 
         height = max(height, y1 - y0 + margin_y)
+
+        if spans[-1][1] != code:
+            spans.append([code, code, index])
+        spans[-1][1] += 1
 
     return {
             'xs': xs,
@@ -134,7 +137,25 @@ def build_metrics(args, boxes, margin_x, margin_y):
             'widths': widths,
             'height': height,
             'first_char': first_char,
+            'spans': spans,
+            'xs2': xs2,
+            'widths2': widths2,
             }
+
+def build_mask(src, code_boxes, metrics):
+    out_w = metrics['xs2'][-1] + metrics['widths2'][-1]
+    out_h = metrics['height']
+
+    out = Image.new('L', (out_w, out_h))
+
+    for low, high, base_index in metrics['spans']:
+        for code in range(low, high):
+            idx = base_index + code - low
+            x_pos = metrics['xs2'][idx]
+            glyph = src.crop(code_boxes[code])
+            out.paste(glyph, (x_pos, 0))
+
+    return out
 
 def main():
     parser = build_parser()
@@ -146,14 +167,15 @@ def main():
         mx, my = (1, 1)
     else:
         offsets = [(0, 0)]
-        mx, my = (1, 0)
+        mx, my = (0, 0)
 
     img = Image.open(args.font_image_in)
 
     boxes = get_glyph_boxes(img)
+    code_boxes = build_code_boxes(args, boxes)
     adjust_palette(img)
-    mask = build_mask(img, boxes, mx, my)
-    metrics = build_metrics(args, boxes, mx, my)
+    metrics = build_metrics(code_boxes, mx, my)
+    mask = build_mask(img, code_boxes, metrics)
 
     out = Image.new('RGBA', mask.size, (0, 0, 0, 0))
     for offset in offsets:

@@ -2,9 +2,12 @@ var module = window['asmlibs_code'];
 var static_data = window['asmlibs_data'];
 var static_size = window['asmlibs_data_size'];
 
+var config = require('config');
 var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
-var LOCAL_SIZE = require('data/chunk').LOCAL_SIZE;
+var encodeUtf8 = require('util/misc').encodeUtf8;
+
+var AsmGl = require('asmgl').AsmGl;
 
 
 // Memory layout
@@ -27,34 +30,17 @@ var HEAP_START = STACK_END;
 
 // External functions
 
-var msg_buffer = '';
+var module_env = function(asm) {
+    var msg_buffer = '';
 
-var module_env = function(buffer, callback_array) {
     return ({
         'abort': function() {
             console.assert(false, 'abort');
             throw 'abort';
         },
 
-        'traceInts': function(ptr, len) {
-            var arr = [];
-            var view = new Int32Array(buffer);
-            for (var i = 0; i < len; ++i) {
-                arr.push(view[(ptr >> 2) + i]);
-            }
-            console.log(arr);
-        },
-
-        'physTrace': function(x, y, w, h) {
-            window.physTrace.push([x, y, w, h]);
-        },
-
-        'resetPhysTrace': function() {
-            window.physTrace = [];
-        },
-
         'writeStr': function(ptr, len) {
-            var view = new Uint8Array(buffer, ptr, len);
+            var view = asm._makeView(Uint8Array, ptr, len);
             msg_buffer += decodeUtf8(view);
         },
 
@@ -63,13 +49,219 @@ var module_env = function(buffer, callback_array) {
             msg_buffer = '';
         },
 
-        'runCallback': function(index, arg_base, arg_len) {
-            var cb = callback_array[index];
-            console.assert(cb != null, 'bad callback index: ', index);
-
-            var args = new Int32Array(buffer, arg_base, arg_len);
-            return cb.apply(window, args);
+        'flushStrWarn': function() {
+            console.warn(msg_buffer);
+            msg_buffer = '';
         },
+
+        'flushStrErr': function() {
+            console.error(msg_buffer);
+            window.onerror(msg_buffer, '<native code>', 0, 0, null);
+            msg_buffer = '';
+        },
+
+        'now': function() {
+            return Date.now() & 0xffffffff;
+        },
+
+
+        'asmgl_has_extension': function(name_ptr, name_len) {
+            var name = asm._loadString(name_ptr, name_len);
+            return asm.asmgl.hasExtension(name);
+        },
+
+        'asmgl_gen_buffer': function() {
+            return asm.asmgl.genBuffer();
+        },
+        'asmgl_delete_buffer': function(name) {
+            asm.asmgl.deleteBuffer(name);
+        },
+        'asmgl_bind_buffer': function(target_idx, name) {
+            asm.asmgl.bindBuffer(target_idx, name);
+        },
+        'asmgl_bind_buffer_index': function(name) {
+            asm.asmgl.bindBufferIndex(name);
+        },
+        'asmgl_buffer_data_alloc': function(target, len) {
+            asm.asmgl.bufferDataAlloc(target, len);
+        },
+        'asmgl_buffer_subdata': function(target, offset, ptr, len) {
+            var data = asm._makeView(Uint8Array, ptr, len);
+            asm.asmgl.bufferSubdata(target, offset, data);
+        },
+
+        'asmgl_load_shader': function(
+                vert_name_ptr, vert_name_len,
+                frag_name_ptr, frag_name_len,
+                defs_ptr, defs_len) {
+            var vert_name = asm._loadString(vert_name_ptr, vert_name_len);
+            var frag_name = asm._loadString(frag_name_ptr, frag_name_len);
+            var defs = asm._loadString(defs_ptr, defs_len);
+            return asm.asmgl.loadShader(vert_name, frag_name, defs);
+        },
+        'asmgl_delete_shader': function(name) {
+            asm.asmgl.deleteShader(name);
+        },
+        'asmgl_bind_shader': function(name) {
+            asm.asmgl.bindShader(name);
+        },
+        'asmgl_get_uniform_location': function(shader_name, name_ptr, name_len) {
+            var var_name = asm._loadString(name_ptr, name_len);
+            return asm.asmgl.getUniformLocation(shader_name, var_name);
+        },
+        'asmgl_get_attrib_location': function(shader_name, name_ptr, name_len) {
+            var var_name = asm._loadString(name_ptr, name_len);
+            return asm.asmgl.getAttribLocation(shader_name, var_name);
+        },
+        'asmgl_set_uniform_1i': function(loc, value) {
+            asm.asmgl.setUniform1i(loc, value);
+        },
+        'asmgl_set_uniform_1f': function(loc, value) {
+            asm.asmgl.setUniform1f(loc, value);
+        },
+        'asmgl_set_uniform_2f': function(loc, ptr) {
+            var view = asm._makeView(Float32Array, ptr, 8);
+            asm.asmgl.setUniform2f(loc, view);
+        },
+        'asmgl_set_uniform_3f': function(loc, ptr) {
+            var view = asm._makeView(Float32Array, ptr, 12);
+            asm.asmgl.setUniform3f(loc, view);
+        },
+        'asmgl_set_uniform_4f': function(loc, ptr) {
+            var view = asm._makeView(Float32Array, ptr, 16);
+            asm.asmgl.setUniform4f(loc, view);
+        },
+
+        'asmgl_load_texture': function(name_ptr, name_len, size_ptr) {
+            var name = asm._loadString(name_ptr, name_len);
+            var size_view = asm._makeView(Uint16Array, size_ptr, 4);
+            return asm.asmgl.loadTexture(name, size_view);
+        },
+        'asmgl_gen_texture': function(width, height, kind) {
+            return asm.asmgl.genTexture(width, height, kind);
+        },
+        'asmgl_delete_texture': function(name) {
+            asm.asmgl.deleteTexture(name);
+        },
+        'asmgl_active_texture': function(unit) {
+            asm.asmgl.activeTexture(unit);
+        },
+        'asmgl_bind_texture': function(name) {
+            asm.asmgl.bindTexture(name);
+        },
+        'asmgl_texture_image': function(width, height, kind, data_ptr, data_len) {
+            var view = asm._makeView(Uint8Array, data_ptr, data_len);
+            asm.asmgl.textureImage(width, height, kind, view);
+        },
+        'asmgl_texture_subimage': function(x, y, width, height, kind, data_ptr, data_len) {
+            var view = asm._makeView(Uint8Array, data_ptr, data_len);
+            asm.asmgl.textureSubimage(x, y, width, height, kind, view);
+        },
+
+        'asmgl_gen_framebuffer': function() {
+            return asm.asmgl.genFramebuffer();
+        },
+        'asmgl_delete_framebuffer': function(name) {
+            asm.asmgl.deleteFramebuffer(name);
+        },
+        'asmgl_bind_framebuffer': function(name) {
+            asm.asmgl.bindFramebuffer(name);
+        },
+        'asmgl_gen_renderbuffer': function(width, height, is_depth) {
+            return asm.asmgl.genRenderbuffer(width, height, is_depth);
+        },
+        'asmgl_delete_renderbuffer': function(name) {
+            asm.asmgl.deleteRenderbuffer(name);
+        },
+        'asmgl_framebuffer_texture': function(tex_name, attachment) {
+            asm.asmgl.framebufferTexture(tex_name, attachment);
+        },
+        'asmgl_framebuffer_renderbuffer': function(rb_name, attachment) {
+            asm.asmgl.framebufferRenderbuffer(rb_name, attachment);
+        },
+        'asmgl_check_framebuffer_status': function() {
+            return asm.asmgl.checkFramebufferStatus();
+        },
+        'asmgl_draw_buffers': function(num_attachments) {
+            asm.asmgl.drawBuffers(num_attachments);
+        },
+
+        'asmgl_viewport': function(x, y, w, h) {
+            asm.asmgl.viewport(x, y, w, h);
+        },
+        'asmgl_clear_color': function(r, g, b, a) {
+            asm.asmgl.clearColor(r, g, b, a);
+        },
+        'asmgl_clear_depth': function(d) {
+            asm.asmgl.clearDepth(d);
+        },
+        'asmgl_clear': function() {
+            asm.asmgl.clear();
+        },
+        'asmgl_set_depth_test': function(enable) {
+            asm.asmgl.setDepthTest(enable);
+        },
+        'asmgl_set_blend_mode': function(mode) {
+            asm.asmgl.setBlendMode(mode);
+        },
+        'asmgl_enable_vertex_attrib_array': function(index) {
+            asm.asmgl.enableVertexAttribArray(index);
+        },
+        'asmgl_disable_vertex_attrib_array': function(index) {
+            asm.asmgl.disableVertexAttribArray(index);
+        },
+        'asmgl_vertex_attrib_pointer': function(loc, count, ty, normalize, stride, offset) {
+            asm.asmgl.vertexAttribPointer(loc, count, ty, normalize, stride, offset);
+        },
+        'asmgl_draw_arrays_triangles': function(start, count) {
+            asm.asmgl.drawArraysTriangles(start, count);
+        },
+
+        'ap_config_get': function(key_ptr, key_len, value_len_p) {
+            var key = asm._loadString(key_ptr, key_len);
+            var value = config.rawGet(key);
+
+            var value_view = asm._allocString(value);
+
+            var value_len_p_view = asm._makeView(Uint32Array, value_len_p, 4);
+            value_len_p_view[0] = value_view.byteLength;
+            return value_view.byteOffset;
+        },
+
+        'ap_config_get_int': function(key_ptr, key_len) {
+            var key = asm._loadString(key_ptr, key_len);
+            var value = config.rawGet(key);
+            return value|0;
+        },
+
+        'ap_config_set': function(key_ptr, key_len, value_ptr, value_len) {
+            var key = asm._loadString(key_ptr, key_len);
+            var value = asm._loadString(value_ptr, value_len);
+
+            config.rawSet(key, value);
+        },
+
+        'ap_config_clear': function(key_ptr, key_len) {
+            var key = asm._loadString(key_ptr, key_len);
+
+            config.rawClear(key);
+        },
+
+        'ap_set_cursor': function(cursor) {
+            var str;
+            switch (cursor) {
+                case 0: str = 'auto'; break;
+                case 1: str = 'grabbing'; break;
+                case 2: str = 'not-allowed'; break;
+                default: throw 'bad cursor value: ' + cursor;
+            }
+            document.body.style.cursor = str;
+        },
+
+        'ap_send_move_item': function(src_inv, src_slot, dest_inv, dest_slot, amount) {
+            asm.conn.sendMoveItem(src_inv, src_slot, dest_inv, dest_slot, amount);
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,
@@ -85,63 +277,9 @@ function memcpy(dest_buffer, dest_offset, src_buffer, src_offset, len) {
     dest.set(src);
 }
 
-
-// Buffer size computations
-var SIZEOF = (function() {
-    var buffer = new ArrayBuffer((HEAP_START + 0xffff) & ~0xffff);
-    memcpy(buffer, STATIC_START,
-            static_data.buffer, static_data.byteOffset, static_data.byteLength);
-    var asm = module(window, module_env(buffer), buffer);
-
-    var EXPECT_SIZES = 16;
-    var alloc = ((1 + EXPECT_SIZES) * 4 + 7) & ~7;
-    var base = asm['__adjust_stack'](alloc);
-
-    asm['get_sizes'](base + 4, base);
-
-    var view = new Int32Array(buffer, base, 1 + EXPECT_SIZES);
-    console.assert(view[0] == EXPECT_SIZES,
-            'expected sizes for ' + EXPECT_SIZES + ' types, but got ' + view[0]);
-
-    var sizeof = {};
-    var index = 0;
-    var next = function() { return view[1 + index++]; };
-
-    sizeof.ShapeChunk = next();
-    sizeof.ShapeLayers = next();
-
-    sizeof.BlockData = next();
-    sizeof.BlockChunk = next();
-    sizeof.LocalChunks = next();
-
-    sizeof.Structure = next();
-
-    sizeof.TerrainVertex = next();
-    sizeof.TerrainGeomGen = next();
-
-    sizeof.StructureTemplate = next();
-    sizeof.TemplatePart = next();
-    sizeof.TemplateVertex = next();
-    sizeof.StructureBuffer = next();
-    sizeof.StructureVertex = next();
-    sizeof.StructureGeomGen = next();
-
-    sizeof.LightVertex = next();
-    sizeof.LightGeomGen = next();
-
-    console.assert(index == EXPECT_SIZES,
-            'some items were left over after building sizeof', index, EXPECT_SIZES);
-
-    return sizeof;
-})();
-exports.SIZEOF = SIZEOF;
-
-
-// window.Asm wrapper
-
 function next_heap_size(size) {
     // "the heap object's byteLength must be either 2^n for n in [12, 24) or
-    // 2^24 * n for n ≥ 1"
+    // 2^24 * n for n >= 1"
     if (size <= (1 << 12)) {
         return (1 << 12);
     } else if (size >= (1 << 24)) {
@@ -157,73 +295,307 @@ function next_heap_size(size) {
     }
 }
 
-/** @constructor */
-function Asm(heap_size) {
-    // Buffer size must be a multiple of 4k.
-    var min_size = HEAP_START + heap_size;
-    this.buffer = new ArrayBuffer(next_heap_size(min_size));
-
-    this._callbacks = [];
-
-    this.memcpy(STATIC_START, static_data);
-    this._raw = module(window, module_env(this.buffer, this._callbacks), this.buffer);
+function store_vec(view, offset, vec) {
+    view[offset + 0] = vec.x;
+    view[offset + 1] = vec.y;
+    view[offset + 2] = vec.z;
 }
-exports.Asm = Asm;
 
-Asm.prototype._stackAlloc = function(type, count) {
+var INIT_HEAP_SIZE = 4 * 1024 * 1024;
+var HEAP_PADDING = 256 * 1024;
+
+/** @constructor */
+function DynAsm() {
+    this.asmgl = new AsmGl();
+    this.conn = null;   // Will be set later, in main.js
+
+    this.buffer = new ArrayBuffer(next_heap_size(INIT_HEAP_SIZE));
+    this._memcpy(STATIC_START, static_data);
+    this._raw = module(window, module_env(this), this.buffer);
+
+    this._raw['asmlibs_init']();
+    this._raw['asmmalloc_init'](HEAP_START, this.buffer.byteLength);
+
+    this.data = null;
+    this.client = null;
+    this.SIZEOF = this._calcSizeof();
+
+    // TODO: hack (also see shaders.js)
+    window.SIZEOF = this.SIZEOF;
+}
+exports.DynAsm = DynAsm;
+
+DynAsm.prototype._grow = function(size) {
+    var old_buffer = this.buffer;
+
+    this.buffer = new ArrayBuffer(next_heap_size(size));
+    this._memcpy(0, old_buffer);
+    this._raw = module(window, module_env(this.buffer), this.buffer);
+
+    this._raw['asmmalloc_reinit'](this.buffer.byteLength);
+};
+
+DynAsm.prototype._heapCheck = function() {
+    var max = this._raw['asmmalloc_max_allocated_address'];
+    if (max >= this.buffer.length - HEAP_PADDING) {
+        this._grow(this.buffer.byteLength * 2);
+    }
+};
+
+DynAsm.prototype._calcSizeof = function() {
+    var EXPECT_SIZES = 10;
+    var sizes = this._stackAlloc(Int32Array, EXPECT_SIZES);
+
+    var num_sizes = this._raw['get_sizes'](sizes.byteOffset);
+    console.assert(num_sizes == EXPECT_SIZES,
+            'expected sizes for ' + EXPECT_SIZES + ' types, but got ' + num_sizes);
+
+    var index = 0;
+    var next = function() { return sizes[index++]; };
+    var result = {};
+
+    result.Client = next();
+    result.ClientAlignment = next();
+    result.Data = next();
+    result.DataAlignment = next();
+
+    result.TerrainVertex = next();
+    result.StructureVertex = next();
+    result.LightVertex = next();
+    result.UIVertex = next();
+
+    result.Scene = next();
+
+    result.Item = next();
+
+    console.assert(index == EXPECT_SIZES,
+            'some items were left over after building sizeof', index, EXPECT_SIZES);
+
+    return result;
+};
+
+DynAsm.prototype._stackAlloc = function(type, count) {
     var size = count * type.BYTES_PER_ELEMENT;
     var base = this._raw['__adjust_stack']((size + 7) & ~7);
     return new type(this.buffer, base, count);
 };
 
-Asm.prototype._stackFree = function(view) {
+DynAsm.prototype._stackFree = function(view) {
     var size = view.byteLength;
     this._raw['__adjust_stack'](-((size + 7) & ~7));
 };
 
-Asm.prototype._callbackAlloc = function(cb) {
-    this._callbacks.push(cb);
-    return this._callbacks.length - 1;
+DynAsm.prototype._heapAlloc = function(type, count) {
+    var size = count * type.BYTES_PER_ELEMENT;
+    var base = this._raw['asmmalloc_alloc'](size, type.BYTES_PER_ELEMENT);
+    return new type(this.buffer, base, count);
 };
 
-Asm.prototype._callbackFree = function(idx) {
-    console.assert(idx == this._callbacks.length - 1);
-    this._callbacks.pop();
+DynAsm.prototype._heapFree = function(view) {
+    this._raw['asmmalloc_free'](view.byteOffset);
 };
 
-Asm.prototype._storeVec = function(view, offset, v) {
-    view[offset + 0] = v.x;
-    view[offset + 1] = v.y;
-    view[offset + 2] = v.z;
-};
-
-Asm.prototype._makeView = function(type, offset, bytes) {
+DynAsm.prototype._makeView = function(type, offset, bytes) {
     return new type(this.buffer, offset, bytes / type.BYTES_PER_ELEMENT);
 };
 
-Asm.prototype.memcpy = function(dest_offset, data) {
-    memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
+DynAsm.prototype._memcpy = function(dest_offset, data) {
+    if (data.constructor !== ArrayBuffer) {
+        memcpy(this.buffer, dest_offset, data.buffer, data.byteOffset, data.byteLength);
+    } else {
+        memcpy(this.buffer, dest_offset, data, 0, data.byteLength);
+    }
 };
 
+DynAsm.prototype._loadString = function(ptr, len) {
+    var view = this._makeView(Uint8Array, ptr, len);
+    return decodeUtf8(view);
+};
 
-// Physics
+DynAsm.prototype._allocString = function(s) {
+    var utf8 = unescape(encodeURIComponent('' + s));
+    var len = utf8.length;
+    var view = this._heapAlloc(Uint8Array, len);
+    for (var i = 0; i < len; ++i) {
+        view[i] = utf8.charCodeAt(i);
+    }
+    return view;
+};
 
-var PHYSICS_HEAP_START = HEAP_START;
+DynAsm.prototype.initClient = function(gl, assets) {
+    // AsmGl must be initialized before calling `client_init`.
+    this.asmgl.init(gl, assets);
 
-var SHAPE_LAYERS_START = HEAP_START;
-var SHAPE_LAYERS_END = SHAPE_LAYERS_START + SIZEOF.ShapeLayers * LOCAL_SIZE * LOCAL_SIZE;
+    var blob = assets['client_data'];
+    var len = blob.byteLength;
+    var ptr = this._raw['asmmalloc_alloc'](len, 8);
+    this._memcpy(ptr, blob);
 
-var PHYSICS_HEAP_END = SHAPE_LAYERS_END;
+    this.data = this._raw['asmmalloc_alloc'](this.SIZEOF.Data, this.SIZEOF.DataAlignment);
+    // NB: takes ownership of `ptr`
+    this._raw['data_init'](ptr, len, this.data);
 
-Asm.prototype.collide = function(pos, size, velocity) {
+    this.client = this._raw['asmmalloc_alloc'](this.SIZEOF.Client, this.SIZEOF.ClientAlignment);
+    this._raw['client_init'](this.data, this.client);
+};
+
+DynAsm.prototype.resetClient = function() {
+    this._raw['client_reset'](this.client);
+};
+
+DynAsm.prototype.structureAppear = function(id, x, y, z, template_id, oneshot_start) {
+    this._raw['structure_appear'](this.client,
+            id, x, y, z, template_id, oneshot_start);
+};
+
+DynAsm.prototype.structureGone = function(id) {
+    this._raw['structure_gone'](this.client, id);
+};
+
+DynAsm.prototype.structureReplace = function(id, template_id, oneshot_start) {
+    this._raw['structure_replace'](this.client, id, template_id, oneshot_start);
+};
+
+DynAsm.prototype.entityAppear = function(id, appearance, name) {
+    var name_ptr = 0;
+    var name_len = 0;
+    if (name != null && name.length > 0) {
+        var name_view = this._allocString(name);
+        name_ptr = name_view.byteOffset;
+        name_len = name_view.byteLength;
+    }
+
+    // Library takes ownership of the name allocation.
+    this._raw['entity_appear'](this.client, id, appearance, name_ptr, name_len);
+};
+
+DynAsm.prototype.entityGone = function(id) {
+    this._raw['entity_gone'](this.client, id);
+};
+
+DynAsm.prototype.entityUpdate = function(id, motion, anim) {
+    var arr = this._stackAlloc(Int32Array, 9);
+
+    arr[0] = motion.start_pos.x;
+    arr[1] = motion.start_pos.y;
+    arr[2] = motion.start_pos.z;
+    arr[3] = motion.end_pos.x;
+    arr[4] = motion.end_pos.y;
+    arr[5] = motion.end_pos.z;
+
+    arr[6] = motion.start_time;
+    arr[7] = motion.end_time;
+    arr[8] = anim;
+
+    this._raw['entity_update'](this.client, id, motion.start_time, arr.byteOffset);
+
+    this._stackFree(arr);
+};
+
+DynAsm.prototype.setPawnId = function(entity_id) {
+    this._raw['set_pawn_id'](this.client, entity_id);
+};
+
+DynAsm.prototype.inventoryAppear = function(id, items) {
+    var item_arr = this._heapAlloc(Uint8Array, items.length * this.SIZEOF.Item);
+    var view = new DataView(item_arr.buffer, item_arr.byteOffset, item_arr.byteLength);
+
+    for (var i = 0; i < items.length; ++i) {
+        var base = i * this.SIZEOF.Item;
+        var item = items[i];
+        view.setUint16( base +  0,  item.item_id, true);
+        view.setUint8(  base +  2,  item.count);
+    }
+
+    // Takes ownership of `items`.
+    this._raw['inventory_appear'](this.client, id, item_arr.byteOffset, item_arr.byteLength);
+};
+
+DynAsm.prototype.inventoryGone = function(id) {
+    this._raw['inventory_gone'](this.client, id);
+};
+
+DynAsm.prototype.inventoryUpdate = function(id, slot, item) {
+    this._raw['inventory_update'](this.client, id, slot, item.item_id, item.count);
+};
+
+DynAsm.prototype.inventoryMainId = function(id) {
+    this._raw['inventory_main_id'](this.client, id);
+};
+
+DynAsm.prototype.inventoryAbilityId = function(id) {
+    this._raw['inventory_ability_id'](this.client, id);
+};
+
+DynAsm.prototype.inputKey = function(code) {
+    return this._raw['input_key'](this.client, code);
+};
+
+DynAsm.prototype.inputMouseMove = function(x, y) {
+    return this._raw['input_mouse_move'](this.client, x, y);
+};
+
+DynAsm.prototype.inputMouseDown = function(x, y) {
+    return this._raw['input_mouse_down'](this.client, x, y);
+};
+
+DynAsm.prototype.inputMouseUp = function(x, y) {
+    return this._raw['input_mouse_up'](this.client, x, y);
+};
+
+DynAsm.prototype.openInventoryDialog = function() {
+    return this._raw['open_inventory_dialog'](this.client);
+};
+
+DynAsm.prototype.openAbilityDialog = function() {
+    return this._raw['open_ability_dialog'](this.client);
+};
+
+DynAsm.prototype.getActiveItem = function() {
+    return this._raw['get_active_item'](this.client);
+};
+
+DynAsm.prototype.getActiveAbility = function() {
+    return this._raw['get_active_ability'](this.client);
+};
+
+DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
+    var region = this._stackAlloc(Int32Array, 6);
+    store_vec(region, 0, base);
+    store_vec(region, 3, size);
+
+    var buf = this._heapAlloc(Uint8Array, shape.length);
+    buf.set(shape);
+    this._raw['set_region_shape'](this.client,
+            region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
+    this._heapFree(buf);
+
+    this._stackFree(region);
+};
+
+DynAsm.prototype.clearRegionShape = function(base, size, layer) {
+    var region = this._stackAlloc(Int32Array, 6);
+    store_vec(region, 0, base);
+    store_vec(region, 3, size);
+
+    var buf = this._heapAlloc(Uint8Array, size.x * size.y * size.z);
+    buf.fill(0);
+    this._raw['set_region_shape'](this.client,
+            region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
+    this._heapFree(buf);
+
+    this._stackFree(region);
+};
+
+DynAsm.prototype.collide = function(pos, size, velocity) {
     var input = this._stackAlloc(Int32Array, 9);
     var output = this._stackAlloc(Int32Array, 4);
 
-    this._storeVec(input, 0, pos);
-    this._storeVec(input, 3, size);
-    this._storeVec(input, 6, velocity);
+    store_vec(input, 0, pos);
+    store_vec(input, 3, size);
+    store_vec(input, 6, velocity);
 
-    this._raw['collide'](SHAPE_LAYERS_START, input.byteOffset, output.byteOffset);
+    this._raw['collide'](this.client, input.byteOffset, output.byteOffset);
 
     var result = ({
         x: output[0],
@@ -238,318 +610,76 @@ Asm.prototype.collide = function(pos, size, velocity) {
     return result;
 };
 
-Asm.prototype.setRegionShape = function(pos, size, layer, shape) {
-    var input_bounds = this._stackAlloc(Int32Array, 6);
-    var input_shape = this._stackAlloc(Uint8Array, shape.length);
-
-    this._storeVec(input_bounds, 0, pos);
-    this._storeVec(input_bounds, 3, pos.add(size));
-    input_shape.set(shape);
-
-    this._raw['set_region_shape'](SHAPE_LAYERS_START,
-            input_bounds.byteOffset, layer,
-            input_shape.byteOffset, input_shape.length);
-    this._raw['refresh_shape_cache'](SHAPE_LAYERS_START, input_bounds.byteOffset);
-
-    this._stackFree(input_shape);
-    this._stackFree(input_bounds);
+DynAsm.prototype.feedInput = function(time, dir) {
+    this._raw['feed_input'](this.client, time, dir.x, dir.y, dir.z);
 };
 
-Asm.prototype.clearRegionShape = function(pos, size, layer) {
-    var volume = size.x * size.y * size.z;
-
-    var input_bounds = this._stackAlloc(Int32Array, 6);
-    var input_shape = this._stackAlloc(Uint8Array, volume);
-
-    this._storeVec(input_bounds, 0, pos);
-    this._storeVec(input_bounds, 3, pos.add(size));
-    for (var i = 0; i < volume; ++i) {
-        input_shape[i] = 0;
-    }
-
-    this._raw['set_region_shape'](PHYSICS_HEAP_START,
-            input_bounds.byteOffset, layer,
-            input_shape.byteOffset, input_shape.length);
-    this._raw['refresh_shape_cache'](PHYSICS_HEAP_START, input_bounds.byteOffset);
-
-    this._stackFree(input_shape);
-    this._stackFree(input_bounds);
+DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
+    var buf = this._heapAlloc(Uint16Array, data.length);
+    buf.set(data);
+    this._raw['load_terrain_chunk'](this.client,
+            cx, cy, buf.byteOffset, buf.byteLength);
+    this._heapFree(buf);
 };
 
-Asm.prototype.refreshShapeLayers = function(pos, size) {
-    var input = this._stackAlloc(Int32Array, 6);
-
-    this._storeVec(input, 0, pos);
-    this._storeVec(input, 3, pos.add(size));
-
-    this._raw['refresh_shape_cache'](SHAPE_LAYERS_START, input.byteOffset);
-
-    this._stackFree(input);
+DynAsm.prototype.renderFrame = function(now, future) {
+    this._raw['render_frame'](this.client, now, future);
 };
 
-Asm.prototype.shapeLayerView = function(chunk_idx, layer) {
-    var chunk_offset = chunk_idx * SIZEOF.ShapeLayers;
-    var layer_offset = (1 + layer) * SIZEOF.ShapeChunk;
-
-    return new Uint8Array(this.buffer,
-            SHAPE_LAYERS_START + chunk_offset + layer_offset, SIZEOF.ShapeChunk);
+DynAsm.prototype.debugRecord = function(frame_time, ping) {
+    this._raw['debug_record'](this.client, frame_time, ping);
 };
 
-Asm.prototype.findCeiling = function(pos) {
-    var input = this._stackAlloc(Int32Array, 3);
-    this._storeVec(input, 0, pos);
-
-    var result = this._raw['find_ceiling'](SHAPE_LAYERS_START, input.byteOffset);
-
-    this._stackFree(input);
-    return result;
+DynAsm.prototype.initDayNight = function(base_time, cycle_ms) {
+    this._raw['init_day_night'](this.client, base_time, cycle_ms);
 };
 
-Asm.prototype.floodfill = function(pos, radius) {
-    var size = radius * 2;
-    var len = size * size;
-
-    var pos_buf = this._stackAlloc(Int32Array, 3);
-    this._storeVec(pos_buf, 0, pos);
-    var grid = this._stackAlloc(Uint8Array, len);
-    grid.fill(0);
-    var queue = this._stackAlloc(Uint8Array, 2 * len);
-
-    this._raw['floodfill'](
-            SHAPE_LAYERS_START,
-            pos_buf.byteOffset, radius,
-            grid.byteOffset, len,
-            queue.byteOffset, 2 * len);
-
-    var result = grid.slice();
-
-    this._stackFree(queue);
-    this._stackFree(grid);
-    this._stackFree(pos_buf);
-
-    return result;
+DynAsm.prototype.setPlaneFlags = function(flags) {
+    this._raw['set_plane_flags'](this.client, flags);
 };
 
-exports.getPhysicsHeapSize = function() {
-    return PHYSICS_HEAP_END - PHYSICS_HEAP_START;
+DynAsm.prototype.toggleCursor = function() {
+    this._raw['toggle_cursor'](this.client);
+};
+
+DynAsm.prototype.resizeWindow = function(width, height) {
+    this._raw['resize_window'](this.client, width, height);
+};
+
+DynAsm.prototype.ponyeditRender = function(app) {
+    return this._raw['ponyedit_render'](this.client, app);
+};
+
+DynAsm.prototype.bench = function() {
+    return this._raw['client_bench'](this.client);
 };
 
 
-// Graphics
-
-/** @constructor */
-function AsmGraphics(num_blocks, num_templates, num_parts, num_verts,
-        structures_size, geom_size) {
-    var heap_end = HEAP_START;
-    function alloc(size) {
-        // 8-byte alignment
-        heap_end = (heap_end + 7) & ~7;
-        var pos = heap_end;
-        heap_end += size;
-        return pos;
-    }
-
-    this.num_blocks = num_blocks;
-    this.num_templates = num_templates;
-    this.num_parts = num_parts;
-    this.num_verts = num_verts;
-
-    this.block_data_bytes = num_blocks * SIZEOF.BlockData;
-    this.template_data_bytes = num_templates * SIZEOF.StructureTemplate;
-    this.template_part_bytes = num_parts * SIZEOF.TemplatePart;
-    this.template_vertex_bytes = num_verts * SIZEOF.TemplateVertex;
-    this.geom_buffer_bytes = geom_size;
-    // TODO: sizeof(Structure) * num_structures
-    this.structure_storage_bytes = structures_size
-
-    this.LOCAL_CHUNKS = alloc(SIZEOF.LocalChunks);
-    this.TERRAIN_GEOM_GEN = alloc(SIZEOF.TerrainGeomGen);
-    this.STRUCTURE_GEOM_GEN = alloc(SIZEOF.StructureGeomGen);
-    this.LIGHT_GEOM_GEN = alloc(SIZEOF.LightGeomGen);
-    this.STRUCTURE_BUFFER = alloc(SIZEOF.StructureBuffer);
-
-    this.BLOCK_DATA = alloc(this.block_data_bytes);
-    this.TEMPLATE_DATA = alloc(this.template_data_bytes);
-    this.TEMPLATE_PART_DATA = alloc(this.template_part_bytes);
-    this.TEMPLATE_VERTEX_DATA = alloc(this.template_vertex_bytes);
-    this.GEOM_BUFFER = alloc(this.geom_buffer_bytes);
-
-    this.STRUCTURE_STORAGE = alloc(this.structure_storage_bytes);
-
-    Asm.call(this, heap_end - HEAP_START);
+function AsmClientInput(asm) {
+    this._asm = asm;
 }
-AsmGraphics.prototype = Object.create(Asm.prototype);
-exports.AsmGraphics = AsmGraphics;
+exports.AsmClientInput = AsmClientInput;
 
-
-AsmGraphics.prototype.blockDataView8 = function() {
-    return this._makeView(Uint8Array, this.BLOCK_DATA, this.block_data_bytes);
+AsmClientInput.prototype.handleMouseMove = function(evt) {
+    var ret = this._asm.inputMouseMove(evt.x, evt.y);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
 };
 
-AsmGraphics.prototype.blockDataView16 = function() {
-    return this._makeView(Uint16Array, this.BLOCK_DATA, this.block_data_bytes);
+AsmClientInput.prototype.handleMouseDown = function(evt) {
+    var ret = this._asm.inputMouseDown(evt.x, evt.y);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
 };
 
-AsmGraphics.prototype.chunkView = function(cx, cy) {
-    var idx = (cy & (LOCAL_SIZE - 1)) * LOCAL_SIZE + (cx & (LOCAL_SIZE - 1));
-    var offset = idx * SIZEOF.BlockChunk;
-    return this._makeView(Uint16Array, this.LOCAL_CHUNKS + offset, SIZEOF.BlockChunk);
-};
-
-AsmGraphics.prototype.templateDataView8 = function() {
-    return this._makeView(Uint8Array, this.TEMPLATE_DATA, this.template_data_bytes);
-};
-
-AsmGraphics.prototype.templateDataView16 = function() {
-    return this._makeView(Uint16Array, this.TEMPLATE_DATA, this.template_data_bytes);
-};
-
-AsmGraphics.prototype.templatePartView8 = function() {
-    return this._makeView(Uint8Array, this.TEMPLATE_PART_DATA, this.template_part_bytes);
-};
-
-AsmGraphics.prototype.templatePartView16 = function() {
-    return this._makeView(Uint16Array, this.TEMPLATE_PART_DATA, this.template_part_bytes);
-};
-
-AsmGraphics.prototype.templateVertexView = function() {
-    return this._makeView(Uint16Array, this.TEMPLATE_VERTEX_DATA, this.template_vertex_bytes);
-};
-
-
-AsmGraphics.prototype.terrainGeomInit = function() {
-    this._raw['terrain_geom_init'](
-            this.TERRAIN_GEOM_GEN,
-            this.BLOCK_DATA,
-            this.block_data_bytes,
-            this.LOCAL_CHUNKS);
-};
-
-AsmGraphics.prototype.terrainGeomReset = function(cx, cy) {
-    this._raw['terrain_geom_reset'](this.TERRAIN_GEOM_GEN, cx, cy);
-};
-
-AsmGraphics.prototype.terrainGeomGenerate = function() {
-    var output = this._stackAlloc(Int32Array, 2);
-
-    this._raw['terrain_geom_generate'](
-            this.TERRAIN_GEOM_GEN,
-            this.GEOM_BUFFER,
-            this.geom_buffer_bytes,
-            output.byteOffset);
-
-    var vertex_count = output[0];
-    var more = (output[1] & 1) != 0;
-
-    this._stackFree(output);
-
-    return {
-        geometry: this._makeView(Uint8Array, this.GEOM_BUFFER,
-                          vertex_count * SIZEOF.TerrainVertex),
-        more: more,
-    };
-};
-
-
-AsmGraphics.prototype.structureBufferInit = function() {
-    this._raw['structure_buffer_init'](
-            this.STRUCTURE_BUFFER,
-            this.STRUCTURE_STORAGE,
-            this.structure_storage_bytes);
-};
-
-AsmGraphics.prototype.structureBufferInsert = function(id, x, y, z, template_id, oneshot_start) {
-    return this._raw['structure_buffer_insert'](
-            this.STRUCTURE_BUFFER,
-            id, x, y, z, template_id, oneshot_start);
-};
-
-AsmGraphics.prototype.structureBufferRemove = function(idx) {
-    return this._raw['structure_buffer_remove'](
-            this.STRUCTURE_BUFFER,
-            idx);
-};
-
-
-AsmGraphics.prototype.structureGeomInit = function() {
-    this._raw['structure_geom_init'](
-            this.STRUCTURE_GEOM_GEN,
-            this.STRUCTURE_BUFFER,
-            this.TEMPLATE_DATA,
-            this.template_data_bytes,
-            this.TEMPLATE_PART_DATA,
-            this.template_part_bytes,
-            this.TEMPLATE_VERTEX_DATA,
-            this.template_vertex_bytes);
-};
-
-AsmGraphics.prototype.structureGeomReset = function(cx0, cy0, cx1, cy1, sheet) {
-    this._raw['structure_geom_reset'](
-            this.STRUCTURE_GEOM_GEN,
-            cx0, cy0, cx1, cy1, sheet);
-};
-
-AsmGraphics.prototype.structureGeomGenerate = function() {
-    var output = this._stackAlloc(Int32Array, 2);
-
-    this._raw['structure_geom_generate'](
-            this.STRUCTURE_GEOM_GEN,
-            this.GEOM_BUFFER,
-            this.geom_buffer_bytes,
-            output.byteOffset);
-
-    var vertex_count = output[0];
-    var more = (output[1] & 1) != 0;
-
-    this._stackFree(output);
-
-    return {
-        geometry: this._makeView(Uint8Array, this.GEOM_BUFFER,
-                          vertex_count * SIZEOF.StructureVertex),
-        more: more,
-    };
-};
-
-
-AsmGraphics.prototype.lightGeomInit = function() {
-    this._raw['light_geom_init'](
-            this.LIGHT_GEOM_GEN,
-            this.STRUCTURE_BUFFER,
-            this.TEMPLATE_DATA,
-            this.template_data_bytes);
-};
-
-AsmGraphics.prototype.lightGeomReset = function(cx0, cy0, cx1, cy1) {
-    this._raw['light_geom_reset'](
-            this.LIGHT_GEOM_GEN,
-            cx0, cy0, cx1, cy1);
-};
-
-AsmGraphics.prototype.lightGeomGenerate = function() {
-    var output = this._stackAlloc(Int32Array, 2);
-
-    this._raw['light_geom_generate'](
-            this.LIGHT_GEOM_GEN,
-            this.GEOM_BUFFER,
-            this.geom_buffer_bytes,
-            output.byteOffset);
-
-    var vertex_count = output[0];
-    var more = (output[1] & 1) != 0;
-
-    this._stackFree(output);
-
-    return {
-        geometry: this._makeView(Uint8Array, this.GEOM_BUFFER,
-                          vertex_count * SIZEOF.LightVertex),
-        more: more,
-    };
-};
-
-
-
-
-// Test
-
-Asm.prototype.test = function() {
+AsmClientInput.prototype.handleMouseUp = function(evt) {
+    var ret = this._asm.inputMouseUp(evt.x, evt.y);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
 };

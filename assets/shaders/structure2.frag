@@ -35,10 +35,8 @@ void main(void) {
         emit(1, vec4(tileZ * 8.0 / 255.0, 0.0, 1.0, 1.0));
     }
 #else
-    if (color.a == 0.0) {
+    if (color.a == 0.0 || color.a == 1.0) {
         discard;
-    } else if (color.a == 1.0) {
-        emit(0, vec4(1.0));
     } else {
         emit(0, color);
     }

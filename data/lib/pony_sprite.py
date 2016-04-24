@@ -2,6 +2,7 @@ from collections import namedtuple
 
 from outpost_data.core import image2
 from outpost_data.core.builder2 import *
+from outpost_data.core.sprite import GraphicsDef
 from outpost_data.outpost.lib.sprite_util import depth_stack
 
 
@@ -33,6 +34,7 @@ MOTIONS = [
         Motion('stand', 0, 0, 1,  1),
         Motion('walk',  1, 0, 6,  8),
         Motion('run',   3, 0, 6, 12),
+        Motion('sit',   0, 1, 1,  1),
         ]
 
 SPRITE_SIZE = (96, 96)
@@ -106,24 +108,30 @@ def get_hat_box_pos(img):
 
 def get_pony_hat_box(sex):
     pony = get_pony_sprite()
-    part = pony.get_part('%s/_dummy' % sex)
+    part = pony.get_part('%s/_dummy/' % sex)
     variant = part.get_variant('hat_box')
     return variant
 
-def add_hat_layer(part, name, sex, sheet):
-    '''Add a hat variant called `name` to `part`.  Use `sheet` as the hat image
-    for ponies of the indicated sex.
+def add_hat_layer(name, sex, sheet):
+    '''Add a hat layer called `name` to the pony sprite.  Use `sheet` as the
+    hat image for ponies of the indicated sex.
     
-    Note that `name` and `part` are used directly, with no modification based
-    on `sex`.'''
+    Note that `name` is used directly, with no modification based on `sex`.'''
     sheet = sheet.with_unit(HAT_SIZE)
-    def f(_variant, anim, _frame_idx, img):
-        idx = DIRS[get_anim_facing(anim)].idx
-        hat = sheet.extract((idx, 0))
-        hat_pos = get_hat_box_pos(img)
+
+    def derive_frame(hat, box):
+        hat_pos = get_hat_box_pos(box)
         return hat.pad(SPRITE_SIZE, offset=hat_pos)
 
-    return part.add_derived_variant(name, get_pony_hat_box(sex), f)
+    def derive_graphics(layer, anim_def, orig):
+        idx = DIRS[get_anim_facing(anim_def)].idx
+        hat = sheet.extract((idx, 0))
+        frames = [derive_frame(hat, box) for box in orig.anim._frames]
+        anim = image2.Anim(frames, orig.anim.rate, oneshot=orig.anim.oneshot)
+        return GraphicsDef(anim)
+
+    pony = get_pony_sprite()
+    return pony.derive_layer(name, '%s/_dummy/hat_box' % sex, derive_graphics)
 
 
 # Map animation name to a direction
