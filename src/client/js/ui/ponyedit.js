@@ -147,7 +147,7 @@ function PonyEditor(name, draw) {
     }
 
     // Now actually draw.
-    //this.draw = draw;
+    this.draw = draw;
     this._refresh();
 }
 PonyEditor.prototype = Object.create(widget.Form.prototype);

@@ -36,4 +36,5 @@ debug_record
 init_day_night
 set_plane_flags
 resize_window
+ponyedit_render
 client_bench

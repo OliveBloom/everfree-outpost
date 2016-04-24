@@ -464,6 +464,35 @@ impl<GL: Context> Renderer<GL> {
             .draw(&mut self.shaders.blit_full);
     }
 
+    pub fn render_ponyedit_hack(&mut self, scene: &Scene) {
+        self.framebuffers.world.clear((0, 0, 0, 0));
+        self.framebuffers.sprite.clear((0, 0, 0, 0));
+
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                //scene.slice_center(),
+                //scene.slice_z(),
+                UniformValue::Float(0.0),
+            ])
+            .arrays(&[&self.entity_buffer])
+            .textures(&[
+                &self.textures.sprite_sheet,
+                &self.framebuffers.world_depth,
+            ])
+            .output(&self.framebuffers.sprite)
+            .viewport_size(scene.camera_size)
+            //.depth_test()
+            .draw(&mut self.shaders.entity);
+
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
+            .textures(&[&self.framebuffers.world_color])
+            .viewport_size(scene.canvas_size)
+            .draw(&mut self.shaders.blit_full);
+    }
+
     fn render_terrain(&mut self, scene: &Scene) {
         DrawArgs::<GL>::new()
             .uniforms(&[

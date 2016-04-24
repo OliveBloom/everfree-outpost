@@ -153,6 +153,13 @@ impl Entities {
         }
     }
 
+    pub fn ponyedit_hack(&mut self, id: EntityId, anim: u16) {
+        let e = self.map.get_mut(&id).unwrap();
+        e.motion.anim_id = anim;
+        e.motion.start_pos = V3::new(4096, 4096, 0);
+        e.motion.end_pos = V3::new(4096, 4096, 0);
+    }
+
     pub fn get(&self, id: EntityId) -> Option<&Entity> {
         self.map.get(&id)
     }

@@ -638,6 +638,10 @@ DynAsm.prototype.resizeWindow = function(width, height) {
     this._raw['resize_window'](this.client, width, height);
 };
 
+DynAsm.prototype.ponyeditRender = function(app) {
+    return this._raw['ponyedit_render'](this.client, app);
+};
+
 DynAsm.prototype.bench = function() {
     return this._raw['client_bench'](this.client);
 };

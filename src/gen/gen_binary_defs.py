@@ -283,11 +283,11 @@ class BinaryDefs:
             lst[int(k)] = v
         self.pack_array(b'XAnimDir', lst, 'B')
 
-        # XDefAnim - default_anim
-        self.pack_array(b'XDefAnim', [j['default_anim']], '<H')
-
-        # XEdtAnim - editor_anim
-        self.pack_array(b'XEdtAnim', [j['editor_anim']], '<H')
+        # XSpcAnim - special anims
+        self.pack_array(b'XSpcAnim', [
+            j['default_anim'],
+            j['editor_anim'],
+            ], '<H')
 
     def convert_day_night(self):
         j = self.load('day_night.json')

@@ -484,15 +484,29 @@ impl<'d, P: Platform> Client<'d, P> {
         self.view_size = view_size;
     }
 
-    fn calc_scale(&self, size: (u16, u16)) -> i16 {
-        let (w, h) = size;
-        let max_dim = cmp::max(w, h);
-        const TARGET: u16 = 1024;
-        if max_dim > TARGET {
-            ((max_dim + TARGET / 2) / TARGET) as i16
-        } else {
-            -(((TARGET + max_dim / 2) / max_dim) as i16)
-        }
+    pub fn ponyedit_render(&mut self, appearance: u32) {
+        self.entities.insert(0, appearance, None);
+        let anim = self.data().editor_anim();
+        self.entities.ponyedit_hack(0, anim);
+        println!("created entity #0 with app {:x}", appearance);
+
+        let scene = Scene::new(0,
+                               self.window_size,
+                               self.view_size,
+                               V3::new(4096, 4096, 0) + V3::new(16, 16, 0),
+                               (255, 255, 255, 255));
+
+        self.renderer.update_framebuffers(self.platform.gl(), &scene);
+        self.renderer.update_entity_geometry(&self.data,
+                                             &self.entities,
+                                             &self.predictor,
+                                             Region::new(scalar(-1), scalar(1)),
+                                             0,
+                                             0,
+                                             None);
+        self.renderer.render_ponyedit_hack(&scene);
+
+        self.entities.remove(0);
     }
 
     pub fn bench(&mut self) {
@@ -503,6 +517,18 @@ impl<'d, P: Platform> Client<'d, P> {
             //self.renderer.load_ui_geometry(&geom);
         }
         println!("counter {}", counter);
+    }
+
+
+    fn calc_scale(&self, size: (u16, u16)) -> i16 {
+        let (w, h) = size;
+        let max_dim = cmp::max(w, h);
+        const TARGET: u16 = 1024;
+        if max_dim > TARGET {
+            ((max_dim + TARGET / 2) / TARGET) as i16
+        } else {
+            -(((TARGET + max_dim / 2) / max_dim) as i16)
+        }
     }
 }
 

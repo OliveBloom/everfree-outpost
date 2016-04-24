@@ -486,17 +486,15 @@ function saveAppearance(a) {
 }
 
 function drawPony(ctx, app_info) {
-    var bits = calcAppearance(app_info);
-    var app = new PonyAppearance(assets, bits, '');
-    var anim_def = AnimationDef.by_id[ExtraDefs.editor_anim];
-    var frame = new Animation(anim_def, 0).frameInfo(0);
-    var sprite = app.buildSprite(new Vec(0, 0, 0), frame);
-    sprite.setRefPosition(sprite.anchor_x, sprite.anchor_y, 0);
+    var app = calcAppearance(app_info);
+    asm_client.ponyeditRender(app);
 
     ctx.clearRect(0, 0, 96, 96);
-    // TODO: hack.  relies on the fact that PonyAppearanceClass.draw2D doesn't
-    // refer to `this`
-    app.getClass().prototype.draw2D(ctx, [0, 0], sprite);
+    var size = Math.round(96 * canvas.canvas.width / canvas.virtualWidth);
+    var extra = Math.round(40 * canvas.canvas.width / canvas.virtualWidth);
+    var cx = ((canvas.canvas.width - size) / 2)|0;
+    var cy = ((canvas.canvas.height - size - extra) / 2)|0;
+    ctx.drawImage(canvas.canvas, cx, cy, size, size, 0, 0, 96, 96);
 }
 
 

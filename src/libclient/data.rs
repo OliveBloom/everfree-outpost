@@ -177,6 +177,7 @@ gen_data! {
     pony_layer_table (b"XPonLayr"): u8,
     physics_anim_table (b"XPhysAnm"): [u16; 8],
     anim_dir_table (b"XAnimDir"): u8,
+    special_anims (b"XSpcAnim"): u16,
 }
 
 impl Data {
@@ -235,5 +236,13 @@ impl Data {
 
     pub fn day_night_phase(&self, idx: u8) -> &DayNightPhase {
         &self.day_night_phases()[idx as usize]
+    }
+
+    pub fn default_anim(&self) -> u16 {
+        self.special_anims()[0]
+    }
+
+    pub fn editor_anim(&self) -> u16 {
+        self.special_anims()[1]
     }
 }

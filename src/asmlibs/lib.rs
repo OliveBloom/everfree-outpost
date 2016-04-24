@@ -309,6 +309,12 @@ pub unsafe extern fn resize_window(client: &mut Client,
     client.resize_window((width, height));
 }
 
+#[no_mangle]
+pub unsafe extern fn ponyedit_render(client: &mut Client,
+                                     appearance: u32) {
+    client.ponyedit_render(appearance);
+}
+
 
 #[no_mangle]
 pub unsafe extern fn client_bench(client: &mut Client) -> u32 {
