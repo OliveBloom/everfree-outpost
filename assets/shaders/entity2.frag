@@ -4,8 +4,6 @@ uniform sampler2D sheet_tex;
 uniform sampler2D depth_tex;
 uniform vec2 camera_pos;
 uniform vec2 camera_size;
-//uniform vec2 sliceCenter;
-//uniform float sliceZ;
 
 varying vec2 tex_coord;
 varying vec3 ref_pos;
