@@ -1,3 +1,4 @@
+var Config = require('config').Config;
 var glutil = require('graphics/glutil');
 var insertFree = require('util/misc').insertFree;
 

@@ -655,6 +655,7 @@ DynAsm.prototype.bench = function() {
 };
 
 
+/** @constructor */
 function AsmClientInput(asm) {
     this._asm = asm;
 }
