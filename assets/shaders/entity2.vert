@@ -44,7 +44,7 @@ void main(void) {
     }
 
     vec2 norm_pos = (pos - camera_pos) / camera_size;
-    float norm_depth = 0.5; //(ref_pos.y - ref_pos.z) / (TILE_SIZE * CHUNK_SIZE * LOCAL_SIZE * 2.0);
+    float norm_depth = (ref_pos.y - ref_pos.z) / (TILE_SIZE * CHUNK_SIZE * LOCAL_SIZE * 2.0);
 
     vec3 adj_pos = vec3(norm_pos, norm_depth) * 2.0 - 1.0;
     adj_pos.y = -adj_pos.y;

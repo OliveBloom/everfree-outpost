@@ -26,7 +26,7 @@ void main(void) {
                     camera_size.y - gl_FragCoord.y + camera_pos.y,
                     0.0);
     float depth = texture2D(depth_tex, gl_FragCoord.xy / camera_size).r;
-    float z = floor(depth * 512.0 + 0.5);
+    float z = floor(depth * 512.0);
 
     pos.y += z;
     pos.z = z;

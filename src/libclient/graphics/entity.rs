@@ -151,6 +151,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             let dest_x = (pos.x - 32) as u16;
             let dest_y = (pos.y - pos.z - 64) as u16;
 
+            const HACKY_ADJUSTMENT: u16 = 24;
+
             for_each_layer(e.appearance, |layer_table_idx, color| {
                 let layer_idx = self.data.pony_layer_table()[layer_table_idx];
                 let l = self.data.sprite_layer(layer_idx);
@@ -176,8 +178,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
                         ref_pos: (pos.x as u16,
                                   // TODO: hardcoded size
-                                  // TODO: extra hack - shouldn't need this +1
-                                  pos.y as u16 + 1/*32*/,
+                                  // TODO: arbitrary adjustment
+                                  pos.y as u16 + HACKY_ADJUSTMENT,
                                   pos.z as u16),
                         // TODO: hardcoded size
                         ref_size_z: 64,
@@ -215,8 +217,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
                                 ref_pos: (pos.x as u16,
                                           // TODO: hardcoded size
-                                          // TODO: extra hack - shouldn't need this +1
-                                          pos.y as u16 + 1/*32*/,
+                                          // TODO: arbitrary adjustment
+                                          pos.y as u16 + HACKY_ADJUSTMENT,
                                           pos.z as u16),
                                 // TODO: hardcoded size
                                 ref_size_z: 64,
@@ -304,11 +306,11 @@ fn for_each_layer<F: FnMut(usize, (u8, u8, u8))>(appearance: u32, mut f: F) {
         go(2, tint1);
     }
     go(4, white); // eyes
+    go(8 + tail as usize, tint0);
     go(5 + mane as usize, tint0);
     if horn {
         go(1, tint1);
     }
-    go(8 + tail as usize, tint0);
     if equip0 != 0 {
         go(11 + equip0 as usize - 1, white);
     }
