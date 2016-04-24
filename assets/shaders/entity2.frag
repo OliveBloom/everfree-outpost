@@ -12,13 +12,7 @@ varying vec3 ref_pos;
 varying float ref_size_z;
 varying vec3 color_;
 
-//#include "slicing.inc"
-
 void main(void) {
-    //if (sliceCheck()) {
-    //    discard;
-    //}
-
     // NB: FragCoord origin is the bottom left, not the top left.  So it works
     // for texture lookups (they use the same origin), but it needs to be
     // flipped for coordinate calculations.

@@ -37,10 +37,17 @@ pub struct Vertex {
 
 pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
     gl.load_shader(
-        "entity2.vert", "entity2.frag", "",
+        "entity2.vert", "entity2.frag",
+        defs! {
+            SLICE_ENABLE: "1",
+            SLICE_SIMPLIFIED: "1",
+        },
         uniforms! {
             camera_pos: V2,
             camera_size: V2,
+            // TODO: rename
+            sliceCenter: V2,
+            sliceZ: Float,
             now: Float,
         },
         arrays! {
@@ -59,6 +66,7 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
         textures! {
             sheet_tex,
             depth_tex,
+            cavernTex,
         },
         outputs! { color: 1, depth })
 }
