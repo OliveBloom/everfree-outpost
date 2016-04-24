@@ -96,7 +96,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     }
 
     fn on_key(&mut self, key: KeyAction) -> EventStatus {
-        use ui::dialogs::AnyDialog::{Inventory};
+        use ui::dialogs::AnyDialog::{Inventory, Ability};
 
         let status = OnKeyVisitor::dispatch(self, key);
         if status.is_handled() {
@@ -110,6 +110,14 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
                     Inventory(ref inv_dialog) => {
                         if let Some(inv) = self.dyn.inventories.main_inventory() {
                             Some((inv_dialog.focused_item(inv), false))
+                        } else {
+                            None
+                        }
+                    },
+
+                    Ability(ref inv_dialog) => {
+                        if let Some(inv) = self.dyn.inventories.ability_inventory() {
+                            Some((inv_dialog.focused_item(inv), true))
                         } else {
                             None
                         }

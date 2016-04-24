@@ -16,6 +16,7 @@ pub use self::inventory::{Inventory, InventoryDyn};
 pub enum AnyDialog {
     None,
     Inventory(Inventory),
+    Ability(Inventory),
 }
 
 impl AnyDialog {
@@ -24,7 +25,11 @@ impl AnyDialog {
     }
 
     pub fn inventory() -> AnyDialog {
-        AnyDialog::Inventory(Inventory::new())
+        AnyDialog::Inventory(Inventory::new(false))
+    }
+
+    pub fn ability() -> AnyDialog {
+        AnyDialog::Ability(Inventory::new(true))
     }
 }
 
@@ -33,6 +38,7 @@ impl dialog::Inner for AnyDialog {
         match *self {
             AnyDialog::None => "",
             AnyDialog::Inventory(_) => "Inventory",
+            AnyDialog::Ability(_) => "Abilities",
         }
     }
 
@@ -70,6 +76,13 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
 
             AnyDialog::Inventory(ref mut state) => {
                 let dyn = InventoryDyn::new(self.dyn.inventories.main_inventory());
+                let mut child = WidgetPack::new(state, dyn);
+                let rect = Region::sized(child.size()) + pos;
+                v.visit(&mut child, rect);
+            },
+
+            AnyDialog::Ability(ref mut state) => {
+                let dyn = InventoryDyn::new(self.dyn.inventories.ability_inventory());
                 let mut child = WidgetPack::new(state, dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);

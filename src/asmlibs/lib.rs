@@ -230,6 +230,11 @@ pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
 }
 
 #[no_mangle]
+pub unsafe extern fn open_ability_dialog(client: &mut Client) {
+    client.open_ability_dialog()
+}
+
+#[no_mangle]
 pub unsafe extern fn get_active_item(client: &mut Client) -> u16 {
     client.get_active_item()
 }

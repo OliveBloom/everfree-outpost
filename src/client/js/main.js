@@ -572,22 +572,7 @@ function setupKeyHandler() {
                     if (ability_inv == null) {
                         break;
                     }
-                    var inv = ability_inv.clone();
-                    var ui = new InventoryUI(dnd, inv, 'Abilities');
-                    dialog.show(ui);
-                    ui.ontransfer = function(from_inv, from_slot, to_inv, to_slot, amount) {
-                        conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
-                    };
-
-                    ui.enableSelect(ui_gl.hotbar.getAbility(), function(idx, new_id) {
-                        ui_gl.hotbar.setSlot(idx, new_id,  false);
-                        ui_gl.hotbar.selectSlot(idx);
-                    });
-
-                    ui.oncancel = function() {
-                        dialog.hide();
-                        inv.release();
-                    };
+                    asm_client.openAbilityDialog();
                     break;
 
                 // Commands to the server

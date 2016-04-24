@@ -9,12 +9,14 @@ use ui::widget::*;
 
 pub struct Inventory {
     grid: inventory::Grid,
+    ability: bool,
 }
 
 impl Inventory {
-    pub fn new() -> Inventory {
+    pub fn new(ability: bool) -> Inventory {
         Inventory {
             grid: inventory::Grid::new(),
+            ability: ability,
         }
     }
 

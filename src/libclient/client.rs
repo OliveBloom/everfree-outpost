@@ -333,6 +333,11 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::inventory();
     }
 
+    pub fn open_ability_dialog(&mut self) {
+        use ui::dialogs::AnyDialog;
+        self.ui.root.dialog.inner = AnyDialog::ability();
+    }
+
     pub fn get_active_item(&self) -> u16 {
         self.misc.hotbar.active_item().unwrap_or(0)
     }
@@ -571,7 +576,9 @@ impl<'d, P: Platform> ClientObj for Client<'d, P> {
             Some(x) => x.items[src_slot].id,
             None => return,
         };
-        self.handle_hotbar_assign(dest_slot, item_id, false);
+        // TODO: hack
+        let is_ability = Some(src_inv) == self.inventories.ability_id();
+        self.handle_hotbar_assign(dest_slot, item_id, is_ability);
     }
 
     fn handle_hotbar_select(&mut self, idx: u8) {

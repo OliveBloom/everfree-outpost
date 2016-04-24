@@ -27,6 +27,7 @@ input_mouse_move
 input_mouse_down
 input_mouse_up
 open_inventory_dialog
+open_ability_dialog
 get_active_item
 get_active_ability
 load_terrain_chunk

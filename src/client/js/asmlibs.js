@@ -547,6 +547,10 @@ DynAsm.prototype.openInventoryDialog = function() {
     return this._raw['open_inventory_dialog'](this.client);
 };
 
+DynAsm.prototype.openAbilityDialog = function() {
+    return this._raw['open_ability_dialog'](this.client);
+};
+
 DynAsm.prototype.getActiveItem = function() {
     return this._raw['get_active_item'](this.client);
 };
