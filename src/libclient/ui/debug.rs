@@ -2,21 +2,23 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
 
+use client::ClientObj;
 use debug;
 use fonts::{self, FontMetricsExt};
 use platform::{Config, ConfigKey};
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::{Geom, Special};
-use ui::input::EventStatus;
+use ui::input::{EventStatus, KeyAction};
 use ui::item;
 use ui::widget::*;
 
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Mode {
-    Nothing,
-    Framerate,
-    Full,
+    Nothing = 0,
+    Framerate = 1,
+    Full = 2,
 }
 
 pub struct Debug {
@@ -26,7 +28,15 @@ pub struct Debug {
 impl Debug {
     pub fn new() -> Debug {
         Debug {
-            mode: Mode::Full,
+            mode: Mode::Nothing,
+        }
+    }
+
+    pub fn init<C: Config>(&mut self, cfg: &C) {
+        match cfg.get_int(ConfigKey::DebugShowPanel) {
+            1 => self.mode = Mode::Framerate,
+            2 => self.mode = Mode::Full,
+            _ => self.mode = Mode::Nothing,
         }
     }
 }
@@ -98,6 +108,24 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
                 });
             },
         }
+    }
+
+    fn on_key(&mut self, key: KeyAction) -> EventStatus {
+        if key == KeyAction::ToggleDebugPanel {
+            self.state.mode = match self.state.mode {
+                Mode::Nothing => Mode::Framerate,
+                Mode::Framerate => Mode::Full,
+                Mode::Full => Mode::Nothing,
+            };
+
+            let new_val = self.state.mode as i32;
+
+            return EventStatus::Action(box move |c: &mut ClientObj| {
+                c.platform().config_mut().set_int(ConfigKey::DebugShowPanel, new_val);
+            });
+        }
+
+        EventStatus::Unhandled
     }
 }
 

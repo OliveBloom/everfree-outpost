@@ -88,6 +88,7 @@ impl<'d, P: Platform> Client<'d, P> {
         };
 
         c.misc.hotbar.init(c.platform.config(), &c.data);
+        c.ui.root.init(c.platform.config());
 
         c
     }

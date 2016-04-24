@@ -77,6 +77,7 @@ impl<P: Platform> PlatformObj for P {
 
 
 pub enum ConfigKey {
+    DebugShowPanel,
     HotbarItemName(u8),
     HotbarIsItem(u8),
     HotbarActiveItem,
@@ -88,6 +89,7 @@ impl ConfigKey {
     pub fn to_string(&self) -> String {
         use self::ConfigKey::*;
         match *self {
+            DebugShowPanel => "debug_show_panel".into(),
             HotbarItemName(idx) => format!("hotbar.names.{}", idx),
             HotbarIsItem(idx) => format!("hotbar.is_item.{}", idx),
             HotbarActiveItem => "hotbar.active_item".into(),

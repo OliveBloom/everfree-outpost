@@ -15,6 +15,8 @@ pub enum KeyAction {
     Cancel,
 
     SetHotbar(i8),
+
+    ToggleDebugPanel,
 }
 
 impl KeyAction {
@@ -35,6 +37,8 @@ impl KeyAction {
             21 => Some(Cancel),
 
             31 ... 39 => Some(SetHotbar(code as i8 - 31)),
+
+            114 => Some(ToggleDebugPanel),
 
             _ => None,
         }

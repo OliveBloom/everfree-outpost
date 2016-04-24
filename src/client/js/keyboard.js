@@ -24,6 +24,8 @@ function asmEncodeKey(code, shift) {
         case 'hotbar_8':    return 38;
         case 'hotbar_9':    return 39;
 
+        case 'debug_show_panel': return 114;
+
         default:            return null;
     }
 }
@@ -71,6 +73,8 @@ function Keyboard(asm_client) {
 
         if (asmDispatchKey(asm_client, evt.keyCode, evt.shiftKey)) {
             asm_handled[evt.keyCode] = true;
+            evt.preventDefault();
+            evt.stopPropagation();
             return;
         }
 

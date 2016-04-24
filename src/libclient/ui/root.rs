@@ -8,7 +8,7 @@ use debug::Debug as DebugDyn;
 use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
 use misc;
-use platform::Config;
+use platform::{Config, ConfigKey};
 use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
@@ -27,6 +27,10 @@ impl Root {
             dialog: dialog::Dialog::new(dialogs::AnyDialog::None),
             debug: debug::Debug::new(),
         }
+    }
+
+    pub fn init<C: Config>(&mut self, cfg: &C) {
+        self.debug.init(cfg);
     }
 }
 

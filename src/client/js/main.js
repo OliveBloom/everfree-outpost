@@ -546,10 +546,6 @@ function setupKeyHandler() {
                     $('key-list').classList.toggle('hidden', !show);
                     break;
                 case 'debug_show_panel':
-                    var setting = (Config.debug_show_panel.get() + 1) % 3;
-                    Config.debug_show_panel.set(setting);
-                    ui_gl.fps.toggle(setting == 1);
-                    debug.container.classList.toggle('hidden', setting != 2);
                     break;
                 case 'debug_test':
                     window.hideUI = !window.hideUI;
@@ -571,26 +567,6 @@ function setupKeyHandler() {
                     if (item_inv == null) {
                         break;
                     }
-                    /*
-                    var inv = item_inv.clone();
-                    var ui = new InventoryUIGL(inv);
-                    ui_gl.showDialog(ui, 'Inventory');
-
-                    ui.addListener('transfer',
-                        function(from_inv, from_slot, to_inv, to_slot, amount) {
-                            conn.sendMoveItem(from_inv, from_slot, to_inv, to_slot, amount);
-                        });
-
-                    ui.addListener('set_hotbar', function(idx, item_id) {
-                        ui_gl.hotbar.setSlot(idx, item_id, true);
-                        ui_gl.hotbar.selectSlot(idx);
-                    });
-
-                    ui.addListener('cancel', function() {
-                        ui_gl.hideDialog();
-                        inv.release();
-                    });
-                    */
                     asm_client.openInventoryDialog();
                     break;
 
