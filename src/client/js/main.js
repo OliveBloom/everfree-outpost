@@ -135,7 +135,6 @@ var assets;
 var asm_client;
 
 var renderer = null;
-var show_cursor = false;
 var synced = net.SYNC_LOADING;
 
 var conn;
@@ -195,7 +194,6 @@ function init() {
     assets = null;
 
     renderer = null;
-    show_cursor = false;
 
     conn = null;    // Initialized after assets are loaded.
     timing = null;  // Initialized after connection is opened.
@@ -558,7 +556,7 @@ function setupKeyHandler() {
                     dialog.show(main_menu);
                     break;
                 case 'toggle_cursor':
-                    show_cursor = !show_cursor;
+                    asm_client.toggleCursor();
                     break;
 
                 case 'inventory':

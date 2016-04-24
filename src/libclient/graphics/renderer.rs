@@ -67,6 +67,7 @@ struct Shaders<GL: Context> {
     light_static: GL::Shader,
     entity: GL::Shader,
 
+    cursor: GL::Shader,
     debug_graph: GL::Shader,
 }
 
@@ -130,6 +131,21 @@ impl<GL: Context> Shaders<GL> {
             light_static: light::load_shader(gl),
 
             entity: entity::load_shader(gl),
+
+            cursor: gl.load_shader(
+                "cursor.vert", "cursor.frag", "",
+                uniforms! {
+                    camera_pos: V2,
+                    camera_size: V2,
+                    cursor_pos: V2,
+                },
+                arrays! {
+                    [2] attribs! {
+                        corner: U8[2] @0,
+                    },
+                },
+                textures! {},
+                outputs! { color: 1 }),
 
             debug_graph: gl.load_shader(
                 "debug_graph.vert", "debug_graph.frag", "",
@@ -663,6 +679,19 @@ impl<GL: Context> Renderer<GL> {
             ])
             .output(&self.framebuffers.output)
             .draw(&mut self.shaders.blit_post);
+
+        if scene.cursor_pos.is_some() {
+            println!("draw cursor at {:?}", scene.cursor_pos);
+            DrawArgs::<GL>::new()
+                .uniforms(&[
+                      scene.camera_pos(),
+                      scene.camera_size(),
+                      scene.cursor_pos(),
+                ])
+                .arrays(&[&self.buffers.square01])
+                .output(&self.framebuffers.output)
+                .draw(&mut self.shaders.cursor);
+        }
     }
 }
 
@@ -683,11 +712,13 @@ pub struct Scene {
     pub slice_center: V3,
     pub now: Time,
     pub ambient_light: (u8, u8, u8, u8),
+    pub cursor_pos: Option<V2>,
 
     pub f_camera_pos: [f32; 2],
     pub f_camera_size: [f32; 2],
     pub f_slice_center: [f32; 2],
     pub f_slice_z: f32,
+    pub f_cursor_pos: [f32; 2],
 }
 
 impl Scene {
@@ -695,7 +726,8 @@ impl Scene {
                window_size: (u16, u16),
                view_size: (u16, u16),
                center: V3,
-               ambient_light: (u8, u8, u8, u8)) -> Scene {
+               ambient_light: (u8, u8, u8, u8),
+               cursor_pos: Option<V2>) -> Scene {
         let camera_center = V2::new(center.x, center.y - center.z);
         let camera_size = V2::new(view_size.0 as i32, view_size.1 as i32);
         let canvas_size = V2::new(window_size.0 as i32, window_size.1 as i32);
@@ -710,6 +742,7 @@ impl Scene {
             slice_center: slice_center,
             now: now,
             ambient_light: ambient_light,
+            cursor_pos: cursor_pos,
 
             f_camera_pos: [camera_pos.x as f32,
                            camera_pos.y as f32],
@@ -718,6 +751,12 @@ impl Scene {
             f_slice_center: [slice_center.x as f32,
                              slice_center.y as f32],
             f_slice_z: slice_center.z as f32,
+            f_cursor_pos:
+                if let Some(pos) = cursor_pos {
+                    [pos.x as f32, pos.y as f32]
+                } else {
+                    [0.0, 0.0]
+                },
         }
     }
 
@@ -735,6 +774,10 @@ impl Scene {
 
     fn slice_z(&self) -> UniformValue {
         UniformValue::Float(self.f_slice_z)
+    }
+
+    fn cursor_pos(&self) -> UniformValue {
+        UniformValue::V2(&self.f_cursor_pos)
     }
 }
 

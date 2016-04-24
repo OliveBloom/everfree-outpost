@@ -308,6 +308,11 @@ pub unsafe extern fn set_plane_flags(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn toggle_cursor(client: &mut Client) {
+    client.toggle_cursor();
+}
+
+#[no_mangle]
 pub unsafe extern fn resize_window(client: &mut Client,
                                    width: u16,
                                    height: u16) {

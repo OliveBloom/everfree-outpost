@@ -48,6 +48,10 @@ impl Entity {
     pub fn pos(&self, now: Time) -> V3 {
         self.motion.pos(now)
     }
+
+    pub fn anim(&self) -> u16 {
+        self.motion.anim_id
+    }
 }
 
 struct Update {

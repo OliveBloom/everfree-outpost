@@ -1,21 +1,36 @@
 precision mediump float;
 
-attribute vec2 position;
+const float TILE_SIZE = 32.0;
+const float CHUNK_SIZE = 16.0;
+const float LOCAL_SIZE = 8.0;
 
-uniform vec2 cameraPos;
-uniform vec2 cameraSize;
-uniform vec2 cursorPos;
-uniform float cursorRadius;
+const float WRAP_MARGIN = TILE_SIZE * CHUNK_SIZE;
+const float WRAP_STEP = TILE_SIZE * CHUNK_SIZE * LOCAL_SIZE;
 
-varying highp vec2 pixelOffset;
+attribute vec2 corner;
+
+uniform vec2 camera_pos;
+uniform vec2 camera_size;
+uniform vec2 cursor_pos;
+
+varying highp vec2 pixel_offset;
 
 void main(void) {
-    vec2 signedOffset = position * 2.0 - 1.0;
-    pixelOffset = signedOffset * cursorRadius;
+    vec2 signed = corner * 2.0 - 1.0;
+    pixel_offset = signed * (TILE_SIZE / 2.0 + 1.0);
 
-    vec2 worldPos = cursorPos + pixelOffset;
-    vec2 zeroOne = (worldPos - cameraPos) / cameraSize;
-    // OpenGL normally has the Y axis point upward, but we have it point
-    // downward instead.
-    gl_Position = vec4(zeroOne * vec2(2.0, -2.0) + vec2(-1.0, 1.0), 0.0, 1.0);
+    vec2 pos = cursor_pos;
+    // If it's too far left/up from the camera, wrap around.
+    if (pos.x < camera_pos.x - WRAP_MARGIN) {
+        pos.x += WRAP_STEP;
+    }
+    if (pos.y < camera_pos.y - WRAP_MARGIN) {
+        pos.y += WRAP_STEP;
+    }
+
+    vec2 norm_pos = (pos + pixel_offset - camera_pos) / camera_size;
+    vec2 adj_pos = norm_pos * 2.0 - 1.0;
+    adj_pos.y = -adj_pos.y;
+
+    gl_Position = vec4(adj_pos, 0.5, 1.0);
 }

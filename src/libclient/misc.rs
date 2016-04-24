@@ -9,6 +9,7 @@ pub struct Misc {
     pub hotbar: Hotbar,
     pub day_night: DayNight,
     pub plane_is_dark: bool,
+    pub show_cursor: bool,
 }
 
 impl Misc {
@@ -17,6 +18,7 @@ impl Misc {
             hotbar: Hotbar::new(),
             day_night: DayNight::new(),
             plane_is_dark: false,
+            show_cursor: false,
         }
     }
 }

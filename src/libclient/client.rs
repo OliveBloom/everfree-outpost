@@ -16,7 +16,7 @@ use graphics::renderer::Renderer;
 use physics;
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE};
 use physics::Shape;
-use physics::v3::{V3, V2, scalar, Region};
+use physics::v3::{V3, V2, Vn, scalar, Region};
 
 use Time;
 use data::Data;
@@ -422,7 +422,7 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn render_frame(&mut self, now: Time, future: Time) {
         self.debug.record_interval(now);
         let day_time = self.misc.day_night.time_of_day(now);
-        self.debug.day_time = self.misc.day_night.phase_delta(&self.data, day_time).1;
+        self.debug.day_time = day_time;
         self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
 
         self.predictor.update(future, &*self.terrain_shape, &self.data);
@@ -439,11 +439,18 @@ impl<'d, P: Platform> Client<'d, P> {
         let ambient_light =
             if self.misc.plane_is_dark { (0, 0, 0, 0) }
             else { self.misc.day_night.ambient_light(&self.data, now) };
+        let cursor_pos =
+            if self.misc.show_cursor && self.pawn_id.is_some() {
+                calc_cursor_pos(&self.data, pos, self.predictor.motion().anim_id)
+            } else {
+                None
+            };
         let scene = Scene::new(now,
                                self.window_size,
                                self.view_size,
                                pos,
-                               ambient_light);
+                               ambient_light,
+                               cursor_pos);
 
         self.entities.apply_updates(scene.now);
         self.prepare(&scene, future);
@@ -465,6 +472,10 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn set_plane_flags(&mut self, flags: u32) {
         self.misc.plane_is_dark = flags != 0;
+    }
+
+    pub fn toggle_cursor(&mut self) {
+        self.misc.show_cursor = !self.misc.show_cursor;
     }
 
     pub fn resize_window(&mut self, size: (u16, u16)) {
@@ -499,7 +510,8 @@ impl<'d, P: Platform> Client<'d, P> {
                                self.window_size,
                                self.view_size,
                                V3::new(4096, 4096, 0) + V3::new(16, 16, 0),
-                               (255, 255, 255, 255));
+                               (255, 255, 255, 255),
+                               None);
 
         self.renderer.update_framebuffers(self.platform.gl(), &scene);
         self.renderer.update_entity_geometry(&self.data,
@@ -608,4 +620,26 @@ fn rle16Decode(input: &[u16], output: &mut [u16]) {
             }
         }
     }
+}
+
+static DIRS: [V2; 8] = [
+    V2 { x:  1, y:  0 },
+    V2 { x:  1, y:  1 },
+    V2 { x:  0, y:  1 },
+    V2 { x: -1, y:  1 },
+    V2 { x: -1, y:  0 },
+    V2 { x: -1, y: -1 },
+    V2 { x:  0, y: -1 },
+    V2 { x:  1, y: -1 },
+];
+
+fn calc_cursor_pos(data: &Data, pos: V3, anim: u16) -> Option<V2> {
+    let dir = match data.anim_dir(anim) {
+        Some(x) => x,
+        None => return None,
+    };
+
+    let tile = pos.div_floor(scalar(TILE_SIZE));
+    let pos = tile + DIRS[dir as usize].extend(0);
+    Some(V2::new(pos.x, pos.y - pos.z) * scalar(TILE_SIZE) + scalar(TILE_SIZE / 2))
 }

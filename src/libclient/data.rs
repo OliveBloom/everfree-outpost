@@ -238,6 +238,11 @@ impl Data {
         &self.day_night_phases()[idx as usize]
     }
 
+
+    pub fn anim_dir(&self, anim: u16) -> Option<u8> {
+        self.anim_dir_table().get(anim as usize).map(|&x| x)
+    }
+
     pub fn default_anim(&self) -> u16 {
         self.special_anims()[0]
     }

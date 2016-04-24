@@ -638,6 +638,10 @@ DynAsm.prototype.setPlaneFlags = function(flags) {
     this._raw['set_plane_flags'](this.client, flags);
 };
 
+DynAsm.prototype.toggleCursor = function() {
+    this._raw['toggle_cursor'](this.client);
+};
+
 DynAsm.prototype.resizeWindow = function(width, height) {
     this._raw['resize_window'](this.client, width, height);
 };
