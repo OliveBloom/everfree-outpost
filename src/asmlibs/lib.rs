@@ -297,6 +297,12 @@ pub unsafe extern fn init_day_night(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn set_plane_flags(client: &mut Client,
+                                     flags: u32) {
+    client.set_plane_flags(flags);
+}
+
+#[no_mangle]
 pub unsafe extern fn resize_window(client: &mut Client,
                                    width: u16,
                                    height: u16) {

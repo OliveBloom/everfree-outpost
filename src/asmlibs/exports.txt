@@ -34,5 +34,6 @@ feed_input
 render_frame
 debug_record
 init_day_night
+set_plane_flags
 resize_window
 client_bench

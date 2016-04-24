@@ -630,6 +630,10 @@ DynAsm.prototype.initDayNight = function(base_time, cycle_ms) {
     this._raw['init_day_night'](this.client, base_time, cycle_ms);
 };
 
+DynAsm.prototype.setPlaneFlags = function(flags) {
+    this._raw['set_plane_flags'](this.client, flags);
+};
+
 DynAsm.prototype.resizeWindow = function(width, height) {
     this._raw['resize_window'](this.client, width, height);
 };

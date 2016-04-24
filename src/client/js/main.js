@@ -808,7 +808,7 @@ function handleAbilityInventory(iid) {
 }
 
 function handlePlaneFlags(flags) {
-    console.warn('unimplemented: handlePlaneFlags');
+    asm_client.setPlaneFlags(flags);
 }
 
 function handleGetInteractArgs(dialog_id, parts) {

@@ -8,6 +8,7 @@ use platform::{Config, ConfigKey};
 pub struct Misc {
     pub hotbar: Hotbar,
     pub day_night: DayNight,
+    pub plane_is_dark: bool,
 }
 
 impl Misc {
@@ -15,6 +16,7 @@ impl Misc {
         Misc {
             hotbar: Hotbar::new(),
             day_night: DayNight::new(),
+            plane_is_dark: false,
         }
     }
 }

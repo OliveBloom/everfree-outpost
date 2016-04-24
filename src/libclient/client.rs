@@ -431,7 +431,9 @@ impl<'d, P: Platform> Client<'d, P> {
             };
         self.debug.pos = pos;
 
-        let ambient_light = self.misc.day_night.ambient_light(&self.data, now);
+        let ambient_light =
+            if self.misc.plane_is_dark { (0, 0, 0, 0) }
+            else { self.misc.day_night.ambient_light(&self.data, now) };
         let scene = Scene::new(now,
                                self.window_size,
                                self.view_size,
@@ -454,6 +456,10 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn init_day_night(&mut self, base_time: Time, cycle_ms: Time) {
         self.misc.day_night.init(base_time, cycle_ms);
+    }
+
+    pub fn set_plane_flags(&mut self, flags: u32) {
+        self.misc.plane_is_dark = flags != 0;
     }
 
     pub fn resize_window(&mut self, size: (u16, u16)) {
