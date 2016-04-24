@@ -192,6 +192,7 @@ struct Framebuffers<GL: Context> {
 
     world: GL::Framebuffer,
     world_and_meta: GL::Framebuffer,
+    light: GL::Framebuffer,
     shadow: GL::Framebuffer,
     sprite: GL::Framebuffer,
     output: GL::Framebuffer,
@@ -240,6 +241,9 @@ impl<GL: Context> Framebuffers<GL> {
                                                    &[Attach::Texture(&world_color),
                                                      Attach::Texture(&world_meta) ],
                                                    Some(Attach::Texture(&world_depth)));
+        let light = gl.create_framebuffer(size,
+                                          &[Attach::Texture(&light_color)],
+                                          None);
         let shadow = gl.create_framebuffer(size,
                                            &[Attach::Texture(&shadow_color)],
                                            Some(Attach::Texture(&world_depth)));
@@ -262,6 +266,7 @@ impl<GL: Context> Framebuffers<GL> {
 
             world: world,
             world_and_meta: world_and_meta,
+            light: light,
             shadow: shadow,
             sprite: sprite,
             output: output,
@@ -272,7 +277,7 @@ impl<GL: Context> Framebuffers<GL> {
 pub struct Renderer<GL: Context> {
     terrain_geom: GeomCache<GL, Region<V2>>,
     structure_geom: GeomCache<GL, Region<V2>>,
-    light_geom: GeomCache<GL, Region<V2>>,
+    structure_light_geom: GeomCache<GL, Region<V2>>,
     entity_buffer: GL::Buffer,
     ui_buffer: GL::Buffer,
     ui_special: Vec<ui::geom::Special>,
@@ -288,7 +293,7 @@ impl<GL: Context> Renderer<GL> {
         Renderer {
             terrain_geom: GeomCache::new(gl),
             structure_geom: GeomCache::new(gl),
-            light_geom: GeomCache::new(gl),
+            structure_light_geom: GeomCache::new(gl),
             entity_buffer: gl.create_buffer(),
             ui_buffer: gl.create_buffer(),
             ui_special: Vec::new(),
@@ -334,10 +339,6 @@ impl<GL: Context> Renderer<GL> {
         self.terrain_geom.invalidate();
     }
 
-    pub fn get_terrain_buffer(&self) -> &GL::Buffer {
-        self.terrain_geom.buffer()
-    }
-
 
     pub fn update_structure_geometry(&mut self,
                                      data: &Data,
@@ -353,18 +354,15 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn invalidate_structure_geometry(&mut self) {
         self.structure_geom.invalidate();
-    }
-
-    pub fn get_structure_buffer(&self) -> &GL::Buffer {
-        self.structure_geom.buffer()
+        self.structure_light_geom.invalidate();
     }
 
 
-    pub fn update_light_geometry(&mut self,
-                                 data: &Data,
-                                 structures: &Structures,
-                                 bounds: Region<V2>) {
-        self.light_geom.update(bounds, |buffer, _| {
+    pub fn update_structure_light_geometry(&mut self,
+                                           data: &Data,
+                                           structures: &Structures,
+                                           bounds: Region<V2>) {
+        self.structure_light_geom.update(bounds, |buffer, _| {
             let mut gen = light::GeomGen::new(structures, data.templates(), bounds);
             buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
@@ -372,12 +370,8 @@ impl<GL: Context> Renderer<GL> {
         });
     }
 
-    pub fn invalidate_light_geometry(&mut self) {
-        self.light_geom.invalidate();
-    }
-
-    pub fn get_light_buffer(&self) -> &GL::Buffer {
-        self.light_geom.buffer()
+    pub fn invalidate_structure_light_geometry(&mut self) {
+        self.structure_light_geom.invalidate();
     }
 
 
@@ -393,10 +387,6 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn set_ui_special(&mut self, special: Vec<ui::geom::Special>) {
         self.ui_special = special;
-    }
-
-    pub fn get_ui_buffer(&self) -> &GL::Buffer {
-        &self.ui_buffer
     }
 
 
@@ -437,6 +427,7 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn render(&mut self, scene: &Scene) {
         self.framebuffers.world.clear((0, 0, 0, 0));
+        self.framebuffers.light.clear(scene.ambient_light);
         self.framebuffers.shadow.clear((0, 0, 0, 0));
         self.framebuffers.sprite.clear((0, 0, 0, 0));
 
@@ -446,6 +437,22 @@ impl<GL: Context> Renderer<GL> {
         }
         let anim_now = anim_now;
 
+        self.render_terrain(scene);
+        self.render_structures(scene, anim_now);
+        self.render_lights(scene);
+        self.render_structure_shadows(scene, anim_now);
+        self.render_sprites(scene, anim_now);
+        self.render_postprocess(scene);
+        self.render_ui(scene);
+
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
+            .textures(&[&self.framebuffers.output_color])
+            .viewport_size(scene.canvas_size)
+            .draw(&mut self.shaders.blit_full);
+    }
+
+    fn render_terrain(&mut self, scene: &Scene) {
         DrawArgs::<GL>::new()
             .uniforms(&[
                 scene.camera_pos(),
@@ -461,45 +468,6 @@ impl<GL: Context> Renderer<GL> {
             .output(&self.framebuffers.world_and_meta)
             .depth_test()
             .draw(&mut self.shaders.terrain);
-
-        self.render_structures(scene, anim_now);
-
-        DrawArgs::<GL>::new()
-            .uniforms(&[
-                scene.camera_pos(),
-                scene.camera_size(),
-                //scene.slice_center(),
-                //scene.slice_z(),
-                UniformValue::Float(anim_now as f32),
-            ])
-            .arrays(&[&self.entity_buffer])
-            .textures(&[
-                &self.textures.sprite_sheet,
-                &self.framebuffers.world_depth,
-            ])
-            .output(&self.framebuffers.sprite)
-            .depth_test()
-            .draw(&mut self.shaders.entity);
-
-        DrawArgs::<GL>::new()
-            .uniforms(&[scene.camera_size()])
-            .arrays(&[&self.buffers.square01])
-            .textures(&[
-                      &self.framebuffers.world_color,
-                      &self.framebuffers.world_meta,
-                      &self.framebuffers.world_depth,
-                      &self.framebuffers.light_color,
-            ])
-            .output(&self.framebuffers.output)
-            .draw(&mut self.shaders.blit_post);
-
-        self.render_ui(scene);
-
-        DrawArgs::<GL>::new()
-            .arrays(&[&self.buffers.square01])
-            .textures(&[&self.framebuffers.output_color])
-            .viewport_size(scene.canvas_size)
-            .draw(&mut self.shaders.blit_full);
     }
 
     fn render_structures(&mut self, scene: &Scene, anim_now: f64) {
@@ -519,7 +487,9 @@ impl<GL: Context> Renderer<GL> {
             .output(&self.framebuffers.world_and_meta)
             .depth_test()
             .draw(&mut self.shaders.structure);
+    }
 
+    fn render_structure_shadows(&mut self, scene: &Scene, anim_now: f64) {
         DrawArgs::<GL>::new()
             .uniforms(&[
                 scene.camera_pos(),
@@ -544,7 +514,40 @@ impl<GL: Context> Renderer<GL> {
             .output(&self.framebuffers.world)
             .blend_mode(BlendMode::Alpha)
             .draw(&mut self.shaders.blit_full);
+    }
 
+    fn render_sprites(&mut self, scene: &Scene, anim_now: f64) {
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                //scene.slice_center(),
+                //scene.slice_z(),
+                UniformValue::Float(anim_now as f32),
+            ])
+            .arrays(&[&self.entity_buffer])
+            .textures(&[
+                &self.textures.sprite_sheet,
+                &self.framebuffers.world_depth,
+            ])
+            .output(&self.framebuffers.sprite)
+            .depth_test()
+            .draw(&mut self.shaders.entity);
+    }
+
+    fn render_lights(&mut self, scene: &Scene) {
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+            ])
+            .arrays(&[self.structure_light_geom.buffer()])
+            .textures(&[
+                &self.framebuffers.world_depth,
+            ])
+            .output(&self.framebuffers.light)
+            .blend_mode(BlendMode::Add)
+            .draw(&mut self.shaders.light_static);
     }
 
     fn render_ui(&mut self, scene: &Scene) {
@@ -593,6 +596,20 @@ impl<GL: Context> Renderer<GL> {
             }
         }
     }
+
+    fn render_postprocess(&mut self, scene: &Scene) {
+        DrawArgs::<GL>::new()
+            .uniforms(&[scene.camera_size()])
+            .arrays(&[&self.buffers.square01])
+            .textures(&[
+                      &self.framebuffers.world_color,
+                      &self.framebuffers.world_meta,
+                      &self.framebuffers.world_depth,
+                      &self.framebuffers.light_color,
+            ])
+            .output(&self.framebuffers.output)
+            .draw(&mut self.shaders.blit_post);
+    }
 }
 
 fn v2_float(v: V2) -> [f32; 2] {
@@ -611,6 +628,7 @@ pub struct Scene {
     pub camera_size: V2,
     pub slice_center: V3,
     pub now: Time,
+    pub ambient_light: (u8, u8, u8, u8),
 
     pub f_camera_pos: [f32; 2],
     pub f_camera_size: [f32; 2],
@@ -622,7 +640,8 @@ impl Scene {
     pub fn new(now: Time,
                window_size: (u16, u16),
                view_size: (u16, u16),
-               center: V3) -> Scene {
+               center: V3,
+               ambient_light: (u8, u8, u8, u8)) -> Scene {
         let camera_center = V2::new(center.x, center.y - center.z);
         let camera_size = V2::new(view_size.0 as i32, view_size.1 as i32);
         let canvas_size = V2::new(window_size.0 as i32, window_size.1 as i32);
@@ -636,6 +655,7 @@ impl Scene {
             camera_size: camera_size,
             slice_center: slice_center,
             now: now,
+            ambient_light: ambient_light,
 
             f_camera_pos: [camera_pos.x as f32,
                            camera_pos.y as f32],

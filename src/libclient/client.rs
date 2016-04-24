@@ -112,7 +112,7 @@ impl<'d, P: Platform> Client<'d, P> {
 
         self.renderer.invalidate_terrain_geometry();
         self.renderer.invalidate_structure_geometry();
-        self.renderer.invalidate_light_geometry();
+        self.renderer.invalidate_structure_light_geometry();
     }
 
     // Terrain chunk tracking
@@ -173,7 +173,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
         if t.flags.contains(HAS_LIGHT) {
-            self.renderer.invalidate_light_geometry();
+            self.renderer.invalidate_structure_light_geometry();
         }
     }
 
@@ -189,7 +189,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
         if t.flags.contains(HAS_LIGHT) {
-            self.renderer.invalidate_light_geometry();
+            self.renderer.invalidate_structure_light_geometry();
         }
     }
 
@@ -214,7 +214,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
         if old_t.flags.contains(HAS_LIGHT) || new_t.flags.contains(HAS_LIGHT) {
-            self.renderer.invalidate_light_geometry();
+            self.renderer.invalidate_structure_light_geometry();
         }
     }
 
@@ -372,7 +372,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Light from any adjacent chunk can extend into the current one.
         let light_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
                                        chunk_bounds.max + V2::new(1, 1));
-        self.renderer.update_light_geometry(&self.data, &self.structures, light_bounds);
+        self.renderer.update_structure_light_geometry(&self.data, &self.structures, light_bounds);
 
         // Entities can extend in any direction from their reference point.
         let entity_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
@@ -417,20 +417,26 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn render_frame(&mut self, now: Time, future: Time) {
         self.debug.record_interval(now);
         let day_time = self.misc.day_night.time_of_day(now);
-        self.debug.day_time = day_time;
+        self.debug.day_time = self.misc.day_night.phase_delta(&self.data, day_time).1;
         self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
 
         self.predictor.update(future, &*self.terrain_shape, &self.data);
 
         let pos =
             if self.pawn_id.is_some() {
-                self.predictor.motion().pos(future)
+                // TODO: hardcoded constant based on entity size
+                self.predictor.motion().pos(future) + V3::new(16, 16, 0)
             } else {
                 V3::new(4096, 4096, 0)
             };
         self.debug.pos = pos;
 
-        let scene = Scene::new(now, self.window_size, self.view_size, pos);
+        let ambient_light = self.misc.day_night.ambient_light(&self.data, now);
+        let scene = Scene::new(now,
+                               self.window_size,
+                               self.view_size,
+                               pos,
+                               ambient_light);
 
         self.entities.apply_updates(scene.now);
         self.prepare(&scene, future);

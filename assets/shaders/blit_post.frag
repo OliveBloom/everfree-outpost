@@ -91,7 +91,7 @@ void main(void) {
     vec4 baseColor = texture2D(color_tex, tex_coord);
 
     vec4 lightColor = texture2D(light_tex, tex_coord);
-    vec4 mainColor = baseColor;// * lightColor;
+    vec4 mainColor = baseColor * lightColor;
 
     vec4 highlightColor = vec4(0.0, 0.75, 1.0, 1.0) * lightColor.a;
 

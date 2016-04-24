@@ -301,13 +301,13 @@ class BinaryDefs:
         cut_3 = len(colors)
 
         phases = [
-                (j['day_end'],      cut_0,      cut_1),     # day
-                (j['night_start'],  cut_1,      cut_2 - 1), # sunset
-                (j['night_end'],    cut_2 - 1,  cut_2),     # night
-                (24000,             cut_2,      cut_3 - 1), # sunrise
+                (j['day_start'],    j['day_end'],      cut_0,      cut_1),     # day
+                (j['day_end'],      j['night_start'],  cut_1,      cut_2 - 1), # sunset
+                (j['night_start'],  j['night_end'],    cut_2 - 1,  cut_2),     # night
+                (j['night_end'],    24000,             cut_2,      cut_3 - 1), # sunrise
                 ]
 
-        self.pack_array(b'DyNtPhas', phases, '<HBB')
+        self.pack_array(b'DyNtPhas', phases, '<HHBB')
         self.pack_array(b'DyNtColr', colors, '3B')
 
 def main():
