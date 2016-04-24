@@ -33,13 +33,15 @@ def rules(i):
         rule js_minify_file
             command = $
                 %if not i.debug
-                $yui_compressor --disable-optimizations --line-break 200 $
-                    $in $filter >$out
+                cp $in $out
                 %else
                 cp $in $out
                 %end
             description = MIN $out
     ''', **locals())
+    # TODO: minification is disabled because yui-compressor breaks asmjs
+    #            $yui_compressor --disable-optimizations --line-break 200 $
+    #                $in $filter >$out
 
 def compile(i, out_file, main_src):
     main_dir, basename_ext = os.path.split(main_src)
