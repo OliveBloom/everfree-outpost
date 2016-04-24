@@ -1,14 +1,12 @@
 precision mediump float;
 
-varying vec2 texCoord;
+uniform sampler2D color_tex;
+uniform sampler2D meta_tex;
+uniform sampler2D depth_tex;
+uniform sampler2D light_tex;
+uniform vec2 screen_size;
 
-uniform sampler2D image0Tex;
-uniform sampler2D image1Tex;
-uniform sampler2D lightTex;
-uniform sampler2D depthTex;
-uniform sampler2D shadowTex;
-uniform sampler2D shadowDepthTex;
-uniform vec2 screenSize;
+varying vec2 tex_coord;
 
 
 // Highlight if the pixel to the left
@@ -17,14 +15,14 @@ uniform vec2 screenSize;
 //  3) has z-offset 0
 //  4) is not continuous with the pixel below it
 float check_horiz(vec2 off, float centerDepth) {
-    vec2 pos = texCoord + off / screenSize;
-    float depth = texture2D(depthTex, pos).r;
+    vec2 pos = tex_coord + off / screen_size;
+    float depth = texture2D(depth_tex, pos).r;
     // #2
     if (depth < centerDepth + 8.0 / 512.0) {
         return 0.0;
     }
 
-    vec4 color1 = texture2D(image1Tex, pos);
+    vec4 color1 = texture2D(meta_tex, pos);
     if (color1.b != 1.0) {
         // #1
         return 0.0;
@@ -38,7 +36,7 @@ float check_horiz(vec2 off, float centerDepth) {
         return 0.0;
     }
 
-    float neighborDepth = texture2D(depthTex, pos + vec2(0.0, -1.0) / screenSize).r;
+    float neighborDepth = texture2D(depth_tex, pos + vec2(0.0, -1.0) / screen_size).r;
     float neighborDelta = (depth - neighborDepth) * 512.0;
     if (0.5 < neighborDelta && neighborDelta < 1.5) {
         // #4
@@ -54,14 +52,14 @@ float check_horiz(vec2 off, float centerDepth) {
 //  2) is above (higher depth) the current pixel
 //  3) has z-offset 0
 float check_vert(vec2 off, float centerDepth) {
-    vec2 pos = texCoord + off / screenSize;
-    float depth = texture2D(depthTex, pos).r;
+    vec2 pos = tex_coord + off / screen_size;
+    float depth = texture2D(depth_tex, pos).r;
     // #2
     if (depth < centerDepth + 8.0 / 512.0) {
         return 0.0;
     }
 
-    vec4 color1 = texture2D(image1Tex, pos);
+    vec4 color1 = texture2D(meta_tex, pos);
     if (color1.b != 1.0) {
         // #1
         return 0.0;
@@ -80,7 +78,7 @@ float check_vert(vec2 off, float centerDepth) {
 }
 
 float get_highlight() {
-    float centerDepth = texture2D(depthTex, texCoord).r;
+    float centerDepth = texture2D(depth_tex, tex_coord).r;
     float n = check_vert(vec2(0.0, -1.0), centerDepth);
     float s = check_vert(vec2(0.0, 1.0), centerDepth);
     float w = check_horiz(vec2(-1.0, 0.0), centerDepth);
@@ -90,16 +88,10 @@ float get_highlight() {
 }
 
 void main(void) {
-    vec4 baseColor = texture2D(image0Tex, texCoord);
-    if (texture2D(depthTex, texCoord).r < texture2D(shadowDepthTex, texCoord).r) {
-        vec4 shadowColor = texture2D(shadowTex, texCoord);
-        if (shadowColor.a > 0.0) {
-            baseColor = baseColor * (1.0 - shadowColor.a) + shadowColor * shadowColor.a;
-        }
-    }
+    vec4 baseColor = texture2D(color_tex, tex_coord);
 
-    vec4 lightColor = texture2D(lightTex, texCoord);
-    vec4 mainColor = baseColor * lightColor;
+    vec4 lightColor = texture2D(light_tex, tex_coord);
+    vec4 mainColor = baseColor;// * lightColor;
 
     vec4 highlightColor = vec4(0.0, 0.75, 1.0, 1.0) * lightColor.a;
 

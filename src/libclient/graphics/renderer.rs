@@ -58,6 +58,7 @@ impl<GL: Context> Buffers<GL> {
 
 struct Shaders<GL: Context> {
     blit_full: GL::Shader,
+    blit_post: GL::Shader,
     ui: GL::Shader,
 
     terrain: GL::Shader,
@@ -77,10 +78,28 @@ impl<GL: Context> Shaders<GL> {
                 uniforms! {},
                 arrays! {
                     [2] attribs! {
-                        posOffset: U8[2] @0,
+                        corner: U8[2] @0,
                     },
                 },
-                textures! { imageTex, },
+                textures! { image_tex, },
+                outputs! { color: 1 }),
+
+            blit_post: gl.load_shader(
+                "blit_fullscreen.vert", "blit_post.frag", "",
+                uniforms! {
+                    screen_size: V2,
+                },
+                arrays! {
+                    [2] attribs! {
+                        corner: U8[2] @0,
+                    },
+                },
+                textures! {
+                    color_tex,
+                    meta_tex,
+                    depth_tex,
+                    light_tex,
+                },
                 outputs! { color: 1 }),
 
             ui: gl.load_shader(
@@ -167,9 +186,14 @@ struct Framebuffers<GL: Context> {
     world_color: GL::Texture,
     world_meta: GL::Texture,
     world_depth: GL::Texture,
+    light_color: GL::Texture,
+    shadow_color: GL::Texture,
+    output_color: GL::Texture,
 
     world: GL::Framebuffer,
+    shadow: GL::Framebuffer,
     sprite: GL::Framebuffer,
+    output: GL::Framebuffer,
 }
 
 fn feature_check_one<GL: Context>(gl: &GL, feature: Feature) -> bool {
@@ -204,13 +228,23 @@ impl<GL: Context> Framebuffers<GL> {
         let world_color = gl.create_texture(size);
         let world_meta = gl.create_texture(size);
         let world_depth = gl.create_depth_texture(size);
+        let light_color = gl.create_texture(size);
+        let shadow_color = gl.create_texture(size);
+        let output_color = gl.create_texture(size);
+
         let world = gl.create_framebuffer(size,
                                           &[Attach::Texture(&world_color),
                                             Attach::Texture(&world_meta) ],
                                           Some(Attach::Texture(&world_depth)));
+        let shadow = gl.create_framebuffer(size,
+                                           &[Attach::Texture(&shadow_color)],
+                                           Some(Attach::Texture(&world_depth)));
         let sprite = gl.create_framebuffer(size,
                                            &[Attach::Texture(&world_color)],
                                            Some(Attach::Renderbuffer));
+        let output = gl.create_framebuffer(size,
+                                           &[Attach::Texture(&output_color)],
+                                           None);
 
         Framebuffers {
             size: size,
@@ -218,9 +252,14 @@ impl<GL: Context> Framebuffers<GL> {
             world_color: world_color,
             world_meta: world_meta,
             world_depth: world_depth,
+            light_color: light_color,
+            shadow_color: shadow_color,
+            output_color: output_color,
 
             world: world,
+            shadow: shadow,
             sprite: sprite,
+            output: output,
         }
     }
 }
@@ -393,6 +432,7 @@ impl<GL: Context> Renderer<GL> {
 
     pub fn render(&mut self, scene: &Scene) {
         self.framebuffers.world.clear((0, 0, 0, 0));
+        self.framebuffers.shadow.clear((0, 0, 0, 0));
         self.framebuffers.sprite.clear((0, 0, 0, 0));
 
         let mut anim_now = scene.now as f64 / 1000.0 % ANIM_MODULUS;
@@ -417,22 +457,7 @@ impl<GL: Context> Renderer<GL> {
             .depth_test()
             .draw(&mut self.shaders.terrain);
 
-        DrawArgs::<GL>::new()
-            .uniforms(&[
-                scene.camera_pos(),
-                scene.camera_size(),
-                scene.slice_center(),
-                scene.slice_z(),
-                UniformValue::Float(anim_now as f32),
-            ])
-            .arrays(&[self.structure_geom.buffer()])
-            .textures(&[
-                &self.textures.structure_atlas,
-                &self.textures.cavern_map,
-            ])
-            .output(&self.framebuffers.world)
-            .depth_test()
-            .draw(&mut self.shaders.structure);
+        self.render_structures(scene, anim_now);
 
         DrawArgs::<GL>::new()
             .uniforms(&[
@@ -454,10 +479,67 @@ impl<GL: Context> Renderer<GL> {
         self.render_ui(scene);
 
         DrawArgs::<GL>::new()
+            .uniforms(&[scene.camera_size()])
             .arrays(&[&self.buffers.square01])
-            .textures(&[&self.framebuffers.world_color])
+            .textures(&[
+                      &self.framebuffers.world_color,
+                      &self.framebuffers.world_meta,
+                      &self.framebuffers.world_depth,
+                      &self.framebuffers.light_color,
+            ])
+            .output(&self.framebuffers.output)
+            .draw(&mut self.shaders.blit_post);
+
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
+            .textures(&[&self.framebuffers.output_color])
             .viewport_size(scene.canvas_size)
             .draw(&mut self.shaders.blit_full);
+    }
+
+    fn render_structures(&mut self, scene: &Scene, anim_now: f64) {
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                scene.slice_center(),
+                scene.slice_z(),
+                UniformValue::Float(anim_now as f32),
+            ])
+            .arrays(&[self.structure_geom.buffer()])
+            .textures(&[
+                &self.textures.structure_atlas,
+                &self.textures.cavern_map,
+            ])
+            .output(&self.framebuffers.world)
+            .depth_test()
+            .draw(&mut self.shaders.structure);
+
+        DrawArgs::<GL>::new()
+            .uniforms(&[
+                scene.camera_pos(),
+                scene.camera_size(),
+                scene.slice_center(),
+                scene.slice_z(),
+                UniformValue::Float(anim_now as f32),
+            ])
+            .arrays(&[self.structure_geom.buffer()])
+            .textures(&[
+                &self.textures.structure_atlas,
+                &self.textures.cavern_map,
+            ])
+            .output(&self.framebuffers.shadow)
+            .depth_test()
+            .draw(&mut self.shaders.structure_shadow);
+
+        // Apply shadows
+        DrawArgs::<GL>::new()
+            .arrays(&[&self.buffers.square01])
+            .textures(&[&self.framebuffers.shadow_color])
+            .output(&self.framebuffers.world)
+            .blend_mode(BlendMode::Alpha)
+            .draw(&mut self.shaders.blit_full);
+
     }
 
     fn render_ui(&mut self, scene: &Scene) {
