@@ -532,6 +532,10 @@ impl Inner {
         status != 0
     }
 
+    pub fn set_draw_buffers(&mut self, num_attachments: u8) {
+        unsafe { ffi::asmgl_draw_buffers(num_attachments) };
+    }
+
 
     // Drawing
 
@@ -803,6 +807,9 @@ impl GL {
                     save_renderbuffer(rb_name);
                 },
             }
+        }
+        if color.len() > 1 {
+            ctx.set_draw_buffers(color.len() as u8);
         }
 
         // Attach depth texture/renderbuffer

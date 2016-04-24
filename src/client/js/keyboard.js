@@ -71,7 +71,9 @@ function Keyboard(asm_client) {
             }
         }
 
-        if (asmDispatchKey(asm_client, evt.keyCode, evt.shiftKey)) {
+        var active_tag = document.activeElement.tagName.toLowerCase();
+        var typing = active_tag == 'input' || active_tag == 'textarea';
+        if (!typing && asmDispatchKey(asm_client, evt.keyCode, evt.shiftKey)) {
             asm_handled[evt.keyCode] = true;
             evt.preventDefault();
             evt.stopPropagation();

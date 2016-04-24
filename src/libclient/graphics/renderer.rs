@@ -191,6 +191,7 @@ struct Framebuffers<GL: Context> {
     output_color: GL::Texture,
 
     world: GL::Framebuffer,
+    world_and_meta: GL::Framebuffer,
     shadow: GL::Framebuffer,
     sprite: GL::Framebuffer,
     output: GL::Framebuffer,
@@ -233,9 +234,12 @@ impl<GL: Context> Framebuffers<GL> {
         let output_color = gl.create_texture(size);
 
         let world = gl.create_framebuffer(size,
-                                          &[Attach::Texture(&world_color),
-                                            Attach::Texture(&world_meta) ],
+                                          &[Attach::Texture(&world_color)],
                                           Some(Attach::Texture(&world_depth)));
+        let world_and_meta = gl.create_framebuffer(size,
+                                                   &[Attach::Texture(&world_color),
+                                                     Attach::Texture(&world_meta) ],
+                                                   Some(Attach::Texture(&world_depth)));
         let shadow = gl.create_framebuffer(size,
                                            &[Attach::Texture(&shadow_color)],
                                            Some(Attach::Texture(&world_depth)));
@@ -257,6 +261,7 @@ impl<GL: Context> Framebuffers<GL> {
             output_color: output_color,
 
             world: world,
+            world_and_meta: world_and_meta,
             shadow: shadow,
             sprite: sprite,
             output: output,
@@ -453,7 +458,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.tile_atlas,
                 &self.textures.cavern_map,
             ])
-            .output(&self.framebuffers.world)
+            .output(&self.framebuffers.world_and_meta)
             .depth_test()
             .draw(&mut self.shaders.terrain);
 
@@ -476,8 +481,6 @@ impl<GL: Context> Renderer<GL> {
             .depth_test()
             .draw(&mut self.shaders.entity);
 
-        self.render_ui(scene);
-
         DrawArgs::<GL>::new()
             .uniforms(&[scene.camera_size()])
             .arrays(&[&self.buffers.square01])
@@ -489,6 +492,8 @@ impl<GL: Context> Renderer<GL> {
             ])
             .output(&self.framebuffers.output)
             .draw(&mut self.shaders.blit_post);
+
+        self.render_ui(scene);
 
         DrawArgs::<GL>::new()
             .arrays(&[&self.buffers.square01])
@@ -511,7 +516,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.structure_atlas,
                 &self.textures.cavern_map,
             ])
-            .output(&self.framebuffers.world)
+            .output(&self.framebuffers.world_and_meta)
             .depth_test()
             .draw(&mut self.shaders.structure);
 
@@ -557,7 +562,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.ui_parts,
                 &self.textures.ui_fonts,
             ])
-            .output(&self.framebuffers.world)
+            .output(&self.framebuffers.output)
             .blend_mode(BlendMode::Alpha)
             .draw(&mut self.shaders.ui);
 
@@ -582,7 +587,7 @@ impl<GL: Context> Renderer<GL> {
                         ])
                         .arrays(&[&self.buffers.square01])
                         .textures(&[&self.textures.debug_graph_data])
-                        .output(&self.framebuffers.world)
+                        .output(&self.framebuffers.output)
                         .draw(&mut self.shaders.debug_graph);
                 }
             }
