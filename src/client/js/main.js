@@ -4,7 +4,6 @@ var $ = document.getElementById.bind(document);
 var loader = require('loader');
 var BackgroundJobRunner = require('util/jobs').BackgroundJobRunner;
 var Vec = require('util/vec').Vec;
-var DebugMonitor = require('debug').DebugMonitor;
 var Config = require('config').Config;
 var TimeVarying = require('util/timevarying').TimeVarying;
 
@@ -113,7 +112,6 @@ for (var i = 0; i < anim_dirs.length; ++i) {
 
 var canvas;
 var ui_div;
-var debug;
 var dialog;
 var banner;
 var keyboard;
@@ -169,8 +167,6 @@ function init() {
     asm_client = new DynAsm();
 
     ui_div = util.element('div', ['ui-container']);
-    debug = new DebugMonitor();
-    window.DEBUG = debug;
     banner = new Banner();
     keyboard = new Keyboard(asm_client);
     dnd = new DNDState(keyboard);
@@ -376,7 +372,6 @@ function buildUI() {
     ui_div.appendChild(inv_update_list.container);
     ui_div.appendChild(banner.container);
     ui_div.appendChild(dialog.container);
-    ui_div.appendChild(debug.container);
 
     if (Config.show_key_display.get()) {
         var key_display = new KeyDisplay();
@@ -392,14 +387,6 @@ function buildUI() {
 
     if (!Config.show_controls.get()) {
         key_list.classList.add('hidden');
-    }
-
-    var show_debug = Config.debug_show_panel.get();
-    if (show_debug == 1) {
-        ui_gl.fps.show();
-    }
-    if (show_debug != 2) {
-        debug.container.classList.add('hidden');
     }
 
     banner.show('Loading...', 0, keyboard, function() { return false; });
@@ -540,8 +527,6 @@ function setupKeyHandler() {
                 case 'show_controls':
                     var show = Config.show_controls.toggle();
                     $('key-list').classList.toggle('hidden', !show);
-                    break;
-                case 'debug_show_panel':
                     break;
                 case 'debug_test':
                     window.hideUI = !window.hideUI;
