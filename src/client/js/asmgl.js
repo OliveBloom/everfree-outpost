@@ -1,5 +1,4 @@
 var Config = require('config').Config;
-var glutil = require('graphics/glutil');
 var insertFree = require('util/misc').insertFree;
 
 /** @constructor */
@@ -52,10 +51,6 @@ AsmGl.prototype.deleteBuffer = function(name) {
 
 AsmGl.prototype.getBuffer = function(name) {
     return this.buffer_list[name - 1];
-};
-
-AsmGl.prototype.getBufferWrapper = function(name) {
-    return new glutil.Buffer(this.gl, this.buffer_list[name - 1]);
 };
 
 AsmGl.prototype._bufferTarget = function(target_idx) {

@@ -9,10 +9,6 @@ var TimeVarying = require('util/timevarying').TimeVarying;
 
 var AnimCanvas = require('graphics/canvas').AnimCanvas;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
-var PonyAppearance = require('graphics/appearance/pony').PonyAppearance;    
-var glutil = require('graphics/glutil');
-var Scene = require('graphics/scene').Scene;
-var DayNight = require('graphics/daynight').DayNight;
 var handleResize = require('resize').handleResize;
 
 var Entity = require('entity').Entity;
@@ -148,14 +144,6 @@ function init() {
             'WEBGL_depth_texture',
             'WEBGL_draw_buffers',
     ]);
-
-    if (!glutil.hasExtension(canvas.ctx, 'WEBGL_depth_texture')) {
-        throw 'missing extension: WEBGL_depth_texture';
-    }
-    if (!glutil.hasExtension(canvas.ctx, 'WEBGL_draw_buffers')) {
-        console.warn('missing optional extension: WEBGL_draw_buffers - ' +
-                'rendering in fallback mode');
-    }
 
     asm_client = new DynAsm();
 
