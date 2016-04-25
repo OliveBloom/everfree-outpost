@@ -27,6 +27,8 @@ use super::structure;
 use super::terrain;
 
 
+pub const RAW_MODULUS: i32 = 55440;
+
 // The `now` value passed to the animation shader must be reduced to fit in a
 // float.  We use the magic number 55440 for this, since it's divisible by
 // every number from 1 to 12 (and most "reasonable" numbers above that).  This
@@ -34,7 +36,19 @@ use super::terrain;
 // unless `length / framerate` divides evenly into the modulus.
 //
 // Note that the shader `now` and ANIM_MODULUS are both in seconds, not ms.
-const ANIM_MODULUS: f64 = 55440.0;
+pub const ANIM_MODULUS: f64 = RAW_MODULUS as f64;
+
+// We also need a smaller modulus for one-shot animation start times.  These
+// are measured in milliseconds and must fit in a 16-bit int.  It's important
+// that the one-shot modulus divides evenly into 1000 * ANIM_MODULUS, because
+// the current frame time in milliseconds will be modded by 1000 * ANIM_MODULUS
+// and then again by the one-shot modulus.
+//
+// We re-use ANIM_MODULUS as the one-shot modulus, since it obviously divides
+// evenly into 1000 * ANIM_MODULUS.  This is okay as long as ANIM_MODULUS fits
+// into 16 bits.
+pub const ONESHOT_MODULUS: Time = ANIM_MODULUS as Time;
+
 
 struct Buffers<GL: Context> {
     square01: GL::Buffer,

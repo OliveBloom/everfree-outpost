@@ -93,13 +93,13 @@ pub unsafe extern fn load_terrain_chunk(client: &mut Client,
 #[no_mangle]
 pub unsafe extern fn structure_appear(client: &mut Client,
                                       id: u32,
-                                      pos_x: u8,
-                                      pos_y: u8,
-                                      pos_z: u8,
+                                      pos_x: i32,
+                                      pos_y: i32,
+                                      pos_z: i32,
                                       template_id: u32,
-                                      oneshot_start: u16) {
+                                      oneshot_start: i32) {
     client.structure_appear(id,
-                            (pos_x, pos_y, pos_z),
+                            V3::new(pos_x, pos_y, pos_z),
                             template_id,
                             oneshot_start);
 }
@@ -114,7 +114,7 @@ pub unsafe extern fn structure_gone(client: &mut Client,
 pub unsafe extern fn structure_replace(client: &mut Client,
                                        id: u32,
                                        template_id: u32,
-                                       oneshot_start: u16) {
+                                       oneshot_start: i32) {
     client.structure_replace(id, template_id, oneshot_start);
 }
 

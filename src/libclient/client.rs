@@ -23,6 +23,7 @@ use data::Data;
 use debug::Debug;
 use entity::{Entities, EntityId, Motion};
 use graphics::renderer::Scene;
+use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use misc::Misc;
@@ -160,10 +161,16 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn structure_appear(&mut self,
                             id: u32,
-                            pos: (u8, u8, u8),
+                            pixel_pos: V3,
                             template_id: u32,
-                            oneshot_start: u16) {
+                            oneshot_start: Time) {
         // Update self.structures
+        const MASK: i32 = LOCAL_SIZE * CHUNK_SIZE - 1;
+        let tile_pos = pixel_pos.div_floor(scalar(TILE_SIZE)) & scalar(MASK);
+        let pos = (tile_pos.x as u8,
+                   tile_pos.y as u8,
+                   tile_pos.z as u8);
+        let oneshot_start = (oneshot_start % ONESHOT_MODULUS) as u16;
         self.structures.insert(id, pos, template_id, oneshot_start);
 
         // Update self.terrain_cache
@@ -196,7 +203,7 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn structure_replace(&mut self,
                              id: u32,
                              template_id: u32,
-                             oneshot_start: u16) {
+                             oneshot_start: i32) {
         let (pos, old_t) = {
             let s = &self.structures[id];
             (s.pos,
@@ -205,6 +212,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let new_t = self.data.template(template_id);
 
         // Update self.structures
+        let oneshot_start = (oneshot_start % ONESHOT_MODULUS) as u16;
         self.structures.replace(id, template_id, oneshot_start);
 
         // Update self.terrain_cache

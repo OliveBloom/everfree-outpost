@@ -10,7 +10,6 @@ var TimeVarying = require('util/timevarying').TimeVarying;
 var AnimCanvas = require('graphics/canvas').AnimCanvas;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
 var PonyAppearance = require('graphics/appearance/pony').PonyAppearance;    
-var Renderer = require('graphics/renderer').Renderer;
 var glutil = require('graphics/glutil');
 var Scene = require('graphics/scene').Scene;
 var DayNight = require('graphics/daynight').DayNight;
@@ -132,7 +131,6 @@ var assets;
 
 var asm_client;
 
-var renderer = null;
 var synced = net.SYNC_LOADING;
 
 var conn;
@@ -189,8 +187,6 @@ function init() {
 
     assets = null;
 
-    renderer = null;
-
     conn = null;    // Initialized after assets are loaded.
     timing = null;  // Initialized after connection is opened.
 
@@ -202,8 +198,6 @@ function init() {
 
     checkBrowser(dialog, function() {
         loadAssets(function() {
-            renderer = new Renderer(canvas.ctx, assets, asm_client);
-
             ui_gl.hotbar.init();
 
             asm_client.initClient(canvas.ctx, assets);
@@ -737,17 +731,17 @@ function handleEntityGone(id, time) {
 
 function handleStructureAppear(id, template_id, x, y, z) {
     var now = timing.visibleNow();
-    renderer.addStructure(now, id, x, y, z, template_id);
+    asm_client.structureAppear(id, x, y, z, template_id, now);
 }
 
 function handleStructureGone(id, time) {
     // TODO: pay attention to the time
-    renderer.removeStructure(id);
+    asm_client.structureGone(id);
 }
 
 function handleStructureReplace(id, template_id) {
     var now = timing.visibleNow();
-    renderer.replaceStructure(now, id, template_id);
+    asm_client.structureReplace(id, template_id, now);
 }
 
 function handleMainInventory(iid) {
