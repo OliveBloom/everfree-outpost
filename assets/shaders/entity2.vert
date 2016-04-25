@@ -51,10 +51,16 @@ void main(void) {
     if (ref_pos.x < camera_pos.x - WRAP_MARGIN) {
         ref_pos.x += WRAP_STEP;
         pos.x += WRAP_STEP;
+    } else if (ref_pos.x > camera_pos.x + camera_size.x + WRAP_MARGIN) {
+        ref_pos.x -= WRAP_STEP;
+        pos.x -= WRAP_STEP;
     }
     if (ref_pos.y < camera_pos.y - WRAP_MARGIN) {
         ref_pos.y += WRAP_STEP;
         pos.y += WRAP_STEP;
+    } else if (ref_pos.y > camera_pos.y + camera_size.y + WRAP_MARGIN) {
+        ref_pos.y -= WRAP_STEP;
+        pos.y -= WRAP_STEP;
     }
 
     vec2 norm_pos = (pos - camera_pos) / camera_size;

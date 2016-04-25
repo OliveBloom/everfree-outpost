@@ -33,9 +33,13 @@ void main(void) {
     // If it's too far left/up from the camera, wrap around.
     if (localCenter.x < -CHUNK_SIZE * TILE_SIZE) {
         localCenter.x += LOCAL_SIZE * CHUNK_SIZE * TILE_SIZE;
+    } else if (localCenter.x > cameraSize.x + CHUNK_SIZE * TILE_SIZE) {
+        localCenter.x -= LOCAL_SIZE * CHUNK_SIZE * TILE_SIZE;
     }
     if (localCenter.y < -CHUNK_SIZE * TILE_SIZE) {
         localCenter.y += LOCAL_SIZE * CHUNK_SIZE * TILE_SIZE;
+    } else if (localCenter.y > cameraSize.y + CHUNK_SIZE * TILE_SIZE) {
+        localCenter.y -= LOCAL_SIZE * CHUNK_SIZE * TILE_SIZE;
     }
 
     localPos = vec2(localCenter.x, localCenter.y - localCenter.z) + cornerOffset;
