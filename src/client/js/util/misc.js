@@ -66,28 +66,6 @@ exports.fstr1 = function(x) {
 };
 
 
-exports.rle16Decode = function(input, output) {
-    var j = 0;
-    for (var i = 0; i < input.length; ++i) {
-        var cur = input[i];
-        if ((cur & 0xf000) == 0) {
-            output[j] = cur;
-            ++j;
-        } else {
-            var count = cur & 0x0fff;
-            ++i;
-            var value = input[i];
-
-            for (var k = 0; k < count; ++k) {
-                output[j] = value;
-                ++j;
-            }
-        }
-    }
-    return j;
-};
-
-
 exports.decodeUtf8 = function(view) {
     var utf8_buffer = '';
     var saw_utf8 = false;

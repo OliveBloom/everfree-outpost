@@ -2,10 +2,8 @@ var $ = document.getElementById.bind(document);
 
 
 var loader = require('loader');
-var BackgroundJobRunner = require('util/jobs').BackgroundJobRunner;
 var Vec = require('util/vec').Vec;
 var Config = require('config').Config;
-var TimeVarying = require('util/timevarying').TimeVarying;
 
 var AnimCanvas = require('canvas').AnimCanvas;
 var OffscreenContext = require('canvas').OffscreenContext;
@@ -19,7 +17,6 @@ var Keyboard = require('keyboard').Keyboard;
 var Dialog = require('ui/dialog').Dialog;
 var Banner = require('ui/banner').Banner;
 var ChatWindow = require('ui/chat').ChatWindow;
-var InventoryUI = require('ui/inventory').InventoryUI;
 var ContainerUI = require('ui/inventory').ContainerUI;
 var CraftingUI = require('ui/crafting').CraftingUI;
 var Iframe = require('ui/iframe').Iframe;
@@ -39,13 +36,7 @@ var Input = require('input').Input;
 
 var ItemDef = require('data/items').ItemDef;
 var RecipeDef = require('data/recipes').RecipeDef;
-var AnimationDef = require('data/sprites').AnimationDef;
-var SpritePartDef = require('data/sprites').SpritePartDef;
-var ExtraDefs = require('data/extras').ExtraDefs;
-var FontMetrics = require('data/fontmetrics').FontMetrics;
 
-var CHUNK_SIZE = require('consts').CHUNK_SIZE;
-var TILE_SIZE = require('consts').TILE_SIZE;
 var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
 var DynAsm = require('asmlibs').DynAsm;
@@ -54,7 +45,6 @@ var AsmClientInput = require('asmlibs').AsmClientInput;
 var net = require('net');
 var Timing = require('time').Timing;
 
-var rle16Decode = require('util/misc').rle16Decode;
 var buildArray = require('util/misc').buildArray;
 var checkBrowser = require('util/browser').checkBrowser;
 var util = require('util/misc');
@@ -228,9 +218,6 @@ function loadAssets(next) {
             for (var i = 0; i < recipes.length; ++i) {
                 RecipeDef.register(i, recipes[i]);
             }
-
-            ExtraDefs.init(assets['extra_defs']);
-            FontMetrics.init(assets['fonts_metrics']);
 
             var css = '.item-icon {' +
                 'background-image: url("' + assets['items'] + '");' +
