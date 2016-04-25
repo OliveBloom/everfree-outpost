@@ -11,10 +11,7 @@ var AnimCanvas = require('graphics/canvas').AnimCanvas;
 var OffscreenContext = require('graphics/canvas').OffscreenContext;
 var handleResize = require('resize').handleResize;
 
-var Entity = require('entity').Entity;
 var Motion = require('entity').Motion;
-var Animation = require('entity').Animation;
-var Structure = require('structure').Structure;
 
 var InventoryTracker = require('inventory').InventoryTracker;
 
