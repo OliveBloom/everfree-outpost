@@ -7,8 +7,8 @@ var Vec = require('util/vec').Vec;
 var Config = require('config').Config;
 var TimeVarying = require('util/timevarying').TimeVarying;
 
-var AnimCanvas = require('graphics/canvas').AnimCanvas;
-var OffscreenContext = require('graphics/canvas').OffscreenContext;
+var AnimCanvas = require('canvas').AnimCanvas;
+var OffscreenContext = require('canvas').OffscreenContext;
 var handleResize = require('resize').handleResize;
 
 var Motion = require('entity').Motion;
