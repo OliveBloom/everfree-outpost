@@ -50,43 +50,13 @@ var checkBrowser = require('util/browser').checkBrowser;
 var util = require('util/misc');
 
 
-var anim_dirs = [
-    // Start facing in +x, then cycle toward +y (clockwise, since y points
-    // downward).
-    {idx: 2, flip: false},
-    {idx: 3, flip: false},
-    {idx: 4, flip: false},
-    {idx: 3, flip: true},
-    {idx: 2, flip: true},
-    {idx: 1, flip: true},
-    {idx: 0, flip: false},
-    {idx: 1, flip: false},
-];
+// Client objects
 
-var pony_anims = new Array(4 * anim_dirs.length);
-for (var i = 0; i < anim_dirs.length; ++i) {
-    var idx = anim_dirs[i].idx;
-    var flip = anim_dirs[i].flip;
+var asm_client;
 
-    pony_anims[i] = {
-        i: 0,
-        j: idx,
-        len: 1,
-        fps: 1,
-        flip: flip,
-    };
+var assets;
 
-    for (var speed = 1; speed < 4; ++speed) {
-        pony_anims[speed * anim_dirs.length + i] = {
-            i: speed,
-            j: idx * 6,
-            len: 6,
-            fps: 6 + 2 * speed,
-            flip: flip,
-        };
-    }
-}
-
+var conn;
 
 var canvas;
 var ui_div;
@@ -104,17 +74,9 @@ var input;
 var main_menu;
 var debug_menu;
 
-var assets;
-
-
-var asm_client;
-
-var synced = net.SYNC_LOADING;
-
-var conn;
 var timing;
 var inv_tracker;
-
+var synced = net.SYNC_LOADING;
 var item_inv;
 var ability_inv;
 
