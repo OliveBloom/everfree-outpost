@@ -301,7 +301,7 @@ function store_vec(view, offset, vec) {
     view[offset + 2] = vec.z;
 }
 
-var INIT_HEAP_SIZE = 4 * 1024 * 1024;
+var INIT_HEAP_SIZE = 8 * 1024 * 1024;
 var HEAP_PADDING = 256 * 1024;
 
 /** @constructor */
