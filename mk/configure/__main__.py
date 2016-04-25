@@ -278,7 +278,6 @@ if __name__ == '__main__':
             js.rules(i),
             js.compile(i, '$b_js/outpost.js', '$root/src/client/js/main.js'),
             js.minify(i, '$b_js/asmlibs.js', '$b_asmjs/asmlibs.js'),
-            js.compile(i, '$b_js/animtest.js', '$root/src/client/js/animtest.js'),
             js.compile(i, '$b_js/configedit.js', '$root/src/client/js/configedit.js'),
             ))
 
