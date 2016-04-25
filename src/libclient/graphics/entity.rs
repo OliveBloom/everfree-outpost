@@ -4,7 +4,7 @@ use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
-use entity::{Entities, EntityId, Motion};
+use entity::{Entities, Entity, EntityId, Motion};
 use fonts::{self, FontMetricsExt};
 use platform::gl;
 use predict::Predictor;
@@ -109,10 +109,18 @@ impl<'a> GeomGen<'a> {
         }
     }
 
+    fn entity_pos(&self, id: EntityId, e: &Entity) -> V3 {
+        if Some(id) != self.pawn_id {
+            e.pos(self.now)
+        } else {
+            self.predictor.motion().pos(self.future)
+        }
+    }
+
     pub fn count_verts(&self) -> usize {
         let mut count = 0;
-        for (_, e) in self.entities.iter() {
-            let pos = e.pos(self.now);
+        for (&id, e) in self.entities.iter() {
+            let pos = self.entity_pos(id, e);
             if !util::contains_wrapped(self.bounds, pos.reduce(), scalar(LOCAL_PX_MASK)) {
                 // Not visible
                 continue;
@@ -135,11 +143,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             self.next = id;
             let is_pawn = Some(id) == self.pawn_id;
 
-            let pos = if !is_pawn {
-                e.pos(self.now)
-            } else {
-                self.predictor.motion().pos(self.future)
-            };
+            let pos = self.entity_pos(id, e);
             if !util::contains_wrapped(self.bounds, pos.reduce(), scalar(LOCAL_PX_MASK)) {
                 // Not visible
                 continue;

@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
-use entity::{Entities, EntityId, Motion};
+use entity::{Entities, Entity, EntityId, Motion};
 use platform::gl;
 use predict::Predictor;
 use structures::Structures;
@@ -194,14 +194,22 @@ impl<'a> EntityGeomGen<'a> {
         }
     }
 
+    fn entity_pos(&self, id: EntityId, e: &Entity) -> V3 {
+        if Some(id) != self.pawn_id {
+            e.pos(self.now)
+        } else {
+            self.predictor.motion().pos(self.future)
+        }
+    }
+
     pub fn count_verts(&self) -> usize {
         let mut count = 0;
-        for (_, e) in self.entities.iter() {
+        for (&id, e) in self.entities.iter() {
             if e.appearance & entity::LIGHT == 0 {
                 continue;
             }
 
-            let pos = e.pos(self.now);
+            let pos = self.entity_pos(id, e);
             // TODO: hard-coded constant based on entity size
             let center = pos + V3::new(16, 16, 48);
 
@@ -229,12 +237,7 @@ impl<'a> GeometryGenerator for EntityGeomGen<'a> {
                 continue;
             }
 
-            let pos = if !is_pawn {
-                e.pos(self.now)
-            } else {
-                self.predictor.motion().pos(self.future)
-            };
-
+            let pos = self.entity_pos(id, e);
             // TODO: hard-coded constant based on entity size
             let center = pos + V3::new(16, 16, 48);
 
