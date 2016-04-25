@@ -240,7 +240,10 @@ impl Data {
 
 
     pub fn anim_dir(&self, anim: u16) -> Option<u8> {
-        self.anim_dir_table().get(anim as usize).map(|&x| x)
+        match self.anim_dir_table().get(anim as usize) {
+            None | Some(&255) => None,
+            Some(&x) => Some(x),
+        }
     }
 
     pub fn default_anim(&self) -> u16 {

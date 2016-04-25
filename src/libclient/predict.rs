@@ -165,10 +165,7 @@ fn predict<S: ShapeSource>(shape: &S,
 
     // TODO: hardcoded constant
     let speed = target_velocity.abs().max() / 50;
-    let old_dir = match data.anim_dir_table().get(old_anim as usize) {
-        None | Some(&255) => None,
-        Some(&x) => Some(x),
-    };
+    let old_dir = data.anim_dir(old_anim);
     let new_anim =
         if old_dir.is_none() && end_pos == start_pos {
             // Old anim was a special (non-physics) animation
