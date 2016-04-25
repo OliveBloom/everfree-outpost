@@ -42,11 +42,7 @@ var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 var DNDState = require('ui/dnd').DNDState;
 
-var GameUI = require('ui_gl/hud').GameUI;
-var UIRenderContext = require('ui_gl/render').UIRenderContext;
-var InventoryUIGL = require('ui_gl/inventory').InventoryUIGL;
 var Input = require('input').Input;
-var UIInput = require('ui_gl/input').UIInput;
 
 var ItemDef = require('data/items').ItemDef;
 var RecipeDef = require('data/recipes').RecipeDef;
@@ -120,7 +116,6 @@ var error_list;
 var inv_update_list;
 var music_test;
 
-var ui_gl;
 var input;
 
 var main_menu;
@@ -173,10 +168,7 @@ function init() {
     inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
 
-    ui_gl = new GameUI(keyboard);
-    ui_gl.calcSize(0, 0);
     input = new Input();
-    input.handlers.push(new UIInput(ui_gl));
     input.handlers.push(new AsmClientInput(asm_client));
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
@@ -198,8 +190,6 @@ function init() {
 
     checkBrowser(dialog, function() {
         loadAssets(function() {
-            ui_gl.hotbar.init();
-
             asm_client.initClient(canvas.ctx, assets);
 
             // This should only happen after client init.
@@ -564,13 +554,7 @@ function setupKeyHandler() {
                     break;
 
                 default:
-                    if (binding != null && binding.startsWith('hotbar_')) {
-                        var idx = +binding.substring(7) - 1;
-                        ui_gl.hotbar.selectSlot(idx);
-                        break;
-                    } else {
-                        return shouldStop;
-                    }
+                    return shouldStop;
             }
 
             return true;
@@ -749,7 +733,6 @@ function handleMainInventory(iid) {
         item_inv.unsubscribe();
     }
     item_inv = inv_tracker.get(iid);
-    ui_gl.hotbar.attachItems(item_inv.clone());
     if (Config.show_inventory_updates.get()) {
         inv_update_list.attach(item_inv.clone());
     }
@@ -762,7 +745,6 @@ function handleAbilityInventory(iid) {
         ability_inv.unsubscribe();
     }
     ability_inv = inv_tracker.get(iid);
-    ui_gl.hotbar.attachAbilities(ability_inv.clone());
 
     asm_client.inventoryAbilityId(iid);
 }
