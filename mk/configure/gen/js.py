@@ -33,15 +33,12 @@ def rules(i):
         rule js_minify_file
             command = $
                 %if not i.debug
-                cp $in $out
+                $python3 $root/mk/misc/minify.py <$in >$out
                 %else
                 cp $in $out
                 %end
             description = MIN $out
     ''', **locals())
-    # TODO: minification is disabled because yui-compressor breaks asmjs
-    #            $yui_compressor --disable-optimizations --line-break 200 $
-    #                $in $filter >$out
 
 def compile(i, out_file, main_src):
     main_dir, basename_ext = os.path.split(main_src)
@@ -55,11 +52,12 @@ def compile(i, out_file, main_src):
             module_dir = %main_dir
     ''', **locals())
 
-def minify(out_file, js_src):
+def minify(i, out_file, js_src):
     if out_file is None:
         out_file = '$b_js/%s' % os.path.basename(js_src)
 
     return template('''
-        build %out_file: js_minify_file %js_src
+        build %out_file: js_minify_file %js_src $
+            | %if i.debug% $root/mk/misc/minify.py %end%
             filter = | sed -e '1s/{/{"use asm";/'
     ''', **locals())
