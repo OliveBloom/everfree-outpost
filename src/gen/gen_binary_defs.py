@@ -230,6 +230,8 @@ class BinaryDefs:
         def adjust(obj):
             if 'anim_size' in obj:
                 obj['anim_step'] = obj['anim_size'][0]
+            if obj.get('anim_oneshot', False):
+                obj['anim_length'] = -obj['anim_length']
         self.convert_file(b'StrcPart', 'structure_parts_client.json', c,
                 adjust=adjust)
 
