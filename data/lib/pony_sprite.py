@@ -34,7 +34,7 @@ MOTIONS = [
         Motion('stand', 0, 0, 1,  1),
         Motion('walk',  1, 0, 6,  8),
         Motion('run',   3, 0, 6, 12),
-        Motion('sit',   0, 1, 1,  1),
+        Motion('sit',   0, 5, 1,  1),
         ]
 
 SPRITE_SIZE = (96, 96)
@@ -102,6 +102,7 @@ def get_hat_box_pos(img):
             y += 1
         while x > 0 and alpha.getpixel((x - 1, y)) != 0:
             x -= 1
+        print('found %d,%d' % (x, y))
         return (x, y + 1 - HAT_SIZE)
 
     return img.raw().compute(f)
