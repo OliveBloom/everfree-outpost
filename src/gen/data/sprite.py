@@ -134,6 +134,11 @@ def mirror_anim(layer, anim, orig):
     gfx.mirror = not gfx.base.mirror
     return gfx
 
+def copy_anim(layer, anim, orig):
+    gfx = GraphicsDef(None)
+    gfx.base = orig
+    return gfx
+
 
 class FullNameWrapper:
     '''Wrapper class to present the full name to assign_ids.'''

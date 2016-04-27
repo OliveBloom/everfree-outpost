@@ -9,7 +9,7 @@ def gen_default_anim(maps):
     return pony(maps).get_anim('stand-0').id
 
 def gen_editor_anim(maps):
-    return pony(maps).get_anim('stand-4').id
+    return pony(maps).get_anim('stand-2').id
 
 def gen_physics_anim_table(maps):
     SPEED_NAMES = ('stand', 'walk', None, 'run')
@@ -20,7 +20,7 @@ def gen_physics_anim_table(maps):
             continue
 
         table.append([pony(maps).get_anim('%s-%d' % (speed, dir_)).id
-            for dir_ in range(8)])
+            for dir_ in (0, 0, 1, 2, 2, 2, 3, 0)])
 
     return table
 
@@ -33,9 +33,9 @@ def gen_anim_dir_table(maps):
     # that's how the current hack in client/js/physics.js distinguishes physics
     # anims from special ones.
     for motion in ('stand', 'walk', 'run'):
-        for dir_ in range(8):
+        for dir_ in range(4):
             anim = pony(maps).get_anim('%s-%d' % (motion, dir_))
-            dct[anim.id] = dir_
+            dct[anim.id] = dir_ * 2
     return dct
 
 def gen_pony_slot_table(maps):

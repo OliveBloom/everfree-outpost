@@ -14,13 +14,13 @@ Dir = namedtuple('Dir', ('idx', 'mirror'))
 
 DIRS = [
         Dir(2, None),
-        Dir(3, None),
+        #Dir(3, None),
         Dir(4, None),
-        Dir(3, 1),
+        #Dir(3, 1),
         Dir(2, 0),
-        Dir(1, 7),
+        #Dir(1, 7),
         Dir(0, None),
-        Dir(1, None),
+        #Dir(1, None),
         ]
 
 INV_DIRS = [None] * 5
@@ -80,6 +80,7 @@ def standard_anims():
     '''Iterate over the standard pony animations (stand-0, walk-7, etc).'''
     for m in MOTIONS:
         for i in range(5):
+            if INV_DIRS[i] is None: continue
             yield m, i, '%s-%d' % (m.name, INV_DIRS[i])
 
 
