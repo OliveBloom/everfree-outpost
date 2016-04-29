@@ -1,5 +1,6 @@
 #![crate_name = "uvedit_asm"]
 #![no_std]
+#![feature(core_intrinsics)]
 
 #[macro_use] extern crate fakestd as std;
 use std::prelude::v1::*;
@@ -98,10 +99,10 @@ impl State {
         let mesh = &self.mesh;
         mesh.rasterize(|p, u_idx, v_idx| {
             if bounds.contains(p) {
-                let (a, b, c, d) = mesh.quad_bary(cell_center(p), u_idx, v_idx);
+                let uv = mesh.quad_uv(cell_center(p), u_idx, v_idx);
 
-                let u = (a + c) * (u_idx as i32) + (b + d) * (u_idx as i32 + 1);
-                let v = (a + b) * (v_idx as i32) + (c + d) * (v_idx as i32 + 1);
+                let u = (FX_1 - uv.x) * (u_idx as i32) + (uv.x) * (u_idx as i32 + 1);
+                let v = (FX_1 - uv.y) * (v_idx as i32) + (uv.y) * (v_idx as i32 + 1);
 
                 let red = cmp::min(cmp::max(0, u / mesh.u_sub as i32), 255) as u8;
                 let green = cmp::min(cmp::max(0, v / mesh.v_sub as i32), 255) as u8;
@@ -143,6 +144,7 @@ impl State {
 
 const FX_BITS: usize = 8;
 const FX_BASE: i32 = 1 << FX_BITS;
+const FX_1: i32 = 1 << FX_BITS;
 const RENDER_SCALE: i32 = 8;
 const SPRITE_SIZE: i32 = 96;
 
@@ -254,25 +256,15 @@ impl Mesh {
         false
     }
 
-    fn quad_bary(&self, pos: V2, u: u8, v: u8) -> (i32, i32, i32, i32) {
+    fn quad_uv(&self, pos: V2, i: u8, j: u8) -> V2 {
         let bounds = self.bounds();
-        let cell = V2::new(u as i32, v as i32);
+        let cell = V2::new(i as i32, j as i32);
         let a = self.points[bounds.index(cell + V2::new(0, 0))];
         let b = self.points[bounds.index(cell + V2::new(1, 0))];
-        let c = self.points[bounds.index(cell + V2::new(0, 1))];
-        let d = self.points[bounds.index(cell + V2::new(1, 1))];
+        let c = self.points[bounds.index(cell + V2::new(1, 1))];
+        let d = self.points[bounds.index(cell + V2::new(0, 1))];
 
-        let (b1, b2, b3) = calc_barycentric(a, b, c, pos);
-        if b1 >= 0 && b2 >= 0 && b3 >= 0 {
-            return (b1, b2, b3, 0);
-        }
-
-        let (b1, b2, b3) = calc_barycentric(b, c, d, pos);
-        if b1 >= 0 && b2 >= 0 && b3 >= 0 {
-            return (0, b1, b2, b3);
-        }
-
-        (0, 0, 0, 0)
+        calc_quad_uv(a, b, c, d, pos)
     }
 
     fn rasterize<F>(&self, mut f: F)
@@ -393,4 +385,40 @@ fn raster_tri<F>(a: V2, b: V2, c: V2, mut f: F)
             }
         }
     }
+}
+
+/// Note that the vertices should be given in winding order, not grid order.
+fn calc_quad_uv(a: V2, b: V2, c: V2, d: V2, x: V2) -> V2 {
+    // Algorithm from http://www.iquilezles.org/www/articles/ibilinear/ibilinear.htm
+    let e = b - a;
+    let f = d - a;
+    let g = a - b + c - d;
+    let h = x - a;
+
+    // 2*FX_BITS
+    let k2 = g.cross(f);
+    let k1 = e.cross(f) + h.cross(g);
+    let k0 = h.cross(e);
+
+
+    let v = if k2 != 0 {
+        let root = sqrt((k1 as f64) * (k1 as f64) - 4.0 * (k0 as f64) * (k2 as f64)) as i32;
+
+        let v1 = (-k1 + root) / ((2 * k2) >> FX_BITS);
+        let v2 = (-k1 - root) / ((2 * k2) >> FX_BITS);
+
+        if 0 <= v1 && v1 <= 1 << FX_BITS { v1 } else { v2 }
+    } else {
+        -k0 / (k1 >> FX_BITS)
+    };
+
+    let numer = (h.x * FX_1 - f.x * v);
+    let denom = (e.x * FX_1 + g.x * v);
+    let u = numer / (denom >> FX_BITS);
+
+    V2::new(u, v)
+}
+
+fn sqrt(x: f64) -> f64 {
+    unsafe { std::intrinsics::sqrtf64(x) }
 }

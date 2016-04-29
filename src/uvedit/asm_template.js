@@ -21,6 +21,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _flush_str_err = env.flushStrErr;
     var _now = env.now;
     var Math_imul = global.Math.imul;
+    var Math_sqrt = global.Math.sqrt;
     var nan = global.NaN;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 
