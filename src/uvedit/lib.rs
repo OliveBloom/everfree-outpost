@@ -48,8 +48,8 @@ pub unsafe extern fn handle_mouse_move(x: i32, y: i32) {
 }
 
 #[no_mangle]
-pub unsafe extern fn handle_mouse_down(x: i32, y: i32) {
-    (*STATE).handle_mouse_down(V2::new(x, y));
+pub unsafe extern fn handle_mouse_down(x: i32, y: i32, shift: u8) {
+    (*STATE).handle_mouse_down(V2::new(x, y), shift != 0);
 }
 
 #[no_mangle]
@@ -57,16 +57,32 @@ pub unsafe extern fn handle_mouse_up(x: i32, y: i32) {
     (*STATE).handle_mouse_up(V2::new(x, y));
 }
 
+#[no_mangle]
+pub unsafe extern fn toggle_mode() {
+    (*STATE).toggle_mode();
+}
 
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Action {
     Nothing,
     DragVertex(usize, V2),
+    DrawMask(bool),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Mode {
+    EditMesh,
+    DrawMask,
 }
 
 pub struct State {
     mesh: Mesh,
+    mask: Vec<bool>,
+
     lines: Vec<(V2, V2)>,
     mouse_pos: V2,
+    mode: Mode,
     action: Action,
     overlay: Vec<(u8, u8, u8, u8)>,
 }
@@ -75,13 +91,26 @@ impl State {
     fn new() -> State {
         State {
             mesh: Mesh::new(),
+            mask: iter::repeat(false)
+                      .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
+                      .collect(),
+
             lines: Vec::new(),
             mouse_pos: scalar(-1),
+            mode: Mode::DrawMask,
             action: Action::Nothing,
             overlay: iter::repeat((0, 0, 0, 0))
                          .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
                          .collect(),
         }
+    }
+
+    fn toggle_mode(&mut self) {
+        let new_mode = match self.mode {
+            Mode::EditMesh => Mode::DrawMask,
+            Mode::DrawMask => Mode::EditMesh,
+        };
+        self.mode = new_mode;
     }
 
     fn update(&mut self) {
@@ -93,8 +122,24 @@ impl State {
             *c = (0, 0, 0, 0);
         }
 
-        let bounds = Region::sized(scalar(SPRITE_SIZE));
+        let bounds = Region::<V2>::sized(scalar(SPRITE_SIZE));
 
+        for p in bounds.points() {
+            let idx = bounds.index(p);
+            if !self.mask[idx] {
+                self.overlay[idx].2 = 255;
+                self.overlay[idx].3 = 100;
+            }
+        }
+
+        let mouse_px = self.mouse_pos.div_floor(scalar(RENDER_SCALE));
+        if self.mode == Mode::DrawMask && bounds.contains(mouse_px) {
+            let idx = bounds.index(mouse_px);
+            self.overlay[idx].1 = 255;
+            self.overlay[idx].3 = 100;
+        }
+
+        /*
         let overlay = &mut self.overlay;
         let mesh = &self.mesh;
         mesh.rasterize(|p, u_idx, v_idx| {
@@ -110,6 +155,7 @@ impl State {
                 overlay[bounds.index(p)] = (red, green, 255, 255);
             }
         });
+        */
     }
 
     fn handle_mouse_move(&mut self, pos: V2) {
@@ -122,22 +168,62 @@ impl State {
                 let vert_pos = off + mouse_pos_fx;
                 self.mesh.set_vertex_pos(v, vert_pos);
             },
+            Action::DrawMask(val) => {
+                let px_pos = pos.div_floor(scalar(RENDER_SCALE));
+                let idx = Region::sized(scalar(SPRITE_SIZE)).index(px_pos);
+                self.mask[idx] = val;
+            },
         }
     }
 
-    fn handle_mouse_down(&mut self, pos: V2) {
+    fn handle_mouse_down(&mut self, pos: V2, shift: bool) {
         self.mouse_pos = pos;
-        if let Some(v) = self.mesh.hit_vertex(pos) {
-            let vert_pos = self.mesh.vertex_pos(v);
-            println!("hit {} @ {:?}", v, vert_pos);
-            let mouse_pos_fx = pixel_to_fixed(pos);
-            self.action = Action::DragVertex(v, vert_pos - mouse_pos_fx);
+        match self.mode {
+            Mode::EditMesh => {
+                if let Some(v) = self.mesh.hit_vertex(pos) {
+                    let vert_pos = self.mesh.vertex_pos(v);
+                    println!("hit {} @ {:?}", v, vert_pos);
+                    let mouse_pos_fx = pixel_to_fixed(pos);
+                    self.action = Action::DragVertex(v, vert_pos - mouse_pos_fx);
+                }
+            },
+
+            Mode::DrawMask => {
+                let px_pos = pos.div_floor(scalar(RENDER_SCALE));
+                let idx = Region::sized(scalar(SPRITE_SIZE)).index(px_pos);
+                let val = !self.mask[idx];
+                if shift {
+                    self.floodfill_mask(px_pos, val);
+                } else {
+                    self.action = Action::DrawMask(val);
+                    self.handle_mouse_move(pos);
+                }
+            },
         }
     }
 
     fn handle_mouse_up(&mut self, pos: V2) {
         self.mouse_pos = pos;
         self.action = Action::Nothing;
+    }
+
+
+    fn floodfill_mask(&mut self, start: V2, val: bool) {
+        let bounds = Region::sized(scalar(SPRITE_SIZE));
+
+        let mut queue = Vec::new();
+        self.mask[bounds.index(start)] = val;
+        queue.push(start);
+
+        while let Some(cur) = queue.pop() {
+            for &(dx, dy) in &[(1, 0), (0, 1), (-1, 0), (0, -1)] {
+                let next = cur + V2::new(dx, dy);
+                if bounds.contains(next) && self.mask[bounds.index(next)] != val {
+                    self.mask[bounds.index(next)] = val;
+                    queue.push(next);
+                }
+            }
+        }
     }
 }
 

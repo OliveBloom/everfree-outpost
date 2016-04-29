@@ -6,6 +6,7 @@ update
 handle_mouse_move
 handle_mouse_down
 handle_mouse_up
+toggle_mode
 
 # asmmalloc entry points
 asmmalloc_init

@@ -289,12 +289,22 @@ canvas.addEventListener('mousemove', function(evt) {
 });
 
 canvas.addEventListener('mousedown', function(evt) {
-    ASM.handle_mouse_down(evt.offsetX, evt.offsetY);
+    ASM.handle_mouse_down(evt.offsetX, evt.offsetY, evt.shiftKey);
     request_frame();
 });
 
 canvas.addEventListener('mouseup', function(evt) {
     ASM.handle_mouse_up(evt.offsetX, evt.offsetY);
     request_frame();
+});
+
+document.addEventListener('keydown', function(evt) {
+    if (evt.keyCode == 32) {
+        ASM.toggle_mode();
+        request_frame();
+
+        evt.stopPropagation();
+        evt.preventDefault();
+    }
 });
 
