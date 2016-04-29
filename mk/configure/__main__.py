@@ -279,6 +279,15 @@ if __name__ == '__main__':
             js.compile(i, '$b_js/outpost.js', '$root/src/client/js/main.js'),
             js.minify(i, '$b_js/asmlibs.js', '$b_asmjs/asmlibs.js'),
             js.compile(i, '$b_js/configedit.js', '$root/src/client/js/configedit.js'),
+
+            '# uvedit',
+            asmjs.asmlibs('uvedit_asm',
+                '$root/src/uvedit/lib.rs',
+                ('core', 'collections', 'asmrt', 'asmmalloc', 'physics'),
+                '$root/src/uvedit/asm_exports.txt',
+                '$root/src/uvedit/asm_template.js'),
+            js.minify(i, '$b_js/uvedit_asm.js', '$b_asmjs/uvedit_asm.js'),
+            js.compile(i, '$b_js/uvedit.js', '$root/src/uvedit/main.js'),
             ))
 
     content += '\n\n'.join((

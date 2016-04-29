@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+    <head>
+        <title>UV Map Editor</title>
+
+<style>
+.flex-row, .flex-col {
+    display: flex;
+    align-items: stretch;
+}
+
+.flex-row {
+    flex-direction: row;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+</style>
+
+    </head>
+    <body>
+        <div class='flex-row'>
+            <div>
+                <div>
+                    Anim: (TODO) &mdash; Frame: (TODO)
+                </div>
+                <canvas id='cnv-main' width='768' height='768'></canvas>
+            </div>
+            <div style='padding: 0.5em; margin: 0.5em; border: 1px solid black;
+                    border-width: 0 1px;'>
+                Button<br>
+                Button<br>
+                Button<br>
+            </div>
+            <div class='flex-col'>
+                <div>
+                    <div>
+                        Anim: (TODO) &mdash; Frame: (TODO)
+                    </div>
+                    <canvas id='cnv-ref' width='384' height='384'></canvas>
+                </div>
+                <div>
+                    Blah blah
+                </div>
+            </div>
+        </div>
+
+        <script src='uvedit_asm.js'></script>
+        <script src='uvedit.js'></script>
+    </body>
+</html>

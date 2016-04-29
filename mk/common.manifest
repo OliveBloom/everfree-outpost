@@ -26,6 +26,10 @@ www/configedit.js: $b_js/configedit.js
 www/img/: $root/assets/ui/png
 www/font/: $root/assets/fonts/ttf
 
+www/uvedit/uvedit.html: $root/src/uvedit/uvedit.html
+www/uvedit/uvedit.js: $root/src/uvedit/main.js
+www/uvedit/uvedit_asm.js: $b_js/uvedit_asm.js
+
 util/map.tmpl.html: $root/util/map.tmpl.html
 util/outpost_savegame$_so: $b_native/outpost_savegame$_so
 util/render_map.py: $root/util/render_map.py

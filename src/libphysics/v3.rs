@@ -64,6 +64,13 @@ impl V3 {
     pub fn reduce(self) -> V2 {
         V2::new(self.x, self.y)
     }
+
+    #[inline]
+    pub fn cross(self, other: V3) -> V3 {
+        V3::new(self.y * other.z - self.z * other.y,
+                self.z * other.x - self.x * other.z,
+                self.x * other.y - self.y * other.z)
+    }
 }
 
 impl Vn for V3 {
@@ -134,6 +141,11 @@ impl V2 {
     #[inline]
     pub fn extend(self, val: i32) -> V3 {
         V3::new(self.x, self.y, val)
+    }
+
+    #[inline]
+    pub fn cross(self, other: V2) -> i32 {
+        self.x * other.y - self.y * other.x
     }
 }
 
