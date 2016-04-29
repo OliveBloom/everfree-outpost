@@ -2,6 +2,7 @@ init
 get_lines_ptr
 get_lines_len
 get_overlay_ptr
+load_sprite
 update
 handle_mouse_move
 handle_mouse_down

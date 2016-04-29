@@ -228,6 +228,30 @@ function update_frames() {
 
 function change_frame() {
     // TODO: save/load mesh data
+
+    // Load sprite data into ASM
+    var s = get_sprite();
+    var frame = +$('sel-main-frame').value;
+    var sx = s.gfx.src_offset[0] + frame * s.gfx.size[0];
+    var sy = s.gfx.src_offset[1];
+    var dx = s.gfx.dest_offset[0];
+    var dy = s.gfx.dest_offset[1];
+    var size_x = s.gfx.size[0];
+    var size_y = s.gfx.size[1];
+
+    overlay_ctx.clearRect(0, 0, 96, 96);
+    overlay_ctx.drawImage(DATA.img,
+            sx, sy, size_x, size_y,
+            dx, dy, size_x, size_y);
+    var idat = overlay_ctx.getImageData(0, 0, 96, 96);
+
+    var len = idat.width * idat.height;
+    var ptr = ASM.asmmalloc_alloc(len * 4, 4);
+    var view = new Uint8ClampedArray(ASM.buffer, ptr, len * 4);
+    view.set(idat.data);
+    ASM.load_sprite(ptr, len);
+    ASM.asmmalloc_free(ptr);
+
     request_frame();
 }
 

@@ -8,7 +8,9 @@ use std::prelude::v1::*;
 extern crate physics;
 
 use std::cmp;
+use std::collections::{BTreeMap, VecDeque};
 use std::iter;
+use std::slice;
 
 use physics::v3::{V2, Vn, Region, scalar};
 
@@ -35,6 +37,13 @@ pub unsafe extern fn get_lines_len() -> usize {
 #[no_mangle]
 pub unsafe extern fn get_overlay_ptr() -> *const (u8, u8, u8, u8) {
     (*STATE).overlay.as_ptr()
+}
+
+#[no_mangle]
+pub unsafe extern fn load_sprite(ptr: *const (u8, u8, u8, u8),
+                                 len: usize) {
+    let slice = slice::from_raw_parts(ptr, len);
+    (*STATE).load_sprite(slice)
 }
 
 #[no_mangle]
@@ -68,6 +77,7 @@ enum Action {
     Nothing,
     DragVertex(usize, V2),
     DrawMask(bool),
+    MaskOutline(bool, V2),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -79,6 +89,7 @@ enum Mode {
 pub struct State {
     mesh: Mesh,
     mask: Vec<bool>,
+    outline: Vec<bool>,
 
     lines: Vec<(V2, V2)>,
     mouse_pos: V2,
@@ -94,6 +105,9 @@ impl State {
             mask: iter::repeat(false)
                       .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
                       .collect(),
+            outline: iter::repeat(false)
+                         .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
+                         .collect(),
 
             lines: Vec::new(),
             mouse_pos: scalar(-1),
@@ -113,6 +127,14 @@ impl State {
         self.mode = new_mode;
     }
 
+    fn load_sprite(&mut self, sprite: &[(u8, u8, u8, u8)]) {
+        assert!(sprite.len() == (SPRITE_SIZE * SPRITE_SIZE) as usize);
+        for i in 0 .. sprite.len() {
+            let (r,g,b,a) = sprite[i];
+            self.outline[i] = a == 255 && r == 180;
+        }
+    }
+
     fn update(&mut self) {
         self.lines.clear();
         self.mesh.draw(self.mouse_pos,
@@ -123,6 +145,7 @@ impl State {
         }
 
         let bounds = Region::<V2>::sized(scalar(SPRITE_SIZE));
+        let mouse_px = self.mouse_pos.div_floor(scalar(RENDER_SCALE));
 
         for p in bounds.points() {
             let idx = bounds.index(p);
@@ -132,7 +155,12 @@ impl State {
             }
         }
 
-        let mouse_px = self.mouse_pos.div_floor(scalar(RENDER_SCALE));
+        if let Action::MaskOutline(_, start_px) = self.action {
+            for p in self.trace_outline(start_px, mouse_px) {
+                self.overlay[bounds.index(p)] = (255, 0, 0, 100);
+            }
+        }
+
         if self.mode == Mode::DrawMask && bounds.contains(mouse_px) {
             let idx = bounds.index(mouse_px);
             self.overlay[idx].1 = 255;
@@ -173,6 +201,7 @@ impl State {
                 let idx = Region::sized(scalar(SPRITE_SIZE)).index(px_pos);
                 self.mask[idx] = val;
             },
+            Action::MaskOutline(_, _) => {},
         }
     }
 
@@ -193,7 +222,8 @@ impl State {
                 let idx = Region::sized(scalar(SPRITE_SIZE)).index(px_pos);
                 let val = !self.mask[idx];
                 if shift {
-                    self.floodfill_mask(px_pos, val);
+                    //self.floodfill_mask(px_pos, val);
+                    self.action = Action::MaskOutline(val, px_pos);
                 } else {
                     self.action = Action::DrawMask(val);
                     self.handle_mouse_move(pos);
@@ -204,6 +234,23 @@ impl State {
 
     fn handle_mouse_up(&mut self, pos: V2) {
         self.mouse_pos = pos;
+
+        match self.action {
+            Action::MaskOutline(val, start_px) => {
+                let bounds = Region::sized(scalar(SPRITE_SIZE));
+                let mouse_px = pos.div_floor(scalar(RENDER_SCALE));
+                if mouse_px == start_px {
+                    self.floodfill_mask(mouse_px, val);
+                } else {
+                    for p in self.trace_outline(start_px, mouse_px) {
+                        self.mask[bounds.index(p)] = val;
+                    }
+                }
+            },
+
+            _ => {},
+        }
+
         self.action = Action::Nothing;
     }
 
@@ -224,6 +271,46 @@ impl State {
                 }
             }
         }
+    }
+
+    fn trace_outline(&mut self, start: V2, end: V2) -> Vec<V2> {
+        let bounds = Region::sized(scalar(SPRITE_SIZE));
+
+        let mut queue = VecDeque::new();
+        let mut parent = BTreeMap::new();
+        queue.push_back((start, None));
+
+        while let Some((cur, prev)) = queue.pop_front() {
+            if parent.contains_key(&(cur.x, cur.y)) {
+                continue;
+            }
+            parent.insert((cur.x, cur.y), prev);
+
+            if cur == end {
+                let mut trace = Vec::new();
+                trace.push(end);
+                loop {
+                    let last = *trace.last().unwrap();
+                    if let Some(prev) = parent[&(last.x, last.y)] {
+                        trace.push(prev);
+                    } else {
+                        break;
+                    }
+                }
+                trace.reverse();
+                return trace;
+            }
+
+            for &(dx, dy) in &[(1, 0), (0, 1), (-1, 0), (0, -1),
+                               (1, 1), (1, -1), (-1, 1), (-1, -1)] {
+                let next = cur + V2::new(dx, dy);
+                if bounds.contains(next) && self.outline[bounds.index(next)] {
+                    queue.push_back((next, Some(cur)));
+                }
+            }
+        }
+
+        Vec::new()
     }
 }
 
