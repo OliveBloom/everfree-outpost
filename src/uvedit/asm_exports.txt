@@ -1,1 +1,17 @@
 init
+get_lines_ptr
+get_lines_len
+get_overlay_ptr
+update
+handle_mouse_move
+handle_mouse_down
+handle_mouse_up
+
+# asmmalloc entry points
+asmmalloc_init
+asmmalloc_reinit
+asmmalloc_max_allocated_address
+asmmalloc_alloc
+asmmalloc_free
+asmmalloc_debug_print
+asmmalloc_debug_check
