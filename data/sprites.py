@@ -63,7 +63,7 @@ def init():
     # Sleep
 
     pony.add_anim('sleep-0', 6, 2)
-    pony.derive_anim('sleep-4', 'sleep-0', sprite.mirror_anim)
+    pony.derive_anim('sleep-2', 'sleep-0', sprite.mirror_anim)
     def make_sleep_anim(row, _m):
         frames = [
                 row.extract((0, 0)),
