@@ -94,7 +94,8 @@ def init():
     icon = load('icons/socks.png')
 
     # TODO: don't hardcode . as $root!
-    path = 'assets/sprites/equipment/uvdata-sock-f.json'
+    # TODO: also make sure this file gets listed in data.d
+    path = 'assets/sprites/equipment/uvdata-socks.json'
 
     for name, rgb in COLORS:
         for sex in ('m', 'f'):
