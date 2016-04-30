@@ -6,8 +6,12 @@ from outpost_data.core.sprite import GraphicsDef
 from outpost_data.outpost.lib.sprite_util import depth_stack
 
 
+_PONY = None
 def get_pony_sprite():
-    return SPRITE.get('pony')
+    global _PONY
+    if _PONY is None:
+        _PONY = SPRITE.new('pony', SPRITE_SIZE)
+    return _PONY
 
 
 Dir = namedtuple('Dir', ('idx', 'mirror'))
@@ -103,7 +107,6 @@ def get_hat_box_pos(img):
             y += 1
         while x > 0 and alpha.getpixel((x - 1, y)) != 0:
             x -= 1
-        print('found %d,%d' % (x, y))
         return (x, y + 1 - HAT_SIZE)
 
     return img.raw().compute(f)

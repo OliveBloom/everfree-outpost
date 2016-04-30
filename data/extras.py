@@ -66,7 +66,8 @@ def gen_pony_layer_table(maps):
     for layer in ('base', 'horn', 'frontwing', 'backwing', 'eyes1',
             'mane/1', 'mane/2', 'mane/3',
             'tail/1', 'tail/2', 'tail/3',
-            'hat/party', 'hat/santa', 'hat/witch', 'hat/explorer'):
+            'sock/solid/red', 'hat/santa', 'hat/witch', 'hat/explorer'):
+            #'hat/party', 'hat/santa', 'hat/witch', 'hat/explorer'):
         for sex in 'fm':
             try:
                 l = p.get_layer('%s/%s' % (sex, layer))

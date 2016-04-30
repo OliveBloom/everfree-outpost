@@ -16,6 +16,8 @@ def build_parser():
             help='path to the outpost source directory')
     args.add_argument('--output-dir',
             help='directory to contain the generated files')
+    args.add_argument('--native-lib-dir',
+            help='directory containing compiled C/Rust libraries')
 
     return args
 
@@ -219,6 +221,9 @@ def main(args):
     # Register `DefScriptFinder` and `LootScriptFinder` for loading .od and .loot modules.
     sys.meta_path.append(DefScriptFinder)
     sys.meta_path.append(LootScriptFinder)
+
+    # Add the native library path
+    sys.path.append(ns.native_lib_dir)
 
 
     from outpost_data.core import files

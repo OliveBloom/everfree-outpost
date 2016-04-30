@@ -16,7 +16,7 @@ def extract_graphics(sheets, m, i, anim_name, row_to_anim):
 
 
 def init():
-    pony = SPRITE.new('pony', SPRITE_SIZE)
+    pony = get_pony_sprite()
     load = loader('sprites', unit=SPRITE_SIZE)
     load1 = loader('sprites')
 

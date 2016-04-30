@@ -108,7 +108,8 @@ def process():
     return template('''
         rule process_data
             command = $python3 $root/src/gen/data_main.py --mods=$mods $
-                    --src-dir=$root --output-dir=$b_data
+                    --src-dir=$root --output-dir=$b_data $
+                    --native-lib-dir=$b_native
             description = DATA
             depfile = $b_data/data.d
 
