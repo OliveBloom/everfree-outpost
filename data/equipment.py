@@ -2,12 +2,13 @@ import base64
 import hashlib
 import json
 
-import PIL
+import PIL.Image
+import PIL.ImageChops
 
 from outpost_data.core import sprite, image2
 from outpost_data.core.builder2 import *
 from outpost_data.core.consts import *
-from outpost_data.core.image2 import loader, Image, Anim
+from outpost_data.core.image2 import load, Image, Anim
 from outpost_data.outpost.lib.pony_sprite import *
 from outpost_data.outpost.lib.sprite_util import *
 
@@ -82,10 +83,25 @@ COLORS = [
         ('black',   (0x44, 0x44, 0x44)),
         ]
 
+def multiply_image(img, color):
+    def f(raw):
+        overlay = PIL.Image.new('RGBA', raw.size)
+        overlay.paste(color)
+        return PIL.ImageChops.multiply(raw, overlay)
+    return img.modify(f, desc=color)
+
 def init():
+    icon = load('icons/socks.png')
+
     # TODO: don't hardcode . as $root!
     path = 'assets/sprites/equipment/uvdata-sock-f.json'
 
     for name, rgb in COLORS:
-        add_equip_layer('f/sock/solid/%s' % name, 'f/base', path, 'solid', rgb)
-        add_equip_layer('m/sock/solid/%s' % name, 'm/base', path, 'solid', rgb)
+        for sex in ('m', 'f'):
+            add_equip_layer('%s/sock/solid/%s' % (sex, name), '%s/base' % sex,
+                    path, 'solid', rgb)
+
+        ITEM.new('sock/solid/%s' % name) \
+                .display_name('%s%s Sock' % (name[0].upper(), name[1:])) \
+                .icon(multiply_image(icon, rgb + (255,)))
+

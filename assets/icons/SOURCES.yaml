@@ -45,3 +45,7 @@ gervais_roguelike/*.png: &gervais-roguelike
 blueprint.png:
     derived-from: williamson-roguelike-items
     attribution: Page/note icon, recolored to look like a blueprint
+
+socks.png:
+    title: Socks Icon
+    author: Stuart Pernsteiner
