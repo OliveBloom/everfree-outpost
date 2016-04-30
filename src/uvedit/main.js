@@ -291,7 +291,12 @@ function save_data(asm) {
     var ptr = asm.get_mask_ptr();
     var view = new Uint8Array(asm.buffer, ptr, 96 * 96);
     var k = key_to_string(current_key());
-    localStorage.setItem(k, view.join(','));
+    var s = '';
+    for (var i = 0; i < view.length; ++i) {
+        s += String.fromCharCode(view[i]);
+    }
+    var v = btoa(s);
+    localStorage.setItem(k, v);
 }
 
 function load_data(asm) {
@@ -299,11 +304,13 @@ function load_data(asm) {
     var view = new Uint8Array(asm.buffer, ptr, 96 * 96);
     var k = key_to_string(current_key());
     var v = localStorage.getItem(k);
-
     if (v == null) {
         view.fill(1);   // set all to MASKED
     } else {
-        view.set(v.split(','));
+        var s = atob(v);
+        for (var i = 0; i < s.length; ++i) {
+            view[i] = s.charCodeAt(i);
+        }
     }
 }
 
