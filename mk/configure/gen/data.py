@@ -103,6 +103,9 @@ def process():
             '$root/src/gen/data_main.py',
             # Name font is embedded into the sprite sheet
             '$b_data/fonts/name.png',
+
+            # Native modules
+            '$b_native/equip_sprites_render$_so',
             ]
 
     return template('''

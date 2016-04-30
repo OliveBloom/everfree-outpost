@@ -9,7 +9,7 @@ use python3_sys::*;
 
 use physics::v3::{V2, scalar};
 
-use super::Renderer;
+use super::{Renderer, Style};
 
 
 struct PyRenderer {
@@ -66,6 +66,25 @@ unsafe extern "C" fn get_image(slf: *mut PyObject, args: *mut PyObject) -> *mut 
 }
 
 
+unsafe extern "C" fn set_style_solid(slf: *mut PyObject, args: *mut PyObject) -> *mut PyObject {
+    let mut r = 0;
+    let mut g = 0;
+    let mut b = 0;
+    if PyArg_ParseTuple(args,
+                        "BBB\0".as_ptr() as *const c_char,
+                        &mut r,
+                        &mut g,
+                        &mut b) == 0 {
+        return ptr::null_mut();
+    }
+
+    (*(slf as *mut PyRenderer)).obj.set_style(Style::Solid(r, g, b));
+
+    Py_INCREF(Py_None());
+    Py_None()
+}
+
+
 
 
 unsafe extern "C" fn obj_new(subtype: *mut PyTypeObject,
@@ -95,12 +114,12 @@ static mut TYPE_SLOTS: [PyType_Slot; 4] = [PyType_Slot {
     pfunc: 0 as *mut _,
 }; 4];
 
-static mut METHOD_DEFS: [PyMethodDef; 4] = [PyMethodDef {
+static mut METHOD_DEFS: [PyMethodDef; 5] = [PyMethodDef {
     ml_name: 0 as *const _,
     ml_meth: None,
     ml_flags: 0,
     ml_doc: 0 as *const _,
-}; 4];
+}; 5];
 
 
 unsafe fn init_type() -> *mut PyObject {
@@ -120,6 +139,9 @@ unsafe fn init_type() -> *mut PyObject {
     method!(set_base);
     method!(render_part);
     method!(get_image);
+
+    method!(set_style_solid);
+
     assert!(i == METHOD_DEFS.len() - 1);
 
     {

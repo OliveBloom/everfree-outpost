@@ -47,8 +47,14 @@ bitflags! {
 }
 
 
+pub enum Style {
+    Solid(u8, u8, u8),
+}
+
+
 pub struct Renderer {
     size: V2,
+    style: Style,
     base: Box<[(u8, u8, u8, u8)]>,
     equip: Box<[(u8, u8, u8, u8)]>,
 }
@@ -57,9 +63,14 @@ impl Renderer {
     pub fn new() -> Renderer {
         Renderer {
             size: scalar(0),
+            style: Style::Solid(255, 255, 255),
             base: make_array((0, 0, 0, 0), 0),
             equip: make_array((0, 0, 0, 0), 0),
         }
+    }
+
+    pub fn set_style(&mut self, style: Style) {
+        self.style = style;
     }
 
     pub fn set_base(&mut self, size: V2, slice: &[u8]) {
@@ -108,16 +119,16 @@ impl Renderer {
     }
 
     fn render_pixel(&self, pos: V2, is_border: bool) -> (u8, u8, u8, u8) {
-        let r = 0xcc;
-        let g = 0x44;
-        let b = 0x44;
+        let (r, g, b) = match self.style {
+            Style::Solid(r, g, b) => (r, g, b),
+        };
 
         let bounds = Region::sized(self.size);
         let c = (if is_border { 180 } else { self.base[bounds.index(pos)].0 }) as u16;
 
-        ((r * c / 255) as u8,
-         (g * c / 255) as u8,
-         (b * c / 255) as u8,
+        ((r as u16 * c / 255) as u8,
+         (g as u16 * c / 255) as u8,
+         (b as u16 * c / 255) as u8,
          255)
     }
 }

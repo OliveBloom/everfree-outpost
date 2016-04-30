@@ -11,13 +11,26 @@ from outpost_data.core.image2 import loader, Image, Anim
 from outpost_data.outpost.lib.pony_sprite import *
 from outpost_data.outpost.lib.sprite_util import *
 
+import equip_sprites_render
 from equip_sprites_render import Renderer
+
+
+with open(equip_sprites_render.__file__, 'rb') as f:
+    h = hashlib.sha1()
+    while True:
+        b = f.read()
+        if len(b) == 0:
+            break
+        h.update(b)
+    RENDERER_HASH = h.digest()
+
 
 class Context:
     def __init__(self, renderer, json_str, desc):
         self.r = renderer
         self.j = json.loads(json_str)
-        self.desc = (hashlib.sha1(json_str.encode()).digest(), desc)
+        self.desc = (desc, RENDERER_HASH,
+                hashlib.sha1(json_str.encode()).digest())
 
 def render_frame(ctx, base_img, frame_name):
     def f(raw_img):
@@ -47,19 +60,32 @@ def mk_derive_graphics(ctx, base_layer_name):
         return GraphicsDef(new_anim)
     return derive_graphics
 
-def add_equip_layer(layer_name, base_name, json_path):
+def add_equip_layer(layer_name, base_name, json_path, style, style_args):
     r = Renderer()
+    getattr(r, 'set_style_%s' % style)(*style_args)
     with open(json_path) as f:
         json_str = f.read()
-    ctx = Context(r, json_str, ())
+    ctx = Context(r, json_str, (style, style_args))
 
     pony = get_pony_sprite()
     pony.derive_layer(layer_name, base_name,
             mk_derive_graphics(ctx, '%s//%s' % (pony.name, base_name)))
 
+COLORS = [
+        ('red',     (0xcc, 0x44, 0x44)),
+        ('orange',  (0xcc, 0x88, 0x44)),
+        ('yellow',  (0xee, 0xee, 0x44)),
+        ('green',   (0x44, 0xcc, 0x44)),
+        ('blue',    (0x44, 0x44, 0xcc)),
+        ('purple',  (0xcc, 0x44, 0xcc)),
+        ('white',   (0xcc, 0xcc, 0xcc)),
+        ('black',   (0x44, 0x44, 0x44)),
+        ]
+
 def init():
     # TODO: don't hardcode . as $root!
     path = 'assets/sprites/equipment/uvdata-sock-f.json'
 
-    add_equip_layer('f/sock/solid/red', 'f/base', path)
-    add_equip_layer('m/sock/solid/red', 'm/base', path)
+    for name, rgb in COLORS:
+        add_equip_layer('f/sock/solid/%s' % name, 'f/base', path, 'solid', rgb)
+        add_equip_layer('m/sock/solid/%s' % name, 'm/base', path, 'solid', rgb)
