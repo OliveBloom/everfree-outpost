@@ -101,17 +101,19 @@ function asm_draw(ctx, asm) {
     // Lines
     var ptr = asm.get_lines_ptr();
     var len = asm.get_lines_len();
-    var view = new Int32Array(asm.buffer, ptr, len * 4);
+    if (len > 0) {
+        var view = new Int32Array(asm.buffer, ptr, len * 4);
 
-    for (var i = 0; i < view.length; i += 4) {
-        var x0 = view[i + 0];
-        var y0 = view[i + 1];
-        var x1 = view[i + 2];
-        var y1 = view[i + 3];
-        ctx.beginPath();
-        ctx.moveTo(x0 + 0.5, y0 + 0.5);
-        ctx.lineTo(x1 + 0.5, y1 + 0.5);
-        ctx.stroke();
+        for (var i = 0; i < view.length; i += 4) {
+            var x0 = view[i + 0];
+            var y0 = view[i + 1];
+            var x1 = view[i + 2];
+            var y1 = view[i + 3];
+            ctx.beginPath();
+            ctx.moveTo(x0 + 0.5, y0 + 0.5);
+            ctx.lineTo(x1 + 0.5, y1 + 0.5);
+            ctx.stroke();
+        }
     }
 }
 
@@ -189,22 +191,10 @@ function init_sprites(data) {
         }
     }
 
-    update_frames();
+    change_anim_layer();
 }
 
-function get_sprite() {
-    var layer = +$('sel-main-layer').value;
-    var anim = +$('sel-main-anim').value;
-    var anim_local_id = DATA.anims_c[anim].local_id;
-    var layer_data = DATA.layers_c[layer];
-    var gfx = layer_data.start + anim_local_id;
-    return {
-        gfx: DATA.graphics[gfx],
-        anim: DATA.anims_c[anim],
-    };
-}
-
-function update_frames() {
+function change_anim_layer() {
     var old_frame = +$('sel-main-frame').value;
 
     var s = get_sprite();
@@ -252,12 +242,70 @@ function change_frame() {
     ASM.load_sprite(ptr, len);
     ASM.asmmalloc_free(ptr);
 
+    change_part();
+}
+
+function change_part() {
+    load_data(ASM);
+
     request_frame();
 }
 
-$('sel-main-anim').onchange = update_frames;
-$('sel-main-layer').onchange = update_frames;
+$('sel-main-anim').onchange = change_anim_layer;
+$('sel-main-layer').onchange = change_anim_layer;
 $('sel-main-frame').onchange = change_frame;
+$('sel-main-part').onchange = change_part;
+
+
+function get_sprite() {
+    var layer = +$('sel-main-layer').value;
+    var anim = +$('sel-main-anim').value;
+    var anim_local_id = DATA.anims_c[anim].local_id;
+    var layer_data = DATA.layers_c[layer];
+    var gfx = layer_data.start + anim_local_id;
+    return {
+        gfx: DATA.graphics[gfx],
+        anim: DATA.anims_c[anim],
+    };
+}
+
+function current_key() {
+    var layer = DATA.layers_s[+$('sel-main-layer').value].name;
+    var anim = DATA.anims_s[+$('sel-main-anim').value].name;
+    var frame = +$('sel-main-frame').value;
+    var part = +$('sel-main-part').value;
+    return {
+        layer: layer,
+        anim: anim,
+        frame: frame,
+        part: part,
+    };
+}
+
+function key_to_string(k) {
+    return k.layer + '$' + k.anim + '$' + k.frame + '$' + k.part;
+}
+
+
+function save_data(asm) {
+    var ptr = asm.get_mask_ptr();
+    var view = new Uint8Array(asm.buffer, ptr, 96 * 96);
+    var k = key_to_string(current_key());
+    localStorage.setItem(k, view.join(','));
+}
+
+function load_data(asm) {
+    var ptr = asm.get_mask_ptr();
+    var view = new Uint8Array(asm.buffer, ptr, 96 * 96);
+    var k = key_to_string(current_key());
+    var v = localStorage.getItem(k);
+
+    if (v == null) {
+        view.fill(1);   // set all to MASKED
+    } else {
+        view.set(v.split(','));
+    }
+}
 
 
 var DATA = new Data();
@@ -319,15 +367,22 @@ canvas.addEventListener('mousedown', function(evt) {
 canvas.addEventListener('mouseup', function(evt) {
     ASM.handle_mouse_up(evt.offsetX, evt.offsetY);
     request_frame();
+    save_data(ASM);
 });
 
 document.addEventListener('keydown', function(evt) {
-    if (evt.keyCode == 32) {
-        ASM.toggle_mode();
-        request_frame();
-
+    var handled = true;
+    switch (evt.keyCode) {
+        case 'A'.charCodeAt(0): ASM.set_mode(0); break;
+        case 'O'.charCodeAt(0): ASM.set_mode(1); break;
+        case 'E'.charCodeAt(0): ASM.set_mode(2); break;
+        case 'U'.charCodeAt(0): ASM.set_mode(3); break;
+        default: handled = false; break;
+    }
+    if (handled) {
         evt.stopPropagation();
         evt.preventDefault();
+        request_frame();
     }
 });
 

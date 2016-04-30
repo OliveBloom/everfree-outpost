@@ -41,6 +41,11 @@ pub unsafe extern fn get_overlay_ptr() -> *const (u8, u8, u8, u8) {
 }
 
 #[no_mangle]
+pub unsafe extern fn get_mask_ptr() -> *mut u8 {
+    (*STATE).mask.as_mut_ptr() as *mut u8
+}
+
+#[no_mangle]
 pub unsafe extern fn load_sprite(ptr: *const (u8, u8, u8, u8),
                                  len: usize) {
     let slice = slice::from_raw_parts(ptr, len);
