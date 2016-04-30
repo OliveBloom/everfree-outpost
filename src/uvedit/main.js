@@ -278,7 +278,6 @@ function empty_element(elt) {
 
 
 
-
 var ASM = init_asm();
 
 var canvas = document.getElementById('cnv-main');
@@ -332,3 +331,8 @@ document.addEventListener('keydown', function(evt) {
     }
 });
 
+
+$('btn-edit-mesh').onclick = function() { ASM.set_mode(0); };
+$('btn-erase-mask').onclick = function() { ASM.set_mode(1); };
+$('btn-draw-mask').onclick = function() { ASM.set_mode(2); };
+$('btn-border-mask').onclick = function() { ASM.set_mode(3); };

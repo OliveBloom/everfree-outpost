@@ -5,6 +5,7 @@
 #[macro_use] extern crate fakestd as std;
 use std::prelude::v1::*;
 
+#[macro_use] extern crate bitflags;
 extern crate physics;
 
 use std::cmp;
@@ -67,8 +68,8 @@ pub unsafe extern fn handle_mouse_up(x: i32, y: i32) {
 }
 
 #[no_mangle]
-pub unsafe extern fn toggle_mode() {
-    (*STATE).toggle_mode();
+pub unsafe extern fn set_mode(mode: usize) {
+    (*STATE).set_mode(mode);
 }
 
 
@@ -76,19 +77,26 @@ pub unsafe extern fn toggle_mode() {
 enum Action {
     Nothing,
     DragVertex(usize, V2),
-    DrawMask(bool),
-    MaskOutline(bool, V2),
+    DrawMask(MaskBits),
+    MaskOutline(MaskBits, V2),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Mode {
     EditMesh,
-    DrawMask,
+    DrawMask(MaskBits),
+}
+
+bitflags! {
+    flags MaskBits: u8 {
+        const MASKED =      0x01,
+        const NO_BORDER =   0x02,
+    }
 }
 
 pub struct State {
     mesh: Mesh,
-    mask: Vec<bool>,
+    mask: Vec<MaskBits>,
     outline: Vec<bool>,
 
     lines: Vec<(V2, V2)>,
@@ -102,7 +110,7 @@ impl State {
     fn new() -> State {
         State {
             mesh: Mesh::new(),
-            mask: iter::repeat(false)
+            mask: iter::repeat(MASKED)
                       .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
                       .collect(),
             outline: iter::repeat(false)
@@ -111,7 +119,7 @@ impl State {
 
             lines: Vec::new(),
             mouse_pos: scalar(-1),
-            mode: Mode::DrawMask,
+            mode: Mode::DrawMask(MaskBits::empty()),
             action: Action::Nothing,
             overlay: iter::repeat((0, 0, 0, 0))
                          .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
@@ -119,12 +127,14 @@ impl State {
         }
     }
 
-    fn toggle_mode(&mut self) {
-        let new_mode = match self.mode {
-            Mode::EditMesh => Mode::DrawMask,
-            Mode::DrawMask => Mode::EditMesh,
+    fn set_mode(&mut self, mode: usize) {
+        self.mode = match mode {
+            0 => Mode::EditMesh,
+            1 => Mode::DrawMask(MaskBits::empty()),
+            2 => Mode::DrawMask(MASKED),
+            3 => Mode::DrawMask(MASKED | NO_BORDER),
+            _ => panic!("bad mode index")
         };
-        self.mode = new_mode;
     }
 
     fn load_sprite(&mut self, sprite: &[(u8, u8, u8, u8)]) {
@@ -149,7 +159,9 @@ impl State {
 
         for p in bounds.points() {
             let idx = bounds.index(p);
-            if !self.mask[idx] {
+            if self.mask[idx].contains(NO_BORDER) {
+                self.overlay[idx] = (0, 0, 0, 100);
+            } else if self.mask[idx].contains(MASKED) {
                 self.overlay[idx].2 = 255;
                 self.overlay[idx].3 = 100;
             }
@@ -161,10 +173,12 @@ impl State {
             }
         }
 
-        if self.mode == Mode::DrawMask && bounds.contains(mouse_px) {
-            let idx = bounds.index(mouse_px);
-            self.overlay[idx].1 = 255;
-            self.overlay[idx].3 = 100;
+        if let Mode::DrawMask(_) = self.mode {
+            if bounds.contains(mouse_px) {
+                let idx = bounds.index(mouse_px);
+                self.overlay[idx].1 = 255;
+                self.overlay[idx].3 = 100;
+            }
         }
 
         /*
@@ -217,10 +231,9 @@ impl State {
                 }
             },
 
-            Mode::DrawMask => {
+            Mode::DrawMask(val) => {
                 let px_pos = pos.div_floor(scalar(RENDER_SCALE));
                 let idx = Region::sized(scalar(SPRITE_SIZE)).index(px_pos);
-                let val = !self.mask[idx];
                 if shift {
                     //self.floodfill_mask(px_pos, val);
                     self.action = Action::MaskOutline(val, px_pos);
@@ -255,17 +268,18 @@ impl State {
     }
 
 
-    fn floodfill_mask(&mut self, start: V2, val: bool) {
+    fn floodfill_mask(&mut self, start: V2, val: MaskBits) {
         let bounds = Region::sized(scalar(SPRITE_SIZE));
 
         let mut queue = Vec::new();
+        let old_val = self.mask[bounds.index(start)];
         self.mask[bounds.index(start)] = val;
         queue.push(start);
 
         while let Some(cur) = queue.pop() {
             for &(dx, dy) in &[(1, 0), (0, 1), (-1, 0), (0, -1)] {
                 let next = cur + V2::new(dx, dy);
-                if bounds.contains(next) && self.mask[bounds.index(next)] != val {
+                if bounds.contains(next) && self.mask[bounds.index(next)] == old_val {
                     self.mask[bounds.index(next)] = val;
                     queue.push(next);
                 }
