@@ -94,10 +94,13 @@ bitflags! {
     }
 }
 
+const OUTLINE_COLOR: u8 = 180;
+
 pub struct State {
     mesh: Mesh,
     mask: Vec<MaskBits>,
-    outline: Vec<bool>,
+
+    sprite: Vec<u8>,
 
     lines: Vec<(V2, V2)>,
     mouse_pos: V2,
@@ -113,7 +116,7 @@ impl State {
             mask: iter::repeat(MASKED)
                       .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
                       .collect(),
-            outline: iter::repeat(false)
+            sprite: iter::repeat(0)
                          .take((SPRITE_SIZE * SPRITE_SIZE) as usize)
                          .collect(),
 
@@ -141,14 +144,14 @@ impl State {
         assert!(sprite.len() == (SPRITE_SIZE * SPRITE_SIZE) as usize);
         for i in 0 .. sprite.len() {
             let (r,g,b,a) = sprite[i];
-            self.outline[i] = a == 255 && r == 180;
+            self.sprite[i] = if a == 255 { r } else { 255 };
         }
     }
 
     fn update(&mut self) {
         self.lines.clear();
-        self.mesh.draw(self.mouse_pos,
-                       &mut self.lines);
+        //self.mesh.draw(self.mouse_pos,
+        //               &mut self.lines);
 
         for c in &mut self.overlay {
             *c = (0, 0, 0, 0);
@@ -273,6 +276,11 @@ impl State {
 
         let mut queue = Vec::new();
         let old_val = self.mask[bounds.index(start)];
+        if old_val == val {
+            return;
+            // (Otherwise we would loop forever, because we detect unvisited squares by
+            // `mask[i] == old_val`.)
+        }
         self.mask[bounds.index(start)] = val;
         queue.push(start);
 
@@ -318,7 +326,7 @@ impl State {
             for &(dx, dy) in &[(1, 0), (0, 1), (-1, 0), (0, -1),
                                (1, 1), (1, -1), (-1, 1), (-1, -1)] {
                 let next = cur + V2::new(dx, dy);
-                if bounds.contains(next) && self.outline[bounds.index(next)] {
+                if bounds.contains(next) && self.sprite[bounds.index(next)] == OUTLINE_COLOR {
                     queue.push_back((next, Some(cur)));
                 }
             }
