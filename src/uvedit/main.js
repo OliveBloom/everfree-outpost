@@ -308,6 +308,18 @@ function load_data(asm) {
 }
 
 
+function export_data() {
+    var result = {};
+    for (var i = 0; i < localStorage.length; ++i) {
+        var k = localStorage.key(i);
+        if (k.indexOf('$') != -1) {
+            result[k] = localStorage.getItem(k);
+        }
+    }
+    return JSON.stringify(result);
+}
+
+
 var DATA = new Data();
 DATA.callback = init_sprites;
 DATA.loadJson('anims_s', 'animations_server.json')
@@ -391,3 +403,20 @@ $('btn-edit-mesh').onclick = function() { ASM.set_mode(0); };
 $('btn-erase-mask').onclick = function() { ASM.set_mode(1); };
 $('btn-draw-mask').onclick = function() { ASM.set_mode(2); };
 $('btn-border-mask').onclick = function() { ASM.set_mode(3); };
+
+$('btn-export').onclick = function() {
+    var data = export_data();
+    var blob = new Blob([data]);
+    var url = URL.createObjectURL(blob);
+
+    console.log(url);
+
+    var a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'uvedit_data.json');
+    document.body.appendChild(a);
+    a.textContent = 'Download';
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(data);
+};
