@@ -1,6 +1,7 @@
 [multi_item cave/chest]
 *cave/chest/small
 (10%) *cave/chest/large
+(10%) *random_socks
 
 [choose_item cave/chest/small]
 (1) 80-120 stone
@@ -42,16 +43,17 @@
 
 [multi_item dungeon/chest/small]
 *dungeon/chest/small/loot
-(10%) *dungeon/chest/large
+(20%) *dungeon/chest/large
 
 [choose_item dungeon/chest/small/loot]
 (4) 8-12 book
 (6) fountain
+(1) trophy
 
 [choose_item dungeon/chest/large]
 (2) *random_hat
-(1) trophy
 (2) *random_blueprint
+(6) *random_socks
 
 
 [choose_item random_blueprint]
@@ -60,6 +62,16 @@
 
 [choose_item random_hat]
 (1) hat
+
+[choose_item random_socks]
+(1) socks/solid/red
+(1) socks/solid/orange
+(1) socks/solid/yellow
+(1) socks/solid/green
+(1) socks/solid/blue
+(1) socks/solid/purple
+(1) socks/solid/white
+(1) socks/solid/black
 
 
 [choose_structure no_structure]
