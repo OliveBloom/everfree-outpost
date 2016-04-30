@@ -295,6 +295,7 @@ fn for_each_layer<F: FnMut(usize, (u8, u8, u8))>(appearance: u32, mut f: F) {
     let mane = (appearance >> MANE_SHIFT) & 7;
     let tail = (appearance >> TAIL_SHIFT) & 7;
     let equip0 = (appearance >> EQUIP0_SHIFT) & 15;
+    let equip1 = (appearance >> EQUIP1_SHIFT) & 15;
 
     let tint0 = (COLOR_TABLE[red + 1],
                  COLOR_TABLE[green + 1],
@@ -314,6 +315,9 @@ fn for_each_layer<F: FnMut(usize, (u8, u8, u8))>(appearance: u32, mut f: F) {
         go(3, tint1);
     }
     go(0, tint1); // base
+    if equip1 != 0 {
+        go(15 + equip1 as usize - 1, white);    // socks
+    }
     if wings {
         go(2, tint1);
     }

@@ -98,10 +98,14 @@ def init():
 
     for name, rgb in COLORS:
         for sex in ('m', 'f'):
-            add_equip_layer('%s/sock/solid/%s' % (sex, name), '%s/base' % sex,
+            add_equip_layer('%s/socks/solid/%s' % (sex, name), '%s/base' % sex,
                     path, 'solid', rgb)
 
-        ITEM.new('sock/solid/%s' % name) \
-                .display_name('%s%s Sock' % (name[0].upper(), name[1:])) \
+        ITEM.new('socks/solid/%s' % name) \
+                .display_name('%s%s Socks' % (name[0].upper(), name[1:])) \
                 .icon(multiply_image(icon, rgb + (255,)))
+
+    ITEM.new('ability/remove_socks') \
+            .display_name('Remove Socks') \
+            .icon(load('icons/remove-socks.png'))
 

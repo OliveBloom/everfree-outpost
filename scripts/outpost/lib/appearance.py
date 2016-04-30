@@ -61,6 +61,31 @@ def set_hat(e, name):
     e.set_appearance(new_a)
 
 
+SOCKS_BASE = 22
+SOCKS_BITS = 4
+SOCKS_MASK = _mask(SOCKS_BASE, SOCKS_BITS)
+
+COLORS = [
+        'red',
+        'orange',
+        'yellow',
+        'green',
+        'blue',
+        'purple',
+        'white',
+        'black',
+        ]
+SOCKS_TABLE = [None] + ['socks/solid/%s' % c for c in COLORS]
+
+def set_socks(e, name):
+    old_a = e.appearance()
+
+    socks_id = SOCKS_TABLE.index(name)
+
+    new_a = (old_a & ~SOCKS_MASK) | (socks_id << SOCKS_BASE)
+    e.set_appearance(new_a)
+
+
 LIGHT_BASE = 9
 LIGHT_MASK = 1 << LIGHT_BASE
 

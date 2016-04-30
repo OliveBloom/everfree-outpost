@@ -9,6 +9,7 @@ from . import emote
 from . import hat
 from . import misc
 from . import sign
+from . import socks
 from . import structure_items
 from . import teleporter
 from . import tools

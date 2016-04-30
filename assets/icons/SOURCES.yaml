@@ -46,6 +46,8 @@ blueprint.png:
     derived-from: williamson-roguelike-items
     attribution: Page/note icon, recolored to look like a blueprint
 
-socks.png:
+socks.png: &socks
     title: Socks Icon
     author: Stuart Pernsteiner
+
+remove-socks.png: *socks

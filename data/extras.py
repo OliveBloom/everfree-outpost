@@ -60,20 +60,31 @@ def gen_pony_bases_table(maps):
         result.append(row)
     return result
 
+COLORS = [
+        'red',
+        'orange',
+        'yellow',
+        'green',
+        'blue',
+        'purple',
+        'white',
+        'black',
+        ]
+
 def gen_pony_layer_table(maps):
     p = pony(maps)
     result = []
     for layer in ('base', 'horn', 'frontwing', 'backwing', 'eyes1',
             'mane/1', 'mane/2', 'mane/3',
             'tail/1', 'tail/2', 'tail/3',
-            'sock/solid/red', 'hat/santa', 'hat/witch', 'hat/explorer'):
-            #'hat/party', 'hat/santa', 'hat/witch', 'hat/explorer'):
+            'hat/party', 'hat/santa', 'hat/witch', 'hat/explorer') + \
+            tuple('socks/solid/%s' % c for c in COLORS):
         for sex in 'fm':
             try:
                 l = p.get_layer('%s/%s' % (sex, layer))
+                result.append(l.id)
             except KeyError:
-                continue
-            result.append(l.id)
+                result.append(255)
     return result
 
 def init():
