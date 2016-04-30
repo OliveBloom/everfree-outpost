@@ -188,6 +188,10 @@ if __name__ == '__main__':
         dist_extra.append(('server_gui.py', '$root/util/server_gui.py'))
 
     content = header(i)
+    content += '\n\n'.join((
+        '',
+        dist.rules(i),
+        ))
 
     if not i.data_only:
         content += '\n\n'.join((
@@ -251,6 +255,12 @@ if __name__ == '__main__':
                 '$b_native/outpost_savegame$_so '
                 '$b_native/outpost_terrain_gen$_so',
 
+            native.rust('equip_sprites_render', 'dylib',
+                    ('physics',),
+                    src_file='$root/src/gen/equip_sprites/render.rs'),
+            dist.copy('$b_native/libequip_sprites_render$_so',
+                      '$b_native/equip_sprites_render$_so'),
+
             '# Asm.js',
             asmjs.rules(i),
             asmjs.rlib('core', (), i.rust_libcore_src),
@@ -313,7 +323,7 @@ if __name__ == '__main__':
         scripts.copy_mod_scripts(i.mod_list),
 
         '# Distribution',
-        dist.rules(i),
+        # dist rules go at the top so other parts can refer to `dist.copy`
         dist.from_manifest(common_manifest, dist_manifest,
                 filter_path=maybe_data_filter,
                 exclude_names=i.use_prebuilt,

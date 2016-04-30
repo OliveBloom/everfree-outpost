@@ -32,25 +32,27 @@ def rules(i):
         # depfile line order from rustc.
         # NB: If you remove the sed commands here, also remove the ones in asmjs.py
         rule rustc_native_bin
-            command = %rustc_base --crate-type=bin $rustflags_lto $rustflags $
+            command = %rustc_base --crate-name=$crate_name --crate-type=bin $
+                $rustflags_lto $rustflags $
                 && sed -i -e '\\,^$out: ,p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
         rule rustc_native_lib
-            command = %rustc_base --crate-type=lib $rustflags $
+            command = %rustc_base --crate-name=$crate_name --crate-type=lib $rustflags $
                 && sed -i -e '\\,^$out: ,p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
         rule rustc_native_dylib
-            command = %rustc_base --crate-type=dylib $rustflags $
+            command = %rustc_base --crate-name=$crate_name --crate-type=dylib $rustflags $
                 && sed -i -e '\\,^$out: ,p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out
 
         rule rustc_native_staticlib
-            command = %rustc_base --crate-type=staticlib $rustflags_lto $rustflags $
+            command = %rustc_base --crate-name=$crate_name --crate-type=staticlib $
+                $rustflags_lto $rustflags $
                 && sed -i -e '\\,^$out: ,p;d' $b_native/$crate_name.d
             depfile = $b_native/$crate_name.d
             description = RUSTC $out

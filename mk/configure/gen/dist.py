@@ -101,3 +101,8 @@ def from_manifest(common_path, extra_path, filter_path=None, exclude_names=None,
     ''', **locals())
 
     return '\n\n'.join(builds)
+
+def copy(src, dest):
+    return template('''
+        build %dest: copy_file %src
+    ''', **locals())
