@@ -116,6 +116,14 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.invalidate_structure_light_geometry();
     }
 
+    pub fn reset_renderer(&mut self) {
+        self.platform.gl().havoc();
+        self.renderer = Renderer::new(self.platform.gl());
+        self.renderer.invalidate_terrain_geometry();
+        self.renderer.invalidate_structure_geometry();
+        self.renderer.invalidate_structure_light_geometry();
+    }
+
     // Terrain chunk tracking
 
     pub fn load_terrain_chunk(&mut self, cpos: V2, data: &[u16]) {

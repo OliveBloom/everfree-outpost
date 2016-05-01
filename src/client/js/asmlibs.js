@@ -655,19 +655,52 @@ DynAsm.prototype.bench = function() {
 };
 
 
-DynAsm.prototype.debugExport = function() {
-    // Convert heap contents into a Blob
-    var b = new Blob([this.buffer]);
+function downloadArray(arr, name) {
+    var b = new Blob([arr]);
     var url = window.URL.createObjectURL(b);
 
     var a = document.createElement('a');
     console.log(url);
     a.setAttribute('href', url);
-    a.setAttribute('download', 'outpost_heap.dat');
+    a.setAttribute('download', name);
     console.log('clicking...');
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+DynAsm.prototype.debugExport = function() {
+    downloadArray(this.buffer, 'outpost_heap.dat');
+};
+
+DynAsm.prototype.debugImport = function() {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'file');
+
+    var this_ = this;
+
+    input.onchange = function(evt) {
+        if (input.files.length != 1) {
+            return;
+        }
+        var f = input.files[0];
+        var reader = new FileReader();
+        reader.onloadend = function(evt) {
+            var src = new Uint8Array(reader.result);
+            var dest = new Uint8Array(this_.buffer);
+            dest.set(src);
+
+            window['ASMGL_LOG'] = true;
+
+            this_._raw['client_reset_renderer'](this_.client);
+            this_._raw['resize_window'](this_.client, window.innerWidth, window.innerHeight);
+        };
+        reader.readAsArrayBuffer(f);
+    };
+
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
 };
 
 

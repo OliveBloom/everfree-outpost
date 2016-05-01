@@ -10,6 +10,7 @@ asmlibs_init
 data_init
 client_init
 client_reset
+client_reset_renderer
 structure_appear
 structure_gone
 structure_replace

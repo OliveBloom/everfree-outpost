@@ -76,6 +76,11 @@ pub unsafe extern fn client_reset(client: &mut Client) {
     client.reset_all();
 }
 
+#[no_mangle]
+pub unsafe extern fn client_reset_renderer(client: &mut Client) {
+    client.reset_renderer();
+}
+
 // Chunks
 
 #[no_mangle]

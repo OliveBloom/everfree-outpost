@@ -447,7 +447,11 @@ function setupKeyHandler() {
                     $('key-list').classList.toggle('hidden', !show);
                     break;
                 case 'debug_test':
-                    asm_client.debugExport();
+                    if (!evt.shiftKey) {
+                        asm_client.debugExport();
+                    } else {
+                        asm_client.debugImport();
+                    }
                     break;
                 case 'chat':
                     chat.startTyping(keyboard, conn, '');
