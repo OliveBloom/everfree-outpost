@@ -106,7 +106,6 @@ function init() {
     music_test = new MusicTest();
 
     input = new Input();
-    input.handlers.push(new AsmClientInput(asm_client));
 
     canvas.canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -128,6 +127,10 @@ function init() {
     checkBrowser(dialog, function() {
         loadAssets(function() {
             asm_client.initClient(canvas.ctx, assets);
+
+            // Don't handle any input until the client is inited.
+            keyboard.attach(document);
+            input.handlers.push(new AsmClientInput(asm_client));
 
             // This should only happen after client init.
             function doResize() {
@@ -279,7 +282,6 @@ function maybeRegister(info, next) {
 // Initialization helpers
 
 function buildUI() {
-    keyboard.attach(document);
     input.attach(document);
     setupKeyHandler();
 

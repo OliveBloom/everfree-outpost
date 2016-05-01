@@ -437,6 +437,8 @@ DynAsm.prototype.initClient = function(gl, assets) {
 
     this.client = this._raw['asmmalloc_alloc'](this.SIZEOF.Client, this.SIZEOF.ClientAlignment);
     this._raw['client_init'](this.data, this.client);
+
+    console.log(' -- CLIENT INIT -- ');
 };
 
 DynAsm.prototype.resetClient = function() {
