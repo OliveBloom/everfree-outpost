@@ -162,7 +162,8 @@ PackReader.prototype._startReadImage = function(entry) {
 
 PackReader.prototype._finishReadImage = function(name, img) {
     this.assets[name] = img;
-    img.onloadend = null;
+    img.onload = null;
+    img.onerror = null;
     this._finishReadItem();
 };
 
