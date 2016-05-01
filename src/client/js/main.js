@@ -447,7 +447,7 @@ function setupKeyHandler() {
                     $('key-list').classList.toggle('hidden', !show);
                     break;
                 case 'debug_test':
-                    window.hideUI = !window.hideUI;
+                    asm_client.debugExport();
                     break;
                 case 'chat':
                     chat.startTyping(keyboard, conn, '');

@@ -655,6 +655,22 @@ DynAsm.prototype.bench = function() {
 };
 
 
+DynAsm.prototype.debugExport = function() {
+    // Convert heap contents into a Blob
+    var b = new Blob([this.buffer]);
+    var url = window.URL.createObjectURL(b);
+
+    var a = document.createElement('a');
+    console.log(url);
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'outpost_heap.dat');
+    console.log('clicking...');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+};
+
+
 /** @constructor */
 function AsmClientInput(asm) {
     this._asm = asm;
