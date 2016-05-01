@@ -371,6 +371,8 @@ DynAsm.prototype._calcSizeof = function() {
     console.assert(index == EXPECT_SIZES,
             'some items were left over after building sizeof', index, EXPECT_SIZES);
 
+    this._stackFree(sizes);
+
     return result;
 };
 
