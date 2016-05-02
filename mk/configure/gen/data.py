@@ -99,6 +99,10 @@ def process():
     data_files.append('loot_tables_server.json')
     data_files.append('extras_client.json')
 
+    # `sprites0.png` is explicitly mentioned in the manifest, to be copied to
+    # the uvedit directory.
+    data_files.append('sprites/sprites0.png')
+
     deps = [
             '$root/src/gen/data_main.py',
             # Name font is embedded into the sprite sheet
