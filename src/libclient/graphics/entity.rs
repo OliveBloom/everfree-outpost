@@ -273,7 +273,8 @@ fn count_layers(appearance: u32) -> usize {
     count += 3;     // mane + tail + eyes
     if (appearance >> EQUIP0_SHIFT) & 0xf != 0 { count += 1; }  // equip0
     if (appearance >> EQUIP1_SHIFT) & 0xf != 0 { count += 1; }  // equip1
-    if (appearance >> EQUIP2_SHIFT) & 0xf != 0 { count += 1; }  // equip2
+    // equip2 is not actually used yet.
+    //if (appearance >> EQUIP2_SHIFT) & 0xf != 0 { count += 1; }  // equip2
     count
 }
 
