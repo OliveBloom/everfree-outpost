@@ -22,6 +22,7 @@
     <body>
         <div class='flex-row'>
             <div>
+                <!-- left pane -->
                 <div>
                     Layer: <select id='sel-main-layer'></select>
                     &mdash;
@@ -50,13 +51,27 @@
             </div>
             <div class='flex-col'>
                 <div>
+                    <!-- upper right pane -->
                     <div>
-                        Anim: (TODO) &mdash; Frame: (TODO)
+                        Layer: <select id='sel-ref-layer'></select>
+                        &mdash;
+                        Anim: <select id='sel-ref-anim'></select>
+                        &mdash;
+                        Frame: <select id='sel-ref-frame'></select>
+                        &mdash;
+                        Part:
+                        <select id='sel-ref-part'>
+                            <option value='*'>*</option>
+                            <option value='0'>1</option>
+                            <option value='1'>2</option>
+                            <option value='2'>3</option>
+                            <option value='3'>4</option>
+                        </select>
                     </div>
                     <canvas id='cnv-ref' width='384' height='384'></canvas>
                 </div>
                 <div>
-                    Blah blah
+                    <!-- lower right pane -->
                 </div>
             </div>
         </div>

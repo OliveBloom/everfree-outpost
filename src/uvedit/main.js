@@ -66,56 +66,283 @@ function init_asm() {
     return asm
 }
 
-var overlay = document.createElement('canvas');
-overlay.width = 96;
-overlay.height = 96;
-var overlay_ctx = overlay.getContext('2d');
 
-function asm_draw(ctx, asm) {
+
+
+// Viewport
+
+function Viewport(side, parent_) {
+    this.side = side;
+    this.parent_ = parent_;
+    this.children = [];
+    if (parent_) {
+        parent_.children.push(this);
+    }
+
+    this.canvas = $('cnv-' + side);
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.mozImageSmoothingEnabled = false;
+    this.scale = this.canvas.width / 96;
+
+    this.overlay = document.createElement('canvas');
+    this.overlay.width = 96;
+    this.overlay.height = 96;
+    this.overlay_ctx = this.overlay.getContext('2d');
+
+    this.asm = init_asm();
+
+    this.frame_pending = false;
+
+    this.init_dropdown_callbacks();
+}
+
+// Utility
+
+Viewport.prototype.get_value = function(name) {
+    var val = $('sel-' + this.side + '-' + name).value;
+    if (val == '*') {
+        val = this.parent_.get_value(name);
+    }
+    return +val;
+};
+
+Viewport.prototype.get_sprite = function() {
+    var layer = this.get_value('layer');
+    var anim = this.get_value('anim');
+    var anim_local_id = DATA.anims_c[anim].local_id;
+    var layer_data = DATA.layers_c[layer];
+    var gfx = layer_data.start + anim_local_id;
+    return {
+        gfx: DATA.graphics[gfx],
+        anim: DATA.anims_c[anim],
+    };
+};
+
+Viewport.prototype.current_key = function() {
+    var layer = DATA.layers_s[this.get_value('layer')].name;
+    var anim = DATA.anims_s[this.get_value('anim')].name;
+    var frame = this.get_value('frame');
+    var part = this.get_value('part');
+    return {
+        layer: layer,
+        anim: anim,
+        frame: frame,
+        part: part,
+    };
+};
+
+function key_to_string(k) {
+    return k.layer + '$' + k.anim + '$' + k.frame + '$' + k.part;
+}
+
+// Rendering
+
+Viewport.prototype.request_frame = function() {
+    if (!this.frame_pending) {
+        this.frame_pending = true;
+        var this_ = this;
+        window.requestAnimationFrame(function() { this_.frame(); });
+    }
+};
+
+Viewport.prototype.frame = function() {
+    this.frame_pending = false;
+    this.asm.update();
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
     if (DATA.ready) {
         // Sprite
-        var s = get_sprite();
-        var frame = +$('sel-main-frame').value;
+        var s = this.get_sprite();
+        var frame = this.get_value('frame');
         var sx = s.gfx.src_offset[0] + frame * s.gfx.size[0];
         var sy = s.gfx.src_offset[1];
-        var dx = s.gfx.dest_offset[0] * 8;
-        var dy = s.gfx.dest_offset[1] * 8;
+        var dx = s.gfx.dest_offset[0] * this.scale;
+        var dy = s.gfx.dest_offset[1] * this.scale;
         var size_x = s.gfx.size[0];
         var size_y = s.gfx.size[1];
 
-        ctx.drawImage(DATA.img,
+        this.ctx.drawImage(DATA.img,
                 sx, sy, size_x, size_y,
-                dx, dy, size_x * 8, size_y * 8);
+                dx, dy, size_x * this.scale, size_y * this.scale);
     }
 
     // Overlay
-    var ptr = asm.get_overlay_ptr();
+    var ptr = this.asm.get_overlay_ptr();
     var len = 96 * 96;
-    var view = new Uint8ClampedArray(asm.buffer, ptr, len * 4);
+    var view = new Uint8ClampedArray(this.asm.buffer, ptr, len * 4);
 
     var idat = new ImageData(view, 96, 96);
-    overlay_ctx.putImageData(idat, 0, 0);
+    this.overlay_ctx.putImageData(idat, 0, 0);
 
-    ctx.drawImage(overlay, 0, 0, 96, 96, 0, 0, 768, 768);
+    this.ctx.drawImage(this.overlay,
+            0, 0, 96, 96, 0, 0, this.canvas.width, this.canvas.height);
 
     // Lines
-    var ptr = asm.get_lines_ptr();
-    var len = asm.get_lines_len();
+    var ptr = this.asm.get_lines_ptr();
+    var len = this.asm.get_lines_len();
     if (len > 0) {
-        var view = new Int32Array(asm.buffer, ptr, len * 4);
+        var view = new Int32Array(this.asm.buffer, ptr, len * 4);
 
         for (var i = 0; i < view.length; i += 4) {
             var x0 = view[i + 0];
             var y0 = view[i + 1];
             var x1 = view[i + 2];
             var y1 = view[i + 3];
-            ctx.beginPath();
-            ctx.moveTo(x0 + 0.5, y0 + 0.5);
-            ctx.lineTo(x1 + 0.5, y1 + 0.5);
-            ctx.stroke();
+            this.ctx.beginPath();
+            this.ctx.moveTo(x0 + 0.5, y0 + 0.5);
+            this.ctx.lineTo(x1 + 0.5, y1 + 0.5);
+            this.ctx.stroke();
         }
     }
+};
+
+// Save/load
+
+Viewport.prototype.save_data = function() {
+    var ptr = this.asm.get_mask_ptr();
+    var view = new Uint8Array(this.asm.buffer, ptr, 96 * 96);
+    var k = key_to_string(this.current_key());
+    var s = '';
+    for (var i = 0; i < view.length; ++i) {
+        s += String.fromCharCode(view[i]);
+    }
+    var v = btoa(s);
+    localStorage.setItem(k, v);
+};
+
+Viewport.prototype.load_data = function() {
+    var ptr = this.asm.get_mask_ptr();
+    var view = new Uint8Array(this.asm.buffer, ptr, 96 * 96);
+    var k = key_to_string(this.current_key());
+    var v = localStorage.getItem(k);
+    if (v == null) {
+        view.fill(1);   // set all to MASKED
+    } else {
+        var s = atob(v);
+        for (var i = 0; i < s.length; ++i) {
+            view[i] = s.charCodeAt(i);
+        }
+    }
+};
+
+// Dropdowns
+
+function empty_element(elt) {
+    while (elt.lastElementChild != null) {
+        elt.removeChild(elt.lastElementChild);
+    }
 }
+
+function mk_option(name, value) {
+    var opt = document.createElement('option');
+    opt.setAttribute('value', '' + value);
+    opt.textContent = name;
+    return opt;
+}
+
+Viewport.prototype.update_select = function(name, opts) {
+    var sel = $('sel-' + this.side + '-' + name);
+
+    var old_val = sel.value;
+
+    empty_element(sel);
+    if (this.parent_) {
+        console.log(this.side, name, 'has parent', this.parent_);
+        sel.appendChild(mk_option('*', '*'));
+    }
+    for (var i = 0; i < opts.length; ++i) {
+        sel.appendChild(opts[i]);
+    }
+
+    sel.value = old_val;
+    sel.value = sel.value || '*';
+    sel.value = sel.value || opts[0].value;
+};
+
+Viewport.prototype.init_sprites = function(data) {
+    var opts = [];
+    for (var i = 0; i < data.layers_s.length; ++i) {
+        var name = data.layers_s[i].name;
+        if (name.startsWith('pony//') && name.indexOf('base') != -1) {
+            opts.push(mk_option(name, i));
+        }
+    }
+    this.update_select('layer', opts);
+
+    var opts = [];
+    for (var i = 0; i < data.anims_s.length; ++i) {
+        var name = data.anims_s[i].name;
+        if (name.startsWith('pony//')) {
+            opts.push(mk_option(name, i));
+        }
+    }
+    this.update_select('anim', opts);
+
+    this.change_anim_layer();
+};
+
+Viewport.prototype.change_anim_layer = function() {
+    var s = this.get_sprite();
+
+    var opts = [];
+    for (var i = 0; i < s.anim.length; ++i) {
+        opts.push(mk_option(i + 1, i));
+    }
+    this.update_select('frame', opts);
+
+    this.change_frame();
+};
+
+Viewport.prototype.change_frame = function() {
+    // Load sprite data into ASM
+    var s = this.get_sprite();
+    var frame = this.get_value('frame');
+    var sx = s.gfx.src_offset[0] + frame * s.gfx.size[0];
+    var sy = s.gfx.src_offset[1];
+    var dx = s.gfx.dest_offset[0];
+    var dy = s.gfx.dest_offset[1];
+    var size_x = s.gfx.size[0];
+    var size_y = s.gfx.size[1];
+
+    this.overlay_ctx.clearRect(0, 0, 96, 96);
+    this.overlay_ctx.drawImage(DATA.img,
+            sx, sy, size_x, size_y,
+            dx, dy, size_x, size_y);
+    var idat = this.overlay_ctx.getImageData(0, 0, 96, 96);
+
+    var len = idat.width * idat.height;
+    var ptr = this.asm.asmmalloc_alloc(len * 4, 4);
+    var view = new Uint8ClampedArray(this.asm.buffer, ptr, len * 4);
+    view.set(idat.data);
+    this.asm.load_sprite(ptr, len);
+    this.asm.asmmalloc_free(ptr);
+
+    this.change_part();
+};
+
+Viewport.prototype.change_part = function() {
+    this.load_data();
+    this.request_frame();
+    for (var i = 0; i < this.children.length; ++i) {
+        this.children[i].change_part();
+    }
+};
+
+Viewport.prototype.init_dropdown_callbacks = function() {
+    var this_ = this;
+    $('sel-' + this.side + '-anim').onchange =
+        function() { this_.change_anim_layer(); };
+    $('sel-' + this.side + '-layer').onchange =
+        function() { this_.change_anim_layer(); };
+    $('sel-' + this.side + '-frame').onchange =
+        function() { this_.change_frame(); };
+    $('sel-' + this.side + '-part').onchange =
+        function() { this_.change_part(); };
+};
+
+
+
 
 
 function Data() {
@@ -164,171 +391,16 @@ Data.prototype.loadImage = function(key, url) {
 };
 
 
-function init_sprites(data) {
-    empty_element($('sel-main-layer'));
-    for (var i = 0; i < data.layers_s.length; ++i) {
-        var name = data.layers_s[i].name;
-        if (name.startsWith('pony//') && name.indexOf('base') != -1) {
-            var opt = document.createElement('option');
-            opt.setAttribute('value', '' + i);
-            opt.textContent = name;
-            $('sel-main-layer').appendChild(opt);
-        }
-    }
-
-    empty_element($('sel-main-anim'));
-    for (var i = 0; i < data.anims_s.length; ++i) {
-        var name = data.anims_s[i].name;
-        if (name.startsWith('pony//')) {
-            var opt = document.createElement('option');
-            opt.setAttribute('value', '' + i);
-            opt.textContent = name;
-            $('sel-main-anim').appendChild(opt);
-
-            if (name == 'pony//stand-0') {
-                $('sel-main-anim').value = '' + i;
-            }
-        }
-    }
-
-    change_anim_layer();
-}
-
-function change_anim_layer() {
-    var old_frame = +$('sel-main-frame').value;
-
-    var s = get_sprite();
-
-    empty_element($('sel-main-frame'));
-    console.log(s, s.anim.length);
-    for (var i = 0; i < s.anim.length; ++i) {
-        console.log(i);
-        var opt = document.createElement('option');
-        opt.setAttribute('value', '' + i);
-        opt.textContent = '' + (i + 1);
-        $('sel-main-frame').appendChild(opt);
-
-        if (i == old_frame) {
-            $('sel-main-frame').value = '' + i;
-        }
-    }
-
-    change_frame();
-}
-
-function change_frame() {
-    // TODO: save/load mesh data
-
-    // Load sprite data into ASM
-    var s = get_sprite();
-    var frame = +$('sel-main-frame').value;
-    var sx = s.gfx.src_offset[0] + frame * s.gfx.size[0];
-    var sy = s.gfx.src_offset[1];
-    var dx = s.gfx.dest_offset[0];
-    var dy = s.gfx.dest_offset[1];
-    var size_x = s.gfx.size[0];
-    var size_y = s.gfx.size[1];
-
-    overlay_ctx.clearRect(0, 0, 96, 96);
-    overlay_ctx.drawImage(DATA.img,
-            sx, sy, size_x, size_y,
-            dx, dy, size_x, size_y);
-    var idat = overlay_ctx.getImageData(0, 0, 96, 96);
-
-    var len = idat.width * idat.height;
-    var ptr = ASM.asmmalloc_alloc(len * 4, 4);
-    var view = new Uint8ClampedArray(ASM.buffer, ptr, len * 4);
-    view.set(idat.data);
-    ASM.load_sprite(ptr, len);
-    ASM.asmmalloc_free(ptr);
-
-    change_part();
-}
-
-function change_part() {
-    load_data(ASM);
-
-    request_frame();
-}
-
-$('sel-main-anim').onchange = change_anim_layer;
-$('sel-main-layer').onchange = change_anim_layer;
-$('sel-main-frame').onchange = change_frame;
-$('sel-main-part').onchange = change_part;
 
 
-function get_sprite() {
-    var layer = +$('sel-main-layer').value;
-    var anim = +$('sel-main-anim').value;
-    var anim_local_id = DATA.anims_c[anim].local_id;
-    var layer_data = DATA.layers_c[layer];
-    var gfx = layer_data.start + anim_local_id;
-    return {
-        gfx: DATA.graphics[gfx],
-        anim: DATA.anims_c[anim],
-    };
-}
-
-function current_key() {
-    var layer = DATA.layers_s[+$('sel-main-layer').value].name;
-    var anim = DATA.anims_s[+$('sel-main-anim').value].name;
-    var frame = +$('sel-main-frame').value;
-    var part = +$('sel-main-part').value;
-    return {
-        layer: layer,
-        anim: anim,
-        frame: frame,
-        part: part,
-    };
-}
-
-function key_to_string(k) {
-    return k.layer + '$' + k.anim + '$' + k.frame + '$' + k.part;
-}
-
-
-function save_data(asm) {
-    var ptr = asm.get_mask_ptr();
-    var view = new Uint8Array(asm.buffer, ptr, 96 * 96);
-    var k = key_to_string(current_key());
-    var s = '';
-    for (var i = 0; i < view.length; ++i) {
-        s += String.fromCharCode(view[i]);
-    }
-    var v = btoa(s);
-    localStorage.setItem(k, v);
-}
-
-function load_data(asm) {
-    var ptr = asm.get_mask_ptr();
-    var view = new Uint8Array(asm.buffer, ptr, 96 * 96);
-    var k = key_to_string(current_key());
-    var v = localStorage.getItem(k);
-    if (v == null) {
-        view.fill(1);   // set all to MASKED
-    } else {
-        var s = atob(v);
-        for (var i = 0; i < s.length; ++i) {
-            view[i] = s.charCodeAt(i);
-        }
-    }
-}
-
-
-function export_data() {
-    var result = {};
-    for (var i = 0; i < localStorage.length; ++i) {
-        var k = localStorage.key(i);
-        if (k.indexOf('$') != -1) {
-            result[k] = localStorage.getItem(k);
-        }
-    }
-    return JSON.stringify(result);
-}
-
+var MAIN = new Viewport('main');
+var REF = new Viewport('ref', MAIN);
 
 var DATA = new Data();
-DATA.callback = init_sprites;
+DATA.callback = function() {
+    MAIN.init_sprites(DATA);
+    REF.init_sprites(DATA);
+};
 DATA.loadJson('anims_s', 'animations_server.json')
 DATA.loadJson('anims_c', 'animations_client.json')
 DATA.loadJson('layers_s', 'sprite_layers_server.json')
@@ -337,65 +409,31 @@ DATA.loadJson('graphics', 'sprite_graphics_client.json')
 DATA.loadImage('img', 'sprites0.png')
 
 
-function empty_element(elt) {
-    while (elt.lastElementChild != null) {
-        elt.removeChild(elt.lastElementChild);
-    }
-}
 
 
-
-var ASM = init_asm();
-
-var canvas = document.getElementById('cnv-main');
-var ctx = canvas.getContext('2d');
-ctx.imageSmoothingEnabled = false;
-ctx.mozImageSmoothingEnabled = false;
-console.log(ctx);
-ASM.update();
-asm_draw(ctx, ASM);
-
-
-var frame_pending = false;
-
-function frame() {
-    frame_pending = false;
-    ASM.update();
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    asm_draw(ctx, ASM);
-}
-
-function request_frame() {
-    if (!frame_pending) {
-        frame_pending = true;
-        window.requestAnimationFrame(frame);
-    }
-}
-
-
-canvas.addEventListener('mousemove', function(evt) {
-    ASM.handle_mouse_move(evt.offsetX, evt.offsetY);
-    request_frame();
+MAIN.canvas.addEventListener('mousemove', function(evt) {
+    MAIN.asm.handle_mouse_move(evt.offsetX, evt.offsetY);
+    MAIN.request_frame();
 });
 
-canvas.addEventListener('mousedown', function(evt) {
-    ASM.handle_mouse_down(evt.offsetX, evt.offsetY, evt.shiftKey);
-    request_frame();
+MAIN.canvas.addEventListener('mousedown', function(evt) {
+    MAIN.asm.handle_mouse_down(evt.offsetX, evt.offsetY, evt.shiftKey);
+    MAIN.request_frame();
 });
 
-canvas.addEventListener('mouseup', function(evt) {
-    ASM.handle_mouse_up(evt.offsetX, evt.offsetY);
-    request_frame();
-    save_data(ASM);
+MAIN.canvas.addEventListener('mouseup', function(evt) {
+    MAIN.asm.handle_mouse_up(evt.offsetX, evt.offsetY);
+    MAIN.request_frame();
+    MAIN.save_data();
 });
 
 document.addEventListener('keydown', function(evt) {
     var handled = true;
     switch (evt.keyCode) {
-        case 'A'.charCodeAt(0): ASM.set_mode(0); break;
-        case 'O'.charCodeAt(0): ASM.set_mode(1); break;
-        case 'E'.charCodeAt(0): ASM.set_mode(2); break;
-        case 'U'.charCodeAt(0): ASM.set_mode(3); break;
+        case 'A'.charCodeAt(0): MAIN.asm.set_mode(0); break;
+        case 'O'.charCodeAt(0): MAIN.asm.set_mode(1); break;
+        case 'E'.charCodeAt(0): MAIN.asm.set_mode(2); break;
+        case 'U'.charCodeAt(0): MAIN.asm.set_mode(3); break;
         default: handled = false; break;
     }
     if (handled) {
@@ -406,10 +444,10 @@ document.addEventListener('keydown', function(evt) {
 });
 
 
-$('btn-edit-mesh').onclick = function() { ASM.set_mode(0); };
-$('btn-erase-mask').onclick = function() { ASM.set_mode(1); };
-$('btn-draw-mask').onclick = function() { ASM.set_mode(2); };
-$('btn-border-mask').onclick = function() { ASM.set_mode(3); };
+$('btn-edit-mesh').onclick = function() { MAIN.asm.set_mode(0); };
+$('btn-erase-mask').onclick = function() { MAIN.asm.set_mode(1); };
+$('btn-draw-mask').onclick = function() { MAIN.asm.set_mode(2); };
+$('btn-border-mask').onclick = function() { MAIN.asm.set_mode(3); };
 
 $('btn-export').onclick = function() {
     var data = export_data();
@@ -427,3 +465,15 @@ $('btn-export').onclick = function() {
     document.body.removeChild(a);
     URL.revokeObjectURL(data);
 };
+
+function export_data() {
+    var result = {};
+    for (var i = 0; i < localStorage.length; ++i) {
+        var k = localStorage.key(i);
+        if (k.indexOf('$') != -1) {
+            result[k] = localStorage.getItem(k);
+        }
+    }
+    return JSON.stringify(result);
+}
+
