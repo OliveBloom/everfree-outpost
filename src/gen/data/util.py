@@ -7,8 +7,7 @@ import sys
 
 from PIL import Image
 
-from .boxpack import BoxPacker
-from .consts import *
+from outpost_data.core.consts import *
 
 
 def cached(f):
@@ -77,6 +76,7 @@ def pack_boxes(page_size, boxes, res=1):
     """Pack a list of boxes (`(w, h)` pairs) into pages of size `page_size`
     (`(page_w, page_h)`).  Returns the number of generated pages and a list
     containing `(page_idx, (x, y))` for each input box."""
+    from outpost_data.core.boxpack import BoxPacker
     p = BoxPacker(page_size, res=res)
     offsets = p.place(boxes)
     return p.num_pages(), offsets
