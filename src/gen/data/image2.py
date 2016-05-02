@@ -3,8 +3,8 @@ from outpost_data.core.image_cache import CachedImage
 
 import PIL  # for filter type constants
 
-from . import files
-from . import util
+from outpost_data.core import files
+from outpost_data.core import util
 
 
 def t2(x):

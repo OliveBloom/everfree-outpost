@@ -1,7 +1,7 @@
 from collections import namedtuple
 import os
 
-from . import util
+from outpost_data.core import util
 
 ModInfo = namedtuple('ModInfo', ('assets', 'overrides', 'deps'))
 MOD_MAP = {}

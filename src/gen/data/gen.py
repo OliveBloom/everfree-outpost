@@ -3,8 +3,8 @@ import json
 import os
 
 
-from . import boxpack, builder2, files, image2, loader, util
-from . import structure, block, item, recipe, sprite, loot_table, extra
+from outpost_data.core import boxpack, builder2, files, image2, loader, util
+from outpost_data.core import structure, block, item, recipe, sprite, loot_table, extra
 from outpost_data.core.loader import TimeIt
 
 

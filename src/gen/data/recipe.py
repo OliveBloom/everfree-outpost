@@ -1,5 +1,5 @@
-from .consts import *
-from .util import err
+from outpost_data.core.consts import *
+from outpost_data.core.util import err
 
 
 class RecipeDef(object):
