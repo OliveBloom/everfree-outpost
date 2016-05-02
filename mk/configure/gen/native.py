@@ -63,7 +63,8 @@ def rules(i):
             description = CC $out
 
         rule cxx_obj
-            command = $cxx -c $in -o $out -std=c++14 %common_cflags $cxxflags $user_cxxflags
+            command = $cxx -c $in -o $out $
+                %{i.cxx14_flag} %common_cflags $cxxflags $user_cxxflags
             depfile = $out.d
             description = CXX $out
 
