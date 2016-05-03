@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+{% block title %} Log In &ndash; Everfree Outpost {% endblock %}
+{% block title_display %} Log In {% endblock %}
+
+{% block content %}
+<form action='/login' method='post'>
+    <table>
+        <tr>
+            <td>Name:</td>
+            <td><input type='text' name='name' autofocus></td>
+        </tr>
+        <tr>
+            <td>Password:</td>
+            <td><input type='password' name='password'></td>
+        </tr>
+        <tr>
+            <td colspan='2' style='text-align: right'>
+                <input type='submit' value='Log In'>
+            </td>
+        </tr>
+    </table>
+</form>
+{% endblock %}

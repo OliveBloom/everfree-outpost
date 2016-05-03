@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% block title %} Register &ndash; Everfree Outpost {% endblock %}
+{% block title_display %} Register Account {% endblock %}
+
+{% block content %}
+<form action='/register' method='post'>
+    <table>
+        <tr>
+            <td>Name:</td>
+            <td><input type='text' name='name' autofocus></td>
+        </tr>
+        <tr>
+            <td>Password:</td>
+            <td><input type='password' name='password'></td>
+        </tr>
+        <tr>
+            <td>Email:</td>
+            <td><input type='text' name='email'></td>
+        </tr>
+        <tr>
+            <td colspan='2' style='text-align: right'>
+                <input type='submit' value='Register'>
+            </td>
+        </tr>
+    </table>
+</form>
+{% endblock %}

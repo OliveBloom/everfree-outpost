@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+    <head>
+        <title>{% block title %}{% endblock %}</title>
+<style>
+.msg { color: blue; }
+</style>
+    </head>
+    <body>
+        <h1>{% block title_display %}{% endblock %}</h1>
+
+        {% for msg in get_flashed_messages() %}
+        <p class='msg'>{{ msg }}</p>
+        {% endfor %}
+
+        {% block content %}{% endblock %}
+    </body>
+</html>
