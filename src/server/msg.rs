@@ -47,11 +47,9 @@ mod op {
         // Requests
         Ping = 0x0003,
         Input = 0x0004,
-        Login = 0x0005,
         UnsubscribeInventory = 0x0007,
         CraftRecipe = 0x0009,
         Chat = 0x000a,
-        Register = 0x000b,
         Interact = 0x000c,
         UseItem = 0x000d,
         UseAbility = 0x000e,
@@ -59,12 +57,16 @@ mod op {
         UseItemWithArgs = 0x0011,
         UseAbilityWithArgs = 0x0012,
         MoveItem = 0x0013,
+        AuthResponse = 0x0014,
+        CreateCharacter = 0x0015,
 
         // Deprecated requests
         GetTerrain = 0x0001,
         UpdateMotion = 0x0002,
+        Login = 0x0005,
         Action = 0x0006,
         old_MoveItem = 0x0008,
+        Register = 0x000b,
         OpenInventory = 0x000f,
 
         // Responses
@@ -79,7 +81,6 @@ mod op {
         ChatUpdate = 0x800b,
         EntityAppear = 0x800c,
         EntityGone = 0x800d,
-        RegisterResult = 0x800e,
         StructureAppear = 0x800f,
         StructureGone = 0x8010,
         MainInventory = 0x8011,
@@ -93,10 +94,13 @@ mod op {
         InventoryUpdate = 0x8019,
         InventoryAppear = 0x801a,
         InventoryGone = 0x801b,
+        AuthChallenge = 0x801c,
+        AuthResult = 0x801d,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
         old_InventoryUpdate = 0x8009,
+        RegisterResult = 0x800e,
 
         // Control messages
         AddClient = 0xff00,
@@ -108,6 +112,9 @@ mod op {
         RestartServer = 0xff06,
         RestartClient = 0xff07,
         RestartBoth = 0xff08,
+        AuthStart = 0xff09,
+        AuthCancel = 0xff0a,
+        AuthFinish = 0xff0b,
     }
 }
 

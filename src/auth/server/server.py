@@ -119,7 +119,7 @@ def user_dispatch(result, ok_url, err_url):
 def api_dispatch(result):
     if result['status'] == 'ok':
         return jsonify(result)
-    elif result['status'] == 'error' or result['status'] == bug:
+    elif result['status'] == 'error' or result['status'] == 'bug':
         return (jsonify(result), 400)
     assert False, 'bad status in result: %r' % result['status']
 
@@ -194,26 +194,26 @@ def do_register(name, password, email):
     return ok('Registered as %r.' % name)
 
 
-@unpack_args
 def do_get_verify_key():
     key = cfg['signing_key'].verify_key
     key_str = key.encode(URLSafeBase64Encoder).decode('ascii')
     return ok(key=key_str)
 
 @unpack_args
-def do_sign_challenge(nonce):
+def do_sign_challenge(challenge):
     if 'uid' not in session or 'name' not in session:
         return error(reason='not_logged_in')
     uid = session['uid']
     name = session['name']
-    nonce_bytes = URLSafeBase64Encoder.decode(nonce.encode('ascii'))
+    nonce_bytes = URLSafeBase64Encoder.decode(challenge.encode('ascii'))
 
-    header = struct.pack('<IBB', uid, len(nonce_bytes), len(name))
-    b = header + nonce_bytes + name.encode('utf-8')
-    sig = cfg['signing_key'].sign(b).signature
-    sig_str = URLSafeBase64Encoder.encode(sig).decode('ascii')
+    name_bytes = name.encode('utf-8')
+    header = struct.pack('<BBBBI', len(nonce_bytes), len(name_bytes), 0, 0, uid)
+    b = header + nonce_bytes + name_bytes
+    signed = cfg['signing_key'].sign(b)
+    signed_str = URLSafeBase64Encoder.encode(signed).decode('ascii')
 
-    return ok(uid=uid, name=name, nonce=nonce, sig=sig_str)
+    return ok(response=signed_str)
 
 
 # User-facing routes
@@ -252,14 +252,12 @@ def logout():
 
 @app.route('/api/get_verify_key')
 def api_get_verify_key():
-    result = do_get_verify_key(request.get_json(force=True))
+    result = do_get_verify_key()
     return api_dispatch(result)
 
 @app.route('/api/sign_challenge', methods=['POST'])
 def api_sign_challenge():
-    print('wat')
     result = do_sign_challenge(request.get_json(force=True))
-    print(result)
     return api_dispatch(result)
 
 if __name__ == '__main__':
