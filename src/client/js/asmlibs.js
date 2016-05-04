@@ -555,6 +555,10 @@ DynAsm.prototype.openAbilityDialog = function() {
     return this._raw['open_ability_dialog'](this.client);
 };
 
+DynAsm.prototype.openContainerDialog = function(inv_id0, inv_id1) {
+    return this._raw['open_container_dialog'](this.client, inv_id0, inv_id1);
+};
+
 DynAsm.prototype.getActiveItem = function() {
     return this._raw['get_active_item'](this.client);
 };

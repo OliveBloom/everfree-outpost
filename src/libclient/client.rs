@@ -354,6 +354,11 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::ability();
     }
 
+    pub fn open_container_dialog(&mut self, inv0: InventoryId, inv1: InventoryId) {
+        use ui::dialogs::AnyDialog;
+        self.ui.root.dialog.inner = AnyDialog::container(inv0, inv1);
+    }
+
     pub fn get_active_item(&self) -> u16 {
         self.misc.hotbar.active_item().unwrap_or(0)
     }

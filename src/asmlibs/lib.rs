@@ -231,12 +231,19 @@ pub unsafe extern fn input_mouse_up(client: &mut Client,
 
 #[no_mangle]
 pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
-    client.open_inventory_dialog()
+    client.open_inventory_dialog();
 }
 
 #[no_mangle]
 pub unsafe extern fn open_ability_dialog(client: &mut Client) {
-    client.open_ability_dialog()
+    client.open_ability_dialog();
+}
+
+#[no_mangle]
+pub unsafe extern fn open_container_dialog(client: &mut Client,
+                                           inv_id0: u32,
+                                           inv_id1: u32) {
+    client.open_container_dialog(inv_id0, inv_id1);
 }
 
 #[no_mangle]

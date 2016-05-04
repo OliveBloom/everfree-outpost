@@ -17,7 +17,6 @@ var Keyboard = require('keyboard').Keyboard;
 var Dialog = require('ui/dialog').Dialog;
 var Banner = require('ui/banner').Banner;
 var ChatWindow = require('ui/chat').ChatWindow;
-var ContainerUI = require('ui/inventory').ContainerUI;
 var CraftingUI = require('ui/crafting').CraftingUI;
 var Iframe = require('ui/iframe').Iframe;
 var KeyDisplay = require('ui/keydisplay').KeyDisplay;
@@ -607,20 +606,7 @@ function handleOpenDialog(idx, args) {
         // Cancel server-side subscription.
         inv_tracker.unsubscribe(args[0]);
     } else if (idx == 1) {
-        var inv1 = inv_tracker.get(args[0]);
-        var inv2 = inv_tracker.get(args[1]);
-
-        var ui = new ContainerUI(dnd, inv1, inv2);
-        dialog.show(ui);
-        ui.ontransfer = function(from_inventory, from_slot, to_inventory, to_slot, amount) {
-            conn.sendMoveItem(from_inventory, from_slot, to_inventory, to_slot, amount);
-        };
-
-        ui.oncancel = function() {
-            dialog.hide();
-            inv1.unsubscribe();
-            inv2.unsubscribe();
-        };
+        asm_client.openContainerDialog(args[0], args[1]);
     }
 }
 
