@@ -14,6 +14,7 @@ use self::widget::{Widget, Visitor};
 pub use client_ui_atlas as atlas;
 pub mod geom;
 pub mod input;
+mod util;
 
 mod widget;
 mod item;

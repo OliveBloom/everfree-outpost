@@ -24,7 +24,7 @@ pub struct Root {
 impl Root {
     pub fn new() -> Root {
         Root {
-            dialog: dialog::Dialog::new(dialogs::AnyDialog::None),
+            dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
             debug: debug::Debug::new(),
         }
     }
@@ -96,7 +96,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     }
 
     fn on_key(&mut self, key: KeyAction) -> EventStatus {
-        use ui::dialogs::AnyDialog::{Inventory, Ability};
+        use ui::dialogs::AnyDialog::{self, Inventory, Ability};
 
         let status = OnKeyVisitor::dispatch(self, key);
         if status.is_handled() {
@@ -139,7 +139,10 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             }
         }
 
-        EventStatus::Unhandled
+        match self.state.dialog.inner {
+            AnyDialog::None => EventStatus::Unhandled,
+            _ => EventStatus::Handled,
+        }
     }
 }
 

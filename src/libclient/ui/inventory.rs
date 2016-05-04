@@ -154,8 +154,11 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
             };
 
         if let Some(dir) = dir {
+            let old_focus = self.state.focus;
             self.state.move_focus(dir, self.dyn.grid_size(), self.dyn.len());
-            return EventStatus::Handled;
+            if self.state.focus != old_focus {
+                return EventStatus::Handled;
+            }
         }
 
         EventStatus::Unhandled

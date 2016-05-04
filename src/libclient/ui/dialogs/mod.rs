@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 use physics::v3::{V2, scalar, Region};
 
-use inventory::Inventories;
+use inventory::{Inventories, InventoryId};
 use ui::dialog;
 use ui::geom::Geom;
 use ui::input::{KeyAction, EventStatus};
@@ -11,12 +11,14 @@ use ui::widget::*;
 mod inventory;
 
 pub use self::inventory::{Inventory, InventoryDyn};
+pub use self::inventory::{Container, ContainerDyn};
 
 
 pub enum AnyDialog {
     None,
     Inventory(Inventory),
     Ability(Inventory),
+    Container(Container),
 }
 
 impl AnyDialog {
@@ -31,6 +33,11 @@ impl AnyDialog {
     pub fn ability() -> AnyDialog {
         AnyDialog::Ability(Inventory::new(true))
     }
+
+    pub fn container(inv_id1: InventoryId,
+                     inv_id2: InventoryId) -> AnyDialog {
+        AnyDialog::Container(Container::new(inv_id1, inv_id2))
+    }
 }
 
 impl dialog::Inner for AnyDialog {
@@ -39,6 +46,7 @@ impl dialog::Inner for AnyDialog {
             AnyDialog::None => "",
             AnyDialog::Inventory(_) => "Inventory",
             AnyDialog::Ability(_) => "Abilities",
+            AnyDialog::Container(_) => "Container",
         }
     }
 
@@ -83,6 +91,13 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
 
             AnyDialog::Ability(ref mut state) => {
                 let dyn = InventoryDyn::new(self.dyn.inventories.ability_inventory());
+                let mut child = WidgetPack::new(state, dyn);
+                let rect = Region::sized(child.size()) + pos;
+                v.visit(&mut child, rect);
+            },
+
+            AnyDialog::Container(ref mut state) => {
+                let dyn = ContainerDyn::new(self.dyn.inventories);
                 let mut child = WidgetPack::new(state, dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
