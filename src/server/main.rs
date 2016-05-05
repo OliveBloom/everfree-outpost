@@ -4,17 +4,18 @@
 
 #![feature(
     btree_range,
+    collections,
     collections_bound,
     filling_drop,
     fnbox,
     mpsc_select,
     nonzero,
     plugin,
-    test,
     trace_macros,
     unboxed_closures,
     unsafe_no_drop_flag,
 )]
+#![cfg_attr(test, feature(test))]
 
 #![plugin(syntax_exts)]
 

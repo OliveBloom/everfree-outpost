@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map;
 use std::collections::{BTreeMap, BTreeSet};
-use std::collections::btree_map;
+use std::collections::{btree_map, btree_set};
 use std::collections::Bound::Included;
 use std::hash::Hash;
 
@@ -126,6 +126,8 @@ impl<V: Vn+Eq+Clone> Name for ZOrdered<V> {
 /// Furthermore, when a publisher/subscriber becomes un/associated with a channel, it is notified
 /// of the identities of all the subscribers/publishers currently associated with that channel.
 pub struct PubSub<P: Name, C: Name, S: Name> {
+    // This implementation represents multisets using BTreeSet<(A, B)> instead of
+    // HashMap<A, HashSet<B>>.  Turns out inserts are 30-50% faster this way...
     chan_pub: BTreeSet<(C, P)>,
     chan_sub: BTreeSet<(C, S)>,
     pub_sub: BTreeMap<(P, S), usize>,
@@ -146,8 +148,7 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
             return;
         }
 
-        for &(_, ref subscriber) in self.chan_sub.range(Included(&(channel.clone(), S::min_bound())),
-                                                        Included(&(channel.clone(), S::max_bound()))) {
+        for &(_, ref subscriber) in multi_lookup(&self.chan_sub, &channel) {
             assoc_insert(&mut self.pub_sub,
                          (publisher.clone(), subscriber.clone()),
                          || f(&publisher, &channel, &subscriber));
@@ -160,8 +161,7 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
             return;
         }
 
-        for &(_, ref subscriber) in self.chan_sub.range(Included(&(channel.clone(), S::min_bound())),
-                                                        Included(&(channel.clone(), S::max_bound()))) {
+        for &(_, ref subscriber) in multi_lookup(&self.chan_sub, &channel) {
             assoc_remove(&mut self.pub_sub,
                          (publisher.clone(), subscriber.clone()),
                          || f(&publisher, &channel, &subscriber));
@@ -174,8 +174,7 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
             return;
         }
 
-        for &(_, ref publisher) in self.chan_pub.range(Included(&(channel.clone(), P::min_bound())),
-                                                       Included(&(channel.clone(), P::max_bound()))) {
+        for &(_, ref publisher) in multi_lookup(&self.chan_pub, &channel) {
             assoc_insert(&mut self.pub_sub,
                          (publisher.clone(), subscriber.clone()),
                          || f(&publisher, &channel, &subscriber));
@@ -188,8 +187,7 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
             return;
         }
 
-        for &(_, ref publisher) in self.chan_pub.range(Included(&(channel.clone(), P::min_bound())),
-                                                       Included(&(channel.clone(), P::max_bound()))) {
+        for &(_, ref publisher) in multi_lookup(&self.chan_pub, &channel) {
             assoc_remove(&mut self.pub_sub,
                          (publisher.clone(), subscriber.clone()),
                          || f(&publisher, &channel, &subscriber));
@@ -199,11 +197,23 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
 
     pub fn message<F>(&self, publisher: &P, mut f: F)
             where F: FnMut(&P, &S) {
-        for (&(_, ref subscriber), _) in self.pub_sub.range(Included(&(publisher.clone(), S::min_bound())),
-                                                            Included(&(publisher.clone(), S::max_bound()))) {
+        for (&(_, ref subscriber), _) in multi_lookup_count(&self.pub_sub, publisher) {
             f(publisher, subscriber);
         }
     }
+}
+
+fn multi_lookup<'a, K: Name, V: Name>(set: &'a BTreeSet<(K, V)>,
+                                      k: &K) -> btree_set::Range<'a, (K, V)> {
+    set.range(Included(&(k.clone(), V::min_bound())),
+              Included(&(k.clone(), V::max_bound())))
+}
+
+fn multi_lookup_count<'a, K1, K2, V>(map: &'a BTreeMap<(K1, K2), V>,
+                                     k1: &K1) -> btree_map::Range<'a, (K1, K2), V>
+        where K1: Name, K2: Name {
+    map.range(Included(&(k1.clone(), K2::min_bound())),
+              Included(&(k1.clone(), K2::max_bound())))
 }
 
 fn assoc_insert<K, F>(map: &mut BTreeMap<K, usize>, k: K, f: F)
