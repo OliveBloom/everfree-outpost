@@ -201,6 +201,28 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
             f(publisher, subscriber);
         }
     }
+
+
+    pub fn subscribe_publisher<F>(&mut self, subscriber: S, publisher: P, mut f: F)
+            where F: FnMut(&P, &S) {
+        assoc_insert(&mut self.pub_sub,
+                     (publisher.clone(), subscriber.clone()),
+                     || f(&publisher, &subscriber));
+    }
+
+    pub fn unsubscribe_publisher<F>(&mut self, subscriber: S, publisher: P, mut f: F)
+            where F: FnMut(&P, &S) {
+        assoc_remove(&mut self.pub_sub,
+                     (publisher.clone(), subscriber.clone()),
+                     || f(&publisher, &subscriber));
+    }
+
+    pub fn channel_message<F>(&self, channel: &C, mut f: F)
+            where F: FnMut(&C, &S) {
+        for &(_, ref subscriber) in multi_lookup(&self.chan_sub, channel) {
+            f(channel, subscriber);
+        }
+    }
 }
 
 fn multi_lookup<'a, K: Name, V: Name>(set: &'a BTreeSet<(K, V)>,

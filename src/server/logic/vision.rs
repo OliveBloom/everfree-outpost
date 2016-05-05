@@ -20,6 +20,7 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
                                cid: ClientId,
                                tcid: TerrainChunkId) {
         use util::encode_rle16;
+        trace!("terrain chunk update: {:?}, {:?}", cid, tcid);
         let tc = unwrap_or!(self.world().get_terrain_chunk(tcid),
             { warn!("no terrain available for {:?}", tcid); return });
         let cpos = tc.chunk_pos();
