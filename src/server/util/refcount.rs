@@ -49,6 +49,10 @@ impl<K: Eq+Hash, V> RefcountedMap<K, V> {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
     pub fn retain<F>(&mut self,
                      key: K,
                      create: F) -> (&mut V, bool)

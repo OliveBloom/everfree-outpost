@@ -71,7 +71,7 @@ pub const NO_ITEM: ItemId = 0;
 macro_rules! mk_id_newtypes {
     ( $($name:ident($inner:ty);)* ) => {
         $(
-            #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+            #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
             pub struct $name(pub $inner);
 
             impl $name {

@@ -3,11 +3,14 @@
 #![allow(dead_code)]
 
 #![feature(
+    btree_range,
+    collections_bound,
     filling_drop,
     fnbox,
     mpsc_select,
     nonzero,
     plugin,
+    test,
     trace_macros,
     unboxed_closures,
     unsafe_no_drop_flag,
@@ -22,6 +25,7 @@ extern crate libc;
 #[macro_use] extern crate log;
 extern crate rand;
 extern crate rustc_serialize;
+#[cfg(test)] extern crate test;
 extern crate time;
 
 extern crate linked_hash_map;
@@ -56,6 +60,7 @@ mod timer;
 mod types;
 mod input;
 mod world;
+mod pubsub;
 
 mod auth;
 mod messages;
@@ -67,6 +72,8 @@ mod logic;
 mod cache;
 
 mod script;
+
+#[cfg(test)] mod tests;
 
 mod data {
     pub use libserver_config::data::*;

@@ -25,7 +25,7 @@ pub const NegY: DirAxis = (Axis::Y, true);
 #[allow(non_snake_case, non_upper_case_globals)]
 pub const NegZ: DirAxis = (Axis::Z, true);
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(not(asmjs), derive(Hash))]
 pub struct V3 {
     pub x: i32,
@@ -109,7 +109,7 @@ pub enum Axis2 {
     Y,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(not(asmjs), derive(Hash))]
 pub struct V2 {
     pub x: i32,
