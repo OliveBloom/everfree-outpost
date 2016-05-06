@@ -387,6 +387,12 @@ fn name_valid(name: &str) -> Result<(), &'static str> {
     if !has_alnum {
         return Err("Names must contain at least one letter or digit.");
     }
+    if name.contains("  ") {
+        return Err("Names must not have more than one space in a row.");
+    }
+    if name.starts_with(" ") || name.ends_with(" ") {
+        return Err("Names must not start or end with a space.");
+    }
 
     Ok(())
 }
