@@ -1,6 +1,6 @@
 use types::*;
 
-use engine::split::EngineRef;
+use engine::split::{EngineRef, Open};
 use input::{InputBits};
 use messages::ClientResponse;
 use msg::ExtraArg;
@@ -49,9 +49,7 @@ pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
             return;
         }
 
-        let msg_out = format!("<{}>\t{}",
-                              eng.world().client(cid).name(),
-                              msg);
-        eng.messages_mut().broadcast_clients(ClientResponse::ChatUpdate(msg_out));
+        let Open { world, messages, chat, .. } = eng.open();
+        chat.send_global(world, messages, cid, msg);
     }
 }

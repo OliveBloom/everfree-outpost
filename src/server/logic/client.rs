@@ -178,6 +178,11 @@ pub fn update_view(mut eng: EngineRef, cid: ClientId) {
         logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);
     }
 
+    // TODO: +scalar(2) hack
+    let old_cpos = old_region.min + scalar(2);
+    let new_cpos = new_region.min + scalar(2);
+    eng.chat_mut().set_client_location(cid, old_pid, old_cpos, new_pid, new_cpos);
+
     eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
 
     // TODO: using `with_hooks` here is gross, move schedule_view_update somewhere better

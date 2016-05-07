@@ -191,3 +191,55 @@ fn pubsub_no_dupes() {
     ].into_iter().collect::<HashSet<_>>();
     assert_eq!(messages, expected);
 }
+
+
+#[test]
+fn pubsub_unsubscribe() {
+    let mut ps = PubSub::new();
+
+    ps.subscribe(0, 0, |_,_,_| ());
+    ps.subscribe(0, 1, |_,_,_| ());
+
+    ps.publish(0, 0, |_,_,_| ());
+    ps.publish(1, 1, |_,_,_| ());
+
+    let mut seen = HashSet::new();
+    ps.message(&0, |&p, &s| { seen.insert((p, s)); });
+    ps.message(&1, |&p, &s| { seen.insert((p, s)); });
+    let expected = vec![(0, 0), (1, 0)].into_iter().collect::<HashSet<_>>();
+    assert_eq!(seen, expected);
+
+
+    ps.unsubscribe(0, 1, |_,_,_| ());
+
+    let mut seen = HashSet::new();
+    ps.message(&0, |&p, &s| { seen.insert((p, s)); });
+    ps.message(&1, |&p, &s| { seen.insert((p, s)); });
+    let expected = vec![(0, 0)].into_iter().collect::<HashSet<_>>();
+    assert_eq!(seen, expected);
+}
+
+
+#[test]
+fn pubsub_unpublish() {
+    let mut ps = PubSub::new();
+
+    ps.subscribe(0, 0, |_,_,_| ());
+    ps.subscribe(1, 1, |_,_,_| ());
+
+    ps.publish(0, 0, |_,_,_| ());
+    ps.publish(0, 1, |_,_,_| ());
+
+    let mut seen = HashSet::new();
+    ps.message(&0, |&p, &s| { seen.insert((p, s)); });
+    let expected = vec![(0, 0), (0, 1)].into_iter().collect::<HashSet<_>>();
+    assert_eq!(seen, expected);
+
+
+    ps.unpublish(0, 1, |_,_,_| ());
+
+    let mut seen = HashSet::new();
+    ps.message(&0, |&p, &s| { seen.insert((p, s)); });
+    let expected = vec![(0, 0)].into_iter().collect::<HashSet<_>>();
+    assert_eq!(seen, expected);
+}
