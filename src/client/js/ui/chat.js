@@ -18,6 +18,9 @@ function ChatWindow() {
     }
 
     this.count = 0;
+
+    // Prefill chat line with "/l" (local) by default?
+    this.prefill_local = false;
 }
 exports.ChatWindow = ChatWindow;
 
@@ -92,6 +95,10 @@ ChatWindow.prototype.startTyping = function(keyboard, conn, init) {
         this.container.style.display = 'flex';
     }
 
+    if (init == '' && this.prefill_local) {
+        init = '/l ';
+    }
+
     this._entry.disabled = false;
     this._entry.value = init;
     this._entry.focus();
@@ -123,25 +130,29 @@ ChatWindow.prototype.startTyping = function(keyboard, conn, init) {
 ChatWindow.prototype.finishTyping = function(keyboard, conn, send) {
     keyboard.popHandler();
 
-    var msg = this._entry.value;
-    var handled = false;
-    if (msg[0] == '/') {
-        var idx = msg.indexOf(' ');
-        if (idx != -1) {
-            var cmd = msg.substring(1, idx);
-            var arg = msg.substring(idx + 1);
-            if (cmd == 'ignore') {
-                this.addIgnore(arg);
-                handled = true;
-            } else if (cmd == 'unignore') {
-                this.removeIgnore(arg);
-                handled = true;
+    if (send) {
+        var msg = this._entry.value;
+        var handled = false;
+        if (msg[0] == '/') {
+            var idx = msg.indexOf(' ');
+            if (idx != -1) {
+                var cmd = msg.substring(1, idx);
+                var arg = msg.substring(idx + 1);
+                if (cmd == 'ignore') {
+                    this.addIgnore(arg);
+                    handled = true;
+                } else if (cmd == 'unignore') {
+                    this.removeIgnore(arg);
+                    handled = true;
+                }
             }
         }
-    }
 
-    if (send && !handled && msg != '') {
-        conn.sendChat(msg);
+        this.prefill_local = msg.startsWith('/l ');
+
+        if (!handled && msg != '') {
+            conn.sendChat(msg);
+        }
     }
 
     this._entry.blur();
