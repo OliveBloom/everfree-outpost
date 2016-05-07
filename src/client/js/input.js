@@ -90,7 +90,13 @@ function alwaysStopKey(evt) {
 }
 
 function alwaysStopMouse(evt) {
-    return true;
+    if (evt.target.getAttribute('class') == 'ui-container') {
+        // Block events on the canvas itself.
+        return true;
+    } else {
+        // Allow events to other UI components.
+        return false;
+    }
 }
 
 
@@ -129,7 +135,9 @@ Input.prototype.attach = function(doc) {
     });
 
     doc.addEventListener('contextmenu', function(evt) {
-        evt.preventDefault();
+        if (alwaysStopMouse(evt)) {
+            evt.preventDefault();
+        }
     });
 };
 
