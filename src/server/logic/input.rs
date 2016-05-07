@@ -41,15 +41,23 @@ pub fn unsubscribe_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId
 }
 
 pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
-    if msg.starts_with("/") {
+    if msg.starts_with("/") && !msg.starts_with("/l ") {
         warn_on_err!(eng.script_hooks().call_client_chat_command(eng, cid, &msg));
-    } else {
-        if msg.len() > 400 {
-            warn!("{:?}: bad request: chat message too long ({})", cid, msg.len());
-            return;
-        }
+        return;
+    }
 
-        let Open { world, messages, chat, .. } = eng.open();
+    let (msg, local) =
+        if msg.starts_with("/l ") { (&msg[3..], true) }
+        else { (&msg as &str, false) };
+    if msg.len() > 400 {
+        warn!("{:?}: bad request: chat message too long ({})", cid, msg.len());
+        return;
+    }
+
+    let Open { world, messages, chat, .. } = eng.open();
+    if !local {
         chat.send_global(world, messages, cid, msg);
+    } else {
+        chat.send_local(world, messages, cid, msg);
     }
 }

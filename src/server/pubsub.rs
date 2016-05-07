@@ -251,6 +251,7 @@ fn assoc_remove<K, F>(map: &mut BTreeMap<K, usize>, k: K, f: F)
             *e.get_mut() -= 1;
             if *e.get() == 0 {
                 e.remove();
+                f();
             }
         },
     }

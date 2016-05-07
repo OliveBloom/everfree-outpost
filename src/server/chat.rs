@@ -65,7 +65,7 @@ impl Chat {
     pub fn send_system(&mut self,
                        messages: &mut Messages,
                        to: ClientId,
-                       msg: String) {
+                       msg: &str) {
         let msg_out = format!("***\t{}", msg);
         messages.send_client(to, ClientResponse::ChatUpdate(msg_out));
     }
@@ -74,7 +74,7 @@ impl Chat {
                        world: &World,
                        messages: &mut Messages,
                        from: ClientId,
-                       msg: String) {
+                       msg: &str) {
         let msg_out = format!("<{}>\t{}", world.client(from).name(), msg);
         messages.broadcast_clients(ClientResponse::ChatUpdate(msg_out));
     }
@@ -83,7 +83,7 @@ impl Chat {
                       world: &World,
                       messages: &mut Messages,
                       from: ClientId,
-                      msg: String) {
+                      msg: &str) {
         let msg_out = format!("<{}>\t{}", world.client(from).name(), msg);
         let resp = ClientResponse::ChatUpdate(msg_out);
         self.local.message(&from, |_, &to| {

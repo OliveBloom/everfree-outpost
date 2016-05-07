@@ -197,11 +197,16 @@ fn pubsub_no_dupes() {
 fn pubsub_unsubscribe() {
     let mut ps = PubSub::new();
 
-    ps.subscribe(0, 0, |_,_,_| ());
-    ps.subscribe(0, 1, |_,_,_| ());
-
     ps.publish(0, 0, |_,_,_| ());
     ps.publish(1, 1, |_,_,_| ());
+
+    let mut called = false;
+    ps.subscribe(0, 0, |&p,&c,&s| { called = true; assert_eq!((p,c,s), (0,0,0)); });
+    assert!(called);
+
+    let mut called = false;
+    ps.subscribe(0, 1, |&p,&c,&s| { called = true; assert_eq!((p,c,s), (1,1,0)); });
+    assert!(called);
 
     let mut seen = HashSet::new();
     ps.message(&0, |&p, &s| { seen.insert((p, s)); });
@@ -210,7 +215,9 @@ fn pubsub_unsubscribe() {
     assert_eq!(seen, expected);
 
 
-    ps.unsubscribe(0, 1, |_,_,_| ());
+    let mut called = false;
+    ps.unsubscribe(0, 1, |&p,&c,&s| { called = true; assert_eq!((p,c,s), (1,1,0)); });
+    assert!(called);
 
     let mut seen = HashSet::new();
     ps.message(&0, |&p, &s| { seen.insert((p, s)); });
@@ -227,8 +234,13 @@ fn pubsub_unpublish() {
     ps.subscribe(0, 0, |_,_,_| ());
     ps.subscribe(1, 1, |_,_,_| ());
 
-    ps.publish(0, 0, |_,_,_| ());
-    ps.publish(0, 1, |_,_,_| ());
+    let mut called = false;
+    ps.publish(0, 0, |&p,&c,&s| { called = true; assert_eq!((p,c,s), (0,0,0)); });
+    assert!(called);
+
+    let mut called = false;
+    ps.publish(0, 1, |&p,&c,&s| { called = true; assert_eq!((p,c,s), (0,1,1)); });
+    assert!(called);
 
     let mut seen = HashSet::new();
     ps.message(&0, |&p, &s| { seen.insert((p, s)); });
@@ -236,7 +248,9 @@ fn pubsub_unpublish() {
     assert_eq!(seen, expected);
 
 
-    ps.unpublish(0, 1, |_,_,_| ());
+    let mut called = false;
+    ps.unpublish(0, 1, |&p,&c,&s| { called = true; assert_eq!((p,c,s), (0,1,1)); });
+    assert!(called);
 
     let mut seen = HashSet::new();
     ps.message(&0, |&p, &s| { seen.insert((p, s)); });
