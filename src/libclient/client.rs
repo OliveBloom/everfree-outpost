@@ -62,7 +62,10 @@ pub struct Client<'d, P: Platform> {
 impl<'d, P: Platform> Client<'d, P> {
     pub fn new(data: &'d Data, platform: P) -> Client<'d, P> {
         let mut platform = platform;
-        let renderer = Renderer::new(platform.gl());
+        let mut renderer = Renderer::new(platform.gl());
+        if platform.config().get_int(ConfigKey::RenderNames) == 0 {
+            renderer.render_names = false;
+        }
 
         let mut c = Client {
             data: data,

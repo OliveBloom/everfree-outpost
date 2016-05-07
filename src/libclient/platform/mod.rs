@@ -82,6 +82,7 @@ pub enum ConfigKey {
     HotbarIsItem(u8),
     HotbarActiveItem,
     HotbarActiveAbility,
+    RenderNames,
     ScaleWorld,
 }
 
@@ -94,6 +95,7 @@ impl ConfigKey {
             HotbarIsItem(idx) => format!("hotbar.is_item.{}", idx),
             HotbarActiveItem => "hotbar.active_item".into(),
             HotbarActiveAbility => "hotbar.active_ability".into(),
+            RenderNames => "render_names".into(),
             ScaleWorld => "scale_world".into(),
         }
     }

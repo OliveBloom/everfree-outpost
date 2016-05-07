@@ -321,6 +321,8 @@ pub struct Renderer<GL: Context> {
     shaders: Shaders<GL>,
     textures: Textures<GL>,
     framebuffers: Framebuffers<GL>,
+
+    pub render_names: bool,
 }
 
 impl<GL: Context> Renderer<GL> {
@@ -338,6 +340,8 @@ impl<GL: Context> Renderer<GL> {
             shaders: Shaders::new(gl),
             textures: Textures::new(gl),
             framebuffers: Framebuffers::new(gl, (640, 480)),
+
+            render_names: true,
         }
     }
 
@@ -435,7 +439,7 @@ impl<GL: Context> Renderer<GL> {
                                   future: Time,
                                   pawn_id: Option<EntityId>) {
         {
-            let mut gen = entity::GeomGen::new(entities, predictor, data,
+            let mut gen = entity::GeomGen::new(entities, predictor, data, self.render_names,
                                                bounds, now, future, pawn_id);
             self.entity_buffer.alloc(gen.count_verts() * mem::size_of::<entity::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };

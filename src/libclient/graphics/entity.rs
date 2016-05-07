@@ -82,6 +82,7 @@ pub struct GeomGen<'a> {
     entities: &'a Entities,
     predictor: &'a Predictor,
     data: &'a Data,
+    render_names: bool,
     bounds: Region<V2>,
     now: i32,
     future: i32,
@@ -95,6 +96,7 @@ impl<'a> GeomGen<'a> {
     pub fn new(entities: &'a Entities,
                predictor: &'a Predictor,
                data: &'a Data,
+               render_names: bool,
                chunk_bounds: Region<V2>,
                now: i32,
                future: i32,
@@ -107,6 +109,8 @@ impl<'a> GeomGen<'a> {
             entities: entities,
             predictor: predictor,
             data: data,
+            render_names: render_names,
+
             bounds: bounds,
             now: now,
             future: future,
@@ -219,7 +223,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 z_order += 1;
             });
 
-            if let (false, &Some(ref name)) = (is_pawn, &e.name) {
+            let should_render_name = self.render_names && !is_pawn;
+            if let (true, &Some(ref name)) = (should_render_name, &e.name) {
                 let name_center_x = dest_x + 48;
                 let name_y = dest_y + 12;
                 let name_x = name_center_x - fonts::NAME.measure_width(name) as u16 / 2;
