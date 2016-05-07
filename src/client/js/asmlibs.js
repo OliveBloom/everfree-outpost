@@ -535,8 +535,8 @@ DynAsm.prototype.inventoryAbilityId = function(id) {
     this._raw['inventory_ability_id'](this.client, id);
 };
 
-DynAsm.prototype.inputKey = function(code) {
-    return this._raw['input_key'](this.client, code);
+DynAsm.prototype.inputKey = function(code, shift) {
+    return this._raw['input_key'](this.client, code, shift);
 };
 
 DynAsm.prototype.inputMouseMove = function(x, y) {

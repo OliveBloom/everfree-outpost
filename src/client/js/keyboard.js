@@ -2,13 +2,12 @@ var Config = require('config').Config;
 
 
 
-function asmEncodeKey(code, shift) {
-    var adj = shift ? 10 : 0;
+function asmEncodeKey(code) {
     switch (Config.keybindings.get()[code]) {
-        case 'move_left':   return 0 + adj;
-        case 'move_right':  return 1 + adj;
-        case 'move_up':     return 2 + adj;
-        case 'move_down':   return 3 + adj;
+        case 'move_left':   return 0;
+        case 'move_right':  return 1;
+        case 'move_up':     return 2;
+        case 'move_down':   return 3;
 
         // TODO: enter key handling is a hack
         case 'chat':        return 20;
@@ -35,7 +34,7 @@ function asmDispatchKey(asm_client, code, shift) {
     if (asm_code == null) {
         return false;
     }
-    return asm_client.inputKey(asm_code);
+    return asm_client.inputKey(asm_code, shift);
 }
 
 

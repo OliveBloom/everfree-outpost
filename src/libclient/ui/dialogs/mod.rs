@@ -5,7 +5,7 @@ use physics::v3::{V2, scalar, Region};
 use inventory::{Inventories, InventoryId};
 use ui::dialog;
 use ui::geom::Geom;
-use ui::input::{KeyAction, EventStatus};
+use ui::input::{KeyAction, KeyEvent, EventStatus};
 use ui::widget::*;
 
 
@@ -117,13 +117,13 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyAction) -> EventStatus {
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
         let status = OnKeyVisitor::dispatch(self, key);
         if status.is_handled() {
             return status;
         }
 
-        if key == KeyAction::Cancel {
+        if key.code == KeyAction::Cancel {
             let old_state = mem::replace(self.state, AnyDialog::None);
             let status = old_state.on_close();
             if status.is_handled() {

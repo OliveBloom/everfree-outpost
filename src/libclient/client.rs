@@ -32,7 +32,7 @@ use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use ui::{UI, Dyn};
-use ui::input::{KeyAction, EventStatus};
+use ui::input::{KeyAction, Modifiers, KeyEvent, EventStatus};
 
 
 pub struct Client<'d, P: Platform> {
@@ -322,10 +322,12 @@ impl<'d, P: Platform> Client<'d, P> {
         f(&mut self.ui, dyn)
     }
 
-    pub fn input_key(&mut self, code: u8) -> bool {
+    pub fn input_key(&mut self, code: u8, mods: u8) -> bool {
         let status =
             if let Some(key) = KeyAction::from_code(code) {
-                self.with_ui_dyn(|ui, dyn| ui.handle_key(key, dyn))
+                let mods = Modifiers::from_bits_truncate(mods);
+                let evt = KeyEvent::new(key, mods);
+                self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn))
             } else {
                 EventStatus::Unhandled
             };

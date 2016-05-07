@@ -6,10 +6,10 @@ use client::ClientObj;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum KeyAction {
-    MoveLeft(u8),
-    MoveRight(u8),
-    MoveUp(u8),
-    MoveDown(u8),
+    MoveLeft,
+    MoveRight,
+    MoveUp,
+    MoveDown,
 
     Select,
     Cancel,
@@ -19,19 +19,20 @@ pub enum KeyAction {
     ToggleDebugPanel,
 }
 
+bitflags! {
+    pub flags Modifiers: u8 {
+        const ModShift =    0x01,
+    }
+}
+
 impl KeyAction {
     pub fn from_code(code: u8) -> Option<KeyAction> {
         use self::KeyAction::*;
         match code {
-            0 => Some(MoveLeft(1)),
-            1 => Some(MoveRight(1)),
-            2 => Some(MoveUp(1)),
-            3 => Some(MoveDown(1)),
-
-            10 => Some(MoveLeft(10)),
-            11 => Some(MoveRight(10)),
-            12 => Some(MoveUp(10)),
-            13 => Some(MoveDown(10)),
+            0 => Some(MoveLeft),
+            1 => Some(MoveRight),
+            2 => Some(MoveUp),
+            3 => Some(MoveDown),
 
             20 => Some(Select),
             21 => Some(Cancel),
@@ -42,6 +43,26 @@ impl KeyAction {
 
             _ => None,
         }
+    }
+}
+
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct KeyEvent {
+    pub code: KeyAction,
+    pub mods: Modifiers,
+}
+
+impl KeyEvent {
+    pub fn new(code: KeyAction, mods: Modifiers) -> KeyEvent {
+        KeyEvent {
+            code: code,
+            mods: mods,
+        }
+    }
+
+    pub fn shift(&self) -> bool {
+        self.mods.contains(ModShift)
     }
 }
 

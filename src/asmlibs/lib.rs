@@ -204,8 +204,12 @@ pub unsafe extern fn inventory_ability_id(client: &mut Client,
 }
 
 #[no_mangle]
-pub unsafe extern fn input_key(client: &mut Client, code: u8) -> u8 {
-    client.input_key(code) as u8
+pub unsafe extern fn input_key(client: &mut Client,
+                               code: u8,
+                               shift: u8) -> u8 {
+    let mods =
+        if shift != 0 { 0x01 } else { 0 };
+    client.input_key(code, mods) as u8
 }
 
 #[no_mangle]

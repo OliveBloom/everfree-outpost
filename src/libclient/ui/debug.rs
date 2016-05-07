@@ -9,7 +9,7 @@ use platform::{Config, ConfigKey};
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::{Geom, Special};
-use ui::input::{EventStatus, KeyAction};
+use ui::input::{EventStatus, KeyAction, KeyEvent};
 use ui::item;
 use ui::widget::*;
 
@@ -110,8 +110,8 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
         }
     }
 
-    fn on_key(&mut self, key: KeyAction) -> EventStatus {
-        if key == KeyAction::ToggleDebugPanel {
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+        if key.code == KeyAction::ToggleDebugPanel {
             self.state.mode = match self.state.mode {
                 Mode::Nothing => Mode::Framerate,
                 Mode::Framerate => Mode::Full,

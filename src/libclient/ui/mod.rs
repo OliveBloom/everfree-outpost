@@ -67,13 +67,13 @@ impl UI {
     }
 
     pub fn handle_key(&mut self,
-                      key: input::KeyAction,
+                      key: input::KeyEvent,
                       dyn: Dyn) -> input::EventStatus {
         if !self.context.dragging() {
             let mut root = widget::WidgetPack::new(&mut self.root, dyn);
             root.on_key(key)
         } else {
-            match key {
+            match key.code {
                 input::KeyAction::Cancel => {
                     self.context.drag_data = None;
                 },

@@ -5,7 +5,7 @@ use physics::v3::{V2, scalar, Region};
 
 use ui::{UI, Context, DragData};
 use ui::geom::{Geom, Special};
-use ui::input::{KeyAction, EventStatus};
+use ui::input::{KeyEvent, EventStatus};
 
 
 pub trait Widget: Sized {
@@ -25,7 +25,7 @@ pub trait Widget: Sized {
     ///
     /// The default implementation calls `OnKeyVisitor::dispatch` to dispatch the event to each
     /// child in turn until one reports that the event has been handled.
-    fn on_key(&mut self, key: KeyAction) -> EventStatus {
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
         OnKeyVisitor::dispatch(self, key)
     }
 
@@ -113,19 +113,19 @@ impl Visitor for NullVisitor {
 
 
 pub struct OnKeyVisitor {
-    key: KeyAction,
+    key: KeyEvent,
     result: EventStatus,
 }
 
 impl OnKeyVisitor {
-    pub fn new(key: KeyAction) -> OnKeyVisitor {
+    pub fn new(key: KeyEvent) -> OnKeyVisitor {
         OnKeyVisitor {
             key: key,
             result: EventStatus::Unhandled,
         }
     }
 
-    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: KeyAction) -> EventStatus {
+    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: KeyEvent) -> EventStatus {
         let mut v = OnKeyVisitor::new(key);
         w.walk_layout(&mut v, scalar(0));
         v.result

@@ -8,7 +8,7 @@ use inventory::Item;
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyAction, EventStatus};
+use ui::input::{self, KeyEvent, EventStatus};
 use ui::item;
 use ui::widget::*;
 
@@ -142,15 +142,16 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyAction) -> EventStatus {
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
         use ui::input::KeyAction::*;
+        let amt = if key.shift() { 10 } else { 1 };
         let dir =
-            match key {
-                MoveUp(amt) =>      Some(V2::new(0, -(amt as i32))),
-                MoveDown(amt) =>    Some(V2::new(0,  (amt as i32))),
-                MoveLeft(amt) =>    Some(V2::new(-(amt as i32), 0)),
-                MoveRight(amt) =>   Some(V2::new( (amt as i32), 0)),
-                _ =>                None,
+            match key.code {
+                MoveUp =>       Some(V2::new(0, -amt)),
+                MoveDown =>     Some(V2::new(0,  amt)),
+                MoveLeft =>     Some(V2::new(-amt, 0)),
+                MoveRight =>    Some(V2::new( amt, 0)),
+                _ =>            None,
             };
 
         if let Some(dir) = dir {

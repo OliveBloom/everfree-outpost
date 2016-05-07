@@ -11,7 +11,7 @@ use misc;
 use platform::{Config, ConfigKey};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyAction, EventStatus};
+use ui::input::{KeyAction, KeyEvent, EventStatus};
 use ui::{dialog, dialogs, hotbar, debug};
 use ui::widget::*;
 
@@ -95,7 +95,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyAction) -> EventStatus {
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
         use ui::dialogs::AnyDialog::{self, Inventory, Ability};
 
         let status = OnKeyVisitor::dispatch(self, key);
@@ -103,7 +103,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             return status;
         }
 
-        if let KeyAction::SetHotbar(idx) = key {
+        if let KeyAction::SetHotbar(idx) = key.code {
             // If the inventory or ability dialog is open, assign the selected item to the hotbar.
             let opt_assign =
                 match self.state.dialog.inner {

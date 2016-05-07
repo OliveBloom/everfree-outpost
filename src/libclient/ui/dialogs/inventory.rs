@@ -7,7 +7,7 @@ use inventory::{Item, InventoryId};
 use ui::Context;
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyAction, EventStatus};
+use ui::input::{KeyAction, KeyEvent, EventStatus};
 use ui::inventory;
 use ui::util;
 use ui::widget::*;
@@ -185,7 +185,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
         });
     }
 
-    fn on_key(&mut self, key: KeyAction) -> EventStatus {
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
         let idx = self.state.focus as usize;
         let inv = self.dyn.invs.get(self.state.inv_id[idx]);
         let mut child = WidgetPack::new(&mut self.state.grid[idx],
@@ -193,12 +193,12 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
         let mut status = child.on_key(key);
 
         if !status.is_handled() {
-            match key {
-                KeyAction::MoveLeft(_) if idx > 0 => {
+            match key.code {
+                KeyAction::MoveLeft if idx > 0 => {
                     self.state.focus -= 1;
                     status = EventStatus::Handled;
                 },
-                KeyAction::MoveRight(_) if idx < 1 => {
+                KeyAction::MoveRight if idx < 1 => {
                     self.state.focus += 1;
                     status = EventStatus::Handled;
                 },
