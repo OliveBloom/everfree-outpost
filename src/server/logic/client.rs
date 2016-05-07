@@ -1,7 +1,8 @@
 use types::*;
+use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use chunks;
-use engine::split::EngineRef;
+use engine::split::{EngineRef, Open};
 use logic;
 use messages::{ClientResponse, SyncKind};
 use world;
@@ -99,6 +100,8 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
                                                              DAY_NIGHT_CYCLE_MS));
 
     vision::Fragment::add_client(&mut eng.as_vision_fragment(), cid, pid, region);
+    let player_cpos = e.motion.end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    eng.chat_mut().add_client(cid, pid, player_cpos);
     warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
     eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
 
@@ -107,6 +110,15 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
 
 pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
     eng.messages_mut().remove_client(cid);
+
+    let (pid, cpos) = {
+        let w = eng.world();
+        let c = w.client(cid);
+        let e = c.pawn().unwrap();
+        (e.plane_id(),
+         e.motion().end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE)))
+    };
+    eng.chat_mut().remove_client(cid, pid, cpos);
 
     let old_region = eng.vision().client_view_area(cid);
     let old_pid = eng.vision().client_view_plane(cid);

@@ -44,10 +44,11 @@ mod parts {
             (7) CHUNKS =        ::chunks::Chunks<'d>;
             (8) CACHE =         ::cache::TerrainCache;
             (9) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
+            (10) CHAT =         ::chat::Chat;
     }
 }
 
-const NUM_PARTS: usize = 10;
+const NUM_PARTS: usize = 11;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]
@@ -76,6 +77,7 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         chunks = CHUNKS;
         cache = CACHE;
         terrain_gen = TERRAIN_GEN;
+        chat = CHAT;
 
         VisionHooks = world | messages;
         VisionFragment = vision | VisionHooks;

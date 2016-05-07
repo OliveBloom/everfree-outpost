@@ -6,6 +6,7 @@ use types::*;
 
 use auth::{Auth, Secret};
 use cache::TerrainCache;
+use chat::Chat;
 use chunks::Chunks;
 use data::Data;
 use logic;
@@ -48,6 +49,7 @@ pub struct Engine<'d> {
     pub chunks: Chunks<'d>,
     pub cache: TerrainCache,
     pub terrain_gen: TerrainGen,
+    pub chat: Chat,
 }
 
 #[must_use]
@@ -81,6 +83,7 @@ impl<'d> Engine<'d> {
             chunks: Chunks::new(storage),
             cache: TerrainCache::new(),
             terrain_gen: TerrainGen::new(data, storage),
+            chat: Chat::new(),
         }
     }
 

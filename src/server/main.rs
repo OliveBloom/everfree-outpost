@@ -62,6 +62,7 @@ mod types;
 mod input;
 mod world;
 mod pubsub;
+mod chat;
 
 mod auth;
 mod messages;

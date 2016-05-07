@@ -187,6 +187,7 @@ EnginePart_decl! {
     Ch Ch2 Ch3 (chunks, chunks_mut, ::chunks::Chunks<'d>),
     Ca Ca2 Ca3 (cache, cache_mut, ::cache::TerrainCache),
     Tg Tg2 Tg3 (terrain_gen, terrain_gen_mut, ::terrain_gen::TerrainGen),
+    Ct Ct2 Ct3 (chat, chat_mut, ::chat::Chat),
 }
 
 
@@ -223,32 +224,32 @@ impl<'a> SplitOffRHS<'a, ()> for () {
 
 
 macro_rules! engine_part_typedef_pub {
-    ($name:ident, $wr:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty) => {
-        pub struct $name<'a, 'd: 'a>(pub ::engine::split::EnginePart<'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>);
-        engine_part_typedef_impls!($name, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg);
+    ($name:ident, $wr:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty, $ct:ty) => {
+        pub struct $name<'a, 'd: 'a>(pub ::engine::split::EnginePart<'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct>);
+        engine_part_typedef_impls!($name, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct);
     };
 }
 
 macro_rules! engine_part_typedef_priv {
-    ($name:ident, $wr:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty) => {
-        struct $name<'a, 'd: 'a>(pub ::engine::split::EnginePart<'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>);
-        engine_part_typedef_impls!($name, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg);
+    ($name:ident, $wr:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty, $ct:ty) => {
+        struct $name<'a, 'd: 'a>(pub ::engine::split::EnginePart<'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct>);
+        engine_part_typedef_impls!($name, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct);
     };
 }
 
 macro_rules! engine_part_typedef_impls {
-    ($name:ident, $wr:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty) => {
+    ($name:ident, $wr:ty, $ex:ty, $ms:ty, $ti:ty, $ph:ty, $vi:ty, $au:ty, $ch:ty, $ca:ty, $tg:ty, $ct:ty) => {
         impl<'a, 'd: 'a> $crate::engine::split::Part for $name<'a, 'd> {
             type P = $crate::engine::split::EnginePart<
-                'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>;
+                'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct>;
 
             fn from_part(part: $crate::engine::split::EnginePart<
-                             'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>) -> $name<'a, 'd> {
+                             'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct>) -> $name<'a, 'd> {
                 $name(part)
             }
 
             fn to_part(self) -> $crate::engine::split::EnginePart<
-                    'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg> {
+                    'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct> {
                 self.0
             }
 
@@ -275,7 +276,7 @@ macro_rules! engine_part_typedef_impls {
 
         impl<'a, 'd: 'a> ::std::ops::Deref for $name<'a, 'd> {
             type Target = $crate::engine::split::EnginePart<
-                 'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>;
+                 'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct>;
 
             fn deref(&self) -> &<Self as ::std::ops::Deref>::Target {
                 &self.0
@@ -291,7 +292,7 @@ macro_rules! engine_part_typedef_impls {
         unsafe impl<'a, 'd: 'a> $crate::engine::split::PartFlags for $name<'a, 'd> {
             fn flags() -> usize {
                 <$crate::engine::split::EnginePart<
-                        'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg>
+                        'a, 'd, $wr, $ex, $ms, $ti, $ph, $vi, $au, $ch, $ca, $tg, $ct>
                     as $crate::engine::split::PartFlags>::flags()
 
             }
