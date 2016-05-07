@@ -66,7 +66,7 @@ impl Chat {
                        messages: &mut Messages,
                        to: ClientId,
                        msg: &str) {
-        let msg_out = format!("***\t{}", msg);
+        let msg_out = format!("&s\t***\t{}", msg);
         messages.send_client(to, ClientResponse::ChatUpdate(msg_out));
     }
 
@@ -75,7 +75,7 @@ impl Chat {
                        messages: &mut Messages,
                        from: ClientId,
                        msg: &str) {
-        let msg_out = format!("<{}>\t{}", world.client(from).name(), msg);
+        let msg_out = format!("&g\t<{}>\t{}", world.client(from).name(), msg);
         messages.broadcast_clients(ClientResponse::ChatUpdate(msg_out));
     }
 
@@ -84,7 +84,7 @@ impl Chat {
                       messages: &mut Messages,
                       from: ClientId,
                       msg: &str) {
-        let msg_out = format!("<{}>\t{}", world.client(from).name(), msg);
+        let msg_out = format!("&l\t<{}>\t{}", world.client(from).name(), msg);
         let resp = ClientResponse::ChatUpdate(msg_out);
         self.local.message(&from, |_, &to| {
             messages.send_client(to, resp.clone());

@@ -22,28 +22,32 @@ function ChatWindow() {
 exports.ChatWindow = ChatWindow;
 
 ChatWindow.prototype.addMessage = function(msg) {
-    var idx = msg.indexOf('\t');
-    if (idx == -1) {
-        console.assert(false, 'msg is missing delimiter', msg);
+    var parts = msg.split('\t');
+    if (parts.length != 3) {
+        console.assert(false, 'msg is malformed', msg);
         return;
     }
 
-    var was_at_bottom =
-        (this._content.scrollTop + this._content.clientHeight >= this._content.scrollHeight);
-
-    var name = msg.substring(0, idx);
+    var channel = parts[0];
+    var name = parts[1];
+    var text = parts[2];
     if (Config.ignores.get()[name]) {
         return;
     }
-    var text = msg.substring(idx + 1);
 
     var parts = util.templateParts('chat-line');
     parts['name'].textContent = name;
     parts['text'].textContent = text;
 
-    if (name == '***') {
+    if (channel == '&s') {
         parts['top'].classList.add('server-message');
+    } else if (channel == '&l') {
+        parts['top'].classList.add('local-message');
     }
+
+
+    var was_at_bottom =
+        (this._content.scrollTop + this._content.clientHeight >= this._content.scrollHeight);
 
     this._content.appendChild(parts['top']);
 
