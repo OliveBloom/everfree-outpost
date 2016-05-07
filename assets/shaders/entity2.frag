@@ -2,15 +2,27 @@ precision mediump float;
 
 uniform sampler2D sheet_tex;
 uniform sampler2D depth_tex;
+uniform sampler2D cavernTex;
 uniform vec2 camera_pos;
 uniform vec2 camera_size;
+uniform vec2 sliceCenter;
+uniform float sliceZ;
 
 varying vec2 tex_coord;
 varying vec3 ref_pos;
 varying float ref_size_z;
 varying vec3 color_;
 
+#define cameraPos camera_pos
+#define cameraSize camera_size
+#define baseZ floor(ref_pos.z / TILE_SIZE)
+#include "slicing.inc"
+
 void main(void) {
+    if (sliceCheck()) {
+        discard;
+    }
+
     // NB: FragCoord origin is the bottom left, not the top left.  So it works
     // for texture lookups (they use the same origin), but it needs to be
     // flipped for coordinate calculations.
