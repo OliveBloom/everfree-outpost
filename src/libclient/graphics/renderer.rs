@@ -113,6 +113,7 @@ impl<GL: Context> Shaders<GL> {
                     color_tex,
                     meta_tex,
                     depth_tex,
+                    entity_depth_tex,
                     light_tex,
                 },
                 outputs! { color: 1 }),
@@ -216,6 +217,7 @@ struct Framebuffers<GL: Context> {
     world_color: GL::Texture,
     world_meta: GL::Texture,
     world_depth: GL::Texture,
+    world_entity_depth: GL::Texture,
     light_color: GL::Texture,
     shadow_color: GL::Texture,
     output_color: GL::Texture,
@@ -260,6 +262,7 @@ impl<GL: Context> Framebuffers<GL> {
         let world_color = gl.create_texture(size);
         let world_meta = gl.create_texture(size);
         let world_depth = gl.create_depth_texture(size);
+        let world_entity_depth = gl.create_depth_texture(size);
         let light_color = gl.create_texture(size);
         let shadow_color = gl.create_texture(size);
         let output_color = gl.create_texture(size);
@@ -279,7 +282,7 @@ impl<GL: Context> Framebuffers<GL> {
                                            Some(Attach::Texture(&world_depth)));
         let sprite = gl.create_framebuffer(size,
                                            &[Attach::Texture(&world_color)],
-                                           Some(Attach::Renderbuffer));
+                                           Some(Attach::Texture(&world_entity_depth)));
         let output = gl.create_framebuffer(size,
                                            &[Attach::Texture(&output_color)],
                                            None);
@@ -290,6 +293,7 @@ impl<GL: Context> Framebuffers<GL> {
             world_color: world_color,
             world_meta: world_meta,
             world_depth: world_depth,
+            world_entity_depth: world_entity_depth,
             light_color: light_color,
             shadow_color: shadow_color,
             output_color: output_color,
@@ -691,6 +695,7 @@ impl<GL: Context> Renderer<GL> {
                       &self.framebuffers.world_color,
                       &self.framebuffers.world_meta,
                       &self.framebuffers.world_depth,
+                      &self.framebuffers.world_entity_depth,
                       &self.framebuffers.light_color,
             ])
             .output(&self.framebuffers.output)

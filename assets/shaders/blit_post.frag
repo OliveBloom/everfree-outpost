@@ -3,6 +3,7 @@ precision mediump float;
 uniform sampler2D color_tex;
 uniform sampler2D meta_tex;
 uniform sampler2D depth_tex;
+uniform sampler2D entity_depth_tex;
 uniform sampler2D light_tex;
 uniform vec2 screen_size;
 
@@ -78,6 +79,10 @@ float check_vert(vec2 off, float centerDepth) {
 }
 
 float get_highlight() {
+    if (texture2D(entity_depth_tex, tex_coord).r > 0.0) {
+        return 0.0;
+    }
+
     float centerDepth = texture2D(depth_tex, tex_coord).r;
     float n = check_vert(vec2(0.0, -1.0), centerDepth);
     float s = check_vert(vec2(0.0, 1.0), centerDepth);
