@@ -38,6 +38,9 @@ void websocket::handle_open(connection_hdl conn) {
     data.id = id;
     clients.insert(make_pair(conn, data));
 
+    auto conn_ptr = ws_server.get_con_from_hdl(conn);
+    cout << "connection from " << conn_ptr->get_remote_endpoint() << ", wire id " << id << endl;
+
     owner.handle_websocket_connect(id);
 }
 
