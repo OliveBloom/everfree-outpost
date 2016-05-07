@@ -31,6 +31,7 @@ mod ffi {
                                  dest_inv: u32,
                                  dest_slot: usize,
                                  amount: u8);
+        pub fn ap_send_unsubscribe_inventory(iid: u32);
     }
 }
 
@@ -70,6 +71,13 @@ impl platform::Platform for Platform {
                       amount: u8) {
         unsafe {
             ffi::ap_send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
+        }
+    }
+
+    fn send_unsubscribe_inventory(&mut self,
+                                  iid: InventoryId) {
+        unsafe {
+            ffi::ap_send_unsubscribe_inventory(iid);
         }
     }
 }

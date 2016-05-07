@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use std::mem;
 use physics::v3::{V2, scalar, Region};
 
 use inventory::{Inventories, InventoryId};
@@ -37,6 +38,14 @@ impl AnyDialog {
     pub fn container(inv_id1: InventoryId,
                      inv_id2: InventoryId) -> AnyDialog {
         AnyDialog::Container(Container::new(inv_id1, inv_id2))
+    }
+
+
+    fn on_close(self) -> EventStatus {
+        match self {
+            AnyDialog::Container(s) => s.on_close(),
+            _ => EventStatus::Unhandled,
+        }
     }
 }
 
@@ -115,8 +124,13 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
         }
 
         if key == KeyAction::Cancel {
-            *self.state = AnyDialog::None;
-            return EventStatus::Handled;
+            let old_state = mem::replace(self.state, AnyDialog::None);
+            let status = old_state.on_close();
+            if status.is_handled() {
+                return status;
+            } else {
+                return EventStatus::Handled;
+            }
         }
 
         EventStatus::Unhandled

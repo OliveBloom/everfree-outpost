@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 use std::cmp;
 use physics::v3::{V2, scalar, Region};
 
+use client::ClientObj;
 use inventory::{Item, InventoryId};
 use ui::Context;
 use ui::atlas;
@@ -127,6 +128,14 @@ impl Container {
                    inventory::Grid::new()],
             focus: 1,
         }
+    }
+
+    pub fn on_close(self) -> EventStatus {
+        let iids = self.inv_id;
+        EventStatus::Action(box move |c: &mut ClientObj| {
+            c.platform().send_unsubscribe_inventory(iids[0]);
+            c.platform().send_unsubscribe_inventory(iids[1]);
+        })
     }
 }
 

@@ -262,6 +262,10 @@ var module_env = function(asm) {
             asm.conn.sendMoveItem(src_inv, src_slot, dest_inv, dest_slot, amount);
         },
 
+        'ap_send_unsubscribe_inventory': function(iid) {
+            asm.conn.sendUnsubscribeInventory(iid);
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,

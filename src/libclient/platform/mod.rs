@@ -21,6 +21,8 @@ pub trait Platform {
                       dest_inv: InventoryId,
                       dest_slot: usize,
                       amount: u8);
+    fn send_unsubscribe_inventory(&mut self,
+                                  iid: InventoryId);
 }
 
 
@@ -49,6 +51,8 @@ pub trait PlatformObj {
                       dest_inv: InventoryId,
                       dest_slot: usize,
                       amount: u8);
+    fn send_unsubscribe_inventory(&mut self,
+                                  iid: InventoryId);
 }
 
 impl<P: Platform> PlatformObj for P {
@@ -72,6 +76,11 @@ impl<P: Platform> PlatformObj for P {
                       dest_slot: usize,
                       amount: u8) {
         Platform::send_move_item(self, src_inv, src_slot, dest_inv, dest_slot, amount);
+    }
+
+    fn send_unsubscribe_inventory(&mut self,
+                                  iid: InventoryId) {
+        Platform::send_unsubscribe_inventory(self, iid);
     }
 }
 
