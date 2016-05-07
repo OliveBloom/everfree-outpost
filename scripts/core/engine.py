@@ -117,7 +117,7 @@ class ClientProxy(ObjectProxy):
         return self._eng.world_client_name(self.id)
 
     def send_message(self, msg):
-        self._eng.messages_send_chat_update(self.id, '***\t' + msg)
+        self._eng.messages_send_chat_update(self.id, '&s\t***\t' + msg)
 
     def pawn(self):
         eid = self._eng.world_client_pawn_id(self.id)

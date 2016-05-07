@@ -80,7 +80,8 @@ pub fn shut_down(mut eng: EngineRef) {
 
 
 pub fn pre_restart(eng: EngineRef) {
-    let msg = ClientResponse::ChatUpdate("***\tServer restarting...".to_owned());
+    // TODO: call into eng.chat instead
+    let msg = ClientResponse::ChatUpdate("&s\t***\tServer restarting...".to_owned());
     eng.messages().broadcast_clients(msg);
     eng.messages().broadcast_clients(ClientResponse::SyncStatus(SyncKind::Reset));
 
@@ -110,6 +111,7 @@ pub fn post_restart(mut eng: EngineRef, file: File) {
         warn_on_err!(logic::client::login(eng.borrow(), wire_id, &name));
     }
 
-    let msg = ClientResponse::ChatUpdate("***\tServer restarted".to_owned());
+    // TODO: call into eng.chat instead
+    let msg = ClientResponse::ChatUpdate("&s\t***\tServer restarted".to_owned());
     eng.messages().broadcast_clients(msg);
 }
