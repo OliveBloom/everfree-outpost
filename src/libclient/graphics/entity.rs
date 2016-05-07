@@ -33,6 +33,11 @@ pub struct Vertex {
     anim_step: u16,
 
     // 28
+    z_order: u8,
+    _pad0: u8,
+    _pad1: u16,
+
+    // 32
 }
 
 pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
@@ -52,7 +57,7 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
         },
         arrays! {
             // struct 
-            [28] attribs! {
+            [32] attribs! {
                 dest_pos: U16[2] @0,
                 src_pos: U16[2] @4,
                 sheet: U8[1] @8,
@@ -61,6 +66,7 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
                 ref_pos_size: U16[4] @12,
                 // Combine all anim properties as well
                 anim_info: U16[4] @20,
+                z_order: U8[1] @28,
             },
         },
         textures! {
@@ -165,6 +171,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
             const HACKY_ADJUSTMENT: u16 = 24;
 
+            let mut z_order = 0;
             for_each_layer(e.appearance, |layer_table_idx, color| {
                 let layer_idx = self.data.pony_layer_table()[layer_table_idx];
                 let l = self.data.sprite_layer(layer_idx);
@@ -200,9 +207,16 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         anim_rate: a.framerate as u16,
                         anim_start: (e.motion.start_time % 55440) as u16,
                         anim_step: g.size.0,
+
+                        z_order: z_order,
+
+                        _pad0: 0,
+                        _pad1: 0,
                     };
                     idx += 1;
                 }
+
+                z_order += 1;
             });
 
             if let (false, &Some(ref name)) = (is_pawn, &e.name) {
@@ -239,6 +253,12 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                                 anim_rate: 1,
                                 anim_start: 0,
                                 anim_step: 0,
+
+                                // Use the same z-order for all chars, since they don't overlap
+                                z_order: z_order,
+
+                                _pad0: 0,
+                                _pad1: 0,
                             };
                             idx += 1;
                         }

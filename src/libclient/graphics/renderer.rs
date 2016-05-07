@@ -485,9 +485,9 @@ impl<GL: Context> Renderer<GL> {
 
         self.render_terrain(scene);
         self.render_structures(scene, anim_now);
-        self.render_lights(scene);
         self.render_structure_shadows(scene, anim_now);
         self.render_sprites(scene, anim_now);
+        self.render_lights(scene);
         self.render_postprocess(scene);
         self.render_ui(scene);
 
@@ -621,6 +621,7 @@ impl<GL: Context> Renderer<GL> {
             .arrays(&[self.structure_light_geom.buffer()])
             .textures(&[
                 &self.framebuffers.world_depth,
+                &self.framebuffers.world_entity_depth,
             ])
             .output(&self.framebuffers.light)
             .blend_mode(BlendMode::Add)
@@ -634,6 +635,7 @@ impl<GL: Context> Renderer<GL> {
             .arrays(&[&self.entity_light_buffer])
             .textures(&[
                 &self.framebuffers.world_depth,
+                &self.framebuffers.world_entity_depth,
             ])
             .output(&self.framebuffers.light)
             .blend_mode(BlendMode::Add)

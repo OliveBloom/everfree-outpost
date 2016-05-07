@@ -59,6 +59,7 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
         },
         textures! {
             depthTex,
+            entityDepthTex,
         },
         outputs! { color: 1 })
 }
