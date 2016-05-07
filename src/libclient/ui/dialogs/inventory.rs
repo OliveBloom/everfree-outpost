@@ -187,10 +187,12 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
 
     fn on_key(&mut self, key: KeyEvent) -> EventStatus {
         let idx = self.state.focus as usize;
-        let inv = self.dyn.invs.get(self.state.inv_id[idx]);
-        let mut child = WidgetPack::new(&mut self.state.grid[idx],
-                                        GridDyn::new(inv, true));
-        let mut status = child.on_key(key);
+        let mut status = {
+            let inv = self.dyn.invs.get(self.state.inv_id[idx]);
+            let mut child = WidgetPack::new(&mut self.state.grid[idx],
+                                            GridDyn::new(inv, true));
+            child.on_key(key)
+        };
 
         if !status.is_handled() {
             match key.code {
@@ -201,6 +203,22 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
                 KeyAction::MoveRight if idx < 1 => {
                     self.state.focus += 1;
                     status = EventStatus::Handled;
+                },
+                KeyAction::Select => {
+                    let src_inv = self.state.inv_id[idx];
+                    let src_slot = self.state.grid[idx].focus;
+                    let dest_inv = self.state.inv_id[1 - idx];
+                    let dest_slot = 255;    // NO_SLOT - place items automatically
+
+                    let amount = if key.shift() { 10 } else { 1 };
+
+                    status = EventStatus::Action(box move |c: &mut ClientObj| {
+                        c.platform().send_move_item(src_inv,
+                                                    src_slot,
+                                                    dest_inv,
+                                                    dest_slot,
+                                                    amount);
+                    });
                 },
                 _ => {},
             }

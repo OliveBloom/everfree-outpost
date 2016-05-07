@@ -11,6 +11,7 @@ function asmEncodeKey(code) {
 
         // TODO: enter key handling is a hack
         case 'chat':        return 20;
+        case 'interact':    return 20;
         case 'cancel':      return 21;
 
         case 'hotbar_1':    return 31;
