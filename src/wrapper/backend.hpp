@@ -20,12 +20,16 @@ class backend {
     std::vector<uint8_t> data_buf;
 
     bool suspended;
+    bool restarting;
     std::vector<message> pending_msgs;
 
     void read_header();
     void read_data();
     void handle_message();
     void handle_shutdown();
+
+    void suspend();
+    void resume();
 
 public:
     backend(server& owner,
@@ -35,9 +39,6 @@ public:
     void start();
 
     void write(message msg);
-
-    void suspend();
-    void resume();
 };
 
 #endif // OUTPOST_WRAPPER_BACKEND_HPP

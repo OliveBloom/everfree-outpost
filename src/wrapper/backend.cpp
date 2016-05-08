@@ -1,4 +1,5 @@
 #include "backend.hpp"
+#include "opcode.hpp"
 #include "server.hpp"
 
 using namespace std;
@@ -11,6 +12,7 @@ void backend::read_header() {
             if (!ec) {
                 read_data();
             } else {
+                cerr << "error reading header from backend: " << ec << endl;
                 handle_shutdown();
             }
         });
@@ -26,7 +28,7 @@ void backend::read_data() {
                 read_header();
             } else {
                 cerr << "error reading data from backend: " << ec << endl;
-                assert(0);
+                handle_shutdown();
             }
         });
 }
@@ -37,13 +39,32 @@ void backend::handle_message() {
 }
 
 void backend::handle_shutdown() {
-    owner.handle_backend_shutdown();
+    if (restarting) {
+        restarting = false;
+        start();
+        resume();
+    } else {
+        owner.handle_backend_shutdown();
+    }
+}
+
+void backend::suspend() {
+    suspended = true;
+}
+
+void backend::resume() {
+    suspended = false;
+    for (auto&& msg : pending_msgs) {
+        write(msg);
+    }
+    pending_msgs.clear();
 }
 
 backend::backend(server& owner,
                  io_service& ios,
                  const char* backend_path)
-  : owner(owner), backend_path(backend_path), pipe_from(ios), pipe_to(ios) {
+  : owner(owner), backend_path(backend_path), pipe_from(ios), pipe_to(ios),
+    restarting(false) {
 }
 
 void backend::start() {
@@ -57,6 +78,13 @@ void backend::write(message msg) {
     if (suspended) {
         pending_msgs.emplace_back(move(msg));
         return;
+    }
+
+    if (msg.client_id == 0 &&
+            (msg.opcode == opcode::OP_RESTART_SERVER ||
+             msg.opcode == opcode::OP_RESTART_BOTH)) {
+        restarting = true;
+        suspend();
     }
 
     auto header_ptr = make_shared<header>();
@@ -80,16 +108,4 @@ void backend::write(message msg) {
                 assert(0);
             }
         });
-}
-
-void backend::suspend() {
-    suspended = true;
-}
-
-void backend::resume() {
-    suspended = false;
-    for (auto&& msg : pending_msgs) {
-        write(msg);
-    }
-    pending_msgs.clear();
 }

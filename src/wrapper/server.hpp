@@ -20,7 +20,6 @@ class server {
     std::unique_ptr<repl> repl_;
     std::unique_ptr<signals> signals_;
     std::unique_ptr<websocket> websocket_;
-    bool restarting_;
 
 public:
     server(boost::asio::io_service& ios,
