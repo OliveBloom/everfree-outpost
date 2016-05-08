@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <vector>
 
+#include "message.hpp"
 #include "platform.hpp"
 
 
@@ -15,16 +16,11 @@ class backend {
     platform::child_stream pipe_to;
     platform::child_stream pipe_from;
 
-    struct header {
-        uint16_t client_id;
-        uint16_t data_len;
-    };
-
     header header_buf;
-    std::vector<uint8_t> msg_buf;
+    std::vector<uint8_t> data_buf;
 
     bool suspended;
-    std::vector<std::pair<uint16_t, std::vector<uint8_t>>> pending_msgs;
+    std::vector<message> pending_msgs;
 
     void read_header();
     void read_data();
@@ -38,7 +34,7 @@ public:
 
     void start();
 
-    void write(uint16_t client_id, std::vector<uint8_t> msg);
+    void write(message msg);
 
     void suspend();
     void resume();

@@ -48,13 +48,12 @@ void repl::handle_command(size_t id,
         vector<uint8_t>::const_iterator begin,
         vector<uint8_t>::const_iterator end) {
     vector<uint8_t> buf;
-    buf.reserve(end - begin + 6);
-    buf.resize(6);
+    buf.reserve(end - begin + 4);
+    buf.resize(4);
 
     uint16_t cookie = next_cookie++;
-    *(uint16_t*)&buf[0] = opcode::OP_REPL_COMMAND;
-    *(uint16_t*)&buf[2] = cookie;
-    *(uint16_t*)&buf[4] = end - begin;
+    *(uint16_t*)&buf[0] = cookie;
+    *(uint16_t*)&buf[2] = end - begin;
     buf.insert(buf.end(), begin, end);
     owner.handle_repl_command(move(buf));
 
@@ -65,14 +64,14 @@ void repl::handle_response(
         vector<uint8_t>::const_iterator begin,
         vector<uint8_t>::const_iterator end) {
     if (end - begin < 2) {
-        cerr << "ReplReply has no cookie" << endl;
+        cerr << "BUG: ReplReply has no cookie" << endl;
         return;
     }
     uint16_t cookie = *(uint16_t*)&*begin;
 
     auto pending_iter = pending.find(cookie);
     if (pending_iter == pending.end()) {
-        cerr << "ReplReply has invalid cookie: " << cookie << endl;
+        cerr << "BUG: ReplReply has invalid cookie: " << cookie << endl;
         return;
     }
     size_t client_id = pending_iter->second;
