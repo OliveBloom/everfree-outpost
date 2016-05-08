@@ -33,21 +33,6 @@ void backend::read_data() {
         });
 }
 
-void backend::handle_message() {
-    message msg(header_buf.client_id, header_buf.opcode, move(data_buf));
-    owner.handle_backend_response(move(msg));
-}
-
-void backend::handle_shutdown() {
-    if (restarting) {
-        restarting = false;
-        start();
-        resume();
-    } else {
-        owner.handle_backend_shutdown();
-    }
-}
-
 void backend::suspend() {
     suspended = true;
 }
@@ -62,13 +47,13 @@ void backend::resume() {
 
 backend::backend(server& owner,
                  io_service& ios,
-                 const char* backend_path)
-  : owner(owner), backend_path(backend_path), pipe_from(ios), pipe_to(ios),
-    restarting(false) {
+                 char** command)
+  : owner(owner), command(command), pipe_from(ios), pipe_to(ios),
+    suspended(false), restarting(false) {
 }
 
 void backend::start() {
-    auto fds = platform::spawn_backend(backend_path);
+    auto fds = platform::spawn_backend(command);
     pipe_from = platform::child_stream(pipe_from.get_io_service(), fds.first);
     pipe_to = platform::child_stream(pipe_to.get_io_service(), fds.second);
     read_header();
@@ -78,13 +63,6 @@ void backend::write(message msg) {
     if (suspended) {
         pending_msgs.emplace_back(move(msg));
         return;
-    }
-
-    if (msg.client_id == 0 &&
-            (msg.opcode == opcode::OP_RESTART_SERVER ||
-             msg.opcode == opcode::OP_RESTART_BOTH)) {
-        restarting = true;
-        suspend();
     }
 
     auto header_ptr = make_shared<header>();

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "backend.hpp"
+#include "game_backend.hpp"
 #include "control.hpp"
 #include "message.hpp"
 #include "repl.hpp"
@@ -15,7 +15,7 @@
 
 
 class server {
-    std::unique_ptr<backend> backend_;
+    std::unique_ptr<game_backend> game_backend_;
     std::unique_ptr<control> control_;
     std::unique_ptr<repl> repl_;
     std::unique_ptr<signals> signals_;
@@ -23,7 +23,7 @@ class server {
 
 public:
     server(boost::asio::io_service& ios,
-           const char* backend_path,
+           char** game_command,
            platform::local_stream::endpoint control_addr,
            platform::local_stream::endpoint repl_addr,
            uint16_t ws_port);

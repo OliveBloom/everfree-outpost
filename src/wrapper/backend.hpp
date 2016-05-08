@@ -11,30 +11,35 @@
 class server;
 
 class backend {
-    server& owner;
-    const char* backend_path;
+    char** command;
     platform::child_stream pipe_to;
     platform::child_stream pipe_from;
+
+    std::vector<message> pending_msgs;
+
+    void read_header();
+    void read_data();
+
+protected:
+    server& owner;
 
     header header_buf;
     std::vector<uint8_t> data_buf;
 
     bool suspended;
     bool restarting;
-    std::vector<message> pending_msgs;
-
-    void read_header();
-    void read_data();
-    void handle_message();
-    void handle_shutdown();
 
     void suspend();
     void resume();
 
+    virtual void handle_message() = 0;
+    virtual void handle_shutdown() = 0;
+
 public:
     backend(server& owner,
             boost::asio::io_service& ios,
-            const char* backend_path);
+            char** command);
+    virtual ~backend() {}
 
     void start();
 

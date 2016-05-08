@@ -14,7 +14,7 @@ namespace platform {
 #endif
 
     std::pair<child_stream::native_handle_type, child_stream::native_handle_type>
-        spawn_backend(const char* path);
+        spawn_backend(char** path);
 }
 
 #endif // OUTPOST_WRAPPER_CONFIG_H
