@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Everfree Outpost</title>
+<style>
+body { background-color: #140c1c }
+#i { display:none; position:absolute; }
+* {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
+}
+</style>
+    </head>
+    <body>
+        <img id='i' src='logo.png'>
+
+        <script>
+(function() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var px = Math.max(w, h);
+    var scale = Math.max(1, Math.round(px / 1024));
+    var x = Math.floor(w / 2 / scale) * scale - 80;
+    var y = Math.floor(h / 2 / scale) * scale - 50;
+    var i = document.getElementById('i');
+    i.style.left = x + 'px';
+    i.style.top = y + 'px';
+    i.style.transform = 'scale(' + scale + ')';
+    i.style.display = 'block';
+})();
+        </script>
+
+        <div id='status' style='color:#deeed6'>
+        </div>
+
+        <script src='launcher.js'></script>
+    </body>
+</html>

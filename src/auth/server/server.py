@@ -6,7 +6,7 @@ import re
 import struct
 
 from flask import Flask, request, jsonify, render_template, \
-        flash, redirect, url_for, abort, session
+        flash, redirect, url_for, abort, session, make_response
 
 import bcrypt
 import nacl.secret
@@ -43,6 +43,8 @@ def read_config():
             'db_name': get('db_name'),
             'db_user': get('db_user'),
             'db_pass': decrypt('db_pass').decode('utf-8'),
+
+            'allowed_origin': get('allowed_origin'),
             }
 
 cfg = read_config()
@@ -117,9 +119,9 @@ def user_dispatch(result, ok_url, err_url):
     assert False, 'bad status in result: %r' % result['status']
 
 def api_dispatch(result):
-    if result['status'] == 'ok':
+    if result['status'] == 'ok' or result['status'] == 'error':
         return jsonify(result)
-    elif result['status'] == 'error' or result['status'] == 'bug':
+    elif  result['status'] == 'bug':
         return (jsonify(result), 400)
     assert False, 'bad status in result: %r' % result['status']
 
@@ -255,10 +257,20 @@ def api_get_verify_key():
     result = do_get_verify_key()
     return api_dispatch(result)
 
-@app.route('/api/sign_challenge', methods=['POST'])
+@app.route('/api/sign_challenge', methods=['POST', 'OPTIONS'])
 def api_sign_challenge():
-    result = do_sign_challenge(request.get_json(force=True))
-    return api_dispatch(result)
+    if request.method == 'POST':
+        if request.headers.get('Origin') == cfg['allowed_origin']:
+            result = do_sign_challenge(request.get_json(force=True))
+            resp = make_response(api_dispatch(result))
+        else:
+            resp = make_response(('', 403))
+    else:
+        resp = make_response('')
+
+    resp.headers['Access-Control-Allow-Origin'] = cfg['allowed_origin']
+    resp.headers['Access-Control-Allow-Credentials'] = 'true'
+    return resp
 
 if __name__ == '__main__':
     app.run()

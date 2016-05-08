@@ -13,9 +13,13 @@ import requests
 OP_AUTH_RESPONSE =      0x0014
 OP_AUTH_CHALLENGE =     0x801c
 OP_AUTH_RESULT =        0x801d
-OP_AUTH_START =         0xff09
-OP_AUTH_CANCEL =        0xff09
-OP_AUTH_FINISH =        0xff0a
+OP_ADD_CLIENT =         0xff00
+OP_REMOVE_CLIENT =      0xff01
+OP_CLIENT_REMOVED =     0xff02
+OP_AUTH_DONE =          0xff09
+
+MODE_SSO =      0
+MODE_LOCAL =    1
 
 
 def read_config():
@@ -49,7 +53,7 @@ def check_response(key, data, expected_nonce):
         key.verify(data)
     except nacl.signing.BadSignatureError:
         print('bad sig', file=sys.stderr)
-        return False
+        return None
 
     body = data[nacl.bindings.crypto_sign_BYTES:]
 
@@ -61,10 +65,10 @@ def check_response(key, data, expected_nonce):
 
     if nonce != expected_nonce:
         print('bad nonce', file=sys.stderr)
-        return False
+        return None
 
     print('response ok', file=sys.stderr)
-    return True
+    return name.decode()
 
 def main():
     cfg = read_config()
@@ -87,22 +91,44 @@ def main():
             if cid == 0:
                 user_cid, = struct.unpack('<H', data[:2])
                 data = data[2:]
-                if opcode == OP_AUTH_START:
+                print('control message for %d' % user_cid, file=sys.stderr)
+                if opcode == OP_ADD_CLIENT:
                     nonce = nacl.utils.random(16)
                     pending_nonces[user_cid] = nonce
-                    b_out.write(build_raw(user_cid, OP_AUTH_CHALLENGE, nonce))
-                elif opcode == OP_AUTH_CANCEL:
+                    challenge = struct.pack('<H', MODE_SSO) + nonce
+                    b_out.write(build_raw(user_cid, OP_AUTH_CHALLENGE, challenge))
+                    print('ADD client %d, mode %d, nonce %s' %
+                            (user_cid, MODE_SSO, ''.join('%02x' % b for b in nonce)),
+                            file=sys.stderr)
+                elif opcode == OP_REMOVE_CLIENT:
                     del pending_nonces[user_cid]
+                    b_out.write(build_msg(0, OP_CLIENT_REMOVED, '<H', user_cid))
+                    print('REMOVE client %d' % user_cid, file=sys.stderr)
                 else:
                     assert False, 'bad opcode: %x' % opcode
             else:
                 if opcode == OP_AUTH_RESPONSE:
-                    check_response(key, data, pending_nonces.pop(cid))
+                    name = check_response(key, data, pending_nonces.pop(cid))
+                    if name is None:
+                        msg = struct.pack('<H', 0) + 'Login failed'.encode()
+                        b_out.write(build_raw(cid, OP_AUTH_RESULT, msg))
+                        b_out.write(build_msg(0, OP_CLIENT_REMOVED, '<H', cid))
+                        print('FAILED client %d' % cid, file=sys.stderr)
+                    else:
+                        msg = struct.pack('<H', 1) + name.encode()
+                        b_out.write(build_raw(cid, OP_AUTH_RESULT, msg))
+                        msg = struct.pack('<HH', cid, 0) + name.encode()
+                        b_out.write(build_raw(0, OP_AUTH_DONE, msg))
+                        print('DONE client %d (name = %r)' % (cid, name),
+                                file=sys.stderr)
+                else:
+                    assert False, 'bad opcode: %x' % opcode
         except:
             sys.stderr.write('Exception while handling %x from %d' % (opcode, cid))
             traceback.print_exc()
 
         b_out.flush()
+        sys.stderr.flush()
 
 
 
