@@ -7,7 +7,7 @@ using namespace std;
 
 void game_backend::handle_message() {
     message msg(header_buf.client_id, header_buf.opcode, move(data_buf));
-    owner.handle_backend_response(move(msg));
+    owner.handle_game_response(move(msg));
 }
 
 void game_backend::handle_shutdown() {
@@ -16,7 +16,7 @@ void game_backend::handle_shutdown() {
         start();
         resume();
     } else {
-        owner.handle_backend_shutdown();
+        owner.handle_game_shutdown();
     }
 }
 
