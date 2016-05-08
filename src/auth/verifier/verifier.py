@@ -24,15 +24,12 @@ def read_config():
     config.read_file(open('outpost.ini'))
 
     return {
-            'auth_server': config['auth'].get('server_url'),
-            'superusers': set(config['auth.superusers'].keys()),
-            'bans': set(config['auth.bans'].keys()),
+            'auth_server': config['auth'].get('sso_endpoint'),
+            #'superusers': set(config['auth.superusers'].keys()),
+            #'bans': set(config['auth.bans'].keys()),
             }
 
 def get_verify_key(url):
-    if not url.startswith('https://'):
-        sys.stderr.write('warning: Auth server URL does not use HTTPS!  '
-                'This configuration is not secure.\n')
     r = requests.get(url)
     key_str = r.json()['key']
     key = nacl.signing.VerifyKey(key_str.encode('ascii'), URLSafeBase64Encoder)
@@ -71,7 +68,10 @@ def check_response(key, data, expected_nonce):
 
 def main():
     cfg = read_config()
-    key = get_verify_key(cfg['auth_server'])
+    if not cfg['auth_server'].startswith('https://'):
+        sys.stderr.write('warning: Auth server URL does not use HTTPS!  '
+                'This configuration is not secure.\n')
+    key = get_verify_key(cfg['auth_server'] + 'get_verify_key')
 
     b_in = sys.stdin.buffer
     b_out = sys.stdout.buffer

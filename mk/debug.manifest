@@ -1,1 +1,5 @@
 www/js/: $root/src/client/js/
+
+bin/auth.py: $root/src/auth/verifier/verifier.py
+
+outpost.ini: $root/util/outpost_debug.ini
