@@ -22,7 +22,6 @@ mk_linux() {
         --dist-dir=../$name_linux \
         --rustc=$RUSTC \
         --emscripten-fastcomp-prefix=$EM_FASTCOMP \
-        --emscripten-passes-prefix=$EM_PLUGINS \
         --rust-extra-libdir=$RUST_EXTRA_LIBDIR \
         --rust-home=$RUST_SRC \
         --bitflags-home=$RUST_EXTRA_LIBDIR/../bitflags \

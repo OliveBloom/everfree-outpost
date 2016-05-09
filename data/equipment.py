@@ -5,7 +5,7 @@ import json
 import PIL.Image
 import PIL.ImageChops
 
-from outpost_data.core import sprite, image2
+from outpost_data.core import sprite, image2, files
 from outpost_data.core.builder2 import *
 from outpost_data.core.consts import *
 from outpost_data.core.image2 import load, Image, Anim
@@ -93,9 +93,7 @@ def multiply_image(img, color):
 def init():
     icon = load('icons/socks.png')
 
-    # TODO: don't hardcode . as $root!
-    # TODO: also make sure this file gets listed in data.d
-    path = 'assets/sprites/equipment/uvdata-socks.json'
+    path = files.find('sprites/equipment/uvdata-socks.json')
 
     for name, rgb in COLORS:
         for sex in ('m', 'f'):
