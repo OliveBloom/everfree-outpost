@@ -136,6 +136,8 @@ def header(i):
         user_cflags = %{i.cflags}
         user_cxxflags = %{i.cxxflags}
         user_ldflags = %{i.ldflags}
+
+        version = dev
     ''', os=os, **locals())
 
 
@@ -289,6 +291,7 @@ if __name__ == '__main__':
             js.compile(i, '$b_js/outpost.js', '$root/src/client/js/main.js'),
             js.minify(i, '$b_js/asmlibs.js', '$b_asmjs/asmlibs.js'),
             js.compile(i, '$b_js/configedit.js', '$root/src/client/js/configedit.js'),
+            js.client_manifest(i, '$b_js/manifest.json'),
 
             '# uvedit',
             asmjs.asmlibs('uvedit_asm',

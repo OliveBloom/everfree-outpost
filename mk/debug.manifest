@@ -1,4 +1,4 @@
-www/js/: $root/src/client/js/
+www/versions/$version/js/: $root/src/client/js/
 
 bin/auth.py: $root/src/auth/verifier/verifier.py
 

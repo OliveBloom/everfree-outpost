@@ -54,6 +54,7 @@ function Launcher(server_url) {
     // 0 - connect to server
     this.server_url = new URL(server_url);
     this.server_info = null;
+    this.base_url = null;
     this.version_info = null;
     this.conn = null;
 
@@ -153,13 +154,8 @@ Launcher.prototype._getVersionInfo = function() {
     var this_ = this;
 
     var version = this.server_info['version'];
-    this._xhr(new URL('versions/' + version + '.json', document.location).href, 'json', {
-        /*
-        progress: function(evt) {
-            this_.cur_bytes = evt.loaded;
-            this_.total_bytes = evt.lengthComputable ? evt.total : null;
-        },
-        */
+    this.base_url = new URL('versions/' + version + '/', document.location).href;
+    this._xhr(new URL('manifest.json', this.base_url).href, 'json', {
         load: function(evt) {
             this_.version_info = evt.target.response;
             this_._connectWebsocket();
@@ -291,8 +287,100 @@ Launcher.prototype._authResult = function(flags, result) {
 //
 
 Launcher.prototype._loadCode = function() {
+    if (this.error) {
+        return;
+    }
+
     this.current = 2;
+
+    // From now on, resolve paths relative to this.base_url.  Note this only
+    // applies to URLs in the document (such as CSS image URLs), not to XHRs.
+    var base = document.createElement('base');
+    base.setAttribute('href', this.base_url);
+    document.body.appendChild(base);
+
+    this.cur_files = 0;
+    this.total_files = this.version_info['files'].length;
+
+    this.cur_bytes = 0;
+    this.total_bytes = 0;
+
+    this.finished_bytes = 0;
+    this.all_bytes = this.version_info['total_size'];
+
+    // Hacky module implementation
+    window.exports = {};
+    window.require = function() { return window.exports; };
+
+    this._loadCodeIndexed(0);
 };
+
+Launcher.prototype._loadCodeIndexed = function(idx) {
+    if (this.error) {
+        return;
+    }
+    var this_ = this;
+
+    if (idx >= this.total_files) {
+        this._finishLoadCode();
+        return;
+    }
+
+    var path = this.version_info['files'][idx];
+    this.cur_bytes = 0;
+    this.total_bytes = 0;
+    var type = path.endsWith('.html') ? 'document' : 'blob';
+    this._xhr(new URL(path, this.base_url).href, type, {
+        progress: function(evt) {
+            this_.cur_bytes = evt.loaded;
+            this_.total_bytes = evt.lengthComputable ? evt.total : 0;
+        },
+        load: function(evt) {
+            this_.finished_bytes += this_.total_bytes;
+            ++this_.cur_files;
+            this_._addCode(path, evt.target.response, function() {
+                this_._loadCodeIndexed(idx + 1);
+            });
+        },
+        error: function(evt) {
+            this_._error((evt.target.statusText || 'Connection error') +
+                    ' (while loading ' + path + ')');
+        },
+    });
+};
+
+Launcher.prototype._addCode = function(path, obj, next) {
+    if (path.endsWith('.html')) {
+        while (obj.body.firstChild) {
+            document.body.appendChild(obj.body.firstChild);
+        }
+        next();
+    } else {
+        var script = document.createElement('script');
+        script.setAttribute('src', URL.createObjectURL(obj) + '#_/' + path);
+        // Don't proceed until the script has been executed.
+        script.onload = next;
+        document.body.appendChild(script);
+    }
+};
+
+Launcher.prototype._finishLoadCode = function() {
+    this._loadData();
+};
+
+//
+// 3 - download code
+//
+
+Launcher.prototype._loadData = function() {
+    if (this.error) {
+        return;
+    }
+
+    this.current = 3;
+    console.log('loadData');
+};
+
 
 window.L = new Launcher('http://localhost:8889/');
 window.L.start();

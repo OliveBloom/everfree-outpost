@@ -12,19 +12,21 @@ data/sprite_layers.json: $b_data/sprite_layers_server.json
 
 scripts/: $b_scripts/gen/
 
-www/client.html: $root/src/client/client.html
 www/instructions.html: $root/src/client/instructions.html
 www/credits.html: $b_data/credits.html
-www/outpost.js: $b_js/outpost.js
-www/asmlibs.js: $b_js/asmlibs.js
 www/outpost.pack: $b_data/outpost.pack
 www/server.json: $b_data/server.json
 
 www/configedit.html: $root/src/client/configedit.html
 www/configedit.js: $b_js/configedit.js
 
-www/img/: $root/assets/ui/png
-www/font/: $root/assets/fonts/ttf
+www/versions/${version}/client_parts.html: $root/src/client/client_parts.html
+www/versions/${version}/outpost.js: $b_js/outpost.js
+www/versions/${version}/asmlibs.js: $b_js/asmlibs.js
+www/versions/${version}/manifest.json: $b_js/manifest.json
+
+www/versions/${version}/img/: $root/assets/ui/png
+www/versions/${version}/font/: $root/assets/fonts/ttf
 
 www/uvedit/uvedit.html: $root/src/uvedit/uvedit.html
 www/uvedit/uvedit.js: $root/src/uvedit/main.js
