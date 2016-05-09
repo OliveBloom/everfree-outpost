@@ -9,6 +9,7 @@ use cache::TerrainCache;
 use chat::Chat;
 use chunks::Chunks;
 use data::Data;
+use input::{Input, Action};
 use logic;
 use logic::extra::Extra;
 use messages::{Messages, MessageEvent};
@@ -22,6 +23,7 @@ use storage::Storage;
 use terrain_gen::{TerrainGen, TerrainGenEvent};
 use terrain_gen::Fragment as TerrainGen_Fragment;
 use timer::{Timer, TimerEvent};
+use timing::*;
 use vision::Vision;
 use world::World;
 
@@ -50,6 +52,8 @@ pub struct Engine<'d> {
     pub cache: TerrainCache,
     pub terrain_gen: TerrainGen,
     pub chat: Chat,
+
+    pub input: Input,
 }
 
 #[must_use]
@@ -84,6 +88,8 @@ impl<'d> Engine<'d> {
             cache: TerrainCache::new(),
             terrain_gen: TerrainGen::new(data, storage),
             chat: Chat::new(),
+
+            input: Input::new(),
         }
     }
 
@@ -94,6 +100,8 @@ impl<'d> Engine<'d> {
             logic::lifecycle::post_restart(self.as_ref(), file);
             self.storage.remove_restart_file();
         }
+
+        self.timer.schedule(next_tick(self.now), |eng| eng.unwrap().tick());
 
         loop {
             enum Event {
@@ -167,19 +175,9 @@ impl<'d> Engine<'d> {
             },
 
             ReplCommand(cookie, msg) => {
-                // TODO: remove
-                let mut msg = &msg as &str;
-                if msg.starts_with("@") {
-                    msg = &msg[1..];
-                }
-
-                let result = self.script_hooks.call_eval(self.as_ref(), msg);
+                let result = self.script_hooks.call_eval(self.as_ref(), &msg);
                 let result_str = match result {
-                    Ok(s) => {
-                        let mut s = s;
-                        s.push_str("\n");
-                        s
-                    },
+                    Ok(s) => s + "\n",
                     Err(e) => format!("[exception: {}]\n", e),
                 };
                 self.messages.send_control(ReplResult(cookie, result_str));
@@ -242,9 +240,8 @@ impl<'d> Engine<'d> {
                      evt: ClientEvent) -> HandlerResult {
         use messages::ClientEvent::*;
         match evt {
-            Input(time, input) => {
-                self.timer.schedule(time,
-                                    move |eng| logic::input::input(eng, cid, input));
+            Input(_time, input) => {
+                self.input.schedule_input(cid, input);
             },
 
             UnsubscribeInventory(iid) => {
@@ -270,18 +267,15 @@ impl<'d> Engine<'d> {
             },
 
             Interact(time, args) => {
-                self.timer.schedule(time,
-                                    move |eng| logic::input::interact(eng, cid, args));
+                self.input.schedule_action(cid, Action::Interact, args);
             },
 
             UseItem(time, item_id, args) => {
-                self.timer.schedule(time,
-                                    move |eng| logic::input::use_item(eng, cid, item_id, args));
+                self.input.schedule_action(cid, Action::UseItem(item_id), args);
             },
 
             UseAbility(time, item_id, args) => {
-                self.timer.schedule(time,
-                                    move |eng| logic::input::use_ability(eng, cid, item_id, args));
+                self.input.schedule_action(cid, Action::UseAbility(item_id), args);
             },
 
             BadRequest => {
@@ -289,6 +283,27 @@ impl<'d> Engine<'d> {
             },
         }
         HandlerResult::Continue
+    }
+
+
+    fn tick(&mut self) {
+        // Schedule this first, so it gets the first slot in the timing wheel bucket.
+        self.timer.schedule(next_tick(self.now), |eng| eng.unwrap().tick());
+
+        for (cid, (act, args)) in self.input.actions() {
+            match act {
+                Action::Interact =>
+                    logic::input::interact(self.as_ref(), cid, args),
+                Action::UseItem(item_id) =>
+                    logic::input::use_item(self.as_ref(), cid, item_id, args),
+                Action::UseAbility(item_id) =>
+                    logic::input::use_ability(self.as_ref(), cid, item_id, args),
+            }
+        }
+
+        for (cid, input) in self.input.inputs() {
+            logic::input::input(self.as_ref(), cid, input);
+        }
     }
 
 
