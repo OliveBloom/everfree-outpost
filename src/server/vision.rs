@@ -13,18 +13,11 @@
 //! In the overall server architecture, the vision system acts as a sort of filter between world
 //! updates and client messages, ensuring that each client receives updates only for objects it can
 //! actually see.
-use std::collections::{HashMap, HashSet};
-use std::fmt::Debug;
-use std::hash::Hash;
-use std::mem;
-use vec_map::VecMap;
+use std::collections::HashMap;
 
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use types::*;
-use util::{multimap_insert, multimap_remove};
-use util::RefcountedMap;
-use util::OptionIterExt;
 use util::SmallSet;
 
 use pubsub::{self, PubSub};

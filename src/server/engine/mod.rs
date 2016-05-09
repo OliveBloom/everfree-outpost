@@ -241,6 +241,7 @@ impl<'d> Engine<'d> {
         use messages::ClientEvent::*;
         match evt {
             Input(_time, input) => {
+                // TODO: actually respect the requested delay
                 self.input.schedule_input(cid, input);
             },
 
@@ -266,15 +267,15 @@ impl<'d> Engine<'d> {
                 logic::input::chat(self.as_ref(), cid, msg);
             },
 
-            Interact(time, args) => {
+            Interact(_time, args) => {
                 self.input.schedule_action(cid, Action::Interact, args);
             },
 
-            UseItem(time, item_id, args) => {
+            UseItem(_time, item_id, args) => {
                 self.input.schedule_action(cid, Action::UseItem(item_id), args);
             },
 
-            UseAbility(time, item_id, args) => {
+            UseAbility(_time, item_id, args) => {
                 self.input.schedule_action(cid, Action::UseAbility(item_id), args);
             },
 

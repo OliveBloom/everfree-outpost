@@ -2,7 +2,6 @@ use types::*;
 
 use engine::split::{EngineRef, Open};
 use input::{InputBits};
-use messages::ClientResponse;
 use msg::ExtraArg;
 use physics;
 use world::object::*;

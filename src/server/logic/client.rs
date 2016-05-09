@@ -2,7 +2,7 @@ use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use chunks;
-use engine::split::{EngineRef, Open};
+use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
 use world;
