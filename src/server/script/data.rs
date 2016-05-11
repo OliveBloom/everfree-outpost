@@ -41,9 +41,9 @@ define_python_class! {
                     Shape::Empty => "empty",
                     Shape::Floor => "floor",
                     Shape::Solid => "solid",
-                    Shape::RampE => "ramp_e",
-                    Shape::RampW => "ramp_w",
-                    Shape::RampS => "ramp_s",
+                    //Shape::RampE => "ramp_e",
+                    //Shape::RampW => "ramp_w",
+                    //Shape::RampS => "ramp_s",
                     Shape::RampN => "ramp_n",
                 };
                 Some(desc)

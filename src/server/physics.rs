@@ -1,6 +1,7 @@
 //! Interface to the physics engine.  The physics engine itself lives in a separate library,
 //! `libphysics`, so that it can be compiled to asm.js for use on the client.  This system just
 //! provides the glue to connect the physics engine to entities and the rest of the `World`.
+use std::collections::HashMap;
 use libphysics::{self, ShapeSource};
 use libphysics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE};
 
@@ -9,22 +10,96 @@ use util::StrResult;
 
 use cache::TerrainCache;
 use data::Data;
+use timing::next_tick;
 use world::{self, World};
 use world::{Motion, Activity};
 use world::object::*;
 
 
+struct MovingEntity {
+    target_velocity: V3,
+    current_velocity: V3,
+}
+
+impl MovingEntity {
+    fn new() -> MovingEntity {
+        MovingEntity {
+            target_velocity: scalar(0),
+            current_velocity: scalar(0),
+        }
+    }
+}
+
+pub enum Update {
+    StartMotion(V3),
+    EndTime(Time),
+}
+
 pub struct Physics<'d> {
     data: &'d Data,
+    moving_entities: HashMap<EntityId, MovingEntity>,
 }
 
 impl<'d> Physics<'d> {
     pub fn new(data: &'d Data) -> Physics<'d> {
         Physics {
             data: data,
+            moving_entities: HashMap::new(),
         }
     }
+
+    pub fn set_target_velocity(&mut self, eid: EntityId, v: V3) {
+        let me = self.moving_entities.entry(eid).or_insert_with(MovingEntity::new);
+        me.target_velocity = v;
+    }
+
+    pub fn update(&mut self,
+                  world: &World,
+                  cache: &TerrainCache,
+                  now: Time) -> Vec<(EntityId, Update)> {
+        let mut journal = Vec::new();
+        let mut remove_eids = Vec::new();
+        let next = next_tick(now);
+
+        for (&eid, me) in &mut self.moving_entities {
+            let e = match world.get_entity(eid) {
+                Some(e) => e,
+                None => {
+                    remove_eids.push(eid);
+                    continue;
+                },
+            };
+
+            let s = ChunksSource {
+                cache: cache,
+                base_tile: scalar(0),
+                plane: e.plane_id(),
+            };
+
+            let pos = e.motion().pos(now);
+            let size = V3::new(32, 32, 48);
+            let (delta, duration) = libphysics::collide2(&s, pos, size, me.target_velocity);
+            journal.push((eid, Update::StartMotion(delta)));
+
+            /*
+            let pos = e.motion().pos(now);
+            let velocity = panic!("NYI: compute actual velocity from target");
+            if velocity != me.current_velocity {
+                journal.push((eid, Update::StartMotion(actual_v)));
+                me.current_velocity = velocity;
+            }
+
+            let end_time = panic!("NYI: run physics to check for early stop");
+            if let Some(end_time) = end_time {
+                journal.push((eid, StopTime(end_time)));
+            }
+            */
+        }
+
+        journal
+    }
 }
+
 
 
 struct ChunksSource<'a> {

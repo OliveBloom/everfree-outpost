@@ -17,6 +17,7 @@ use v3::{Vn, V3, V2, Region, scalar};
 
 pub mod v3;
 mod walk;
+mod walk2;
 
 
 pub const TILE_BITS: usize = 5;
@@ -34,9 +35,9 @@ pub enum Shape {
     Empty = 0,
     Floor = 1,
     Solid = 2,
-    RampE = 3,
-    RampW = 4,
-    RampS = 5,
+    //RampE = 3,
+    //RampW = 4,
+    //RampS = 5,
     RampN = 6,
 }
 
@@ -57,7 +58,7 @@ impl Shape {
     pub fn is_ramp(&self) -> bool {
         use self::Shape::*;
         match *self {
-            RampE | RampW | RampS | RampN => true,
+            RampN => true,
             _ => false,
         }
     }
@@ -107,6 +108,10 @@ pub fn collide<S: ShapeSource>(chunk: &S, pos: V3, size: V3, velocity: V3) -> (V
         };
 
     (end_pos, t)
+}
+
+pub fn collide2<S: ShapeSource>(chunk: &S, pos: V3, size: V3, velocity: V3) -> (V3, i32) {
+    walk2::collide(chunk, Region::new(pos, pos + size), velocity)
 }
 
 

@@ -303,7 +303,37 @@ impl<'d> Engine<'d> {
         }
 
         for (cid, input) in self.input.inputs() {
+            use world::object::*;
             logic::input::input(self.as_ref(), cid, input);
+            if let Some(c) = self.world.get_client(cid) {
+                if let Some(e) = c.pawn() {
+                    self.physics.set_target_velocity(e.id(), input.to_velocity());
+                }
+            }
+        }
+
+        for (eid, u) in self.physics.update(&self.world, &self.cache, self.now) {
+            use physics::Update::*;
+            use world::Fragment;
+            use world::Motion;
+            use world::object::*;
+            let now = self.now;
+            let mut eng = self.as_ref();
+            let mut wf = eng.as_world_fragment();
+            match u {
+                StartMotion(step) => {
+                    let mut e = wf.entity_mut(eid);
+                    let pos = e.pos(now);
+                    let m = Motion {
+                        start_time: now,
+                        duration: 32,
+                        start_pos: pos,
+                        end_pos: pos + step,
+                    };
+                    e.set_motion(m);
+                },
+                EndTime(_) => {},
+            }
         }
     }
 

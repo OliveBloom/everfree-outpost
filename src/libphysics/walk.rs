@@ -365,9 +365,9 @@ fn max_altitude(shape: Shape, overlap: Region<V2>) -> i32 {
         Empty => -1,
         Floor => 0,
         Solid => TILE_SIZE,
-        RampE => overlap.max.x,
-        RampW => TILE_SIZE - overlap.min.x,
-        RampS => overlap.max.y,
+        //RampE => overlap.max.x,
+        //RampW => TILE_SIZE - overlap.min.x,
+        //RampS => overlap.max.y,
         RampN => TILE_SIZE - overlap.min.y,
     }
 }
@@ -536,9 +536,9 @@ fn altitude_at_pixel(shape: Shape, x: i32, y: i32) -> i32 {
         Empty => -1,
         Floor => 0,
         Solid => TILE_SIZE,
-        RampE => x,
-        RampW => TILE_SIZE - x,
-        RampS => y,
+        //RampE => x,
+        //RampW => TILE_SIZE - x,
+        //RampS => y,
         RampN => TILE_SIZE - y,
     }
 }

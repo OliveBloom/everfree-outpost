@@ -405,7 +405,7 @@ fn compute_layer_mask_excluding(w: &World,
 
 fn update_physics(mut eng: EngineRef, eid: EntityId) {
     let now = eng.now();
-    warn_on_err!(physics::Fragment::update(&mut eng.as_physics_fragment(), now, eid));
+    //warn_on_err!(physics::Fragment::update(&mut eng.as_physics_fragment(), now, eid));
     // When `update` changes the entity's motion, the hook will schedule the next update,
     // cancelling any currently pending update.
 }
