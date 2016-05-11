@@ -321,14 +321,14 @@ impl<'d> Engine<'d> {
             let mut eng = self.as_ref();
             let mut wf = eng.as_world_fragment();
             match u {
-                StartMotion(step) => {
+                StartMotion(v) => {
                     let mut e = wf.entity_mut(eid);
                     let pos = e.pos(now);
                     let m = Motion {
                         start_time: now,
-                        duration: 32,
+                        duration: 1000,
                         start_pos: pos,
-                        end_pos: pos + step,
+                        end_pos: pos + v,
                     };
                     e.set_motion(m);
                 },

@@ -202,11 +202,13 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
 
 impl<'a, 'd> $WorldHooks<'a, 'd> {
     fn schedule_physics_update(&mut self, eid: EntityId, when: Time) {
+        /*
         if let Some(cookie) = self.extra_mut().entity_physics_update_timer.remove(&eid) {
             self.timer_mut().cancel(cookie);
         }
         let cookie = self.timer_mut().schedule(when, move |eng| update_physics(eng, eid));
         self.extra_mut().entity_physics_update_timer.insert(eid, cookie);
+        */
     }
 
     pub fn schedule_view_update(&mut self, eid: EntityId) {

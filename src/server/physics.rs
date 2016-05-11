@@ -10,7 +10,7 @@ use util::StrResult;
 
 use cache::TerrainCache;
 use data::Data;
-use timing::next_tick;
+use timing::{next_tick, TICK_MS};
 use world::{self, World};
 use world::{Motion, Activity};
 use world::object::*;
@@ -65,6 +65,7 @@ impl<'d> Physics<'d> {
             let e = match world.get_entity(eid) {
                 Some(e) => e,
                 None => {
+                    info!("no such entity: {:?}", eid);
                     remove_eids.push(eid);
                     continue;
                 },
@@ -77,23 +78,23 @@ impl<'d> Physics<'d> {
             };
 
             let pos = e.motion().pos(now);
+            let m = e.motion();
             let size = V3::new(32, 32, 48);
-            let (delta, duration) = libphysics::collide2(&s, pos, size, me.target_velocity);
-            journal.push((eid, Update::StartMotion(delta)));
+            let mut collider = libphysics::walk2::Collider::new(&s, Region::new(pos, pos + size));
 
-            /*
-            let pos = e.motion().pos(now);
-            let velocity = panic!("NYI: compute actual velocity from target");
-            if velocity != me.current_velocity {
-                journal.push((eid, Update::StartMotion(actual_v)));
+            let velocity = collider.calc_velocity(me.target_velocity);
+            let new_motion = velocity != me.current_velocity || m.end_time() <= now;
+            if new_motion {
+                journal.push((eid, Update::StartMotion(velocity)));
                 me.current_velocity = velocity;
             }
 
-            let end_time = panic!("NYI: run physics to check for early stop");
-            if let Some(end_time) = end_time {
-                journal.push((eid, StopTime(end_time)));
+            let start_time = if new_motion { now } else { m.start_time };
+            let next_pos = m.start_pos + velocity * scalar((next - start_time) as i32) / scalar(1000);
+            let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
+            if dur != TICK_MS as i32 {
+                journal.push((eid, Update::EndTime(now + dur as Time)));
             }
-            */
         }
 
         journal

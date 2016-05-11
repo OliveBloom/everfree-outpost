@@ -237,23 +237,19 @@ fn calc_velocity(planar: V2,
 }
 
 
-pub fn collide<S: ShapeSource>(s: &S,
-                               bounds: Region<V3>,
-                               target: V3) -> (V3, i32) {
-    let planar = calc_planar_velocity(s, bounds, target);
-    let floor = check_floor(s, bounds, planar);
-    let velocity = calc_velocity(planar, floor);
-
+pub fn walk<S: ShapeSource>(s: &S,
+                            bounds: Region<V3>,
+                            step: V3,
+                            duration: i32) -> (V3, i32) {
     let start_pos = bounds.min;
     let mut pos = bounds.min;
     let size = bounds.size();
-    let corner_offset = bounds.max * velocity.is_positive();
-    let step = (velocity * scalar(32)).div_floor(scalar(1000));
+    let corner_offset = bounds.max * step.is_positive();
 
     // Fast path: If the entity is not on a ramp, not sliding, and won't cross into any new cells
     // this tick, then allow the movement.
     // TODO: check sliding flags
-    if velocity.z == 0 {
+    if step.z == 0 {
         let corner = pos + corner_offset;
         let start_tile = corner.reduce().div_floor(scalar(TILE_SIZE));
         let end_tile = (corner + step).reduce().div_floor(scalar(TILE_SIZE));
@@ -305,4 +301,44 @@ pub fn collide<S: ShapeSource>(s: &S,
     }
 
     (pos - start_pos, 32 * steps / limit)
+}
+
+
+pub fn collide<S: ShapeSource>(s: &S,
+                               bounds: Region<V3>,
+                               target: V3,
+                               duration: i32) -> (V3, i32) {
+    let planar = calc_planar_velocity(s, bounds, target);
+    let floor = check_floor(s, bounds, planar);
+    let velocity = calc_velocity(planar, floor);
+
+    let step = (velocity * scalar(duration)).div_floor(scalar(1000));
+    walk(s, bounds, step, duration)
+}
+
+
+pub struct Collider<'a, S: ShapeSource+'a> {
+    s: &'a S,
+    bounds: Region<V3>,
+
+    // TODO: flags
+}
+
+impl<'a, S: ShapeSource> Collider<'a, S> {
+    pub fn new(s: &'a S, bounds: Region<V3>) -> Collider<'a, S> {
+        Collider {
+            s: s,
+            bounds: bounds,
+        }
+    }
+
+    pub fn calc_velocity(&mut self, target: V3) -> V3 {
+        let planar = calc_planar_velocity(self.s, self.bounds, target);
+        let floor = check_floor(self.s, self.bounds, planar);
+        calc_velocity(planar, floor)
+    }
+
+    pub fn walk(&self, step: V3, duration: i32) -> (V3, i32) {
+        walk(self.s, self.bounds, step, duration)
+    }
 }

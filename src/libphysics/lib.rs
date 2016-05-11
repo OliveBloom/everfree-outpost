@@ -17,7 +17,7 @@ use v3::{Vn, V3, V2, Region, scalar};
 
 pub mod v3;
 mod walk;
-mod walk2;
+pub mod walk2;
 
 
 pub const TILE_BITS: usize = 5;
@@ -108,10 +108,6 @@ pub fn collide<S: ShapeSource>(chunk: &S, pos: V3, size: V3, velocity: V3) -> (V
         };
 
     (end_pos, t)
-}
-
-pub fn collide2<S: ShapeSource>(chunk: &S, pos: V3, size: V3, velocity: V3) -> (V3, i32) {
-    walk2::collide(chunk, Region::new(pos, pos + size), velocity)
 }
 
 
