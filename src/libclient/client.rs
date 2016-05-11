@@ -414,7 +414,8 @@ impl<'d, P: Platform> Client<'d, P> {
                                              entity_bounds,
                                              scene.now,
                                              future,
-                                             self.pawn_id);
+                                             //self.pawn_id);
+                                             None);
 
         // Also refresh the UI buffer.
         let (geom, special, cursor) = self.with_ui_dyn(|ui, dyn| {
@@ -453,10 +454,18 @@ impl<'d, P: Platform> Client<'d, P> {
 
         self.predictor.update(future, &*self.terrain_shape, &self.data);
 
+        /*
         let pos =
             if self.pawn_id.is_some() {
                 // TODO: hardcoded constant based on entity size
                 self.predictor.motion().pos(future) + V3::new(16, 16, 0)
+            } else {
+                V3::new(4096, 4096, 0)
+            };
+            */
+        let pos =
+            if let Some(e) = self.pawn_id.and_then(|id| self.entities.get(id)) {
+                e.pos(now)
             } else {
                 V3::new(4096, 4096, 0)
             };
