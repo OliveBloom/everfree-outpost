@@ -109,7 +109,7 @@ fn boundary_match(a: Shape,
 fn calc_planar_velocity<S: ShapeSource>(s: &S,
                                         bounds: Region<V3>,
                                         target: V3) -> V2 {
-    let corner = bounds.min + bounds.max * target.is_positive();
+    let corner = bounds.min + bounds.size() * target.is_positive();
 
     let mut vx = target.x;
     let mut vy = target.y;
@@ -244,19 +244,23 @@ pub fn walk<S: ShapeSource>(s: &S,
     let start_pos = bounds.min;
     let mut pos = bounds.min;
     let size = bounds.size();
-    let corner_offset = bounds.max * step.is_positive();
+    let corner_offset = bounds.size() * step.is_positive();
 
     // Fast path: If the entity is not on a ramp, not sliding, and won't cross into any new cells
     // this tick, then allow the movement.
     // TODO: check sliding flags
+    /*
+    // TODO: currently broken - doesn't handle the case where the starting position is touching a
+    // cell boundary.
     if step.z == 0 {
         let corner = pos + corner_offset;
         let start_tile = corner.reduce().div_floor(scalar(TILE_SIZE));
         let end_tile = (corner + step).reduce().div_floor(scalar(TILE_SIZE));
         if start_tile == end_tile {
-            return (step, 32);
+            return (step, duration);
         }
     }
+    */
 
     // Bresenham-style line drawing.  Increase accumulator each step, and move along the axes that
     // overflowed.
@@ -265,6 +269,10 @@ pub fn walk<S: ShapeSource>(s: &S,
     let limit = inc.max();
     let dir = step.signum();
     let mut steps = 0;
+
+    if limit == 0 {
+        return (scalar(0), duration);
+    }
 
     for _ in 0 .. limit {
         acc = acc + inc;
@@ -279,16 +287,26 @@ pub fn walk<S: ShapeSource>(s: &S,
         // This check handles the "standard" reason for stopping, running into a non-walkable cell
         // boundary.  Such collisions can only happen when passing through a cell boundary.
         if overflowed.x != 0 && corner.x & TILE_MASK == 0 {
-            // TODO: check boundary in this direction
+            let boundary = Region::new(bounds.min.with_x(corner.x),
+                                       bounds.max.with_x(corner.x));
+            if !check_boundary(s, boundary, Axis::X) {
+                break;
+            }
         }
 
         if overflowed.y != 0 && corner.y & TILE_MASK == 0 {
-            // TODO
+            let boundary = Region::new(bounds.min.with_y(corner.y),
+                                       bounds.max.with_y(corner.y));
+            if !check_boundary(s, boundary, Axis::Y) {
+                break;
+            }
         }
 
         if overflowed.x != 0 && corner.x & TILE_MASK == 0 &&
            overflowed.y != 0 && corner.y & TILE_MASK == 0 {
-            // TODO
+            if !check_boundary_corner(s, corner) {
+                break;
+            }
         }
 
         // TODO: handle stopping due to sliding
@@ -300,7 +318,7 @@ pub fn walk<S: ShapeSource>(s: &S,
         steps += 1;
     }
 
-    (pos - start_pos, 32 * steps / limit)
+    (pos - start_pos, duration * steps / limit)
 }
 
 

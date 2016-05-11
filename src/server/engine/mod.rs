@@ -320,19 +320,26 @@ impl<'d> Engine<'d> {
             let now = self.now;
             let mut eng = self.as_ref();
             let mut wf = eng.as_world_fragment();
+            let mut e = wf.entity_mut(eid);
             match u {
                 StartMotion(v) => {
-                    let mut e = wf.entity_mut(eid);
                     let pos = e.pos(now);
                     let m = Motion {
                         start_time: now,
-                        duration: 1000,
+                        duration: 10000,
                         start_pos: pos,
-                        end_pos: pos + v,
+                        end_pos: pos + v * scalar(10),
                     };
+                    info!("StartMotion: {:?}", m);
                     e.set_motion(m);
                 },
-                EndTime(_) => {},
+                EndTime(end_time) => {
+                    let mut m = e.motion().clone();
+                    m.end_pos = m.pos(end_time);
+                    m.duration = (end_time - m.start_time) as Duration;
+                    info!("EndTime: {:?}", m);
+                    e.set_motion(m);
+                },
             }
         }
     }

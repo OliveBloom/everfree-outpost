@@ -90,11 +90,20 @@ impl<'d> Physics<'d> {
             }
 
             let start_time = if new_motion { now } else { m.start_time };
+            if start_time > next {
+                warn!("BUG: start_time {} > next {} (new? {})",
+                    start_time, next, new_motion);
+                continue;
+            }
             let next_pos = m.start_pos + velocity * scalar((next - start_time) as i32) / scalar(1000);
             let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
             if dur != TICK_MS as i32 {
                 journal.push((eid, Update::EndTime(now + dur as Time)));
             }
+        }
+
+        for eid in remove_eids {
+            self.moving_entities.remove(&eid);
         }
 
         journal
