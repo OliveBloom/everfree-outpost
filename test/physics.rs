@@ -377,6 +377,31 @@ fn walk_edges() {
         (V3::new(-32, 0, 0), 32));
 }
 
+#[test]
+fn walk_sliding() {
+    let s = init_map(&[
+        ".....",
+        ".#.#.",
+        ".....",
+        ".#.#.",
+        ".....",
+    ]);
+
+    let b = |x,y| Region::sized(V3::new(32, 32, 48)) + V3::new(x, y, 0);
+
+    let run = |x, y, dx, dy| {
+        let mut c = Collider::new(&s, b(x, y));
+        let v = c.calc_velocity(V3::new(dx, dy, 0));
+        c.walk(v, V2::new(dx, dy).max())
+    };
+
+    // Walking through level ground
+    assert_eq!(run(0, 1,  100, 100), (V3::new(0, 63, 0), 63));          // Y_POS
+    assert_eq!(run(128, 1,  -100, 100), (V3::new(0, 63, 0), 63));       // Y_NEG
+    assert_eq!(run(1, 0,  100, 100), (V3::new(63, 0, 0), 63));          // Y_POS
+    assert_eq!(run(1, 128,  100, -100), (V3::new(63, 0, 0), 63));       // Y_NEG
+}
+
 
 
 #[test]

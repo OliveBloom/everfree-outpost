@@ -64,7 +64,8 @@ fn check_boundary<S: ShapeSource>(s: &S,
                                   bounds: Region<V3>,
                                   //(axis, dir): (Axis, bool)) -> bool {
                                   axis: Axis) -> bool {
-    assert!(bounds.min.get(axis) % TILE_SIZE == 0);
+    assert!(bounds.min.get(axis) % TILE_SIZE == 0,
+            "bounds = {:?} does not lie on a cell boundary", bounds);
     assert!(bounds.size().get(axis) == 0);
     let old_bounds = bounds;
 
@@ -271,10 +272,11 @@ fn calc_velocity(planar: V2,
 }
 
 
-pub fn walk<S: ShapeSource>(s: &S,
-                            bounds: Region<V3>,
-                            step: V3,
-                            duration: i32) -> (V3, i32) {
+fn walk<S: ShapeSource>(s: &S,
+                        bounds: Region<V3>,
+                        step: V3,
+                        duration: i32,
+                        flags: Flags) -> (V3, i32) {
     let start_pos = bounds.min;
     let mut pos = bounds.min;
     let size = bounds.size();
@@ -346,6 +348,44 @@ pub fn walk<S: ShapeSource>(s: &S,
 
         // TODO: handle stopping due to sliding
 
+        if flags.intersects(SLIDE_MASK) {
+            let cur_bounds = Region::sized(bounds.size()) + pos;
+
+            if flags.contains(SLIDE_X_POS) {
+                let boundary = Region::new(cur_bounds.min.with_x(cur_bounds.max.x),
+                                           cur_bounds.max);
+                // Note the lack of `!` on this conditional - we stop if the boundary the entity is
+                // sliding against ever becomes *not* blocked.
+                if check_boundary(s, boundary, Axis::X) {
+                    break;
+                }
+            }
+
+            if flags.contains(SLIDE_X_NEG) {
+                let boundary = Region::new(cur_bounds.min,
+                                           cur_bounds.max.with_x(cur_bounds.min.x));
+                if check_boundary(s, boundary, Axis::X) {
+                    break;
+                }
+            }
+
+            if flags.contains(SLIDE_Y_POS) {
+                let boundary = Region::new(cur_bounds.min.with_y(cur_bounds.max.y),
+                                           cur_bounds.max);
+                if check_boundary(s, boundary, Axis::Y) {
+                    break;
+                }
+            }
+
+            if flags.contains(SLIDE_Y_NEG) {
+                let boundary = Region::new(cur_bounds.min,
+                                           cur_bounds.max.with_y(cur_bounds.min.y));
+                if check_boundary(s, boundary, Axis::Y) {
+                    break;
+                }
+            }
+        }
+
         let new_pos = pos + dir * overflowed;
 
         let (alt, _) = get_altitude_below(s, new_pos + center_offset);
@@ -372,7 +412,7 @@ pub fn collide<S: ShapeSource>(s: &S,
     let velocity = calc_velocity(planar, floor);
 
     let step = (velocity * scalar(duration)).div_floor(scalar(1000));
-    walk(s, bounds, step, duration)
+    walk(s, bounds, step, duration, flags)
 }
 
 
@@ -396,11 +436,12 @@ impl<'a, S: ShapeSource> Collider<'a, S> {
     pub fn calc_velocity(&mut self, target: V3) -> V3 {
         let (planar, flags) = calc_planar_velocity(self.s, self.bounds, target);
         let floor = check_floor(self.s, self.bounds, planar);
+        let velocity = calc_velocity(planar, floor);
         self.flags = flags;
-        calc_velocity(planar, floor)
+        velocity
     }
 
     pub fn walk(&self, step: V3, duration: i32) -> (V3, i32) {
-        walk(self.s, self.bounds, step, duration)
+        walk(self.s, self.bounds, step, duration, self.flags)
     }
 }
