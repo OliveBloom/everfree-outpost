@@ -6,6 +6,25 @@ use super::{Shape, ShapeSource};
 use super::{TILE_SIZE, TILE_MASK, CHUNK_SIZE};
 
 
+bitflags! {
+    flags Flags: u32 {
+        /// Entity is sliding along a wall in the +X direction.
+        const SLIDE_X_POS =     0x0000_0001,
+        /// Entity is sliding along a wall in the -X direction.
+        const SLIDE_X_NEG =     0x0000_0002,
+        /// Entity is sliding along a wall in the +Y direction.
+        const SLIDE_Y_POS =     0x0000_0004,
+        /// Entity is sliding along a wall in the -Y direction.
+        const SLIDE_Y_NEG =     0x0000_0008,
+
+        const SLIDE_MASK =      SLIDE_X_POS.bits |
+                                SLIDE_X_NEG.bits |
+                                SLIDE_Y_POS.bits |
+                                SLIDE_Y_NEG.bits,
+    }
+}
+
+
 // The core idea of the "walk" physics engine is to construct (implicitly) a map of the boundaries
 // between grid cells, indicating which cell edges are passable.  This map is two-dimensional,
 // calculated from (roughly) the nearby area under the entity.
@@ -119,20 +138,20 @@ fn boundary_match(a: Shape,
 
 fn calc_planar_velocity<S: ShapeSource>(s: &S,
                                         bounds: Region<V3>,
-                                        target: V3) -> V2 {
+                                        target: V3) -> (V2, Flags) {
     let corner = bounds.min + bounds.size() * target.is_positive();
 
     let mut vx = target.x;
     let mut vy = target.y;
-    // let mut flags = ...;
+    let mut flags = Flags::empty();
 
     if vx != 0 && corner.x % TILE_SIZE == 0 {
         let x_dir = target.x < 0;
         let flat_x = Region::new(bounds.min.with_x(corner.x),
                                  bounds.max.with_x(corner.x));
         if !check_boundary(s, flat_x, Axis::X) {
+            flags.insert(if vx > 0 { SLIDE_X_POS } else { SLIDE_X_NEG });
             vx = 0;
-            // TODO: set flag
         }
     }
 
@@ -141,8 +160,8 @@ fn calc_planar_velocity<S: ShapeSource>(s: &S,
         let flat_y = Region::new(bounds.min.with_y(corner.y),
                                  bounds.max.with_y(corner.y));
         if !check_boundary(s, flat_y, Axis::Y) {
+            flags.insert(if vy > 0 { SLIDE_Y_POS } else { SLIDE_Y_NEG });
             vy = 0;
-            // TODO: set flag
         }
     }
 
@@ -152,11 +171,11 @@ fn calc_planar_velocity<S: ShapeSource>(s: &S,
         if !check_boundary_corner(s, corner) {
             vx = 0;
             vy = 0;
-            // TODO: set flags
+            flags.remove(SLIDE_MASK);
         }
     }
 
-    V2::new(vx, vy)
+    (V2::new(vx, vy), flags)
 }
 
 
@@ -348,7 +367,7 @@ pub fn collide<S: ShapeSource>(s: &S,
                                bounds: Region<V3>,
                                target: V3,
                                duration: i32) -> (V3, i32) {
-    let planar = calc_planar_velocity(s, bounds, target);
+    let (planar, flags) = calc_planar_velocity(s, bounds, target);
     let floor = check_floor(s, bounds, planar);
     let velocity = calc_velocity(planar, floor);
 
@@ -361,7 +380,7 @@ pub struct Collider<'a, S: ShapeSource+'a> {
     s: &'a S,
     bounds: Region<V3>,
 
-    // TODO: flags
+    flags: Flags,
 }
 
 impl<'a, S: ShapeSource> Collider<'a, S> {
@@ -369,12 +388,15 @@ impl<'a, S: ShapeSource> Collider<'a, S> {
         Collider {
             s: s,
             bounds: bounds,
+
+            flags: Flags::empty(),
         }
     }
 
     pub fn calc_velocity(&mut self, target: V3) -> V3 {
-        let planar = calc_planar_velocity(self.s, self.bounds, target);
+        let (planar, flags) = calc_planar_velocity(self.s, self.bounds, target);
         let floor = check_floor(self.s, self.bounds, planar);
+        self.flags = flags;
         calc_velocity(planar, floor)
     }
 
