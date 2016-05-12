@@ -50,6 +50,43 @@ fn init_map(repr: &[&str]) -> ShapeSourceImpl {
     }
 }
 
+fn init_side_view(repr: &[&str], depth: i32) -> ShapeSourceImpl{ 
+    let h = repr.len();
+    let w = if h > 0 { repr[0].len() } else { 0 };
+
+    let size = V3::new(depth + 2, w as i32, h as i32);
+    let bounds = Region::sized(size);
+    let mut buf = iter::repeat(Shape::Empty).take(bounds.volume() as usize)
+                      .collect::<Vec<_>>().into_boxed_slice();
+
+    for (inv_z, row) in repr.iter().enumerate() {
+        let z = size.z - 1 - inv_z as i32;
+        for (inv_y, c) in row.chars().enumerate() {
+            let y = size.y - 1 - inv_y as i32;
+            for x in 1 .. depth + 1 {
+                let pos = V3::new(x, y, z);
+                buf[bounds.index(pos)] = match c {
+                    ' ' => Shape::Empty,
+                    '_' => Shape::Floor,
+                    '#' => Shape::Solid,
+                    '/' => Shape::RampN,
+                    _ => panic!("bad char: {:?}", c),
+                };
+            }
+        }
+    }
+
+    for y in 0 .. size.y {
+        buf[bounds.index(V3::new(0, y, 0))] = Shape::Floor;
+        buf[bounds.index(V3::new(depth + 1, y, 0))] = Shape::Floor;
+    }
+
+    ShapeSourceImpl {
+        buf: buf,
+        bounds: bounds,
+    }
+}
+
 
 #[test]
 fn calc_velocity_basics() {
@@ -101,6 +138,120 @@ fn calc_velocity_sliding() {
         Collider::new(&s, b + V3::new(0, 1, 0)).calc_velocity(V3::new(10, 10, 0)),
         V3::new(0, 10, 0));
 }
+
+#[test]
+fn calc_velocity_ramp_up() {
+    // Regression test for a bug that caused boundary checks to happen at min+max instead of
+    // min+size.
+    let s = init_side_view(&[
+        "    __",
+        "   /##",
+        "__/###",
+    ], 2);
+
+    // Position `b` at the left side of the entrance to the ramp.
+    let b = Region::sized(V3::new(32, 32, 48)) + V3::new(32, 32 * 4, 0);
+
+    // Trying to walk into the ramp
+    assert_eq!(
+        Collider::new(&s, b + V3::new(0, 0, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 0));
+
+    assert_eq!(
+        Collider::new(&s, b + V3::new(16, 0, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 0));
+
+    // TODO - NYI
+    /*
+    // Trying to walk up the edges (blocked)
+    assert_eq!(
+        Collider::new(&s, b + V3::new(-16, 0, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, 0, 0));
+
+    assert_eq!(
+        Collider::new(&s, b + V3::new(48, 0, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, 0, 0));
+        */
+
+    // Walking up the ramp
+    assert_eq!( // ... from the bottom
+        Collider::new(&s, b + V3::new(16, -16, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 10));
+
+    assert_eq!( // ... from partway up
+        Collider::new(&s, b + V3::new(16, -19, 3)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 10));
+
+    assert_eq!( // ... from dead center on the bottom square
+        Collider::new(&s, b + V3::new(16, -32, 16)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 10));
+
+    assert_eq!( // ... from dead center on the top square (toward upper level)
+        Collider::new(&s, b + V3::new(16, -64, 48)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 10));
+
+    assert_eq!( // ... onto the top
+        Collider::new(&s, b + V3::new(16, -80, 64)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, -10, 0));
+}
+
+#[test]
+fn calc_velocity_ramp_down() {
+    // Regression test for a bug that caused boundary checks to happen at min+max instead of
+    // min+size.
+    let s = init_side_view(&[
+        "    __",
+        "   /##",
+        "__/###",
+    ], 2);
+
+    // Position `b` at the left side of the entrance to the ramp.
+    let b = Region::sized(V3::new(32, 32, 48)) + V3::new(32, 32 * 4, 0);
+
+    // Trying to walk into the ramp
+    assert_eq!(
+        Collider::new(&s, b + V3::new(0, -96, 64)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, 0));
+
+    assert_eq!(
+        Collider::new(&s, b + V3::new(16, -96, 64)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, 0));
+
+    // TODO - NYI
+    // TODO - need more floor at top side
+    /*
+    // Trying to walk down the edges (blocked)
+    assert_eq!(
+        Collider::new(&s, b + V3::new(-16, 0, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, 0, 0));
+
+    assert_eq!(
+        Collider::new(&s, b + V3::new(48, 0, 0)).calc_velocity(V3::new(0, -10, 0)),
+        V3::new(0, 0, 0));
+        */
+
+    // Walking down the ramp
+    assert_eq!( // ... from the top
+        Collider::new(&s, b + V3::new(16, -80, 64)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, -10));
+
+    assert_eq!( // ... from partway down
+        Collider::new(&s, b + V3::new(16, -77, 61)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, -10));
+
+    assert_eq!( // ... from dead center on the top square
+        Collider::new(&s, b + V3::new(16, -64, 48)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, -10));
+
+    assert_eq!( // ... from dead center on the bottom square
+        Collider::new(&s, b + V3::new(16, -32, 16)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, -10));
+
+    assert_eq!( // ... onto the bottom
+        Collider::new(&s, b + V3::new(16, -16, 0)).calc_velocity(V3::new(0, 10, 0)),
+        V3::new(0, 10, 0));
+}
+
 
 #[test]
 fn walk_basics() {

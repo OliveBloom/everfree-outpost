@@ -47,9 +47,18 @@ fn check_boundary<S: ShapeSource>(s: &S,
                                   axis: Axis) -> bool {
     assert!(bounds.min.get(axis) % TILE_SIZE == 0);
     assert!(bounds.size().get(axis) == 0);
+    let old_bounds = bounds;
 
     let bounds = Region::new(bounds.min - V3::on_axis(axis, 1),
-                             bounds.max).div_round_signed(TILE_SIZE).flatten(1);
+                             bounds.max).div_round_signed(TILE_SIZE);
+    // Like `flatten(1)`, but at the top of the volume instead of the bottom.  This matters when
+    // moving up ramps.  If the entity is standing directly on a ramp block, bounds.min.z will be
+    // half the ramp height (16 for full-height ramps), which is not high enough to catch the
+    // ramp or floor connected to the upper edge of the current ramp (get_shape_below will start
+    // with z too low).
+    // NB: this only works if the entity's height is > 16.
+    let bounds = Region::new(bounds.min.with_z(bounds.max.z - 1),
+                             bounds.max);
 
     for p in bounds.points() {
         let (a, za) = s.get_shape_below(p);
@@ -91,12 +100,14 @@ fn boundary_match(a: Shape,
     match axis {
         Axis::X => match (a, b) {
             (Shape::Floor, Shape::Floor) => za == zb,
+            (Shape::RampN, Shape::RampN) => za == zb,
             _ => false,
         },
 
         Axis::Y => match (a, b) {
             (Shape::Floor, Shape::Floor) => za == zb,
             (Shape::Floor, Shape::RampN) => za == zb + 1,
+            (Shape::RampN, Shape::RampN) => za == zb + 1,
             (Shape::RampN, Shape::Floor) => za == zb,
             _ => false,
         },
@@ -187,7 +198,10 @@ fn get_altitude_below_dir<S: ShapeSource>(s: &S, pos: V3, dir: V2) -> (i32, Shap
 fn altitude_at_offset(shape: Shape, off: V2) -> i32 {
     match shape {
         // The `Empty` case should only come up when the entire column is empty.
-        Shape::Empty => -1,
+        // Use an outrageous value here that will never come up in practice.  In particular, -1
+        // doesn't work because `walk` will actually check an altitude against -1 when hitting the
+        // bottom of a ramp.
+        Shape::Empty => -100,
         Shape::Floor => 0,
         Shape::Solid => TILE_SIZE,
         Shape::RampN => TILE_SIZE - off.y,
@@ -229,7 +243,8 @@ fn calc_velocity(planar: V2,
                  floor: FloorState) -> V3 {
     match floor {
         // Entities in mid-air fall due to gravity.
-        FloorState::MidAir => V3::new(0, 0, -300),
+        //FloorState::MidAir => V3::new(0, 0, -300),
+        FloorState::MidAir => V3::new(0, 0, 0),
         FloorState::OnRamp(slope) => planar.extend(slope.dot(planar)),
         FloorState::OnFloor |
         FloorState::PartialFloor => planar.extend(0),
@@ -244,6 +259,7 @@ pub fn walk<S: ShapeSource>(s: &S,
     let start_pos = bounds.min;
     let mut pos = bounds.min;
     let size = bounds.size();
+    let center_offset = bounds.flatten(0).size().div_floor(scalar(2));
     let corner_offset = bounds.size() * step.is_positive();
 
     // Fast path: If the entity is not on a ramp, not sliding, and won't cross into any new cells
@@ -310,7 +326,13 @@ pub fn walk<S: ShapeSource>(s: &S,
         }
 
         // TODO: handle stopping due to sliding
-        // TODO: handle stopping due to bad altitude (top/bottom of ramp)
+
+        let new_pos = pos + dir * overflowed;
+
+        let (alt, _) = get_altitude_below(s, new_pos + center_offset);
+        if new_pos.z != alt {
+            break;
+        }
 
 
         // All is well, so move to the next position.
