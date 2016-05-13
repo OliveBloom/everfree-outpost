@@ -70,7 +70,6 @@ mod op {
         // Responses
         TerrainChunk = 0x8001,
         Pong = 0x8003,
-        EntityUpdate = 0x8004,
         Init = 0x8005,
         KickReason = 0x8006,
         UnloadChunk = 0x8007,
@@ -93,9 +92,14 @@ mod op {
         InventoryUpdate = 0x8019,
         InventoryAppear = 0x801a,
         InventoryGone = 0x801b,
+        EntityMotionStart = 0x801c,
+        EntityMotionEnd = 0x801d,
+        EntityMotionStartEnd = 0x801e,
+        ProcessedInputs = 0x801f,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
+        old_EntityUpdate = 0x8004,
         old_InventoryUpdate = 0x8009,
 
         // Control messages
@@ -244,7 +248,6 @@ impl Request {
 pub enum Response {
     TerrainChunk(u16, Vec<u16>),
     Pong(u16, LocalTime),
-    EntityUpdate(EntityId, Motion, u16),
     Init(InitData),
     KickReason(String),
     UnloadChunk(u16),
@@ -267,6 +270,10 @@ pub enum Response {
     InventoryUpdate(InventoryId, u8, (u8, u8, ItemId)),
     InventoryAppear(InventoryId, Vec<(u8, u8, ItemId)>),
     InventoryGone(InventoryId),
+    EntityMotionStart(EntityId, (u16, u16, u16), LocalTime, (i16, i16, i16), AnimId),
+    EntityMotionEnd(EntityId, LocalTime),
+    EntityMotionStartEnd(EntityId, (u16, u16, u16), LocalTime, (i16, i16, i16), AnimId, LocalTime),
+    ProcessedInputs(LocalTime, u16),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -279,8 +286,6 @@ impl Response {
                 ww.write_msg(id, (op::TerrainChunk, idx, data)),
             Pong(data, time) =>
                 ww.write_msg(id, (op::Pong, data, time)),
-            EntityUpdate(entity_id, ref motion, anim) =>
-                ww.write_msg(id, (op::EntityUpdate, entity_id, motion, anim)),
             Init(ref data) =>
                 ww.write_msg(id, (op::Init, data.flatten())),
             KickReason(ref msg) =>
@@ -325,6 +330,16 @@ impl Response {
                 ww.write_msg(id, (op::InventoryAppear, inventory_id, all_slot_data)),
             InventoryGone(inventory_id) =>
                 ww.write_msg(id, (op::InventoryGone, inventory_id)),
+            EntityMotionStart(entity_id, pos, time, velocity, anim_id) =>
+                ww.write_msg(id, (op::EntityMotionStart, entity_id,
+                                  pos, time, velocity, anim_id)),
+            EntityMotionEnd(entity_id, time) =>
+                ww.write_msg(id, (op::EntityMotionEnd, time)),
+            EntityMotionStartEnd(entity_id, pos, time, velocity, end_time, anim_id) =>
+                ww.write_msg(id, (op::EntityMotionStartEnd, entity_id,
+                                  pos, time, velocity, end_time, anim_id)),
+            ProcessedInputs(time, count) =>
+                ww.write_msg(id, (op::ProcessedInputs, time, count)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

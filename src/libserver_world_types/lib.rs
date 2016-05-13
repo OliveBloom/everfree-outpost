@@ -67,47 +67,42 @@ impl Item {
 
 #[derive(Clone, Debug)]
 pub struct Motion {
-    pub start_time: Time,
-    pub duration: Duration,
     pub start_pos: V3,
-    pub end_pos: V3,
+    pub velocity: V3,
+    pub start_time: Time,
+    pub end_time: Option<Time>,
 }
 
 impl Motion {
     pub fn fixed(pos: V3) -> Motion {
         Motion {
-            start_time: 0,
-            duration: 0,
             start_pos: pos,
-            end_pos: pos,
+            velocity: scalar(0),
+            start_time: 0,
+            end_time: None,
         }
     }
 
     pub fn stationary(pos: V3, now: Time) -> Motion {
         Motion {
-            start_time: now,
-            duration: -1_i64 as Duration,
             start_pos: pos,
-            end_pos: pos,
+            velocity: scalar(0),
+            start_time: now,
+            end_time: None,
         }
     }
 
     pub fn pos(&self, now: Time) -> V3 {
         if now <= self.start_time {
-            self.start_pos
-        } else {
-            let delta = now - self.start_time;
-            if delta >= self.duration as Time {
-                self.end_pos
-            } else {
-                let offset = (self.end_pos - self.start_pos) *
-                        scalar(delta as i32) / scalar(self.duration as i32);
-                self.start_pos + offset
-            }
+            return self.start_pos;
         }
-    }
+        let now = match self.end_time {
+            Some(end_time) if now > end_time => end_time,
+            _ => now,
+        };
 
-    pub fn end_time(&self) -> Time {
-        self.start_time + self.duration as Time
+        let delta = now - self.start_time;
+        let offset = self.velocity * scalar(delta as i32) / scalar(1000);
+        self.start_pos + offset
     }
 }

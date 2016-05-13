@@ -24,6 +24,7 @@
 // TODO: error handling!
 
 use std::collections::HashMap;
+use std::i64;
 use std::io;
 use std::mem;
 use std::slice;
@@ -650,9 +651,9 @@ pub struct FlatEntity {
     pub stable_plane: u64,
 
     pub motion_start_time: i64,
-    pub motion_duration: u16,
+    pub motion_end_time: i64,
     pub motion_start_pos: CV3,
-    pub motion_end_pos: CV3,
+    pub motion_velocity: CV3,
 
     pub anim: u16,
     pub facing: CV3,
@@ -1681,9 +1682,9 @@ impl Flatten for Entity {
             stable_plane: conv(self.stable_plane),
 
             motion_start_time: self.motion.start_time,
-            motion_duration: self.motion.duration,
+            motion_end_time: self.motion.end_time.unwrap_or(i64::MIN),
             motion_start_pos: conv(self.motion.start_pos),
-            motion_end_pos: conv(self.motion.end_pos),
+            motion_velocity: conv(self.motion.velocity),
 
             anim: self.anim,
             facing: conv(self.facing),
@@ -1706,9 +1707,12 @@ impl Flatten for Entity {
 
             motion: Motion {
                 start_time: fe.motion_start_time,
-                duration: fe.motion_duration,
+                end_time: match fe.motion_end_time {
+                    i64::MIN => None,
+                    t => Some(t),
+                },
                 start_pos: unconv(fe.motion_start_pos),
-                end_pos: unconv(fe.motion_end_pos),
+                velocity: unconv(fe.motion_velocity),
             },
 
             anim: fe.anim,

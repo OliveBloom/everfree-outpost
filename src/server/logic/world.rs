@@ -30,7 +30,7 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
                              new_pawn: Option<EntityId>) {
         if let Some(eid) = new_pawn {
             // TODO: handle this properly.  needs to send a fresh Init message to the client
-            self.schedule_view_update(eid);
+            // FIXME: view update
         }
     }
 
@@ -66,18 +66,17 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
 
 
     fn on_entity_create(&mut self, eid: EntityId) {
-        let (plane, area, end_time) = {
+        let (plane, area) = {
             let e = self.world().entity(eid);
             (e.plane_id(),
-             entity_area(self.world().entity(eid)),
-             e.motion().end_time())
+             entity_area(self.world().entity(eid)))
         };
         trace!("entity {:?} created at {:?}", eid, plane);
         // TODO: use a default plane/area for add_entity, then just call on_motion_change
         vision::Fragment::add_entity(&mut self.$as_vision_fragment(), eid, plane, area);
-        self.schedule_physics_update(eid, end_time);
+        // FIXME: need to schedule a physics update right away
         // Might have an owner pre-set, if it's been loaded instead of newly created.
-        self.schedule_view_update(eid);
+        // FIXME: view update
     }
 
     fn on_entity_destroy(&mut self, eid: EntityId) {
@@ -87,20 +86,19 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     fn on_entity_activity_change(&mut self, eid: EntityId) {
         trace!("entity {:?} activity changed", eid);
         let now = self.now();
-        self.schedule_physics_update(eid, now);
+        // FIXME: need to schedule a physics update right away
     }
 
     fn on_entity_motion_change(&mut self, eid: EntityId) {
-        let (plane, area, end_time) = {
+        let (plane, area) = {
             let e = self.world().entity(eid);
             (e.plane_id(),
-             entity_area(self.world().entity(eid)),
-             e.motion().end_time())
+             entity_area(self.world().entity(eid)))
         };
         trace!("entity {:?} motion changed to {:?}", eid, plane);
         vision::Fragment::set_entity_area(&mut self.$as_vision_fragment(), eid, plane, area);
-        self.schedule_physics_update(eid, end_time);
-        self.schedule_view_update(eid);
+        // FIXME not sure what to do here, if anything (messages should be handled externally?)
+        // FIXME: view update
     }
 
     fn on_entity_appearance_change(&mut self, eid: EntityId) {
@@ -200,72 +198,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 }
 
-impl<'a, 'd> $WorldHooks<'a, 'd> {
-    fn schedule_physics_update(&mut self, eid: EntityId, when: Time) {
-        /*
-        if let Some(cookie) = self.extra_mut().entity_physics_update_timer.remove(&eid) {
-            self.timer_mut().cancel(cookie);
-        }
-        let cookie = self.timer_mut().schedule(when, move |eng| update_physics(eng, eid));
-        self.extra_mut().entity_physics_update_timer.insert(eid, cookie);
-        */
-    }
-
-    pub fn schedule_view_update(&mut self, eid: EntityId) {
-        let now = self.now();
-        let cid;
-        let when = {
-            let e = unwrap_or!(self.world().get_entity(eid));
-            let c = unwrap_or!(e.pawn_owner());
-            cid = c.id();
-
-            // If the client is not registered with the vision system, do nothing.
-            let old_area = unwrap_or!(self.vision().client_view_area(c.id()));
-            let new_area = vision_region(e.pos(now));
-
-            if old_area != new_area {
-                // Simple case: If the vision area needs to change immediately, schedule the update
-                // to happen as soon as possible.
-                Some(now)
-            } else {
-                // Complex case: Figure out when the pawn will move into a new chunk, and schedule
-                // the update to happen at that time.
-                let m = e.motion();
-                let start = m.pos(now);
-                let delta = m.end_pos - start;
-                let dur = (m.end_time() - now) as i32;
-                const CHUNK_PX: i32 = CHUNK_SIZE * TILE_SIZE;
-
-                let hit_time = start.zip(delta, |x, dx| {
-                    use std::i32;
-                    if dx == 0 {
-                        return i32::MAX;
-                    }
-                    let target = (x & !(CHUNK_PX - 1)) + if dx < 0 { -1 } else { CHUNK_PX };
-                    // i32 math is okay here because `dir` maxes out at 2^16 and `target` at 2^9.
-                    (dur * (target - x) + dx - 1) / dx
-                }).min();
-                if hit_time > dur {
-                    // Won't hit a chunk boundary before the motion ends.
-                    None
-                } else {
-                    Some(now + hit_time as Time)
-                }
-            }
-        };
-
-        if let Some(cookie) = self.extra_mut().client_view_update_timer.remove(&cid) {
-            self.timer_mut().cancel(cookie);
-        }
-        if let Some(when) = when {
-            let cookie = self.timer_mut().schedule(when, move |eng| {
-                logic::client::update_view(eng, cid);
-            });
-            self.extra_mut().client_view_update_timer.insert(cid, cookie);
-        }
-    }
-}
-
 // End of macro_rules
     };
 }
@@ -279,10 +211,11 @@ pub fn entity_area(e: ObjectRef<Entity>) -> SmallSet<V2> {
     let mut area = SmallSet::new();
 
     let a = e.motion().start_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-    let b = e.motion().end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    // FIXME
+    //let b = e.motion().end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
 
     area.insert(a);
-    area.insert(b);
+    //area.insert(b);
     area
 }
 
@@ -404,13 +337,6 @@ fn compute_layer_mask_excluding(w: &World,
     Ok(result)
 }
 
-
-fn update_physics(mut eng: EngineRef, eid: EntityId) {
-    let now = eng.now();
-    //warn_on_err!(physics::Fragment::update(&mut eng.as_physics_fragment(), now, eid));
-    // When `update` changes the entity's motion, the hook will schedule the next update,
-    // cancelling any currently pending update.
-}
 
 fn teleport_entity_internal(mut wf: WorldFragment,
                             eid: EntityId,

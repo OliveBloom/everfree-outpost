@@ -90,7 +90,9 @@ pub enum ClientResponse {
     UnloadChunk(V2),
 
     EntityAppear(EntityId, u32, String),
-    EntityUpdate(EntityId, Motion, AnimId),
+    EntityMotionStart(EntityId, V3, Time, V3, AnimId),
+    EntityMotionStartEnd(EntityId, V3, Time, V3, AnimId, Time),
+    EntityMotionEnd(EntityId, Time),
     EntityGone(EntityId, Time),
 
     StructureAppear(StructureId, TemplateId, V3),
@@ -111,6 +113,7 @@ pub enum ClientResponse {
     OpenDialog(Dialog),
     MainInventory(InventoryId),
     AbilityInventory(InventoryId),
+    ProcessedInputs(Time, usize),
     ChatUpdate(String),
     KickReason(String),
 }
@@ -401,10 +404,22 @@ impl Messages {
             ClientResponse::EntityAppear(eid, appear, name) =>
                 self.send_raw(wire_id, Response::EntityAppear(eid, appear, name)),
 
-            ClientResponse::EntityUpdate(eid, motion, anim) => {
-                let wire_motion = client.local_motion(motion);
-                self.send_raw(wire_id, Response::EntityUpdate(eid, wire_motion, anim));
+            ClientResponse::EntityMotionStart(eid, pos, time, velocity, anim) => {
+                let pos16 = client.local_pos_tuple(pos);
+                let v16 = (velocity.x as i16, velocity.y as i16, velocity.z as i16);
+                self.send_raw(wire_id, Response::EntityMotionStart(
+                        eid, pos16, time.to_local(), v16, anim));
             },
+
+            ClientResponse::EntityMotionStartEnd(eid, pos, time, velocity, anim, end_time) => {
+                let pos16 = client.local_pos_tuple(pos);
+                let v16 = (velocity.x as i16, velocity.y as i16, velocity.z as i16);
+                self.send_raw(wire_id, Response::EntityMotionStartEnd(
+                        eid, pos16, time.to_local(), v16, anim, end_time.to_local()));
+            },
+
+            ClientResponse::EntityMotionEnd(eid, time) =>
+                self.send_raw(wire_id, Response::EntityMotionEnd(eid, time.to_local())),
 
             ClientResponse::EntityGone(eid, time) => {
                 let time = time.to_local();
@@ -482,6 +497,9 @@ impl Messages {
 
             ClientResponse::AbilityInventory(iid) =>
                 self.send_raw(wire_id, Response::AbilityInventory(iid)),
+
+            ClientResponse::ProcessedInputs(time, count) =>
+                self.send_raw(wire_id, Response::ProcessedInputs(time.to_local(), count as u16)),
 
             ClientResponse::ChatUpdate(msg) =>
                 self.send_raw(wire_id, Response::ChatUpdate(msg)),

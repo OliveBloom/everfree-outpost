@@ -118,30 +118,4 @@ impl ClientInfo {
          local.y as u16,
          local.z as u16)
     }
-
-    pub fn local_motion(&self, m: world::Motion) -> msg::Motion {
-        let start = self.local_pos(m.start_pos);
-        let end = start + (m.end_pos - m.start_pos);
-
-        msg::Motion {
-            start_pos: (start.x as u16,
-                        start.y as u16,
-                        start.z as u16),
-            start_time: m.start_time.to_local(),
-
-            end_pos: (end.x as u16,
-                      end.y as u16,
-                      end.z as u16),
-            end_time: (m.start_time + m.duration as Time).to_local(),
-        }
-    }
-
-    pub fn maybe_check(&mut self, now: Time) -> bool {
-        if now < self.last_check + 1000 {
-            false
-        } else {
-            self.last_check = now;
-            true
-        }
-    }
 }

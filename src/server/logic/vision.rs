@@ -68,7 +68,8 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
 
         let motion = entity.motion().clone();
         let anim = entity.anim();
-        self.messages().send_client(cid, ClientResponse::EntityUpdate(eid, motion, anim));
+        // FIXME
+        //self.messages().send_client(cid, ClientResponse::EntityUpdate(eid, motion, anim));
     }
 
     fn on_entity_appearance_update(&mut self, cid: ClientId, eid: EntityId) {

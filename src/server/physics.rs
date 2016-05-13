@@ -83,7 +83,9 @@ impl<'d> Physics<'d> {
             let mut collider = libphysics::walk2::Collider::new(&s, Region::new(pos, pos + size));
 
             let velocity = collider.calc_velocity(me.target_velocity);
-            let new_motion = velocity != me.current_velocity || m.end_time() <= now;
+            // FIXME
+            //let new_motion = velocity != me.current_velocity || m.end_time() <= now;
+            let new_motion = velocity != me.current_velocity;
             if new_motion {
                 journal.push((eid, Update::StartMotion(velocity)));
                 me.current_velocity = velocity;
@@ -150,6 +152,7 @@ pub trait Fragment<'d> {
         where F: FnOnce(&mut Self::WF) -> R;
 
     fn set_velocity(&mut self, now: Time, eid: EntityId, target: V3) -> StrResult<()> {
+        /*
         use world::Fragment;
         let changed = try!(self.with_world(|wf| -> StrResult<_> {
             let mut e = unwrap!(wf.get_entity_mut(eid));
@@ -164,10 +167,12 @@ pub trait Fragment<'d> {
         if changed {
             try!(self.update(now, eid));
         }
+        */
         Ok(())
     }
 
     fn update(&mut self, now: Time, eid: EntityId) -> StrResult<()> {
+        /*
         use world::Fragment;
 
         let motion = try!(self.with_cache(|_sys, cache, world| -> StrResult<_> {
@@ -259,6 +264,7 @@ pub trait Fragment<'d> {
             e.set_facing(facing);
             e.set_motion(motion);
         });
+    */
         Ok(())
     }
 }

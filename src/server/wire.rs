@@ -268,6 +268,8 @@ tuple_impl!(a: A , b: B , c: C);
 tuple_impl!(a: A , b: B , c: C , d: D);
 tuple_impl!(a: A , b: B , c: C , d: D , e: E);
 tuple_impl!(a: A , b: B , c: C , d: D , e: E , f: F);
+tuple_impl!(a: A , b: B , c: C , d: D , e: E , f: F, g: G);
+tuple_impl!(a: A , b: B , c: C , d: D , e: E , f: F, g: G, h: H);
 
 
 macro_rules! id_newtype_impl {

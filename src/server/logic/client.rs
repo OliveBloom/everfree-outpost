@@ -77,7 +77,7 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
 
     // Load the plane and nearby chunks
     // TODO: stop entity motions on logout
-    let region = vision::vision_region(e.motion.end_pos);
+    let region = vision::vision_region(e.motion.pos(now));
     let pid = chunks::Fragment::get_plane_id(&mut eng.as_chunks_fragment(), e.stable_plane);
     for cpos in region.points() {
         logic::chunks::load_chunk(eng.borrow(), pid, cpos);
@@ -100,7 +100,7 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
                                                              DAY_NIGHT_CYCLE_MS));
 
     vision::Fragment::add_client(&mut eng.as_vision_fragment(), cid, pid, region);
-    let player_cpos = e.motion.end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    let player_cpos = e.motion.pos(now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
     eng.chat_mut().add_client(cid, pid, player_cpos);
     warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
     eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
@@ -109,6 +109,8 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
 }
 
 pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
+    let now = eng.now();
+
     eng.messages_mut().remove_client(cid);
 
     let (pid, cpos) = {
@@ -116,7 +118,7 @@ pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
         let c = w.client(cid);
         let e = c.pawn().unwrap();
         (e.plane_id(),
-         e.motion().end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE)))
+         e.motion().pos(now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE)))
     };
     eng.chat_mut().remove_client(cid, pid, cpos);
 
@@ -188,6 +190,6 @@ pub fn update_view(mut eng: EngineRef, cid: ClientId) {
     // TODO: using `with_hooks` here is gross, move schedule_view_update somewhere better
     {
         use world::fragment::Fragment;
-        eng.as_world_fragment().with_hooks(|h| h.schedule_view_update(pawn_id));
+        // FIXME: view update
     }
 }

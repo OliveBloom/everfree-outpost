@@ -321,6 +321,8 @@ impl<'d> Engine<'d> {
             let mut eng = self.as_ref();
             let mut wf = eng.as_world_fragment();
             let mut e = wf.entity_mut(eid);
+            // FIXME
+            /*
             match u {
                 StartMotion(v) => {
                     let pos = e.pos(now);
@@ -341,6 +343,7 @@ impl<'d> Engine<'d> {
                     e.set_motion(m);
                 },
             }
+            */
         }
     }
 
