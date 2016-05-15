@@ -245,6 +245,7 @@ impl Request {
 
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub enum Response {
     TerrainChunk(u16, Vec<u16>),
     Pong(u16, LocalTime),
@@ -351,6 +352,7 @@ impl Response {
 }
 
 
+#[derive(Debug)]
 pub struct InitData {
     pub entity_id: EntityId,
     pub now: LocalTime,

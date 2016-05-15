@@ -43,10 +43,21 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
                     String::new()
                 };
 
-            self.messages().send_client(cid, ClientResponse::EntityAppear(eid, appearance, name));
-        }
+            // FIXME merge some of this with the new-style update code below
+            let m = entity.motion();
+            let motion_msg = if let Some(end_time) = m.end_time {
+                ClientResponse::EntityMotionStartEnd(
+                    // FIXME: anim handling
+                    eid, m.start_pos, m.start_time, m.velocity, 0, end_time)
+            } else {
+                ClientResponse::EntityMotionStart(
+                    // FIXME: anim handling
+                    eid, m.start_pos, m.start_time, m.velocity, 0)
+            };
 
-        self.on_entity_motion_update(cid, eid);
+            self.messages().send_client(cid, ClientResponse::EntityAppear(eid, appearance, name));
+            self.messages().send_client(cid, motion_msg);
+        }
     }
 
     fn on_entity_disappear(&mut self, cid: ClientId, eid: EntityId) {
@@ -63,13 +74,8 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
     }
 
     fn on_entity_motion_update(&mut self, cid: ClientId, eid: EntityId) {
-        trace!("on_entity_motion_update({:?}, {:?})", cid, eid);
-        let entity = self.world().entity(eid);
-
-        let motion = entity.motion().clone();
-        let anim = entity.anim();
-        // FIXME
-        //self.messages().send_client(cid, ClientResponse::EntityUpdate(eid, motion, anim));
+        // New physics code never uses these callbacks.
+        unreachable!();
     }
 
     fn on_entity_appearance_update(&mut self, cid: ClientId, eid: EntityId) {
@@ -177,13 +183,13 @@ pub fn change_entity_chunk(vision: &mut Vision,
                            messages: &mut Messages,
                            world: &World,
                            eid: EntityId,
+                           plane: PlaneId,
                            old_cpos: V2,
                            new_cpos: V2) {
     if old_cpos == new_cpos {
         return;
         // Otherwise PubSub state would get corrupted by duplicate `publish` calls.
     }
-    let plane = world.entity(eid).plane_id();
     add_entity(vision, messages, world, eid, plane, new_cpos);
     remove_entity(vision, messages, world, eid, plane, old_cpos);
 }

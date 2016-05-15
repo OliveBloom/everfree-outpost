@@ -7,6 +7,7 @@ use logic;
 use messages::ClientResponse;
 use physics::UpdateKind;
 use timing::next_tick;
+use vision;
 use world::object::*;
 
 
@@ -37,17 +38,30 @@ pub fn tick(eng: &mut Engine) {
         }
     }
 
+    // FIXME borrow checker workaround
+    // This one's okay because VisionFragment doesn't include physics.
+    let eng2: &mut Engine = unsafe { &mut *(eng as *mut _) };
+
     co_for!( (eid, m, kind) in
                 (eng.physics.update(now)) (&mut eng.world, &eng.cache) {
         let chunk_px = scalar(TILE_SIZE * CHUNK_SIZE);
+        let plane = eng.world.entity(eid).plane_id();
         let old_chunk = m.pos(now).reduce().div_floor(chunk_px);
         let new_chunk = m.pos(next).reduce().div_floor(chunk_px);
 
         if new_chunk != old_chunk {
-            // FIXME vision publisher update
+            logic::vision::change_entity_chunk(&mut eng.vision,
+                                               &mut eng.messages,
+                                               &eng.world,
+                                               eid,
+                                               plane,
+                                               old_chunk,
+                                               new_chunk);
 
-            if let Some(c) = eng.world.entity(eid).pawn_owner() {
-                // FIXME vision subscriber update
+            if let Some(cid) = eng.world.entity(eid).pawn_owner().map(|c| c.id()) {
+                use vision::Fragment;
+                let area = vision::vision_region(m.pos(next));
+                eng2.as_ref().as_vision_fragment().set_client_area(cid, plane, area);
             }
         }
 
@@ -62,7 +76,10 @@ pub fn tick(eng: &mut Engine) {
                 UpdateKind::StartEnd => ClientResponse::EntityMotionStartEnd(
                     eid, m.start_pos, m.start_time, m.velocity, 0, m.end_time.unwrap()),
             };
-            // FIXME Do vision broadcast of msg
+            let messages = &mut eng.messages;
+            eng.vision.entity_update(eid, |cid| {
+                messages.send_client(cid, msg.clone());
+            });
         }
     });
 

@@ -348,6 +348,7 @@ impl Messages {
     // Response sending
 
     fn send_raw(&self, wire_id: WireId, msg: Response) {
+        trace!("{:?}: {:?}", wire_id, msg);
         self.send.send((wire_id, msg)).unwrap();
     }
 

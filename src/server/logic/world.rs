@@ -201,18 +201,6 @@ impl_world_Hooks!(WorldHooks, as_vision_fragment);
 impl_world_Hooks!(HiddenWorldHooks, as_hidden_vision_fragment);
 
 
-pub fn entity_area(e: ObjectRef<Entity>) -> SmallSet<V2> {
-    let mut area = SmallSet::new();
-
-    let a = e.motion().start_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-    // FIXME
-    //let b = e.motion().end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-
-    area.insert(a);
-    //area.insert(b);
-    area
-}
-
 pub fn structure_area(s: ObjectRef<Structure>) -> SmallSet<V2> {
     let mut area = SmallSet::new();
     for p in s.bounds().reduce().div_round_signed(CHUNK_SIZE).points() {
