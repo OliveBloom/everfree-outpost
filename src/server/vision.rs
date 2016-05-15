@@ -28,8 +28,11 @@ pub const VIEW_ANCHOR: V2 = V2 { x: 2, y: 2 };
 
 pub fn vision_region(pos: V3) -> Region<V2> {
     let center = pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    vision_region_chunk(center)
+}
 
-    let base = center - VIEW_ANCHOR;
+pub fn vision_region_chunk(cpos: V2) -> Region<V2> {
+    let base = cpos - VIEW_ANCHOR;
     Region::new(base, base + VIEW_SIZE)
 }
 

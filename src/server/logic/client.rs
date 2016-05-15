@@ -2,6 +2,7 @@ use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use chunks;
+use engine::Engine;
 use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
@@ -181,50 +182,30 @@ pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
     Ok(())
 }
 
-pub fn update_view(mut eng: EngineRef, cid: ClientId) {
+pub fn update_view(eng: &mut Engine,
+                   cid: ClientId,
+                   old_plane: PlaneId,
+                   old_cpos: V2,
+                   new_plane: PlaneId,
+                   new_cpos: V2) {
     let now = eng.now();
 
-    let old_region = unwrap_or!(eng.vision().client_view_area(cid));
-    let old_pid = unwrap_or!(eng.vision().client_view_plane(cid));
-
-    let (new_stable_pid, new_region, pawn_id) = {
-        // TODO: warn on None? - may indicate inconsistency between World and Vision
-        let client = unwrap_or!(eng.world().get_client(cid));
-
-        // TODO: make sure return is the right thing to do on None
-        let pawn = unwrap_or!(client.pawn());
-
-        (pawn.stable_plane_id(),
-         vision::vision_region(pawn.pos(now)),
-         pawn.id())
-    };
-    let new_pid = chunks::Fragment::get_plane_id(&mut eng.as_chunks_fragment(), new_stable_pid);
-
-    let plane_change = new_pid != old_pid;
-
-    // un/load_chunk use HiddenWorldFragment, so do the calls in this specific order to make sure
-    // the chunks being un/loaded are actually not in the client's vision.
+    let old_region = vision::vision_region_chunk(old_cpos);
+    let new_region = vision::vision_region_chunk(new_cpos);
+    let plane_change = new_plane != old_plane;
 
     for cpos in new_region.points().filter(|&p| !old_region.contains(p) || plane_change) {
-        logic::chunks::load_chunk(eng.borrow(), new_pid, cpos);
+        logic::chunks::load_chunk(eng.as_ref(), new_plane, cpos);
     }
 
-    vision::Fragment::set_client_area(&mut eng.as_vision_fragment(), cid, new_pid, new_region);
+    vision::Fragment::set_client_area(&mut eng.as_ref().as_vision_fragment(),
+                                      cid, new_plane, new_region);
 
     for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
-        logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);
+        logic::chunks::unload_chunk(eng.as_ref(), old_plane, cpos);
     }
 
-    // TODO: +scalar(2) hack
-    let old_cpos = old_region.min + scalar(2);
-    let new_cpos = new_region.min + scalar(2);
-    eng.chat_mut().set_client_location(cid, old_pid, old_cpos, new_pid, new_cpos);
+    eng.chat.set_client_location(cid, old_plane, old_cpos, new_plane, new_cpos);
 
-    eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
-
-    // TODO: using `with_hooks` here is gross, move schedule_view_update somewhere better
-    {
-        use world::fragment::Fragment;
-        // FIXME: view update
-    }
+    eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
 }

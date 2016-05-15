@@ -59,9 +59,7 @@ pub fn tick(eng: &mut Engine) {
                                                new_chunk);
 
             if let Some(cid) = eng.world.entity(eid).pawn_owner().map(|c| c.id()) {
-                use vision::Fragment;
-                let area = vision::vision_region(m.pos(next));
-                eng2.as_ref().as_vision_fragment().set_client_area(cid, plane, area);
+                logic::client::update_view(eng2, cid, plane, old_chunk, plane, new_chunk);
             }
         }
 
