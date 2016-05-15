@@ -188,23 +188,3 @@ impl<'a> ShapeSource for ChunksSource<'a> {
         }
     }
 }
-
-
-pub trait Fragment<'d> {
-    fn with_cache<F, R>(&mut self, f: F) -> R
-        where F: FnOnce(&mut Physics<'d>, &TerrainCache, &World<'d>) -> R;
-
-    type WF: world::Fragment<'d>;
-    fn with_world<F, R>(&mut self, f: F) -> R
-        where F: FnOnce(&mut Self::WF) -> R;
-
-    fn set_velocity(&mut self, now: Time, eid: EntityId, target: V3) -> StrResult<()> {
-        // FIXME remove
-        Ok(())
-    }
-
-    fn update(&mut self, now: Time, eid: EntityId) -> StrResult<()> {
-        // FIXME remove
-        Ok(())
-    }
-}
