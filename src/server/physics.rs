@@ -141,6 +141,9 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
             let next_pos = m.pos(next);
             let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
             let ended = dur != TICK_MS as i32;
+            if ended {
+                m.end_time = Some(now + dur as Time);
+            }
 
             // Actually update the world
             DummyFragment::new(world).entity_mut(eid).set_motion(m.clone());

@@ -24,7 +24,7 @@ var OP_MOVE_ITEM =              0x0013;
 var OP_TERRAIN_CHUNK =          0x8001;
 // DEPRECATED                   0x8002;
 var OP_PONG =                   0x8003;
-var OP_ENTITY_UPDATE =          0x8004;
+// DEPRECATED                   0x8004;
 var OP_INIT =                   0x8005;
 var OP_KICK_REASON =            0x8006;
 var OP_UNLOAD_CHUNK =           0x8007;
@@ -48,6 +48,10 @@ var OP_STRUCTURE_REPLACE =      0x8018;
 var OP_INVENTORY_UPDATE =       0x8019;
 var OP_INVENTORY_APPEAR =       0x801a;
 var OP_INVENTORY_GONE =         0x801b;
+var OP_ENTITY_MOTION_START =    0x801c;
+var OP_ENTITY_MOTION_END =      0x801d;
+var OP_ENTITY_MOTION_START_END =0x801e;
+var OP_PROCESSED_INPUTS =       0x801f;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -71,7 +75,6 @@ function Connection(url) {
     this.onClose = null;
     this.onTerrainChunk = null;
     this.onPong = null;
-    this.onEntityUpdate = null;
     this.onInit = null;
     this.onUnloadChunk = null;
     this.onOpenDialog = null;
@@ -92,6 +95,10 @@ function Connection(url) {
     this.onInventoryUpdate = null;
     this.onInventoryAppear = null;
     this.onInventoryGone = null;
+    this.onEntityMotionStart = null;
+    this.onEntityMotionEnd = null;
+    this.onEntityMotionStartEnd = null;
+    this.onProcessedInputs = null;
 }
 exports.Connection = Connection;
 
@@ -119,6 +126,12 @@ Connection.prototype._handleMessage = function(evt) {
 
     function get16() {
         var result = view.getUint16(offset, true);
+        offset += 2;
+        return result;
+    }
+
+    function getI16() {
+        var result = view.getInt16(offset, true);
         offset += 2;
         return result;
     }
@@ -183,28 +196,6 @@ Connection.prototype._handleMessage = function(evt) {
                 var msg = get16();
                 var server_time = get16();
                 this.onPong(msg, server_time, evt.timeStamp);
-            }
-            break;
-
-        case OP_ENTITY_UPDATE:
-            if (this.onEntityUpdate != null) {
-                var id =            get32();
-                var start_x =       get16();
-                var start_y =       get16();
-                var start_z =       get16();
-                var start_time =    get16();
-                var end_x =         get16();
-                var end_y =         get16();
-                var end_z =         get16();
-                var end_time =      get16();
-                var anim =          get16();
-                var motion = {
-                    start_pos:  new Vec(start_x, start_y, start_z),
-                    start_time: start_time,
-                    end_pos:    new Vec(end_x, end_y, end_z),
-                    end_time:   end_time,
-                };
-                this.onEntityUpdate(id, motion, anim);
             }
             break;
 
@@ -403,6 +394,66 @@ Connection.prototype._handleMessage = function(evt) {
                 this.onInventoryGone(inventory_id);
             };
             break;
+
+        case OP_ENTITY_MOTION_START:
+            if (this.onEntityMotionStart != null) {
+                var id =            get32();
+                var start_x =       get16();
+                var start_y =       get16();
+                var start_z =       get16();
+                var start_time =    get16();
+                var velocity_x =    getI16();
+                var velocity_y =    getI16();
+                var velocity_z =    getI16();
+                var anim =          get16();
+                var motion = {
+                    start_pos:  new Vec(start_x, start_y, start_z),
+                    velocity:   new Vec(velocity_x, velocity_y, velocity_z),
+                    start_time: start_time,
+                    end_time:   null,
+                };
+                this.onEntityMotionStart(id, motion, anim);
+            }
+            break;
+
+        case OP_ENTITY_MOTION_END:
+            if (this.onEntityMotionEnd != null) {
+                var id =            get32();
+                var end_time =      get16();
+                this.onEntityMotionEnd(id, end_time);
+            }
+            break;
+
+        case OP_ENTITY_MOTION_START_END:
+            if (this.onEntityMotionStartEnd != null) {
+                var id =            get32();
+                var start_x =       get16();
+                var start_y =       get16();
+                var start_z =       get16();
+                var start_time =    get16();
+                var velocity_x =    getI16();
+                var velocity_y =    getI16();
+                var velocity_z =    getI16();
+                var anim =          get16();
+                var end_time =      get16();
+                var motion = {
+                    start_pos:  new Vec(start_x, start_y, start_z),
+                    velocity:   new Vec(velocity_x, velocity_y, velocity_z),
+                    start_time: start_time,
+                    end_time:   end_time,
+                };
+                this.onEntityMotionStartEnd(id, motion, anim);
+            }
+            break;
+
+        case OP_PROCESSED_INPUTS:
+            if (this.onProcessedInputs != null) {
+                var time =          get16();
+                var count =         get16();
+                this.onProcessedInputs(time, count);
+            }
+            break;
+
 
         default:
             console.assert(false, 'received invalid opcode:', opcode.toString(16));

@@ -335,7 +335,7 @@ impl Response {
                 ww.write_msg(id, (op::EntityMotionStart, entity_id,
                                   pos, time, velocity, anim_id)),
             EntityMotionEnd(entity_id, time) =>
-                ww.write_msg(id, (op::EntityMotionEnd, time)),
+                ww.write_msg(id, (op::EntityMotionEnd, entity_id, time)),
             EntityMotionStartEnd(entity_id, pos, time, velocity, end_time, anim_id) =>
                 ww.write_msg(id, (op::EntityMotionStartEnd, entity_id,
                                   pos, time, velocity, end_time, anim_id)),
