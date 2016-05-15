@@ -5,7 +5,7 @@ use types::*;
 use util::{multimap_insert, multimap_remove};
 
 use world::{Entity, EntityAttachment, Motion, Activity};
-use world::{Fragment, Hooks};
+use world::Fragment;
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 
@@ -36,7 +36,6 @@ pub fn create<'d, F>(f: &mut F,
 
     let eid = unwrap!(f.world_mut().entities.insert(e));
     post_init(f, eid);
-    f.with_hooks(|h| h.on_entity_create(eid));
     Ok(eid)
 }
 
@@ -118,7 +117,6 @@ pub fn destroy<'d, F>(f: &mut F,
         ops::inventory::destroy(f, iid).unwrap();
     }
 
-    f.with_hooks(|h| h.on_entity_destroy(eid, e));
     Ok(())
 }
 
@@ -208,6 +206,5 @@ pub fn set_stable_plane<'d, F>(f: &mut F,
         e.stable_plane = new_stable_pid;
     }
 
-    f.with_hooks(|h| h.on_entity_plane_change(eid));
     Ok(())
 }

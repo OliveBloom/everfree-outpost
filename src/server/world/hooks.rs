@@ -13,13 +13,6 @@ pub trait Hooks {
                              old_pawn: Option<EntityId>,
                              new_pan: Option<EntityId>) {}
 
-    fn on_entity_create(&mut self, eid: EntityId) {}
-    fn on_entity_destroy(&mut self, eid: EntityId, e: Entity) {}
-    fn on_entity_activity_change(&mut self, eid: EntityId) {}
-    fn on_entity_motion_change(&mut self, eid: EntityId) {}
-    fn on_entity_appearance_change(&mut self, eid: EntityId) {}
-    fn on_entity_plane_change(&mut self, eid: EntityId) {}
-
     fn on_inventory_create(&mut self, iid: InventoryId) {}
     fn on_inventory_destroy(&mut self, iid: InventoryId) {}
     fn on_inventory_update(&mut self,

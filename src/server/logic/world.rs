@@ -1,4 +1,5 @@
 use std::iter;
+use std::mem;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use types::*;
@@ -65,23 +66,17 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
 
+    /*
     fn on_entity_create(&mut self, eid: EntityId) {
-        let now = self.now();
-        let Open { vision, messages, world, .. } = self.open();
-        let e = world.entity(eid);
-        let cpos = e.pos(now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-        logic::vision::add_entity(vision, messages, world,
-                                  eid, e.plane_id(), cpos);
-        // FIXME: register with physics?
+        unsafe {
+            logic::handle::entity_create(mem::transmute_copy(self), eid);
+        }
     }
 
     fn on_entity_destroy(&mut self, eid: EntityId, e: Entity) {
-        let now = self.now();
-        let Open { vision, messages, world, .. } = self.open();
-        let cpos = e.pos(now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-        logic::vision::remove_entity(vision, messages, world,
-                                     eid, e.plane_id(), cpos);
-        // FIXME: unregister with physics?
+        unsafe {
+            logic::handle::entity_destroy(mem::transmute_copy(self), eid, &e);
+        }
     }
 
     fn on_entity_activity_change(&mut self, eid: EntityId) {
@@ -90,19 +85,10 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
         // FIXME: need to schedule a physics update right away
     }
 
-    fn on_entity_motion_change(&mut self, eid: EntityId) {
-        // set_motion is called only with dummy hooks.
-        unreachable!();
-    }
-
     fn on_entity_appearance_change(&mut self, eid: EntityId) {
         // FIXME: dispatch through logic::vision
     }
-
-    fn on_entity_plane_change(&mut self, eid: EntityId) {
-        // set_motion is called only with dummy hooks.
-        unreachable!();
-    }
+    */
 
 
     fn on_structure_create(&mut self, sid: StructureId) {

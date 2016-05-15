@@ -4,7 +4,7 @@ use types::*;
 
 use engine::glue::*;
 use messages::{Messages, ClientResponse};
-use world::{self, World};
+use world::{self, World, Entity};
 use world::object::*;
 use vision::{self, Vision};
 
@@ -31,46 +31,16 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
 
     fn on_entity_appear(&mut self, cid: ClientId, eid: EntityId) {
         trace!("on_entity_appear({:?}, {:?})", cid, eid);
-        {
-            let entity = self.world().entity(eid);
-
-            let appearance = entity.appearance();
-            // TODO: hack.  Should have a separate "entity name" field somewhere.
-            let name =
-                if let world::EntityAttachment::Client(controller_cid) = entity.attachment() {
-                    self.world().client(controller_cid).name().to_owned()
-                } else {
-                    String::new()
-                };
-
-            // FIXME merge some of this with the new-style update code below
-            let m = entity.motion();
-            let motion_msg = if let Some(end_time) = m.end_time {
-                ClientResponse::EntityMotionStartEnd(
-                    // FIXME: anim handling
-                    eid, m.start_pos, m.start_time, m.velocity, 0, end_time)
-            } else {
-                ClientResponse::EntityMotionStart(
-                    // FIXME: anim handling
-                    eid, m.start_pos, m.start_time, m.velocity, 0)
-            };
-
-            self.messages().send_client(cid, ClientResponse::EntityAppear(eid, appearance, name));
-            self.messages().send_client(cid, motion_msg);
-        }
+        let e = self.world().entity(eid);
+        self.messages().send_client(cid, entity_appear_message(e));
+        self.messages().send_client(cid, entity_motion_message(e));
     }
 
     fn on_entity_disappear(&mut self, cid: ClientId, eid: EntityId) {
         trace!("on_entity_disappear({:?}, {:?})", cid, eid);
-        let time =
-            if let Some(entity) = self.world().get_entity(eid) {
-                entity.motion().start_time
-            } else {
-                0
-            };
         // TODO: figure out if it's actually useful to send the time here.  The client currently
-        // ignores it.
-        self.messages().send_client(cid, ClientResponse::EntityGone(eid, time));
+        // ignores it, so we don't
+        self.messages().send_client(cid, entity_gone_message2(eid));
     }
 
     fn on_entity_motion_update(&mut self, cid: ClientId, eid: EntityId) {
@@ -134,6 +104,36 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
         self.messages().send_client(
             cid, ClientResponse::InventoryUpdate(iid, slot_idx, item));
     }
+}
+
+
+pub fn entity_appear_message(e: ObjectRef<Entity>) -> ClientResponse {
+    // TODO: hack.  Should have a separate "entity name" field somewhere.
+    let name = if let Some(c) = e.pawn_owner() {
+        c.name().to_owned()
+    } else {
+        String::new()
+    };
+    ClientResponse::EntityAppear(e.id(), e.appearance(), name)
+}
+
+pub fn entity_motion_message(e: ObjectRef<Entity>) -> ClientResponse {
+    let m = e.motion();
+    if let Some(end_time) = m.end_time {
+        ClientResponse::EntityMotionStartEnd(
+            e.id(), m.start_pos, m.start_time, m.velocity, e.anim(), end_time)
+    } else {
+        ClientResponse::EntityMotionStart(
+            e.id(), m.start_pos, m.start_time, m.velocity, e.anim())
+    }
+}
+
+pub fn entity_gone_message(e: ObjectRef<Entity>) -> ClientResponse {
+    ClientResponse::EntityGone(e.id(), 0)
+}
+
+pub fn entity_gone_message2(eid: EntityId) -> ClientResponse {
+    ClientResponse::EntityGone(eid, 0)
 }
 
 

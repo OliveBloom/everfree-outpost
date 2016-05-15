@@ -45,7 +45,6 @@ pub enum UpdateKind {
 pub struct Physics<'d> {
     data: &'d Data,
     moving_entities: HashMap<EntityId, MovingEntity>,
-    remove_entities: SmallVec<EntityId>,
 }
 
 impl<'d> Physics<'d> {
@@ -53,8 +52,17 @@ impl<'d> Physics<'d> {
         Physics {
             data: data,
             moving_entities: HashMap::new(),
-            remove_entities: SmallVec::new(),
         }
+    }
+
+    pub fn add_entity(&mut self, eid: EntityId, velocity: V3) {
+        let mut me = MovingEntity::new();
+        me.current_velocity = velocity;
+        self.moving_entities.insert(eid, me);
+    }
+
+    pub fn remove_entity(&mut self, eid: EntityId) {
+        self.moving_entities.remove(&eid);
     }
 
     pub fn set_target_velocity(&mut self, eid: EntityId, v: V3) {
@@ -63,10 +71,7 @@ impl<'d> Physics<'d> {
     }
 
     pub fn cleanup(&mut self) {
-        for &eid in self.remove_entities.iter() {
-            self.moving_entities.remove(&eid);
-        }
-        self.remove_entities.clear();
+        // FIXME: remove
     }
 }
 
@@ -75,7 +80,6 @@ pub struct UpdateCo<'a, 'd: 'a> {
     data: &'d Data,
     now: Time,
     inner: hash_map::IterMut<'a, EntityId, MovingEntity>,
-    remove: &'a mut SmallVec<EntityId>,
 }
 
 impl<'d> Physics<'d> {
@@ -85,7 +89,6 @@ impl<'d> Physics<'d> {
             data: self.data,
             now: now,
             inner: self.moving_entities.iter_mut(),
-            remove: &mut self.remove_entities,
         }
     }
 }
@@ -104,8 +107,7 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
                 let e = match world.get_entity(eid) {
                     Some(e) => e,
                     None => {
-                        info!("no such entity: {:?}", eid);
-                        self.remove.push(eid);
+                        error!("BUG: no such entity: {:?}", eid);
                         continue;
                     },
                 };
