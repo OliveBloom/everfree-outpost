@@ -73,14 +73,14 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
         };
         trace!("entity {:?} created at {:?}", eid, plane);
         // TODO: use a default plane/area for add_entity, then just call on_motion_change
-        vision::Fragment::add_entity(&mut self.$as_vision_fragment(), eid, plane, area);
+        // FIXME: dispatch through logic::vision
         // FIXME: need to schedule a physics update right away
         // Might have an owner pre-set, if it's been loaded instead of newly created.
         // FIXME: view update
     }
 
     fn on_entity_destroy(&mut self, eid: EntityId) {
-        vision::Fragment::remove_entity(&mut self.$as_vision_fragment(), eid);
+        // FIXME: dispatch through logic::vision
     }
 
     fn on_entity_activity_change(&mut self, eid: EntityId) {
@@ -90,24 +90,17 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
     fn on_entity_motion_change(&mut self, eid: EntityId) {
-        let (plane, area) = {
-            let e = self.world().entity(eid);
-            (e.plane_id(),
-             entity_area(self.world().entity(eid)))
-        };
-        trace!("entity {:?} motion changed to {:?}", eid, plane);
-        vision::Fragment::set_entity_area(&mut self.$as_vision_fragment(), eid, plane, area);
-        // FIXME not sure what to do here, if anything (messages should be handled externally?)
-        // FIXME: view update
+        // The relevant messages are all handled externally.
+        // FIXME: check this is correct
     }
 
     fn on_entity_appearance_change(&mut self, eid: EntityId) {
-        vision::Fragment::update_entity_appearance(&mut self.$as_vision_fragment(), eid);
+        // FIXME: dispatch through logic::vision
     }
 
     fn on_entity_plane_change(&mut self, eid: EntityId) {
-        trace!("entity {:?} plane changed", eid);
-        self.on_entity_motion_change(eid);
+        // The relevant messages are all handled externally.
+        // FIXME: check this is correct
     }
 
 
@@ -343,6 +336,7 @@ fn teleport_entity_internal(mut wf: WorldFragment,
                             pid: Option<PlaneId>,
                             stable_pid: Option<Stable<PlaneId>>,
                             pos: V3) -> StrResult<()> {
+    /*
     use world::Fragment;
     let now = wf.now();
 
@@ -372,6 +366,8 @@ fn teleport_entity_internal(mut wf: WorldFragment,
         try!(e.set_plane_id(pid));
     }
     e.set_motion(world::Motion::stationary(pos, now));
+    */
+    // FIXME: update this whole thing
     Ok(())
 }
 

@@ -113,7 +113,7 @@ pub enum ClientResponse {
     OpenDialog(Dialog),
     MainInventory(InventoryId),
     AbilityInventory(InventoryId),
-    ProcessedInputs(Time, usize),
+    ProcessedInputs(Time, u16),
     ChatUpdate(String),
     KickReason(String),
 }
@@ -499,7 +499,7 @@ impl Messages {
                 self.send_raw(wire_id, Response::AbilityInventory(iid)),
 
             ClientResponse::ProcessedInputs(time, count) =>
-                self.send_raw(wire_id, Response::ProcessedInputs(time.to_local(), count as u16)),
+                self.send_raw(wire_id, Response::ProcessedInputs(time.to_local(), count)),
 
             ClientResponse::ChatUpdate(msg) =>
                 self.send_raw(wire_id, Response::ChatUpdate(msg)),

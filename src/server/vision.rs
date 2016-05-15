@@ -55,7 +55,6 @@ pub struct Vision {
     ps: PubSub<ViewableId, Location, ViewerId>,
 
     viewer_pos: HashMap<ViewerId, (PlaneId, Region<V2>)>,
-    entity_pos: HashMap<EntityId, (PlaneId, SmallSet<V2>)>,
     structure_pos: HashMap<StructureId, (PlaneId, SmallSet<V2>)>,
     terrain_chunk_pos: HashMap<TerrainChunkId, (PlaneId, V2)>,
 
@@ -132,7 +131,6 @@ impl Vision {
             ps: PubSub::new(),
 
             viewer_pos: HashMap::new(),
-            entity_pos: HashMap::new(),
             structure_pos: HashMap::new(),
             terrain_chunk_pos: HashMap::new(),
 
@@ -210,67 +208,43 @@ impl Vision {
     }
 
 
-    pub fn add_entity<H>(&mut self,
+    // In general, client code should perform all "add" operations before all "remove"
+    // operations.  There are four cases here:
+    //  - Neither old nor new position is visible: Refcount remains unchanged (at zero).
+    //  - Only old position is visible: First loop has no effect, second decrements refcount
+    //    (possibly generating `gone` event).
+    //  - Only new position is visible: First loop increments refcount (possibly generating
+    //    `appear` event), second has no effect.
+    //  - Both old and new are visible: Since old position is visible, refcount is positive, First
+    //    loop increments, and second decrements.  No events are generated because the refcount is
+    //    positive the whole way through.
+
+    pub fn entity_add<F>(&mut self,
                          eid: EntityId,
                          plane: PlaneId,
-                         area: SmallSet<V2>,
-                         h: &mut H)
-            where H: Hooks {
-        self.entity_pos.insert(eid, (PLANE_LIMBO, SmallSet::new()));
-        self.set_entity_area(eid, plane, area, h);
+                         cpos: V2,
+                         mut f: F)
+            where F: FnMut(ClientId) {
+        self.ps.publish(ViewableId::Entity(eid), (plane, cpos),
+                        |_, _, &cid| f(cid));
     }
 
-    pub fn remove_entity<H>(&mut self,
+    pub fn entity_remove<F>(&mut self,
                             eid: EntityId,
-                            h: &mut H)
-            where H: Hooks {
-        self.set_entity_area(eid, PLANE_LIMBO, SmallSet::new(), h);
-        self.entity_pos.remove(&eid);
+                            plane: PlaneId,
+                            cpos: V2,
+                            mut f: F)
+            where F: FnMut(ClientId) {
+        self.ps.unpublish(ViewableId::Entity(eid), (plane, cpos),
+                          |_, _, &cid| f(cid));
     }
 
-    pub fn set_entity_area<H>(&mut self,
-                              eid: EntityId,
-                              new_plane: PlaneId,
-                              new_area: SmallSet<V2>,
-                              h: &mut H)
-            where H: Hooks {
-        let vid = ViewableId::Entity(eid);
-        let entry = unwrap_or!(self.entity_pos.get_mut(&eid));
-        {
-            let old_plane = entry.0;
-            let old_area = &entry.1;
-            let plane_change = new_plane != old_plane;
-
-            // Send all "appear" events before all "disappear" events.  There are four cases here:
-            //  - Neither old nor new position is visible: Refcount remains unchanged (at zero).
-            //  - Only old position is visible: First loop has no effect, second decrements
-            //    refcount (possibly generating `gone` event).
-            //  - Only new position is visible: First loop increments refcount (possibly generating
-            //    `appear` event), second has no effect.
-            //  - Both old and new are visible: Since old position is visible, refcount is
-            //    positive, First loop increments, and second decrements.  No events are generated
-            //    because the refcount is positive the whole way through.
-            for &p in new_area.iter().filter(|&p| !old_area.contains(p) || plane_change) {
-                self.ps.publish(vid, (new_plane, p),
-                                |_, _, &cid| h.on_entity_appear(cid, eid));
-            }
-
-            for &p in old_area.iter().filter(|&p| !new_area.contains(p) || plane_change) {
-                self.ps.unpublish(vid, (old_plane, p),
-                                  |_, _, &cid| h.on_entity_disappear(cid, eid));
-            }
-        }
-
-        *entry = (new_plane, new_area);
-        self.ps.message(&vid, |_, &cid| h.on_entity_motion_update(cid, eid));
-    }
-
-    pub fn update_entity_appearance<H>(&mut self,
-                                       eid: EntityId,
-                                       h: &mut H)
-            where H: Hooks {
+    pub fn entity_update<F>(&mut self,
+                            eid: EntityId,
+                            mut f: F)
+            where F: FnMut(ClientId) {
         self.ps.message(&ViewableId::Entity(eid),
-                        |_, &cid| h.on_entity_appearance_update(cid, eid));
+                        |_, &cid| f(cid));
     }
 
 
@@ -419,11 +393,6 @@ gen_Fragment! {
     fn add_client(cid: ClientId, plane: PlaneId, view: Region<V2>);
     fn remove_client(cid: ClientId);
     fn set_client_area(cid: ClientId, plane: PlaneId, view: Region<V2>);
-
-    fn add_entity(eid: EntityId, plane: PlaneId, area: SmallSet<V2>);
-    fn remove_entity(eid: EntityId);
-    fn set_entity_area(eid: EntityId, plane: PlaneId, area: SmallSet<V2>);
-    fn update_entity_appearance(eid: EntityId);
 
     fn add_terrain_chunk(tcid: TerrainChunkId, plane: PlaneId, cpos: V2);
     fn remove_terrain_chunk(tcid: TerrainChunkId);

@@ -47,3 +47,17 @@ pub trait Hooks {
                                    plane_id: PlaneId,
                                    pos: V3) -> bool;
 }
+
+pub struct NoHooks;
+impl Hooks for NoHooks {
+    fn check_structure_placement(&self,
+                                 template: &StructureTemplate,
+                                 plane_id: PlaneId,
+                                 pos: V3) -> bool { false }
+
+    fn check_structure_replacement(&self,
+                                   sid: StructureId,
+                                   new_template: &StructureTemplate,
+                                   plane_id: PlaneId,
+                                   pos: V3) -> bool { false }
+}

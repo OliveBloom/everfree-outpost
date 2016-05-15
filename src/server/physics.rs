@@ -1,18 +1,22 @@
 //! Interface to the physics engine.  The physics engine itself lives in a separate library,
 //! `libphysics`, so that it can be compiled to asm.js for use on the client.  This system just
 //! provides the glue to connect the physics engine to entities and the rest of the `World`.
-use std::collections::HashMap;
+use std::collections::hash_map::{self, HashMap};
 use libphysics::{self, ShapeSource};
 use libphysics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE};
 
 use types::*;
 use util::StrResult;
+use util::SmallVec;
+use util::Coroutine;
 
 use cache::TerrainCache;
 use data::Data;
 use timing::{next_tick, TICK_MS};
 use world::{self, World};
 use world::{Motion, Activity};
+use world::fragment::Fragment as World_Fragment;
+use world::fragment::DummyFragment;
 use world::object::*;
 
 
@@ -30,14 +34,18 @@ impl MovingEntity {
     }
 }
 
-pub enum Update {
-    StartMotion(V3),
-    EndTime(Time),
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum UpdateKind {
+    Move,
+    Start,
+    End,
+    StartEnd,
 }
 
 pub struct Physics<'d> {
     data: &'d Data,
     moving_entities: HashMap<EntityId, MovingEntity>,
+    remove_entities: SmallVec<EntityId>,
 }
 
 impl<'d> Physics<'d> {
@@ -45,6 +53,7 @@ impl<'d> Physics<'d> {
         Physics {
             data: data,
             moving_entities: HashMap::new(),
+            remove_entities: SmallVec::new(),
         }
     }
 
@@ -53,64 +62,167 @@ impl<'d> Physics<'d> {
         me.target_velocity = v;
     }
 
-    pub fn update(&mut self,
-                  world: &World,
-                  cache: &TerrainCache,
-                  now: Time) -> Vec<(EntityId, Update)> {
-        let mut journal = Vec::new();
-        let mut remove_eids = Vec::new();
+    pub fn cleanup(&mut self) {
+        for &eid in self.remove_entities.iter() {
+            self.moving_entities.remove(&eid);
+        }
+        self.remove_entities.clear();
+    }
+
+    pub fn update_<F>(&mut self,
+                     world: &mut World,
+                     cache: &TerrainCache,
+                     now: Time,
+                     mut update: F)
+            where F: FnMut(EntityId, &Motion, UpdateKind) {
+        let mut remove_eids = SmallVec::new();
         let next = next_tick(now);
 
         for (&eid, me) in &mut self.moving_entities {
-            let e = match world.get_entity(eid) {
-                Some(e) => e,
-                None => {
-                    info!("no such entity: {:?}", eid);
-                    remove_eids.push(eid);
-                    continue;
-                },
+            let (mut m, s) = {
+                let e = match world.get_entity(eid) {
+                    Some(e) => e,
+                    None => {
+                        info!("no such entity: {:?}", eid);
+                        remove_eids.push(eid);
+                        continue;
+                    },
+                };
+
+                let m = e.motion().clone();
+
+                let s = ChunksSource {
+                    cache: cache,
+                    base_tile: scalar(0),
+                    plane: e.plane_id(),
+                };
+
+                (m, s)
             };
 
-            let s = ChunksSource {
-                cache: cache,
-                base_tile: scalar(0),
-                plane: e.plane_id(),
-            };
-
-            let pos = e.motion().pos(now);
-            let m = e.motion();
+            let pos = m.pos(now);
             let size = V3::new(32, 32, 48);
             let mut collider = libphysics::walk2::Collider::new(&s, Region::new(pos, pos + size));
 
+            // 1) Compute the actual velocity for this tick
             let velocity = collider.calc_velocity(me.target_velocity);
-            // FIXME
-            //let new_motion = velocity != me.current_velocity || m.end_time() <= now;
-            let new_motion = velocity != me.current_velocity;
-            if new_motion {
-                journal.push((eid, Update::StartMotion(velocity)));
+            let started = velocity != me.current_velocity;
+            if started {
                 me.current_velocity = velocity;
+                m = Motion {
+                    start_pos: pos,
+                    velocity: velocity,
+                    start_time: now,
+                    end_time: None,
+                };
             }
 
-            let start_pos = if new_motion { pos } else { m.start_pos };
-            let start_time = if new_motion { now } else { m.start_time };
-            if start_time > next {
-                warn!("BUG: start_time {} > next {} (new? {})",
-                    start_time, next, new_motion);
-                continue;
-            }
-            let next_pos = start_pos + velocity * scalar((next - start_time) as i32) / scalar(1000);
-
+            let next_pos = m.pos(next);
             let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
-            if dur != TICK_MS as i32 {
-                journal.push((eid, Update::EndTime(now + dur as Time)));
+            let ended = dur != TICK_MS as i32;
+
+            let kind = match (started, ended) {
+                (false, false) => UpdateKind::Move,
+                (true, false) => UpdateKind::Start,
+                (false, true) => UpdateKind::End,
+                (true, true) => UpdateKind::StartEnd,
+            };
+            update(eid, &m, kind);
+
+            DummyFragment::new(world).entity_mut(eid).set_motion(m);
+        }
+
+        for eid in remove_eids.iter() {
+            self.moving_entities.remove(eid);
+        }
+    }
+}
+
+
+pub struct UpdateCo<'a, 'd: 'a> {
+    data: &'d Data,
+    now: Time,
+    inner: hash_map::IterMut<'a, EntityId, MovingEntity>,
+    remove: &'a mut SmallVec<EntityId>,
+}
+
+impl<'d> Physics<'d> {
+    pub fn update<'a>(&'a mut self, now: Time) -> UpdateCo<'a, 'd> {
+        let ptr = self as *mut _;
+        UpdateCo {
+            data: self.data,
+            now: now,
+            inner: self.moving_entities.iter_mut(),
+            remove: &mut self.remove_entities,
+        }
+    }
+}
+
+impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'a, 'd> {
+    type Item = (EntityId, Motion, UpdateKind);
+
+    fn send(&mut self, args: (&'b mut World<'d>, &'b TerrainCache)) -> Option<Self::Item> {
+        let (world, cache) = args;
+
+        for (&eid, me) in &mut self.inner {
+            let now = self.now;
+            let next = next_tick(now);
+
+            let (mut m, s) = {
+                let e = match world.get_entity(eid) {
+                    Some(e) => e,
+                    None => {
+                        info!("no such entity: {:?}", eid);
+                        self.remove.push(eid);
+                        continue;
+                    },
+                };
+
+                let m = e.motion().clone();
+
+                let s = ChunksSource {
+                    cache: cache,
+                    base_tile: scalar(0),
+                    plane: e.plane_id(),
+                };
+
+                (m, s)
+            };
+
+            let pos = m.pos(now);
+            let size = V3::new(32, 32, 48);
+            let mut collider = libphysics::walk2::Collider::new(&s, Region::new(pos, pos + size));
+
+            // 1) Compute the actual velocity for this tick
+            let velocity = collider.calc_velocity(me.target_velocity);
+            let started = velocity != me.current_velocity;
+            if started {
+                me.current_velocity = velocity;
+                m = Motion {
+                    start_pos: pos,
+                    velocity: velocity,
+                    start_time: now,
+                    end_time: None,
+                };
             }
+
+            let next_pos = m.pos(next);
+            let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
+            let ended = dur != TICK_MS as i32;
+
+            // Actually update the world
+            DummyFragment::new(world).entity_mut(eid).set_motion(m.clone());
+
+            let kind = match (started, ended) {
+                (false, false) => UpdateKind::Move,
+                (true, false) => UpdateKind::Start,
+                (false, true) => UpdateKind::End,
+                (true, true) => UpdateKind::StartEnd,
+            };
+            return Some((eid, m, kind));
         }
 
-        for eid in remove_eids {
-            self.moving_entities.remove(&eid);
-        }
-
-        journal
+        None
     }
 }
 

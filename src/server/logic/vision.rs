@@ -3,10 +3,10 @@ use std::borrow::ToOwned;
 use types::*;
 
 use engine::glue::*;
-use messages::ClientResponse;
-use world;
+use messages::{Messages, ClientResponse};
+use world::{self, World};
 use world::object::*;
-use vision;
+use vision::{self, Vision};
 
 
 impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
@@ -128,4 +128,27 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
         self.messages().send_client(
             cid, ClientResponse::InventoryUpdate(iid, slot_idx, item));
     }
+}
+
+
+pub fn change_entity_chunk(vision: &mut Vision,
+                           messages: &mut Messages,
+                           world: &World,
+                           eid: EntityId,
+                           old_cpos: V2,
+                           new_cpos: V2) {
+    let e = world.entity(eid);
+    vision.entity_add(eid, e.plane_id(), new_cpos, |cid| {
+        let name = if let Some(c) = e.pawn_owner() {
+            c.name().to_owned()
+        } else {
+            String::new()
+        };
+        messages.send_client(
+            cid, ClientResponse::EntityAppear(eid, e.appearance(), name));
+    });
+    vision.entity_remove(eid, e.plane_id(), old_cpos, |cid| {
+        messages.send_client(
+            cid, ClientResponse::EntityGone(eid, 0));
+    });
 }

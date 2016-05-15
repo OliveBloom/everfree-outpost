@@ -17,11 +17,13 @@ use libserver_types::Time;
 pub use self::bit_slice::BitSlice;
 pub use self::bytes::Bytes;
 pub use self::convert::Convert;
+pub use self::coroutine::Coroutine;
 pub use self::small_vec::SmallVec;
 pub use self::small_set::SmallSet;
 pub use self::str_error::{StrError, StrResult};
 pub use self::str_error::{StringError, StringResult};
 
+#[macro_use] pub mod coroutine;
 #[macro_use] pub mod str_error;
 pub mod bit_slice;
 pub mod bytes;

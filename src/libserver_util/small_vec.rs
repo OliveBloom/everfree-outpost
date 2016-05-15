@@ -92,6 +92,12 @@ impl<T> SmallVec<T> {
         }
     }
 
+    pub fn clear(&mut self) {
+        let mut interp = unsafe { self.to_interp() };
+        interp.clear();
+        unsafe { self.from_interp(interp) };
+    }
+
     pub fn swap_remove(&mut self, idx: usize) -> T {
         let len = self.len();
         self.as_mut_slice().swap(idx, len - 1);
@@ -205,6 +211,24 @@ impl<T> SmallVecInterp<T> {
             let result = v.pop();
             unsafe { self.from_vec(v) };
             result
+        }
+    }
+
+    #[inline]
+    fn clear(&mut self) {
+        if !self.is_large {
+            while self.len > 0 {
+                unsafe {
+                    // Drop the item.  Decrement first to avoid double-dropping if a panic occurs
+                    // partway through this drop.
+                    self.len -= 1;
+                    ptr::read(self.ptr.offset(self.len as isize))
+                };
+            }
+        } else {
+            let mut v = unsafe { self.to_vec() };
+            v.clear();
+            unsafe { self.from_vec(v) };
         }
     }
 

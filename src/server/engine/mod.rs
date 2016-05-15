@@ -288,63 +288,7 @@ impl<'d> Engine<'d> {
 
 
     fn tick(&mut self) {
-        // Schedule this first, so it gets the first slot in the timing wheel bucket.
-        self.timer.schedule(next_tick(self.now), |eng| eng.unwrap().tick());
-
-        for (cid, (act, args)) in self.input.actions() {
-            match act {
-                Action::Interact =>
-                    logic::input::interact(self.as_ref(), cid, args),
-                Action::UseItem(item_id) =>
-                    logic::input::use_item(self.as_ref(), cid, item_id, args),
-                Action::UseAbility(item_id) =>
-                    logic::input::use_ability(self.as_ref(), cid, item_id, args),
-            }
-        }
-
-        for (cid, input) in self.input.inputs() {
-            use world::object::*;
-            logic::input::input(self.as_ref(), cid, input);
-            if let Some(c) = self.world.get_client(cid) {
-                if let Some(e) = c.pawn() {
-                    self.physics.set_target_velocity(e.id(), input.to_velocity());
-                }
-            }
-        }
-
-        for (eid, u) in self.physics.update(&self.world, &self.cache, self.now) {
-            use physics::Update::*;
-            use world::Fragment;
-            use world::Motion;
-            use world::object::*;
-            let now = self.now;
-            let mut eng = self.as_ref();
-            let mut wf = eng.as_world_fragment();
-            let mut e = wf.entity_mut(eid);
-            // FIXME
-            /*
-            match u {
-                StartMotion(v) => {
-                    let pos = e.pos(now);
-                    let m = Motion {
-                        start_time: now,
-                        duration: 10000,
-                        start_pos: pos,
-                        end_pos: pos + v * scalar(10),
-                    };
-                    info!("StartMotion: {:?}", m);
-                    e.set_motion(m);
-                },
-                EndTime(end_time) => {
-                    let mut m = e.motion().clone();
-                    m.end_pos = m.pos(end_time);
-                    m.duration = (end_time - m.start_time) as Duration;
-                    info!("EndTime: {:?}", m);
-                    e.set_motion(m);
-                },
-            }
-            */
-        }
+        logic::tick::tick(self);
     }
 
 

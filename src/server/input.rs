@@ -40,7 +40,7 @@ pub enum Action {
 
 /// Track the latest input from each client.
 pub struct Input {
-    pending_input: HashMap<ClientId, InputBits>,
+    pending_input: HashMap<ClientId, (InputBits, u16)>,
     pending_action: HashMap<ClientId, (Action, Option<ExtraArg>)>,
 }
 
@@ -53,14 +53,18 @@ impl Input {
     }
 
     pub fn schedule_input(&mut self, cid: ClientId, input: InputBits) {
-        self.pending_input.insert(cid, input);
+        let mut i = self.pending_input.entry(cid).or_insert((input, 0));
+        i.0 = input;
+        // If this ever wraps, the client will get very confused, but that's their own fault for
+        // spamming 65,000 inputs in a single tick.
+        i.1 = i.1.wrapping_add(1);
     }
 
     pub fn schedule_action(&mut self, cid: ClientId, action: Action, args: Option<ExtraArg>) {
         self.pending_action.insert(cid, (action, args));
     }
 
-    pub fn inputs(&mut self) -> hash_map::IntoIter<ClientId, InputBits> {
+    pub fn inputs(&mut self) -> hash_map::IntoIter<ClientId, (InputBits, u16)> {
         mem::replace(&mut self.pending_input, HashMap::new()).into_iter()
     }
 
