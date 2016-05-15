@@ -122,14 +122,10 @@ pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
     };
     eng.chat_mut().remove_client(cid, pid, cpos);
 
+    // Grab these before the client is destroyed, but don't unload anything yet.
     let old_region = eng.vision().client_view_area(cid);
     let old_pid = eng.vision().client_view_plane(cid);
     vision::Fragment::remove_client(&mut eng.as_vision_fragment(), cid);
-    if let (Some(old_region), Some(old_pid)) = (old_region, old_pid) {
-        for cpos in old_region.points() {
-            logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);
-        }
-    }
 
     // Actually save and destroy the client
     {
@@ -143,6 +139,15 @@ pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
         try!(bundle::write_bundle(&mut file, &b));
     }
     try!(world::Fragment::destroy_client(&mut eng.as_world_fragment(), cid));
+
+    // Now that the Entity is gone, it's safe to unload the chunks (which may trigger unloading of
+    // the Plane).
+    if let (Some(old_region), Some(old_pid)) = (old_region, old_pid) {
+        for cpos in old_region.points() {
+            logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);
+        }
+    }
+
     Ok(())
 }
 
