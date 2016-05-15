@@ -131,24 +131,59 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
 }
 
 
+
+// NB: These add/remove/change methods MUST follow the appropriate protocol:
+// - Call `add` only on (id, plane, cpos) tuples that *are not* already present
+// - Call `remove` only on (id, plane, cpos) tuples that *are* present
+// - Call `change` only on (id, old_plane, old_cpos) tuples that are present
+// Otherwise Vision's internal PubSub state may get corrupted.
+// (TODO: add debug_assert!s to detect such corruption)
+//
+// Note that this does allow adding multiple tuples with the same ID and different plane/cpos.
+
+pub fn add_entity(vision: &mut Vision,
+                  messages: &mut Messages,
+                  world: &World,
+                  eid: EntityId,
+                  plane: PlaneId,
+                  cpos: V2) {
+    let e = world.entity(eid);
+    // TODO: hack.  Should have a separate "entity name" field somewhere.
+    let name = if let Some(c) = e.pawn_owner() {
+        c.name().to_owned()
+    } else {
+        String::new()
+    };
+    vision.entity_add(eid, plane, cpos, |cid| {
+        messages.send_client(
+            cid, ClientResponse::EntityAppear(eid, e.appearance(), name.clone()));
+    });
+}
+
+pub fn remove_entity(vision: &mut Vision,
+                     messages: &mut Messages,
+                     world: &World,
+                     eid: EntityId,
+                     plane: PlaneId,
+                     cpos: V2) {
+    // NB: the indicated entity may not exist at this point, so world.entity(eid) may panic
+    vision.entity_remove(eid, plane, cpos, |cid| {
+        messages.send_client(
+            cid, ClientResponse::EntityGone(eid, 0));
+    });
+}
+
 pub fn change_entity_chunk(vision: &mut Vision,
                            messages: &mut Messages,
                            world: &World,
                            eid: EntityId,
                            old_cpos: V2,
                            new_cpos: V2) {
-    let e = world.entity(eid);
-    vision.entity_add(eid, e.plane_id(), new_cpos, |cid| {
-        let name = if let Some(c) = e.pawn_owner() {
-            c.name().to_owned()
-        } else {
-            String::new()
-        };
-        messages.send_client(
-            cid, ClientResponse::EntityAppear(eid, e.appearance(), name));
-    });
-    vision.entity_remove(eid, e.plane_id(), old_cpos, |cid| {
-        messages.send_client(
-            cid, ClientResponse::EntityGone(eid, 0));
-    });
+    if old_cpos == new_cpos {
+        return;
+        // Otherwise PubSub state would get corrupted by duplicate `publish` calls.
+    }
+    let plane = world.entity(eid).plane_id();
+    add_entity(vision, messages, world, eid, plane, new_cpos);
+    remove_entity(vision, messages, world, eid, plane, old_cpos);
 }

@@ -118,7 +118,7 @@ pub fn destroy<'d, F>(f: &mut F,
         ops::inventory::destroy(f, iid).unwrap();
     }
 
-    f.with_hooks(|h| h.on_entity_destroy(eid));
+    f.with_hooks(|h| h.on_entity_destroy(eid, e));
     Ok(())
 }
 

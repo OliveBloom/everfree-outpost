@@ -1,6 +1,7 @@
 use types::*;
 
 use data::StructureTemplate;
+use world::{Entity};
 
 
 #[allow(unused_variables)]
@@ -13,7 +14,7 @@ pub trait Hooks {
                              new_pan: Option<EntityId>) {}
 
     fn on_entity_create(&mut self, eid: EntityId) {}
-    fn on_entity_destroy(&mut self, eid: EntityId) {}
+    fn on_entity_destroy(&mut self, eid: EntityId, e: Entity) {}
     fn on_entity_activity_change(&mut self, eid: EntityId) {}
     fn on_entity_motion_change(&mut self, eid: EntityId) {}
     fn on_entity_appearance_change(&mut self, eid: EntityId) {}

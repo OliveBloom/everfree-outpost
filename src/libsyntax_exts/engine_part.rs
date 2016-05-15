@@ -84,9 +84,9 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         WorldHooks = world | timer | extra | vision | cache | VisionFragment;
         WorldFragment = world | WorldHooks;
 
-        HiddenVisionFragment = vision;
-        HiddenWorldHooks = world | timer | extra | cache | HiddenVisionFragment;
-        HiddenWorldFragment = world | HiddenWorldHooks;
+        HiddenVisionFragment = VisionFragment;
+        HiddenWorldHooks = WorldHooks;
+        HiddenWorldFragment = WorldFragment;
 
         PhysicsFragment = physics | world | cache | WorldFragment;
 

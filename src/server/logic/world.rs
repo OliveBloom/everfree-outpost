@@ -66,21 +66,22 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
 
 
     fn on_entity_create(&mut self, eid: EntityId) {
-        let (plane, area) = {
-            let e = self.world().entity(eid);
-            (e.plane_id(),
-             entity_area(self.world().entity(eid)))
-        };
-        trace!("entity {:?} created at {:?}", eid, plane);
-        // TODO: use a default plane/area for add_entity, then just call on_motion_change
-        // FIXME: dispatch through logic::vision
-        // FIXME: need to schedule a physics update right away
-        // Might have an owner pre-set, if it's been loaded instead of newly created.
-        // FIXME: view update
+        let now = self.now();
+        let Open { vision, messages, world, .. } = self.open();
+        let e = world.entity(eid);
+        let cpos = e.pos(now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+        logic::vision::add_entity(vision, messages, world,
+                                  eid, e.plane_id(), cpos);
+        // FIXME: register with physics?
     }
 
-    fn on_entity_destroy(&mut self, eid: EntityId) {
-        // FIXME: dispatch through logic::vision
+    fn on_entity_destroy(&mut self, eid: EntityId, e: Entity) {
+        let now = self.now();
+        let Open { vision, messages, world, .. } = self.open();
+        let cpos = e.pos(now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+        logic::vision::remove_entity(vision, messages, world,
+                                     eid, e.plane_id(), cpos);
+        // FIXME: unregister with physics?
     }
 
     fn on_entity_activity_change(&mut self, eid: EntityId) {
@@ -90,8 +91,8 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
     fn on_entity_motion_change(&mut self, eid: EntityId) {
-        // The relevant messages are all handled externally.
-        // FIXME: check this is correct
+        // set_motion is called only with dummy hooks.
+        unreachable!();
     }
 
     fn on_entity_appearance_change(&mut self, eid: EntityId) {
@@ -99,8 +100,8 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
     fn on_entity_plane_change(&mut self, eid: EntityId) {
-        // The relevant messages are all handled externally.
-        // FIXME: check this is correct
+        // set_motion is called only with dummy hooks.
+        unreachable!();
     }
 
 
