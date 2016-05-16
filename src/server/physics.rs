@@ -144,29 +144,35 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
                 m.end_time = Some(now + dur as Time);
             }
 
+
             // 2) Actually update the world
-            // FIXME do these writes only when actually necessary
             let anim = {
                 let data = world.data();
                 let mut wf = DummyFragment::new(world);
                 let mut e = wf.entity_mut(eid);
 
-                e.set_motion(m.clone());
+                if started || ended {
+                    e.set_motion(m.clone());
+                }
 
-                let facing = if me.target_velocity != scalar(0) {
-                    me.target_velocity.signum()
-                } else if e.facing() != scalar(0) {
-                    e.facing()
+                if started {
+                    let facing = if me.target_velocity != scalar(0) {
+                        me.target_velocity.signum()
+                    } else if e.facing() != scalar(0) {
+                        e.facing()
+                    } else {
+                        V3::new(1, 0, 0)
+                    };
+                    e.set_facing(facing);
+
+                    let speed = me.target_velocity.abs().max() as usize / 50;
+                    let anim = facing_anim(data, facing, speed);
+                    e.set_anim(anim);
+
+                    anim
                 } else {
-                    V3::new(1, 0, 0)
-                };
-                e.set_facing(facing);
-
-                let speed = me.target_velocity.abs().max() as usize / 50;
-                let anim = facing_anim(data, facing, speed);
-                e.set_anim(anim);
-
-                anim
+                    e.anim()
+                }
             };
 
 
