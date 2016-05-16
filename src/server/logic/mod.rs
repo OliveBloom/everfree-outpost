@@ -9,3 +9,4 @@ pub mod misc;
 pub mod extra;
 pub mod tick;
 pub mod handle;
+pub mod entity;

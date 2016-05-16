@@ -131,6 +131,14 @@ impl<'a, 'd, O: Object, F: Fragment<'d>> ObjectRefMut<'a, 'd, O, F> {
             _marker0: PhantomData,
         }
     }
+
+    pub fn borrow<'b>(&'b self) -> ObjectRef<'b, 'd, O> {
+        ObjectRef {
+            world: self.world(),
+            id: self.id,
+            obj: self.obj(),
+        }
+    }
 }
 
 pub trait ObjectRefBase<'d, O: Object> {
