@@ -42,7 +42,7 @@ pub fn tick(eng: &mut Engine) {
     // This one's okay because VisionFragment doesn't include physics.
     let eng2: &mut Engine = unsafe { &mut *(eng as *mut _) };
 
-    co_for!( (eid, m, kind) in
+    co_for!( (eid, m, anim, kind) in
                 (eng.physics.update(now)) (&mut eng.world, &eng.cache) {
         let chunk_px = scalar(TILE_SIZE * CHUNK_SIZE);
         let plane = eng.world.entity(eid).plane_id();
@@ -66,13 +66,12 @@ pub fn tick(eng: &mut Engine) {
         if kind != UpdateKind::Move {
             let msg = match kind {
                 UpdateKind::Move => unreachable!(),
-                // FIXME anim handling
                 UpdateKind::Start => ClientResponse::EntityMotionStart(
-                    eid, m.start_pos, m.start_time, m.velocity, 0),
+                    eid, m.start_pos, m.start_time, m.velocity, anim),
                 UpdateKind::End => ClientResponse::EntityMotionEnd(
                     eid, m.end_time.unwrap()),
                 UpdateKind::StartEnd => ClientResponse::EntityMotionStartEnd(
-                    eid, m.start_pos, m.start_time, m.velocity, 0, m.end_time.unwrap()),
+                    eid, m.start_pos, m.start_time, m.velocity, anim, m.end_time.unwrap()),
             };
             let messages = &mut eng.messages;
             eng.vision.entity_update(eid, |cid| {
@@ -80,6 +79,4 @@ pub fn tick(eng: &mut Engine) {
             });
         }
     });
-
-    eng.physics.cleanup();
 }

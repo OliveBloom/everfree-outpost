@@ -69,10 +69,6 @@ impl<'d> Physics<'d> {
         let me = self.moving_entities.entry(eid).or_insert_with(MovingEntity::new);
         me.target_velocity = v;
     }
-
-    pub fn cleanup(&mut self) {
-        // FIXME: remove
-    }
 }
 
 
@@ -94,7 +90,7 @@ impl<'d> Physics<'d> {
 }
 
 impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'a, 'd> {
-    type Item = (EntityId, Motion, UpdateKind);
+    type Item = (EntityId, Motion, AnimId, UpdateKind);
 
     fn send(&mut self, args: (&'b mut World<'d>, &'b TerrainCache)) -> Option<Self::Item> {
         let (world, cache) = args;
@@ -127,6 +123,7 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
             let size = V3::new(32, 32, 48);
             let mut collider = libphysics::walk2::Collider::new(&s, Region::new(pos, pos + size));
 
+
             // 1) Compute the actual velocity for this tick
             let velocity = collider.calc_velocity(me.target_velocity);
             let started = velocity != me.current_velocity;
@@ -147,8 +144,33 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
                 m.end_time = Some(now + dur as Time);
             }
 
-            // Actually update the world
-            DummyFragment::new(world).entity_mut(eid).set_motion(m.clone());
+            // 2) Actually update the world
+            // FIXME do these writes only when actually necessary
+            let anim = {
+                let data = world.data();
+                let mut wf = DummyFragment::new(world);
+                let mut e = wf.entity_mut(eid);
+
+                e.set_motion(m.clone());
+
+                let facing = if me.target_velocity != scalar(0) {
+                    me.target_velocity.signum()
+                } else if e.facing() != scalar(0) {
+                    e.facing()
+                } else {
+                    V3::new(1, 0, 0)
+                };
+                e.set_facing(facing);
+
+                let speed = me.target_velocity.abs().max() as usize / 50;
+                let anim = facing_anim(data, facing, speed);
+                e.set_anim(anim);
+
+                anim
+            };
+
+
+            // 3) Compute result
 
             let kind = match (started, ended) {
                 (false, false) => UpdateKind::Move,
@@ -156,11 +178,23 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
                 (false, true) => UpdateKind::End,
                 (true, true) => UpdateKind::StartEnd,
             };
-            return Some((eid, m, kind));
+            return Some((eid, m, anim, kind));
         }
 
         None
     }
+}
+
+
+fn facing_anim(data: &Data, facing: V3, speed: usize) -> AnimId {
+    const ANIM_DIR_COUNT: AnimId = 8;
+    static SPEED_NAME_MAP: [&'static str; 4] = ["stand", "walk", "", "run"];
+    let idx = (3 * (facing.x + 1) + (facing.y + 1)) as usize;
+    let anim_dir = [2, 2, 2, 3, 0, 1, 0, 0, 0][idx];
+    let anim_name = format!("pony//{}-{}",
+                            SPEED_NAME_MAP[speed],
+                            anim_dir);
+    data.animations.get_id(&anim_name)
 }
 
 

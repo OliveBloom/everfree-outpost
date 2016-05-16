@@ -28,11 +28,9 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     fn on_client_change_pawn(&mut self,
                              _cid: ClientId,
                              _old_pawn: Option<EntityId>,
-                             new_pawn: Option<EntityId>) {
-        if let Some(eid) = new_pawn {
-            // TODO: handle this properly.  needs to send a fresh Init message to the client
-            // FIXME: view update
-        }
+                             _new_pawn: Option<EntityId>) {
+        // Should never happen, now that clients are imported from a fully-initialized bundle.
+        unreachable!();
     }
 
 
@@ -67,18 +65,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
 
 
     /*
-    fn on_entity_create(&mut self, eid: EntityId) {
-        unsafe {
-            logic::handle::entity_create(mem::transmute_copy(self), eid);
-        }
-    }
-
-    fn on_entity_destroy(&mut self, eid: EntityId, e: Entity) {
-        unsafe {
-            logic::handle::entity_destroy(mem::transmute_copy(self), eid, &e);
-        }
-    }
-
     fn on_entity_activity_change(&mut self, eid: EntityId) {
         trace!("entity {:?} activity changed", eid);
         let now = self.now();
