@@ -6,13 +6,18 @@ use types::*;
 use util::SmallSet;
 use util::StrResult;
 
+use chunks;
 use data::StructureTemplate;
+use engine::Engine;
 use engine::glue::*;
 use engine::split::{Open, EngineRef};
 use logic;
 use messages::{ClientResponse, SyncKind};
 use physics;
 use world::{self, World, Entity, Structure};
+use world::Motion;
+use world::fragment::Fragment as World_Fragment;
+use world::fragment::DummyFragment;
 use world::object::*;
 use vision::{self, vision_region};
 
@@ -69,10 +74,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
         trace!("entity {:?} activity changed", eid);
         let now = self.now();
         // FIXME: need to schedule a physics update right away
-    }
-
-    fn on_entity_appearance_change(&mut self, eid: EntityId) {
-        // FIXME: dispatch through logic::vision
     }
     */
 
@@ -297,38 +298,68 @@ fn teleport_entity_internal(mut wf: WorldFragment,
                             pid: Option<PlaneId>,
                             stable_pid: Option<Stable<PlaneId>>,
                             pos: V3) -> StrResult<()> {
-    /*
-    use world::Fragment;
-    let now = wf.now();
+    // FIXME ugly transmute
+    let eng: &mut Engine = unsafe { mem::transmute(wf) };
 
-    {
-        let e = unwrap!(wf.world().get_entity(eid));
-        let cid = e.pawn_owner().map(|c| c.id());
-        if let Some(cid) = cid {
-            // Only send desync message for long-range teleports.
-            let dist = (e.pos(now) - pos).reduce().abs().max();
-            let change_plane = (pid.is_some() && pid.unwrap() != e.plane_id()) ||
-                (stable_pid.is_some() && stable_pid.unwrap() != e.stable_plane_id());
+    let (old_pos, old_plane, cid) = {
+        let e = unwrap!(eng.world.get_entity(eid));
+        (e.pos(eng.now), e.plane_id(), e.pawn_owner().map(|c| c.id()))
+    };
 
-            // NB: Teleporting to another point within the current chunk will not cause a view
-            // update to be scheduled, so there will never be a resync message.  That's why we set
-            // the limit to CHUNK_SIZE * TILE_SIZE: traveling that distance along either the X or Y
-            // axis will definitely move the entity into a different chunk.
-            if dist >= CHUNK_SIZE * TILE_SIZE || change_plane {
-                wf.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Loading));
-            }
+    let new_plane =
+        if let Some(stable_pid) = stable_pid {
+            // Load the plane, if it's not already.
+            chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(), stable_pid)
+        } else if let Some(pid) = pid {
+            unwrap!(eng.world.get_plane(pid));
+            pid
+        } else {
+            old_plane
+        };
+    let new_pos = pos;
+
+    let old_cpos = old_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    let new_cpos = new_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+
+    if let Some(cid) = cid {
+        // Check if we need to send a desync message.
+        // Teleporting to another point within the current chunk will not cause a view
+        // update to be scheduled, so there will never be a resync message.  That's why we set
+        // the limit to CHUNK_SIZE * TILE_SIZE: traveling that distance along either the X or Y
+        // axis will definitely move the entity into a different chunk.
+        if new_plane != old_plane || new_cpos != old_cpos {
+            eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Loading));
         }
     }
 
-    let mut e = wf.entity_mut(eid);
-    if let Some(stable_pid) = stable_pid {
-        try!(e.set_stable_plane_id(stable_pid));
-    } else if let Some(pid) = pid {
-        try!(e.set_plane_id(pid));
+    {
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut e = wf.entity_mut(eid);
+        try!(e.set_plane_id(new_plane));
+        e.set_motion(Motion::stationary(new_pos, eng.now));
+
+        let e = e.borrow();
+        let msg_gone = logic::vision::entity_gone_message(e);
+        let msg_appear = logic::vision::entity_appear_message(e);
+        let msg_motion = logic::vision::entity_motion_message(e);
+        let messages = &mut eng.messages;
+        if new_plane != old_plane || new_cpos != old_cpos {
+            eng.vision.entity_add(eid, new_plane, new_cpos, |cid| {
+                messages.send_client(cid, msg_appear.clone());
+            });
+            eng.vision.entity_remove(eid, old_plane, old_cpos, |cid| {
+                messages.send_client(cid, msg_gone.clone());
+            });
+        }
+        eng.vision.entity_update(eid, |cid| {
+            messages.send_client(cid, msg_motion.clone());
+        });
     }
-    e.set_motion(world::Motion::stationary(pos, now));
-    */
-    // FIXME: update this whole thing
+
+    if let Some(cid) = cid {
+        logic::client::update_view(eng, cid, old_plane, old_cpos, new_plane, new_cpos);
+    }
+
     Ok(())
 }
 

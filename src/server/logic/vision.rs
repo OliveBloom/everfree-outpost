@@ -190,6 +190,7 @@ pub fn change_entity_chunk(vision: &mut Vision,
         return;
         // Otherwise PubSub state would get corrupted by duplicate `publish` calls.
     }
+    // FIXME refactor (add/remove entity are otherwise unused)
     add_entity(vision, messages, world, eid, plane, new_cpos);
     remove_entity(vision, messages, world, eid, plane, old_cpos);
 }
