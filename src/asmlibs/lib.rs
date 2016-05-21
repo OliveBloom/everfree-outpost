@@ -148,11 +148,28 @@ pub unsafe extern fn entity_gone(client: &mut Client,
 }
 
 #[no_mangle]
-pub unsafe extern fn entity_update(client: &mut Client,
-                                   id: u32,
-                                   when: i32,
-                                   motion: &client::entity::Motion) {
-    client.entity_update(id, when, motion.clone());
+pub unsafe extern fn entity_motion_start(client: &mut Client,
+                                         id: u32,
+                                         start_time: i32,
+                                         pos_x: i32,
+                                         pos_y: i32,
+                                         pos_z: i32,
+                                         velocity_x: i32,
+                                         velocity_y: i32,
+                                         velocity_z: i32,
+                                         anim: u16) {
+    client.entity_motion_start(id,
+                               start_time,
+                               V3::new(pos_x, pos_y, pos_z),
+                               V3::new(velocity_x, velocity_y, velocity_z),
+                               anim);
+}
+
+#[no_mangle]
+pub unsafe extern fn entity_motion_end(client: &mut Client,
+                                       id: u32,
+                                       end_time: i32) {
+    client.entity_motion_end(id, end_time);
 }
 
 #[no_mangle]

@@ -16,7 +16,8 @@ structure_gone
 structure_replace
 entity_appear
 entity_gone
-entity_update
+entity_motion_start
+entity_motion_end
 set_pawn_id
 inventory_appear
 inventory_gone

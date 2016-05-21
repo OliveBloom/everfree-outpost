@@ -7,7 +7,7 @@ use physics::{self, ShapeSource};
 
 use Time;
 use data::Data;
-use entity::Motion;
+use entity::{Motion, Update};
 
 
 struct Input {
@@ -25,69 +25,60 @@ struct Input {
 /// with timestamps between the latest visible time and some future (server) time, so that it can
 /// report the state of the world as of that future time.
 pub struct Predictor {
-    /// The most recent movement direction, that is, the direction from the most recently processed
-    /// input (as of the latest visible time).  We guess which inputs have been processed by
-    /// comparing input timestamps to the start times of server-reported motions.
-    last_dir: V3,
-    /// Inputs whose timestamps are less than the future time, but for which we have not yet seen a
-    /// response.
-    inputs: VecDeque<Input>,
+    /// Inputs that have been sent to the server but not acknowledged.
+    pending_inputs: VecDeque<Input>,
 
-    /// The predicted movement direction as of the future time.
-    cur_dir: V3,
-    /// The predicted entity's current motion as of the future time.
-    motion: Motion,
+    /// Last canonical motion received from the server.
+    canon_motion: Motion,
 
-    /// Flag to indicate that the input log needs replaying.
-    stale: bool,
+    /// The current motion as of the future time.
+    current_motion: Motion,
+
+    /// Timestamp of the last update.
+    current_time: Time,
 }
+
+// This must match the server tick.
+pub const TICK_MS: i32 = 32;
 
 impl Predictor {
     pub fn new() -> Predictor {
         Predictor {
-            last_dir: scalar(0),
-            inputs: VecDeque::new(),
-
-            cur_dir: scalar(0),
-            motion: Motion {
-                start_pos: scalar(0),
-                end_pos: scalar(0),
-                start_time: 0,
-                end_time: 1,
-                anim_id: 0,
-            },
-
-            stale: false,
+            pending_inputs: VecDeque::new(),
+            canon_motion: Motion::new(),
+            current_motion: Motion::new(),
+            // Initialize to a time prior to any time reported by timing.js
+            current_time: -65536,
         }
     }
 
-    pub fn canonical_motion(&mut self, motion: Motion) {
-        self.motion = motion;
-
-        // Pop all inputs that were handled by the server before it sent this motion.
-        while self.inputs.len() > 0 {
-            if self.inputs.front().unwrap().time > self.motion.start_time {
-                break;
-            }
-            self.last_dir = self.inputs.pop_front().unwrap().dir;
-        }
-
-        self.stale = true;
+    pub fn canonical_motion_update(&mut self, update: Update) {
+        self.canon_motion.apply(update);
+        self.current_motion = self.canon_motion.clone();
+        // Rewind the current time to the time of the update, so that inputs will be replayed.
+        self.current_time = update.when();
     }
 
     pub fn input<S>(&mut self, time: Time, dir: V3, shape: &S, data: &Data)
             where S: ShapeSource {
         let input = Input { time: time, dir: dir };
+        /*
         play_input(&mut self.motion,
                    &mut self.cur_dir,
                    &input,
                    shape,
                    data);
-        self.inputs.push_back(input);
+                   */
+        self.pending_inputs.push_back(input);
     }
 
-    pub fn update<S>(&mut self, now: Time, shape: &S, data: &Data)
+    pub fn update<S>(&mut self, future: Time, shape: &S, data: &Data)
             where S: ShapeSource {
+        let cur_tick = future & !(TICK_MS - 1);
+        while self.current_time < future {
+            // TODO: play an input
+        }
+        /*
         if self.stale {
             // Replay all inputs.
             self.cur_dir = self.last_dir;
@@ -109,13 +100,15 @@ impl Predictor {
                                   self.motion.anim_id,
                                   self.cur_dir);
         }
+        */
     }
 
     pub fn motion(&self) -> &Motion {
-        &self.motion
+        &self.current_motion
     }
 }
 
+/*
 fn play_input<S>(motion: &mut Motion,
                  dir: &mut V3,
                  input: &Input,
@@ -141,7 +134,9 @@ fn play_input<S>(motion: &mut Motion,
                       motion.anim_id,
                       *dir);
 }
+*/
 
+/*
 fn predict<S: ShapeSource>(shape: &S,
                            data: &Data,
                            start_pos: V3,
@@ -190,3 +185,4 @@ fn velocity_dir(v: V3, old_dir: usize) -> usize {
     let idx = (3 * (s.x + 1) + (s.y + 1)) as usize;
     [5, 4, 3, 6, old_dir, 2, 7, 0, 1][idx]
 }
+*/

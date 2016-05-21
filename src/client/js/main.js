@@ -707,48 +707,18 @@ function handleSyncStatus(new_synced) {
     }
 }
 
-function handleEntityMotionStart(id, motion, anim) {
-    var m = new Motion(motion.start_pos);
-
-    var now = timing.visibleNow();
-    m.start_time = timing.decodeRecv(motion.start_time);
-    if (m.start_time > now + 2000) {
-        m.start_time -= 0x10000;
-    }
-    m.end_time = m.start_time + 0x10000;
-    if (m.end_time < m.start_time) {
-        m.end_time += 0x10000;
-    }
-    var step = motion.velocity.mulScalar(m.end_time - m.start_time).divScalar(1000);
-    m.end_pos = m.start_pos.add(step);
-
-    m.anim_id = anim;
-
-    asm_client.entityUpdate(id, m, anim);
+function handleEntityMotionStart(id, m, anim) {
+    var start_time = timing.decodeRecv(m.start_time);
+    asm_client.entityMotionStart(id, start_time, m.start_pos, m.velocity, anim);
 }
 
 function handleEntityMotionEnd(id, end_time) {
-    // TODO
+    asm_client.entityMotionStart(id, timing.decodeRecv(end_time));
 }
 
-function handleEntityMotionStartEnd(id, motion, anim) {
-    var m = new Motion(motion.start_pos);
-
-    var now = timing.visibleNow();
-    m.start_time = timing.decodeRecv(motion.start_time);
-    if (m.start_time > now + 2000) {
-        m.start_time -= 0x10000;
-    }
-    m.end_time = timing.decodeRecv(motion.end_time);
-    if (m.end_time < m.start_time) {
-        m.end_time += 0x10000;
-    }
-    var step = motion.velocity.mulScalar(m.end_time - m.start_time).divScalar(1000);
-    m.end_pos = m.start_pos.add(step);
-
-    m.anim_id = anim;
-
-    asm_client.entityUpdate(id, m, anim);
+function handleEntityMotionStartEnd(id, m, anim) {
+    handleEntityMotionStart(id, m, anim);
+    handleEntityMotionEnd(id, m.end_time);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.
