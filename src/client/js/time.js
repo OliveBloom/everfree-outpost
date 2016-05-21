@@ -27,7 +27,7 @@ function Timing(conn) {
     this.conn = conn;
 
     // The CT timestamp corresponding to PST 0.
-    this.client_base = null;
+    this.client_base = Date.now();
     this.ping = 0;
 
     var this_ = this;

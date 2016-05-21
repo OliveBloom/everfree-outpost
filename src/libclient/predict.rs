@@ -43,9 +43,6 @@ pub struct Predictor {
 
     /// Timestamp of the last update.
     current_time: Time,
-
-    /// Target velocity based on inputs so far.
-    target_velocity: V3,
 }
 
 // This must match the server tick.
@@ -63,7 +60,6 @@ impl Predictor {
             // Initialize to a time far in the future.  The first `canonical_motion_update` will
             // rewind it to something reasonable.
             current_time: 65536,
-            target_velocity: scalar(0),
         }
     }
 
@@ -81,7 +77,7 @@ impl Predictor {
                 break;
             }
 
-            let i = self.pending_inputs.pop_back().unwrap();
+            let i = self.pending_inputs.pop_front().unwrap();
             self.canon_target = i.dir;
         }
 
@@ -91,26 +87,31 @@ impl Predictor {
     pub fn input<S>(&mut self, time: Time, dir: V3, shape: &S, data: &Data)
             where S: ShapeSource {
         let input = Input { time: time, dir: dir };
-        self.target_velocity = dir;
         self.pending_inputs.push_back(input);
     }
 
     pub fn update<S>(&mut self, future: Time, shape: &S, data: &Data)
             where S: ShapeSource {
+        if future - self.current_time > TICK_MS * 3 {
+            warn!("large time delta: {} .. {} ({} ticks)",
+                  self.current_time, future, (future - self.current_time) / TICK_MS);
+        }
+
         let cur_tick = future & !(TICK_MS - 1);
         let mut input_iter = self.pending_inputs.iter().peekable();
+        let mut target_velocity = self.canon_target;
         while self.current_time < future {
             // This mimics the event loop body in server/logic/tick.rs
             let now = self.current_time;
 
-            // Process inputs
-            if input_iter.peek().map_or(false, |i| i.time <= now) {
+            // Run through pending inputs to find the current target velocity.
+            while input_iter.peek().map_or(false, |i| i.time <= now) {
                 let i = input_iter.next().unwrap();
-                self.target_velocity = i.dir;
+                target_velocity = i.dir;
             }
 
             // Take a step
-            step_physics(shape, data, &mut self.current_motion, now, self.target_velocity);
+            step_physics(shape, data, &mut self.current_motion, now, target_velocity);
             self.current_time += TICK_MS;
         }
     }

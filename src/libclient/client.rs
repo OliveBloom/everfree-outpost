@@ -21,7 +21,7 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 use Time;
 use data::Data;
 use debug::Debug;
-use entity::{Entities, EntityId, Motion};
+use entity::{self, Entities, EntityId, Motion};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
@@ -258,20 +258,21 @@ impl<'d, P: Platform> Client<'d, P> {
                                velocity: V3,
                                anim: u16) {
         self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
-        // FIXME wire up to predictor
 
-        /*
         if Some(id) == self.pawn_id {
-            // TODO: not sure it's correct to apply this instantly
-            self.predictor.canonical_motion(motion);
+            self.predictor.canonical_motion_update(entity::Update::MotionStart(
+                    start_time, start_pos, velocity, anim));
         }
-        */
     }
 
     pub fn entity_motion_end(&mut self,
                              id: EntityId,
                              end_time: Time) {
         self.entities.schedule_motion_end(id, end_time);
+
+        if Some(id) == self.pawn_id {
+            self.predictor.canonical_motion_update(entity::Update::MotionEnd(end_time));
+        }
     }
 
     pub fn set_pawn_id(&mut self,
@@ -429,8 +430,7 @@ impl<'d, P: Platform> Client<'d, P> {
                                              entity_bounds,
                                              scene.now,
                                              future,
-                                             //self.pawn_id);
-                                             None);
+                                             self.pawn_id);
 
         // Also refresh the UI buffer.
         let (geom, special, cursor) = self.with_ui_dyn(|ui, dyn| {
@@ -469,18 +469,10 @@ impl<'d, P: Platform> Client<'d, P> {
 
         self.predictor.update(future, &*self.terrain_shape, &self.data);
 
-        /*
         let pos =
             if self.pawn_id.is_some() {
                 // TODO: hardcoded constant based on entity size
                 self.predictor.motion().pos(future) + V3::new(16, 16, 0)
-            } else {
-                V3::new(4096, 4096, 0)
-            };
-            */
-        let pos =
-            if let Some(e) = self.pawn_id.and_then(|id| self.entities.get(id)) {
-                e.pos(now)
             } else {
                 V3::new(4096, 4096, 0)
             };
