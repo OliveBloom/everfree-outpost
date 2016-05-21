@@ -290,6 +290,13 @@ pub extern fn feed_input(client: &mut Client,
     client.feed_input(time, V3::new(dir_x, dir_y, dir_z));
 }
 
+#[no_mangle]
+pub extern fn processed_inputs(client: &mut Client,
+                               time: i32,
+                               count: u16) {
+    client.processed_inputs(time, count);
+}
+
 
 // Graphics
 

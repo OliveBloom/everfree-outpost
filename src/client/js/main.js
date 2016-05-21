@@ -230,6 +230,7 @@ function openConn(info, next) {
     conn.onEntityMotionStart = handleEntityMotionStart;
     conn.onEntityMotionEnd = handleEntityMotionEnd;
     conn.onEntityMotionStartEnd = handleEntityMotionStartEnd;
+    conn.onProcessedInputs = handleProcessedInputs;
 }
 
 function maybeRegister(info, next) {
@@ -713,12 +714,16 @@ function handleEntityMotionStart(id, m, anim) {
 }
 
 function handleEntityMotionEnd(id, end_time) {
-    asm_client.entityMotionStart(id, timing.decodeRecv(end_time));
+    asm_client.entityMotionEnd(id, timing.decodeRecv(end_time));
 }
 
 function handleEntityMotionStartEnd(id, m, anim) {
     handleEntityMotionStart(id, m, anim);
     handleEntityMotionEnd(id, m.end_time);
+}
+
+function handleProcessedInputs(time, count) {
+    asm_client.processedInputs(timing.decodeRecv(time), count);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.

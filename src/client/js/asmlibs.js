@@ -618,6 +618,10 @@ DynAsm.prototype.feedInput = function(time, dir) {
     this._raw['feed_input'](this.client, time, dir.x, dir.y, dir.z);
 };
 
+DynAsm.prototype.processedInputs = function(time, count) {
+    this._raw['processed_inputs'](this.client, time, count);
+};
+
 DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
     var buf = this._heapAlloc(Uint16Array, data.length);
     buf.set(data);

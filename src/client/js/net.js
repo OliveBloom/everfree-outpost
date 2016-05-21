@@ -1,3 +1,4 @@
+var Config = require('config').Config;
 var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
 
@@ -65,7 +66,14 @@ function Connection(url) {
     var socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
     socket.onopen = function(evt) { this_._handleOpen(evt); };
-    socket.onmessage = function(evt) { this_._handleMessage(evt); };
+    if (Config.debug_delay_recv.get() == 0) {
+        socket.onmessage = function(evt) { this_._handleMessage(evt); };
+    } else {
+        var delay = Config.debug_delay_recv.get();
+        socket.onmessage = function(evt) {
+            window.setTimeout(function() { this_._handleMessage(evt); }, delay);
+        };
+    }
     socket.onclose = function(evt) { this_._handleClose(evt); };
     this.socket = socket;
 
@@ -101,6 +109,18 @@ function Connection(url) {
     this.onProcessedInputs = null;
 }
 exports.Connection = Connection;
+
+Connection.prototype._send = function(msg) {
+    if (Config.debug_delay_send.get() == 0) {
+        this.socket.send(msg);
+    } else {
+        var delay = Config.debug_delay_send.get();
+        var this_ = this;
+        window.setTimeout(function() {
+            this_.socket.send(msg);
+        }, delay);
+    }
+}
 
 Connection.prototype._handleOpen = function(evt) {
     if (this.onOpen != null) {
@@ -461,7 +481,7 @@ Connection.prototype._handleMessage = function(evt) {
     }
 
     console.assert(offset == view.buffer.byteLength,
-            'received message with bad length');
+            'received message with bad length (opcode ' + opcode.toString(16) + ')');
 };
 
 
@@ -545,7 +565,7 @@ Connection.prototype.sendPing = function(data) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_PING);
     msg.put16(data);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendInput = function(time, input) {
@@ -553,7 +573,7 @@ Connection.prototype.sendInput = function(time, input) {
     msg.put16(OP_INPUT);
     msg.put16(time);
     msg.put16(input);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendLogin = function(name, secret) {
@@ -565,14 +585,14 @@ Connection.prototype.sendLogin = function(name, secret) {
     }
     msg.putString(name);
 
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUnsubscribeInventory = function(inventory_id) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_UNSUBSCRIBE_INVENTORY);
     msg.put32(inventory_id);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendCraftRecipe = function(station_id, inventory_id, recipe_id, count) {
@@ -582,14 +602,14 @@ Connection.prototype.sendCraftRecipe = function(station_id, inventory_id, recipe
     msg.put32(inventory_id);
     msg.put16(recipe_id);
     msg.put16(count);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendChat = function(text) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_CHAT);
     msg.putString(text);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendRegister = function(name, secret, appearance) {
@@ -602,14 +622,14 @@ Connection.prototype.sendRegister = function(name, secret, appearance) {
     msg.put32(appearance);
     msg.putString(name);
 
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendInteract = function(time) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_INTERACT);
     msg.put16(time);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseItem = function(time, item_id) {
@@ -617,7 +637,7 @@ Connection.prototype.sendUseItem = function(time, item_id) {
     msg.put16(OP_USE_ITEM);
     msg.put16(time);
     msg.put16(item_id);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseAbility = function(time, item_id) {
@@ -625,7 +645,7 @@ Connection.prototype.sendUseAbility = function(time, item_id) {
     msg.put16(OP_USE_ABILITY);
     msg.put16(time);
     msg.put16(item_id);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendInteractWithArgs = function(time, args) {
@@ -633,7 +653,7 @@ Connection.prototype.sendInteractWithArgs = function(time, args) {
     msg.put16(OP_INTERACT_WITH_ARGS);
     msg.put16(time);
     msg.putArg(args);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseItemWithArgs = function(time, item_id, args) {
@@ -642,7 +662,7 @@ Connection.prototype.sendUseItemWithArgs = function(time, item_id, args) {
     msg.put16(time);
     msg.put16(item_id);
     msg.putArg(args);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseAbilityWithArgs = function(time, item_id, args) {
@@ -651,7 +671,7 @@ Connection.prototype.sendUseAbilityWithArgs = function(time, item_id, args) {
     msg.put16(time);
     msg.put16(item_id);
     msg.putArg(args);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendMoveItem = function(
@@ -663,5 +683,5 @@ Connection.prototype.sendMoveItem = function(
     msg.put32(to_inventory);
     msg.put8(to_slot);
     msg.put8(amount);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };

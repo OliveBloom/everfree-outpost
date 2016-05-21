@@ -390,6 +390,10 @@ impl<'d, P: Platform> Client<'d, P> {
         self.predictor.input(time, dir, &*self.terrain_shape, &self.data);
     }
 
+    pub fn processed_inputs(&mut self, time: Time, count: u16) {
+        self.predictor.processed_inputs(time, count as usize);
+    }
+
 
     // Graphics
 
