@@ -133,16 +133,18 @@ fn step_physics<S>(shape: &S,
     let size = V3::new(32, 32, 48);
     let mut collider = Collider::new(shape, Region::new(pos, pos + size));
 
+    let new_anim = walk_anim(data, motion.anim_id, target_velocity);
+
     // 1) Compute the actual velocity for this tick
     let velocity = collider.calc_velocity(target_velocity);
-    let started = velocity != motion.velocity;
+    let started = velocity != motion.velocity || new_anim != motion.anim_id;
     if started {
         *motion = Motion {
             start_pos: pos,
             velocity: velocity,
             start_time: now,
             end_time: None,
-            anim_id: walk_anim(data, motion.anim_id, target_velocity),
+            anim_id: new_anim,
         };
     }
 

@@ -23,6 +23,7 @@ use world::object::*;
 struct MovingEntity {
     target_velocity: V3,
     current_velocity: V3,
+    target_changed: bool,
 }
 
 impl MovingEntity {
@@ -30,6 +31,7 @@ impl MovingEntity {
         MovingEntity {
             target_velocity: scalar(0),
             current_velocity: scalar(0),
+            target_changed: false,
         }
     }
 }
@@ -68,6 +70,7 @@ impl<'d> Physics<'d> {
     pub fn set_target_velocity(&mut self, eid: EntityId, v: V3) {
         let me = self.moving_entities.entry(eid).or_insert_with(MovingEntity::new);
         me.target_velocity = v;
+        me.target_changed = true;
     }
 }
 
@@ -126,9 +129,10 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
 
             // 1) Compute the actual velocity for this tick
             let velocity = collider.calc_velocity(me.target_velocity);
-            let started = velocity != me.current_velocity;
+            let started = velocity != me.current_velocity || me.target_changed;
             if started {
                 me.current_velocity = velocity;
+                me.target_changed = false;
                 m = Motion {
                     start_pos: pos,
                     velocity: velocity,
