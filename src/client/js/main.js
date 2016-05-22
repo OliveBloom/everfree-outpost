@@ -211,7 +211,6 @@ function openConn(info, next) {
     conn.onClose = handleClose;
     conn.onInit = handleInit;
     conn.onTerrainChunk = handleTerrainChunk;
-    conn.onEntityUpdate = handleEntityUpdate;
     conn.onUnloadChunk = handleUnloadChunk;
     conn.onOpenDialog = handleOpenDialog;
     conn.onOpenCrafting = handleOpenCrafting;
@@ -228,6 +227,10 @@ function openConn(info, next) {
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
     conn.onSyncStatus = handleSyncStatus;
     conn.onStructureReplace = handleStructureReplace;
+    conn.onEntityMotionStart = handleEntityMotionStart;
+    conn.onEntityMotionEnd = handleEntityMotionEnd;
+    conn.onEntityMotionStartEnd = handleEntityMotionStartEnd;
+    conn.onProcessedInputs = handleProcessedInputs;
 }
 
 function maybeRegister(info, next) {
@@ -579,25 +582,6 @@ function handleTerrainChunk(i, data) {
     asm_client.loadTerrainChunk(cx, cy, data);
 }
 
-function handleEntityUpdate(id, motion, anim) {
-    var m = new Motion(motion.start_pos);
-    m.end_pos = motion.end_pos;
-
-    var now = timing.visibleNow();
-    m.start_time = timing.decodeRecv(motion.start_time);
-    m.end_time = timing.decodeRecv(motion.end_time);
-    if (m.start_time > now + 2000) {
-        m.start_time -= 0x10000;
-    }
-    if (m.end_time < m.start_time) {
-        m.end_time += 0x10000;
-    }
-
-    m.anim_id = anim;
-
-    asm_client.entityUpdate(id, m, anim);
-}
-
 function handleUnloadChunk(idx) {
 }
 
@@ -722,6 +706,24 @@ function handleSyncStatus(new_synced) {
     } else {
         banner.hide();
     }
+}
+
+function handleEntityMotionStart(id, m, anim) {
+    var start_time = timing.decodeRecv(m.start_time);
+    asm_client.entityMotionStart(id, start_time, m.start_pos, m.velocity, anim);
+}
+
+function handleEntityMotionEnd(id, end_time) {
+    asm_client.entityMotionEnd(id, timing.decodeRecv(end_time));
+}
+
+function handleEntityMotionStartEnd(id, m, anim) {
+    handleEntityMotionStart(id, m, anim);
+    handleEntityMotionEnd(id, m.end_time);
+}
+
+function handleProcessedInputs(time, count) {
+    asm_client.processedInputs(timing.decodeRecv(time), count);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.

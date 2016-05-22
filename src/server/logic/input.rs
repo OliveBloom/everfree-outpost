@@ -2,22 +2,11 @@ use types::*;
 
 use engine::split::{EngineRef, Open};
 use input::{InputBits};
-use messages::ClientResponse;
 use msg::ExtraArg;
 use physics;
 use world::object::*;
 use vision;
 
-
-pub fn input(mut eng: EngineRef, cid: ClientId, input: InputBits) {
-    let now = eng.now();
-
-    let target_velocity = input.to_velocity();
-    if let Some(eid) = eng.world().get_client(cid).and_then(|c| c.pawn_id()) {
-        warn_on_err!(physics::Fragment::set_velocity(
-                &mut eng.as_physics_fragment(), now, eid, target_velocity));
-    }
-}
 
 pub fn interact(eng: EngineRef, cid: ClientId, args: Option<ExtraArg>) {
     warn_on_err!(eng.script_hooks().call_client_interact(eng, cid, args));

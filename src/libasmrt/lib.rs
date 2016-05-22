@@ -111,6 +111,13 @@ macro_rules! log {
 }
 
 #[macro_export]
+macro_rules! info {
+    ($($args:tt)*) => {
+        println!($($args)*)
+    };
+}
+
+#[macro_export]
 macro_rules! warn {
     ($str:expr) => {
         $crate::raw_println_warn(format_args!($str))

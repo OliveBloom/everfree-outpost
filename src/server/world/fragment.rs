@@ -2,7 +2,7 @@ use types::*;
 
 use world::World;
 use world::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
-use world::hooks::Hooks;
+use world::hooks::{Hooks, NoHooks};
 use world::object::ObjectRefMut;
 use world::ops::{self, OpResult};
 
@@ -90,3 +90,32 @@ pub trait Fragment<'d>: Sized {
 }
 
 process_objects!(define_Fragment!);
+
+
+pub struct DummyFragment<'a, 'd: 'a> {
+    w: &'a mut World<'d>,
+}
+
+impl<'a, 'd> DummyFragment<'a, 'd> {
+    pub fn new(w: &'a mut World<'d>) -> DummyFragment<'a, 'd> {
+        DummyFragment {
+            w: w,
+        }
+    }
+}
+
+impl<'a, 'd> Fragment<'d> for DummyFragment<'a, 'd> {
+    fn world(&self) -> &World<'d> {
+        self.w
+    }
+
+    fn world_mut(&mut self) -> &mut World<'d> {
+        self.w
+    }
+
+    type H = NoHooks;
+    fn with_hooks<F, R>(&mut self, f: F) -> R
+            where F: FnOnce(&mut NoHooks) -> R {
+        f(&mut NoHooks)
+    }
+}

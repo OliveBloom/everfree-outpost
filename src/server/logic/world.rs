@@ -1,17 +1,23 @@
 use std::iter;
+use std::mem;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use types::*;
 use util::SmallSet;
 use util::StrResult;
 
+use chunks;
 use data::StructureTemplate;
+use engine::Engine;
 use engine::glue::*;
 use engine::split::{Open, EngineRef};
 use logic;
 use messages::{ClientResponse, SyncKind};
 use physics;
 use world::{self, World, Entity, Structure};
+use world::Motion;
+use world::fragment::Fragment as World_Fragment;
+use world::fragment::DummyFragment;
 use world::object::*;
 use vision::{self, vision_region};
 
@@ -27,11 +33,9 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     fn on_client_change_pawn(&mut self,
                              _cid: ClientId,
                              _old_pawn: Option<EntityId>,
-                             new_pawn: Option<EntityId>) {
-        if let Some(eid) = new_pawn {
-            // TODO: handle this properly.  needs to send a fresh Init message to the client
-            self.schedule_view_update(eid);
-        }
+                             _new_pawn: Option<EntityId>) {
+        // Should never happen, now that clients are imported from a fully-initialized bundle.
+        unreachable!();
     }
 
 
@@ -65,52 +69,13 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
 
-    fn on_entity_create(&mut self, eid: EntityId) {
-        let (plane, area, end_time) = {
-            let e = self.world().entity(eid);
-            (e.plane_id(),
-             entity_area(self.world().entity(eid)),
-             e.motion().end_time())
-        };
-        trace!("entity {:?} created at {:?}", eid, plane);
-        // TODO: use a default plane/area for add_entity, then just call on_motion_change
-        vision::Fragment::add_entity(&mut self.$as_vision_fragment(), eid, plane, area);
-        self.schedule_physics_update(eid, end_time);
-        // Might have an owner pre-set, if it's been loaded instead of newly created.
-        self.schedule_view_update(eid);
-    }
-
-    fn on_entity_destroy(&mut self, eid: EntityId) {
-        vision::Fragment::remove_entity(&mut self.$as_vision_fragment(), eid);
-    }
-
+    /*
     fn on_entity_activity_change(&mut self, eid: EntityId) {
         trace!("entity {:?} activity changed", eid);
         let now = self.now();
-        self.schedule_physics_update(eid, now);
+        // FIXME: need to schedule a physics update right away
     }
-
-    fn on_entity_motion_change(&mut self, eid: EntityId) {
-        let (plane, area, end_time) = {
-            let e = self.world().entity(eid);
-            (e.plane_id(),
-             entity_area(self.world().entity(eid)),
-             e.motion().end_time())
-        };
-        trace!("entity {:?} motion changed to {:?}", eid, plane);
-        vision::Fragment::set_entity_area(&mut self.$as_vision_fragment(), eid, plane, area);
-        self.schedule_physics_update(eid, end_time);
-        self.schedule_view_update(eid);
-    }
-
-    fn on_entity_appearance_change(&mut self, eid: EntityId) {
-        vision::Fragment::update_entity_appearance(&mut self.$as_vision_fragment(), eid);
-    }
-
-    fn on_entity_plane_change(&mut self, eid: EntityId) {
-        trace!("entity {:?} plane changed", eid);
-        self.on_entity_motion_change(eid);
-    }
+    */
 
 
     fn on_structure_create(&mut self, sid: StructureId) {
@@ -200,70 +165,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 }
 
-impl<'a, 'd> $WorldHooks<'a, 'd> {
-    fn schedule_physics_update(&mut self, eid: EntityId, when: Time) {
-        if let Some(cookie) = self.extra_mut().entity_physics_update_timer.remove(&eid) {
-            self.timer_mut().cancel(cookie);
-        }
-        let cookie = self.timer_mut().schedule(when, move |eng| update_physics(eng, eid));
-        self.extra_mut().entity_physics_update_timer.insert(eid, cookie);
-    }
-
-    pub fn schedule_view_update(&mut self, eid: EntityId) {
-        let now = self.now();
-        let cid;
-        let when = {
-            let e = unwrap_or!(self.world().get_entity(eid));
-            let c = unwrap_or!(e.pawn_owner());
-            cid = c.id();
-
-            // If the client is not registered with the vision system, do nothing.
-            let old_area = unwrap_or!(self.vision().client_view_area(c.id()));
-            let new_area = vision_region(e.pos(now));
-
-            if old_area != new_area {
-                // Simple case: If the vision area needs to change immediately, schedule the update
-                // to happen as soon as possible.
-                Some(now)
-            } else {
-                // Complex case: Figure out when the pawn will move into a new chunk, and schedule
-                // the update to happen at that time.
-                let m = e.motion();
-                let start = m.pos(now);
-                let delta = m.end_pos - start;
-                let dur = (m.end_time() - now) as i32;
-                const CHUNK_PX: i32 = CHUNK_SIZE * TILE_SIZE;
-
-                let hit_time = start.zip(delta, |x, dx| {
-                    use std::i32;
-                    if dx == 0 {
-                        return i32::MAX;
-                    }
-                    let target = (x & !(CHUNK_PX - 1)) + if dx < 0 { -1 } else { CHUNK_PX };
-                    // i32 math is okay here because `dir` maxes out at 2^16 and `target` at 2^9.
-                    (dur * (target - x) + dx - 1) / dx
-                }).min();
-                if hit_time > dur {
-                    // Won't hit a chunk boundary before the motion ends.
-                    None
-                } else {
-                    Some(now + hit_time as Time)
-                }
-            }
-        };
-
-        if let Some(cookie) = self.extra_mut().client_view_update_timer.remove(&cid) {
-            self.timer_mut().cancel(cookie);
-        }
-        if let Some(when) = when {
-            let cookie = self.timer_mut().schedule(when, move |eng| {
-                logic::client::update_view(eng, cid);
-            });
-            self.extra_mut().client_view_update_timer.insert(cid, cookie);
-        }
-    }
-}
-
 // End of macro_rules
     };
 }
@@ -272,17 +173,6 @@ impl<'a, 'd> $WorldHooks<'a, 'd> {
 impl_world_Hooks!(WorldHooks, as_vision_fragment);
 impl_world_Hooks!(HiddenWorldHooks, as_hidden_vision_fragment);
 
-
-pub fn entity_area(e: ObjectRef<Entity>) -> SmallSet<V2> {
-    let mut area = SmallSet::new();
-
-    let a = e.motion().start_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-    let b = e.motion().end_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-
-    area.insert(a);
-    area.insert(b);
-    area
-}
 
 pub fn structure_area(s: ObjectRef<Structure>) -> SmallSet<V2> {
     let mut area = SmallSet::new();
@@ -403,47 +293,73 @@ fn compute_layer_mask_excluding(w: &World,
 }
 
 
-fn update_physics(mut eng: EngineRef, eid: EntityId) {
-    let now = eng.now();
-    warn_on_err!(physics::Fragment::update(&mut eng.as_physics_fragment(), now, eid));
-    // When `update` changes the entity's motion, the hook will schedule the next update,
-    // cancelling any currently pending update.
-}
-
 fn teleport_entity_internal(mut wf: WorldFragment,
                             eid: EntityId,
                             pid: Option<PlaneId>,
                             stable_pid: Option<Stable<PlaneId>>,
                             pos: V3) -> StrResult<()> {
-    use world::Fragment;
-    let now = wf.now();
+    // FIXME ugly transmute
+    let eng: &mut Engine = unsafe { mem::transmute(wf) };
 
-    {
-        let e = unwrap!(wf.world().get_entity(eid));
-        let cid = e.pawn_owner().map(|c| c.id());
-        if let Some(cid) = cid {
-            // Only send desync message for long-range teleports.
-            let dist = (e.pos(now) - pos).reduce().abs().max();
-            let change_plane = (pid.is_some() && pid.unwrap() != e.plane_id()) ||
-                (stable_pid.is_some() && stable_pid.unwrap() != e.stable_plane_id());
+    let (old_pos, old_plane, cid) = {
+        let e = unwrap!(eng.world.get_entity(eid));
+        (e.pos(eng.now), e.plane_id(), e.pawn_owner().map(|c| c.id()))
+    };
 
-            // NB: Teleporting to another point within the current chunk will not cause a view
-            // update to be scheduled, so there will never be a resync message.  That's why we set
-            // the limit to CHUNK_SIZE * TILE_SIZE: traveling that distance along either the X or Y
-            // axis will definitely move the entity into a different chunk.
-            if dist >= CHUNK_SIZE * TILE_SIZE || change_plane {
-                wf.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Loading));
-            }
+    let new_plane =
+        if let Some(stable_pid) = stable_pid {
+            // Load the plane, if it's not already.
+            chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(), stable_pid)
+        } else if let Some(pid) = pid {
+            unwrap!(eng.world.get_plane(pid));
+            pid
+        } else {
+            old_plane
+        };
+    let new_pos = pos;
+
+    let old_cpos = old_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    let new_cpos = new_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+
+    if let Some(cid) = cid {
+        // Check if we need to send a desync message.
+        // Teleporting to another point within the current chunk will not cause a view
+        // update to be scheduled, so there will never be a resync message.  That's why we set
+        // the limit to CHUNK_SIZE * TILE_SIZE: traveling that distance along either the X or Y
+        // axis will definitely move the entity into a different chunk.
+        if new_plane != old_plane || new_cpos != old_cpos {
+            eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Loading));
         }
     }
 
-    let mut e = wf.entity_mut(eid);
-    if let Some(stable_pid) = stable_pid {
-        try!(e.set_stable_plane_id(stable_pid));
-    } else if let Some(pid) = pid {
-        try!(e.set_plane_id(pid));
+    {
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut e = wf.entity_mut(eid);
+        try!(e.set_plane_id(new_plane));
+        e.set_motion(Motion::stationary(new_pos, eng.now));
+
+        let e = e.borrow();
+        let msg_gone = logic::vision::entity_gone_message(e);
+        let msg_appear = logic::vision::entity_appear_message(e);
+        let msg_motion = logic::vision::entity_motion_message(e);
+        let messages = &mut eng.messages;
+        if new_plane != old_plane || new_cpos != old_cpos {
+            eng.vision.entity_add(eid, new_plane, new_cpos, |cid| {
+                messages.send_client(cid, msg_appear.clone());
+            });
+            eng.vision.entity_remove(eid, old_plane, old_cpos, |cid| {
+                messages.send_client(cid, msg_gone.clone());
+            });
+        }
+        eng.vision.entity_update(eid, |cid| {
+            messages.send_client(cid, msg_motion.clone());
+        });
     }
-    e.set_motion(world::Motion::stationary(pos, now));
+
+    if let Some(cid) = cid {
+        logic::client::update_view(eng, cid, old_plane, old_cpos, new_plane, new_cpos);
+    }
+
     Ok(())
 }
 

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::hash_map::{self, HashMap};
 use std::hash::Hash;
 use std::iter;
 
@@ -40,6 +40,10 @@ impl<Val, Id: Eq+Hash+Copy> Remapper<Val, Id> {
             self.id_map.insert(old_id, new_id);
             new_id
         }
+    }
+
+    pub fn keys(&self) -> hash_map::Keys<Id, Id> {
+        self.id_map.keys()
     }
 }
 

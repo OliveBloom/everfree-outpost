@@ -481,23 +481,15 @@ DynAsm.prototype.entityGone = function(id) {
     this._raw['entity_gone'](this.client, id);
 };
 
-DynAsm.prototype.entityUpdate = function(id, motion, anim) {
-    var arr = this._stackAlloc(Int32Array, 9);
+DynAsm.prototype.entityMotionStart = function(id, time, pos, velocity, anim) {
+    this._raw['entity_motion_start'](this.client, id, time,
+            pos.x, pos.y, pos.z,
+            velocity.x, velocity.y, velocity.z,
+            anim);
+};
 
-    arr[0] = motion.start_pos.x;
-    arr[1] = motion.start_pos.y;
-    arr[2] = motion.start_pos.z;
-    arr[3] = motion.end_pos.x;
-    arr[4] = motion.end_pos.y;
-    arr[5] = motion.end_pos.z;
-
-    arr[6] = motion.start_time;
-    arr[7] = motion.end_time;
-    arr[8] = anim;
-
-    this._raw['entity_update'](this.client, id, motion.start_time, arr.byteOffset);
-
-    this._stackFree(arr);
+DynAsm.prototype.entityMotionEnd = function(id, time) {
+    this._raw['entity_motion_end'](this.client, id, time);
 };
 
 DynAsm.prototype.setPawnId = function(entity_id) {
@@ -624,6 +616,10 @@ DynAsm.prototype.collide = function(pos, size, velocity) {
 
 DynAsm.prototype.feedInput = function(time, dir) {
     this._raw['feed_input'](this.client, time, dir.x, dir.y, dir.z);
+};
+
+DynAsm.prototype.processedInputs = function(time, count) {
+    this._raw['processed_inputs'](this.client, time, count);
 };
 
 DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {

@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 use std::collections::btree_map::{self, BTreeMap};
-use std::collections::BinaryHeap;
+use std::collections::VecDeque;
 use std::collections::Bound;
 use std::cmp::Ordering;
 use std::ops::Index;
@@ -15,25 +15,58 @@ pub type EntityId = u32;
 #[derive(Clone, Debug)]
 pub struct Motion {
     pub start_pos: V3,
-    pub end_pos: V3,
+    pub velocity: V3,
     pub start_time: Time,
-    pub end_time: Time,
+    pub end_time: Option<Time>,
     pub anim_id: u16,
 }
 
 impl Motion {
-    pub fn pos(&self, now: Time) -> V3 {
-        let delta = now - self.start_time;
-        let dur = self.end_time - self.start_time;
-        if delta <= 0 {
-            self.start_pos
-        } else if delta >= dur {
-            self.end_pos
-        } else {
-            let offset = (self.end_pos - self.start_pos) *
-                scalar(delta) / scalar(dur);
-            self.start_pos + offset
+    pub fn new() -> Motion {
+        Motion {
+            start_pos: scalar(0),
+            velocity: scalar(0),
+            start_time: 0,
+            end_time: None,
+            anim_id: 0,
         }
+    }
+
+    pub fn pos(&self, now: Time) -> V3 {
+        if now <= self.start_time {
+            return self.start_pos;
+        }
+        let now = match self.end_time {
+            Some(end_time) if now > end_time => end_time,
+            _ => now,
+        };
+
+        let delta = now - self.start_time;
+        let offset = self.velocity * scalar(delta) / scalar(1000);
+        self.start_pos + offset
+    }
+
+    pub fn apply(&mut self, update: Update) {
+        match update {
+            Update::MotionStart(time, pos, velocity, anim) =>
+                self.apply_start(time, pos, velocity, anim),
+            Update::MotionEnd(time) =>
+                self.apply_end(time),
+        }
+    }
+
+    pub fn apply_start(&mut self, start_time: Time, start_pos: V3, velocity: V3, anim: u16) {
+        *self = Motion {
+            start_pos: start_pos,
+            velocity: velocity,
+            start_time: start_time,
+            end_time: None,
+            anim_id: anim,
+        };
+    }
+
+    pub fn apply_end(&mut self, end_time: Time) {
+        self.end_time = Some(end_time);
     }
 }
 
@@ -41,7 +74,6 @@ pub struct Entity {
     pub motion: Motion,
     pub appearance: u32,
     pub name: Option<String>,
-    serial: u32,
 }
 
 impl Entity {
@@ -54,54 +86,32 @@ impl Entity {
     }
 }
 
-struct Update {
-    when: Time,
-    entity: EntityId,
-    serial: u32,
-    motion: Motion,
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Update {
+    MotionStart(Time, V3, V3, u16),
+    MotionEnd(Time),
 }
 
-impl PartialEq for Update {
-    fn eq(&self, other: &Update) -> bool {
-        self.when == other.when
-    }
-}
-
-impl Eq for Update {}
-
-impl PartialOrd for Update {
-    fn partial_cmp(&self, other: &Update) -> Option<Ordering> {
-        // Reverse the ordering on times, so that the BinaryHeap acts as a min-heap instead of a
-        // max-heap.
-        other.when.partial_cmp(&self.when)
-    }
-}
-
-impl Ord for Update {
-    fn cmp(&self, other: &Update) -> Ordering {
-        other.when.cmp(&self.when)
+impl Update {
+    pub fn when(&self) -> Time {
+        match *self {
+            Update::MotionStart(start_time, _, _, _) => start_time,
+            Update::MotionEnd(end_time) => end_time,
+        }
     }
 }
 
 pub struct Entities {
     map: BTreeMap<EntityId, Entity>,
-    updates: BinaryHeap<Update>,
-    next_serial: u32,
+    updates: VecDeque<(EntityId, Update)>,
 }
 
 impl Entities {
     pub fn new() -> Entities {
         Entities {
             map: BTreeMap::new(),
-            updates: BinaryHeap::new(),
-            next_serial: 0,
+            updates: VecDeque::new(),
         }
-    }
-
-    fn next_serial(&mut self) -> u32 {
-        let val = self.next_serial;
-        self.next_serial = self.next_serial.wrapping_add(1);
-        val
     }
 
     pub fn clear(&mut self) {
@@ -112,18 +122,10 @@ impl Entities {
                   id: EntityId,
                   appearance: u32,
                   name: Option<String>) {
-        let serial = self.next_serial();
         self.map.insert(id, Entity {
-            motion: Motion {
-                start_pos: scalar(0),
-                end_pos: scalar(0),
-                start_time: 0,
-                end_time: 1,
-                anim_id: 0,
-            },
+            motion: Motion::new(),
             appearance: appearance,
             name: name,
-            serial: serial,
         });
     }
 
@@ -131,28 +133,31 @@ impl Entities {
         self.map.remove(&id).unwrap()
     }
 
-    pub fn schedule_update(&mut self, id: EntityId, when: Time, motion: Motion) {
-        if let Some(e) = self.map.get(&id) {
-            self.updates.push(Update {
-                when: when,
-                entity: id,
-                serial: e.serial,
-                motion: motion,
-            });
+    pub fn schedule_motion_start(&mut self,
+                                 id: EntityId,
+                                 start_time: Time,
+                                 start_pos: V3,
+                                 velocity: V3,
+                                 anim: u16) {
+        if self.map.contains_key(&id) {
+            let update = Update::MotionStart(start_time, start_pos, velocity, anim);
+            self.updates.push_back((id, update));
+        }
+    }
+
+    pub fn schedule_motion_end(&mut self,
+                               id: EntityId,
+                               end_time: Time) {
+        if self.map.contains_key(&id) {
+            self.updates.push_back((id, Update::MotionEnd(end_time)));
         }
     }
 
     pub fn apply_updates(&mut self, now: Time) {
-        while self.updates.len() > 0 && self.updates.peek().unwrap().when <= now {
-            let update = self.updates.pop().unwrap();
-            if let Some(e) = self.map.get_mut(&update.entity) {
-                if e.serial != update.serial {
-                    // The entity was replaced and its ID was reused since the update was
-                    // scheduled.
-                    continue;
-                }
-
-                e.motion = update.motion;
+        while self.updates.len() > 0 && self.updates.front().unwrap().1.when() <= now {
+            let (eid, update) = self.updates.pop_front().unwrap();
+            if let Some(e) = self.map.get_mut(&eid) {
+                e.motion.apply(update);
             }
         }
     }
@@ -161,7 +166,6 @@ impl Entities {
         let e = self.map.get_mut(&id).unwrap();
         e.motion.anim_id = anim;
         e.motion.start_pos = V3::new(4096, 4096, 0);
-        e.motion.end_pos = V3::new(4096, 4096, 0);
     }
 
     pub fn get(&self, id: EntityId) -> Option<&Entity> {

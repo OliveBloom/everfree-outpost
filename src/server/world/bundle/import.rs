@@ -13,6 +13,7 @@ use world::fragment::Fragment;
 use world::ops;
 use world::extra::{self, Extra};
 
+use super::AnyId;
 use super::export::{BAD_CLIENT_ID, BAD_ENTITY_ID, BAD_INVENTORY_ID};
 use super::export::{BAD_PLANE_ID, BAD_TERRAIN_CHUNK_ID, BAD_STRUCTURE_ID};
 
@@ -301,9 +302,7 @@ impl<'d> Importer<'d> {
         for i in 0 .. b.clients.len() {
             f.with_hooks(|h| h.on_client_create(self.client_id_map[i]));
         }
-        for i in 0 .. b.entities.len() {
-            f.with_hooks(|h| h.on_entity_create(self.entity_id_map[i]));
-        }
+        // entity hooks have been removed
         for i in 0 .. b.inventories.len() {
             f.with_hooks(|h| h.on_inventory_create(self.inventory_id_map[i]));
         }
@@ -335,6 +334,27 @@ impl<'d> Importer<'d> {
         self.add_bundle(f, b);
     }
 
+    pub fn iter_imports<F>(&self, mut f: F)
+            where F: FnMut(AnyId) {
+        for &id in &self.client_id_map {
+            f(AnyId::Client(id));
+        }
+        for &id in &self.entity_id_map {
+            f(AnyId::Entity(id));
+        }
+        for &id in &self.inventory_id_map {
+            f(AnyId::Inventory(id));
+        }
+        for &id in &self.plane_id_map {
+            f(AnyId::Plane(id));
+        }
+        for &id in &self.terrain_chunk_id_map {
+            f(AnyId::TerrainChunk(id));
+        }
+        for &id in &self.structure_id_map {
+            f(AnyId::Structure(id));
+        }
+    }
 }
 
 pub fn import_bundle<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>

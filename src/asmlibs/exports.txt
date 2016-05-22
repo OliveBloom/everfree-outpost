@@ -16,7 +16,8 @@ structure_gone
 structure_replace
 entity_appear
 entity_gone
-entity_update
+entity_motion_start
+entity_motion_end
 set_pawn_id
 inventory_appear
 inventory_gone
@@ -34,6 +35,7 @@ get_active_item
 get_active_ability
 load_terrain_chunk
 feed_input
+processed_inputs
 render_frame
 debug_record
 init_day_night

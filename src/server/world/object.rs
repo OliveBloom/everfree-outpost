@@ -106,7 +106,16 @@ pub struct ObjectRef<'a, 'd: 'a, O: Object> {
 // TODO: should really be able to just derive Copy, but it tries O: Copy instead of O::Id: Copy
 // TODO: turns out you can write this copy impl, but actually using it zeroes out the original
 // (memory corruption, null &s)
-//impl<'a, 'd, O: Object> Copy for ObjectRef<'a, 'd, O> { }
+impl<'a, 'd, O: Object> Clone for ObjectRef<'a, 'd, O> {
+    fn clone(&self) -> ObjectRef<'a, 'd, O> {
+        ObjectRef {
+            world: self.world,
+            id: self.id,
+            obj: self.obj,
+        }
+    }
+}
+impl<'a, 'd, O: Object> Copy for ObjectRef<'a, 'd, O> { }
 
 pub struct ObjectRefMut<'a, 'd, O: Object, F: Fragment<'d>+'a> {
     pub fragment: &'a mut F,
@@ -120,6 +129,14 @@ impl<'a, 'd, O: Object, F: Fragment<'d>> ObjectRefMut<'a, 'd, O, F> {
             fragment: fragment,
             id: id,
             _marker0: PhantomData,
+        }
+    }
+
+    pub fn borrow<'b>(&'b self) -> ObjectRef<'b, 'd, O> {
+        ObjectRef {
+            world: self.world(),
+            id: self.id,
+            obj: self.obj(),
         }
     }
 }
@@ -292,20 +309,17 @@ pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
     fn set_activity(&mut self, activity: Activity) {
         let eid = self.id();
         self.obj_mut().activity = activity;
-        self.fragment_mut().with_hooks(|h| h.on_entity_activity_change(eid));
     }
 
     fn set_motion(&mut self, motion: Motion) {
         let eid = self.id();
         // TODO: update entity-by-chunk cache
         self.obj_mut().motion = motion;
-        self.fragment_mut().with_hooks(|h| h.on_entity_motion_change(eid));
     }
 
     fn set_appearance(&mut self, appearance: u32) {
         let eid = self.id();
         self.obj_mut().appearance = appearance;
-        self.fragment_mut().with_hooks(|h| h.on_entity_appearance_change(eid));
     }
 
     fn set_attachment(&mut self, attach: EntityAttachment) -> OpResult<EntityAttachment> {

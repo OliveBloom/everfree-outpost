@@ -140,25 +140,3 @@ impl_slice! {
     ChunkProvider::as_hidden_world_fragment -> HiddenWorldFragment;
     ChunkProvider::as_terrain_gen_fragment -> TerrainGenFragment;
 }
-
-
-parts!(PhysicsFragment);
-
-impl<'a, 'd> physics::Fragment<'d> for PhysicsFragment<'a, 'd> {
-    fn with_cache<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Physics<'d>, &TerrainCache, &World<'d>) -> R {
-        let Open { physics, cache, world, .. } = self.open();
-        f(physics, cache, world)
-    }
-
-    type WF = WorldFragment<'a, 'd>;
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut WorldFragment<'a, 'd>) -> R {
-        let e = unsafe { self.borrow().fiddle().to_part().slice() };
-        f(&mut Part::from_part(e))
-    }
-}
-
-impl_slice! {
-    EngineRef::as_physics_fragment -> PhysicsFragment;
-}

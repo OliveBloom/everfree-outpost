@@ -21,7 +21,7 @@ use physics::v3::{V3, V2, Vn, scalar, Region};
 use Time;
 use data::Data;
 use debug::Debug;
-use entity::{Entities, EntityId, Motion};
+use entity::{self, Entities, EntityId, Motion};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
@@ -251,15 +251,27 @@ impl<'d, P: Platform> Client<'d, P> {
         self.entities.remove(id);
     }
 
-    pub fn entity_update(&mut self,
-                         id: EntityId,
-                         when: Time,
-                         motion: Motion) {
-        self.entities.schedule_update(id, when, motion.clone());
+    pub fn entity_motion_start(&mut self,
+                               id: EntityId,
+                               start_time: Time,
+                               start_pos: V3,
+                               velocity: V3,
+                               anim: u16) {
+        self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
 
         if Some(id) == self.pawn_id {
-            // TODO: not sure it's correct to apply this instantly
-            self.predictor.canonical_motion(motion);
+            self.predictor.canonical_motion_update(entity::Update::MotionStart(
+                    start_time, start_pos, velocity, anim));
+        }
+    }
+
+    pub fn entity_motion_end(&mut self,
+                             id: EntityId,
+                             end_time: Time) {
+        self.entities.schedule_motion_end(id, end_time);
+
+        if Some(id) == self.pawn_id {
+            self.predictor.canonical_motion_update(entity::Update::MotionEnd(end_time));
         }
     }
 
@@ -377,6 +389,10 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn feed_input(&mut self, time: Time, dir: V3) {
         self.predictor.input(time, dir, &*self.terrain_shape, &self.data);
+    }
+
+    pub fn processed_inputs(&mut self, time: Time, count: u16) {
+        self.predictor.processed_inputs(time, count as usize);
     }
 
 

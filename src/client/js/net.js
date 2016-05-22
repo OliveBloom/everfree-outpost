@@ -1,3 +1,4 @@
+var Config = require('config').Config;
 var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
 
@@ -24,7 +25,7 @@ var OP_MOVE_ITEM =              0x0013;
 var OP_TERRAIN_CHUNK =          0x8001;
 // DEPRECATED                   0x8002;
 var OP_PONG =                   0x8003;
-var OP_ENTITY_UPDATE =          0x8004;
+// DEPRECATED                   0x8004;
 var OP_INIT =                   0x8005;
 var OP_KICK_REASON =            0x8006;
 var OP_UNLOAD_CHUNK =           0x8007;
@@ -48,6 +49,10 @@ var OP_STRUCTURE_REPLACE =      0x8018;
 var OP_INVENTORY_UPDATE =       0x8019;
 var OP_INVENTORY_APPEAR =       0x801a;
 var OP_INVENTORY_GONE =         0x801b;
+var OP_ENTITY_MOTION_START =    0x801c;
+var OP_ENTITY_MOTION_END =      0x801d;
+var OP_ENTITY_MOTION_START_END =0x801e;
+var OP_PROCESSED_INPUTS =       0x801f;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -61,7 +66,14 @@ function Connection(url) {
     var socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
     socket.onopen = function(evt) { this_._handleOpen(evt); };
-    socket.onmessage = function(evt) { this_._handleMessage(evt); };
+    if (Config.debug_delay_recv.get() == 0) {
+        socket.onmessage = function(evt) { this_._handleMessage(evt); };
+    } else {
+        var delay = Config.debug_delay_recv.get();
+        socket.onmessage = function(evt) {
+            window.setTimeout(function() { this_._handleMessage(evt); }, delay);
+        };
+    }
     socket.onclose = function(evt) { this_._handleClose(evt); };
     this.socket = socket;
 
@@ -71,7 +83,6 @@ function Connection(url) {
     this.onClose = null;
     this.onTerrainChunk = null;
     this.onPong = null;
-    this.onEntityUpdate = null;
     this.onInit = null;
     this.onUnloadChunk = null;
     this.onOpenDialog = null;
@@ -92,8 +103,24 @@ function Connection(url) {
     this.onInventoryUpdate = null;
     this.onInventoryAppear = null;
     this.onInventoryGone = null;
+    this.onEntityMotionStart = null;
+    this.onEntityMotionEnd = null;
+    this.onEntityMotionStartEnd = null;
+    this.onProcessedInputs = null;
 }
 exports.Connection = Connection;
+
+Connection.prototype._send = function(msg) {
+    if (Config.debug_delay_send.get() == 0) {
+        this.socket.send(msg);
+    } else {
+        var delay = Config.debug_delay_send.get();
+        var this_ = this;
+        window.setTimeout(function() {
+            this_.socket.send(msg);
+        }, delay);
+    }
+}
 
 Connection.prototype._handleOpen = function(evt) {
     if (this.onOpen != null) {
@@ -119,6 +146,12 @@ Connection.prototype._handleMessage = function(evt) {
 
     function get16() {
         var result = view.getUint16(offset, true);
+        offset += 2;
+        return result;
+    }
+
+    function getI16() {
+        var result = view.getInt16(offset, true);
         offset += 2;
         return result;
     }
@@ -183,28 +216,6 @@ Connection.prototype._handleMessage = function(evt) {
                 var msg = get16();
                 var server_time = get16();
                 this.onPong(msg, server_time, evt.timeStamp);
-            }
-            break;
-
-        case OP_ENTITY_UPDATE:
-            if (this.onEntityUpdate != null) {
-                var id =            get32();
-                var start_x =       get16();
-                var start_y =       get16();
-                var start_z =       get16();
-                var start_time =    get16();
-                var end_x =         get16();
-                var end_y =         get16();
-                var end_z =         get16();
-                var end_time =      get16();
-                var anim =          get16();
-                var motion = {
-                    start_pos:  new Vec(start_x, start_y, start_z),
-                    start_time: start_time,
-                    end_pos:    new Vec(end_x, end_y, end_z),
-                    end_time:   end_time,
-                };
-                this.onEntityUpdate(id, motion, anim);
             }
             break;
 
@@ -404,13 +415,73 @@ Connection.prototype._handleMessage = function(evt) {
             };
             break;
 
+        case OP_ENTITY_MOTION_START:
+            if (this.onEntityMotionStart != null) {
+                var id =            get32();
+                var start_x =       get16();
+                var start_y =       get16();
+                var start_z =       get16();
+                var start_time =    get16();
+                var velocity_x =    getI16();
+                var velocity_y =    getI16();
+                var velocity_z =    getI16();
+                var anim =          get16();
+                var motion = {
+                    start_pos:  new Vec(start_x, start_y, start_z),
+                    velocity:   new Vec(velocity_x, velocity_y, velocity_z),
+                    start_time: start_time,
+                    end_time:   null,
+                };
+                this.onEntityMotionStart(id, motion, anim);
+            }
+            break;
+
+        case OP_ENTITY_MOTION_END:
+            if (this.onEntityMotionEnd != null) {
+                var id =            get32();
+                var end_time =      get16();
+                this.onEntityMotionEnd(id, end_time);
+            }
+            break;
+
+        case OP_ENTITY_MOTION_START_END:
+            if (this.onEntityMotionStartEnd != null) {
+                var id =            get32();
+                var start_x =       get16();
+                var start_y =       get16();
+                var start_z =       get16();
+                var start_time =    get16();
+                var velocity_x =    getI16();
+                var velocity_y =    getI16();
+                var velocity_z =    getI16();
+                var anim =          get16();
+                var end_time =      get16();
+                var motion = {
+                    start_pos:  new Vec(start_x, start_y, start_z),
+                    velocity:   new Vec(velocity_x, velocity_y, velocity_z),
+                    start_time: start_time,
+                    end_time:   end_time,
+                };
+                this.onEntityMotionStartEnd(id, motion, anim);
+            }
+            break;
+
+        case OP_PROCESSED_INPUTS:
+            if (this.onProcessedInputs != null) {
+                var time =          get16();
+                var count =         get16();
+                this.onProcessedInputs(time, count);
+            }
+            break;
+
+
         default:
             console.assert(false, 'received invalid opcode:', opcode.toString(16));
             break;
     }
 
     console.assert(offset == view.buffer.byteLength,
-            'received message with bad length');
+            'received message with bad length (opcode ' + opcode.toString(16) + ')');
 };
 
 
@@ -494,7 +565,7 @@ Connection.prototype.sendPing = function(data) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_PING);
     msg.put16(data);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendInput = function(time, input) {
@@ -502,7 +573,7 @@ Connection.prototype.sendInput = function(time, input) {
     msg.put16(OP_INPUT);
     msg.put16(time);
     msg.put16(input);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendLogin = function(name, secret) {
@@ -514,14 +585,14 @@ Connection.prototype.sendLogin = function(name, secret) {
     }
     msg.putString(name);
 
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUnsubscribeInventory = function(inventory_id) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_UNSUBSCRIBE_INVENTORY);
     msg.put32(inventory_id);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendCraftRecipe = function(station_id, inventory_id, recipe_id, count) {
@@ -531,14 +602,14 @@ Connection.prototype.sendCraftRecipe = function(station_id, inventory_id, recipe
     msg.put32(inventory_id);
     msg.put16(recipe_id);
     msg.put16(count);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendChat = function(text) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_CHAT);
     msg.putString(text);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendRegister = function(name, secret, appearance) {
@@ -551,14 +622,14 @@ Connection.prototype.sendRegister = function(name, secret, appearance) {
     msg.put32(appearance);
     msg.putString(name);
 
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendInteract = function(time) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_INTERACT);
     msg.put16(time);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseItem = function(time, item_id) {
@@ -566,7 +637,7 @@ Connection.prototype.sendUseItem = function(time, item_id) {
     msg.put16(OP_USE_ITEM);
     msg.put16(time);
     msg.put16(item_id);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseAbility = function(time, item_id) {
@@ -574,7 +645,7 @@ Connection.prototype.sendUseAbility = function(time, item_id) {
     msg.put16(OP_USE_ABILITY);
     msg.put16(time);
     msg.put16(item_id);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendInteractWithArgs = function(time, args) {
@@ -582,7 +653,7 @@ Connection.prototype.sendInteractWithArgs = function(time, args) {
     msg.put16(OP_INTERACT_WITH_ARGS);
     msg.put16(time);
     msg.putArg(args);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseItemWithArgs = function(time, item_id, args) {
@@ -591,7 +662,7 @@ Connection.prototype.sendUseItemWithArgs = function(time, item_id, args) {
     msg.put16(time);
     msg.put16(item_id);
     msg.putArg(args);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendUseAbilityWithArgs = function(time, item_id, args) {
@@ -600,7 +671,7 @@ Connection.prototype.sendUseAbilityWithArgs = function(time, item_id, args) {
     msg.put16(time);
     msg.put16(item_id);
     msg.putArg(args);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };
 
 Connection.prototype.sendMoveItem = function(
@@ -612,5 +683,5 @@ Connection.prototype.sendMoveItem = function(
     msg.put32(to_inventory);
     msg.put8(to_slot);
     msg.put8(amount);
-    this.socket.send(msg.done());
+    this._send(msg.done());
 };

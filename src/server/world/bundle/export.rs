@@ -8,6 +8,8 @@ use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachm
 use world as w;
 use world::extra::{self, Extra};
 
+use super::AnyId;
+
 
 pub const BAD_CLIENT_ID: ClientId = ClientId(-1_i16 as u16);
 pub const BAD_ENTITY_ID: EntityId = EntityId(-1_i32 as u32);
@@ -342,6 +344,29 @@ impl<'d> Exporter<'d> {
             child_inventories: self.export_iter(s.child_inventories.iter()),
         };
         self.structures.vals[idx] = Some(b);
+    }
+
+
+    pub fn iter_exports<F>(&self, mut f: F)
+            where F: FnMut(AnyId) {
+        for &id in self.clients.keys() {
+            f(AnyId::Client(id));
+        }
+        for &id in self.entities.keys() {
+            f(AnyId::Entity(id));
+        }
+        for &id in self.inventories.keys() {
+            f(AnyId::Inventory(id));
+        }
+        for &id in self.planes.keys() {
+            f(AnyId::Plane(id));
+        }
+        for &id in self.terrain_chunks.keys() {
+            f(AnyId::TerrainChunk(id));
+        }
+        for &id in self.structures.keys() {
+            f(AnyId::Structure(id));
+        }
     }
 }
 

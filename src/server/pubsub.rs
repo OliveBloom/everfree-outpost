@@ -1,17 +1,9 @@
 use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::collections::hash_map;
 use std::collections::{BTreeMap, BTreeSet};
 use std::collections::{btree_map, btree_set};
 use std::collections::Bound::Included;
-use std::hash::Hash;
 
 use types::*;
-
-use util::{multimap_insert, multimap_remove};
-use util::OptionIterExt;
-use util::RefcountedMap;
-
 
 
 pub trait Name: Ord+Clone {

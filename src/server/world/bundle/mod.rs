@@ -1,3 +1,4 @@
+use types::*;
 
 pub use self::types::*;
 
@@ -25,4 +26,14 @@ pub fn write_bundle<W: ::std::io::Write>(w: &mut W, b: &Bundle) -> Result<()> {
     f.flatten_bundle(b);
     try!(f.write(w));
     Ok(())
+}
+
+
+pub enum AnyId {
+    Client(ClientId),
+    Entity(EntityId),
+    Inventory(InventoryId),
+    Plane(PlaneId),
+    TerrainChunk(TerrainChunkId),
+    Structure(StructureId),
 }

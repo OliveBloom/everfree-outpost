@@ -407,10 +407,10 @@ define_python_class! {
         fn world_entity_set_appearance(eng: glue::WorldFragment,
                                        eid: EntityId,
                                        appearance: u32) -> PyResult<()> {
-            let mut eng = eng;
-            let mut e = pyunwrap!(eng.get_entity_mut(eid),
-                                  runtime_error, "no entity with that ID");
-            e.set_appearance(appearance);
+            let eng = unsafe { mem::transmute(eng) };
+            let ok = logic::entity::set_appearance(eng, eid, appearance);
+            // Bad eid is currently the only possible failure mode
+            pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
