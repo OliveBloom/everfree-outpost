@@ -12,6 +12,11 @@ bitflags! {
         const INPUT_UP =        0x0004,
         const INPUT_DOWN =      0x0008,
         const INPUT_RUN =       0x0010,
+
+        const INPUT_DIR_MASK =  INPUT_LEFT.bits |
+                                INPUT_RIGHT.bits |
+                                INPUT_UP.bits |
+                                INPUT_DOWN.bits,
     }
 }
 

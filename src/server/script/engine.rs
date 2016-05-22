@@ -407,6 +407,7 @@ define_python_class! {
         fn world_entity_set_appearance(eng: glue::WorldFragment,
                                        eid: EntityId,
                                        appearance: u32) -> PyResult<()> {
+            // FIXME: actually-unsafe transmute
             let eng = unsafe { mem::transmute(eng) };
             let ok = logic::entity::set_appearance(eng, eid, appearance);
             // Bad eid is currently the only possible failure mode
@@ -451,10 +452,11 @@ define_python_class! {
 
         fn world_entity_set_activity_move(eng: glue::WorldFragment,
                                           eid: EntityId) -> PyResult<()> {
-            let mut eng = eng;
-            let mut e = pyunwrap!(eng.get_entity_mut(eid),
-                                  runtime_error, "no entity with that ID");
-            e.set_activity(Activity::Move);
+            // FIXME: actually-unsafe transmute
+            let eng = unsafe { mem::transmute(eng) };
+            let ok = logic::entity::set_activity_(eng, eid, Activity::Move);
+            // Bad eid is currently the only possible failure mode
+            pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
@@ -462,10 +464,12 @@ define_python_class! {
                                              eid: EntityId,
                                              anim: AnimId,
                                              interruptible: bool) -> PyResult<()> {
-            let mut eng = eng;
-            let mut e = pyunwrap!(eng.get_entity_mut(eid),
-                                  runtime_error, "no entity with that ID");
-            e.set_activity(Activity::Special(anim, interruptible));
+            // FIXME: actually-unsafe transmute
+            let eng = unsafe { mem::transmute(eng) };
+            let act = Activity::Special(anim, interruptible);
+            let ok = logic::entity::set_activity_(eng, eid, act);
+            // Bad eid is currently the only possible failure mode
+            pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 

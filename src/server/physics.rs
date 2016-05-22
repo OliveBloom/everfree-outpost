@@ -22,16 +22,14 @@ use world::object::*;
 
 struct MovingEntity {
     target_velocity: V3,
-    current_velocity: V3,
-    target_changed: bool,
+    force_update: bool,
 }
 
 impl MovingEntity {
     fn new() -> MovingEntity {
         MovingEntity {
             target_velocity: scalar(0),
-            current_velocity: scalar(0),
-            target_changed: false,
+            force_update: false,
         }
     }
 }
@@ -59,7 +57,6 @@ impl<'d> Physics<'d> {
 
     pub fn add_entity(&mut self, eid: EntityId, velocity: V3) {
         let mut me = MovingEntity::new();
-        me.current_velocity = velocity;
         self.moving_entities.insert(eid, me);
     }
 
@@ -70,7 +67,13 @@ impl<'d> Physics<'d> {
     pub fn set_target_velocity(&mut self, eid: EntityId, v: V3) {
         let me = self.moving_entities.entry(eid).or_insert_with(MovingEntity::new);
         me.target_velocity = v;
-        me.target_changed = true;
+        me.force_update = true;
+    }
+
+    pub fn force_update(&mut self, eid: EntityId) {
+        let me = unwrap_or!(self.moving_entities.get_mut(&eid),
+                            { warn!("no such MovingEntity: {:?}", eid); return; });
+        me.force_update = true;
     }
 }
 
@@ -111,6 +114,10 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
                     },
                 };
 
+                if e.activity() != Activity::Move {
+                    continue;
+                }
+
                 let m = e.motion().clone();
 
                 let s = ChunksSource {
@@ -129,10 +136,9 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
 
             // 1) Compute the actual velocity for this tick
             let velocity = collider.calc_velocity(me.target_velocity);
-            let started = velocity != me.current_velocity || me.target_changed;
+            let started = velocity != m.velocity || me.force_update;
             if started {
-                me.current_velocity = velocity;
-                me.target_changed = false;
+                me.force_update = false;
                 m = Motion {
                     start_pos: pos,
                     velocity: velocity,

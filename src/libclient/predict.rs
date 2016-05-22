@@ -133,6 +133,12 @@ fn step_physics<S>(shape: &S,
     let size = V3::new(32, 32, 48);
     let mut collider = Collider::new(shape, Region::new(pos, pos + size));
 
+    if data.anim_dir(motion.anim_id).is_none() {
+        // It's a special activity, so leave it alone.
+        // TODO: make this less ugly by directly notifying about activity changes
+        return;
+    }
+
     let new_anim = walk_anim(data, motion.anim_id, target_velocity);
 
     // 1) Compute the actual velocity for this tick
@@ -160,7 +166,11 @@ fn walk_anim(data: &Data, old_anim: u16, velocity: V3) -> u16 {
     let speed = velocity.abs().max() / 50;
     let dir_vec = velocity.signum();
     let idx = (3 * (dir_vec.x + 1) + (dir_vec.y + 1)) as usize;
-    let old_dir = data.anim_dir(old_anim).unwrap_or(0);
+    let old_dir = match data.anim_dir(old_anim) {
+        Some(x) => x,
+        // If None, it's a special (non-movement) anim, like "sit".
+        None => return old_anim,
+    };
     let dir = [5, 4, 3, 6, old_dir, 2, 7, 0, 1][idx];
 
     data.physics_anim_table()[speed as usize][dir as usize]

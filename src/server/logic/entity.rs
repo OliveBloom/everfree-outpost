@@ -4,10 +4,11 @@ use libphysics::{TILE_SIZE, CHUNK_SIZE};
 use engine::Engine;
 use input::Action;
 use logic;
-use messages::ClientResponse;
-use physics::UpdateKind;
+use messages::{Messages, ClientResponse};
+use physics::{Physics, UpdateKind};
 use timing::next_tick;
-use vision;
+use vision::{self, Vision};
+use world::{Activity, Motion, World};
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
@@ -32,6 +33,62 @@ pub fn set_appearance(eng: &mut Engine,
         messages.send_client(cid, msg_appear.clone());
         messages.send_client(cid, msg_motion.clone());
     });
+
+    true
+}
+
+
+pub fn set_activity_(eng: &mut Engine,
+                     eid: EntityId,
+                     activity: Activity) -> bool {
+    set_activity(&mut eng.world,
+                 &mut eng.physics,
+                 &mut eng.messages,
+                 &mut eng.vision,
+                 eng.now,
+                 eid,
+                 activity)
+}
+
+pub fn set_activity(world: &mut World,
+                    physics: &mut Physics,
+                    messages: &mut Messages,
+                    vision: &mut Vision,
+                    now: Time,
+                    eid: EntityId,
+                    activity: Activity) -> bool {
+    let mut wf = DummyFragment::new(world);
+    let mut e = unwrap_or!(wf.get_entity_mut(eid), return false);
+
+    info!("{:?}: set activity to {:?} at {}", eid, activity, now);
+
+    if e.activity() == activity {
+        return true;
+    }
+
+    e.set_activity(activity);
+    physics.force_update(eid);
+
+    let send_msg = match activity {
+        Activity::Move => {
+            // Let physics handle the message.  Otherwise we'll just send one made-up motion
+            // followed by another correct one.
+            false
+        },
+        Activity::Special(anim, _interruptible) => {
+            let pos = e.pos(now);
+            e.set_motion(Motion::stationary(pos, now));
+            e.set_anim(anim);
+            true
+        },
+    };
+
+    if send_msg {
+        let msg = logic::vision::entity_motion_message(e.borrow());
+        vision.entity_update(eid, |cid| {
+            messages.send_client(cid, msg.clone());
+        });
+    }
 
     true
 }

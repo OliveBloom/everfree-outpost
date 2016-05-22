@@ -2,12 +2,13 @@ use types::*;
 use libphysics::{TILE_SIZE, CHUNK_SIZE};
 
 use engine::Engine;
-use input::Action;
+use input::{Action, InputBits, INPUT_DIR_MASK};
 use logic;
 use messages::ClientResponse;
 use physics::UpdateKind;
 use timing::next_tick;
 use vision;
+use world::Activity;
 use world::object::*;
 
 
@@ -30,11 +31,26 @@ pub fn tick(eng: &mut Engine) {
     }
 
     for (cid, (input, count)) in eng.input.inputs() {
-        if let Some(c) = eng.world.get_client(cid) {
+        let opt_eid = if let Some(c) = eng.world.get_client(cid) {
             if let Some(e) = c.pawn() {
                 eng.physics.set_target_velocity(e.id(), input.to_velocity());
             }
             eng.messages.send_client(cid, ClientResponse::ProcessedInputs(now, count));
+            c.pawn_id()
+        } else {
+            None
+        };
+
+        if let Some(eid) = opt_eid {
+            if input & INPUT_DIR_MASK != InputBits::empty() {
+                logic::entity::set_activity(&mut eng.world,
+                                            &mut eng.physics,
+                                            &mut eng.messages,
+                                            &mut eng.vision,
+                                            eng.now,
+                                            eid,
+                                            Activity::Move);
+            }
         }
     }
 
