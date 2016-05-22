@@ -1,6 +1,6 @@
 use core::cmp;
 
-use v3::{V3, V2, Vn, Axis, scalar, Region};
+use v3::{self, V3, V2, Vn, Axis, scalar, Region};
 
 use super::{Shape, ShapeSource};
 use super::{TILE_SIZE, TILE_MASK, CHUNK_SIZE};
@@ -59,11 +59,9 @@ bitflags! {
 /// Main boundary passability function.  `bounds` should describe a border between grid cells,
 /// having size zero along `axis`.  Returns true if the boundary described by `bounds` is
 /// continuous.
-// TODO: add flag to consider floating obstacles
 fn check_boundary<S: ShapeSource>(s: &S,
                                   bounds: Region<V3>,
-                                  //(axis, dir): (Axis, bool)) -> bool {
-                                  axis: Axis) -> bool {
+                                  (axis, dir): (Axis, bool)) -> bool {
     assert!(bounds.min.get(axis) % TILE_SIZE == 0,
             "bounds = {:?} does not lie on a cell boundary", bounds);
     assert!(bounds.size().get(axis) == 0);
@@ -80,6 +78,21 @@ fn check_boundary<S: ShapeSource>(s: &S,
     let bounds = Region::new(bounds.min.with_z(bounds.max.z - 1),
                              bounds.max);
 
+    // Extra vectors for checking perpendicular edges.
+    //      | | | |     <- these ones
+    //     ---------
+    // `bounds` covers the tiles on the `-` side of the boundary in question.  `perp_offset` gives
+    // the offset to the region where perpendicular edges should be checked (either 0 or 1 along
+    // `axis`).  `perp_sideways` gives the offset to the cell on the other side of one of those
+    // perpendicular boundaries (it would be (1, 0) for the example above).
+    let perp_offset = V3::on_axis(axis, (!dir) as i32);
+    let other_axis = match axis {
+        Axis::X => Axis::Y,
+        Axis::Y => Axis::X,
+        Axis::Z => panic!("expected Axis::X or Axis::Y"),
+    };
+    let perp_sideways = V3::on_axis(other_axis, 1);
+
     for p in bounds.points() {
         let (a, za) = s.get_shape_below(p);
         let (b, zb) = s.get_shape_below(p + V3::on_axis(axis, 1));
@@ -88,10 +101,17 @@ fn check_boundary<S: ShapeSource>(s: &S,
             return false;
         }
 
-        // TODO: also check boundary_match for all the perpendicular connecting edges
-        //
-        //  | | | |     <- these ones
-        // ---------
+        if p != bounds.min {
+            let p2 = p + perp_offset;
+            let p1 = p2 - perp_sideways;
+
+            let (a, za) = s.get_shape_below(p1);
+            let (b, zb) = s.get_shape_below(p2);
+
+            if !boundary_match(a, za, b, zb, other_axis) {
+                return false;
+            }
+        }
     }
 
     true
@@ -150,7 +170,7 @@ fn calc_planar_velocity<S: ShapeSource>(s: &S,
         let x_dir = target.x < 0;
         let flat_x = Region::new(bounds.min.with_x(corner.x),
                                  bounds.max.with_x(corner.x));
-        if !check_boundary(s, flat_x, Axis::X) {
+        if !check_boundary(s, flat_x, (Axis::X, x_dir)) {
             flags.insert(if vx > 0 { SLIDE_X_POS } else { SLIDE_X_NEG });
             vx = 0;
         }
@@ -160,7 +180,7 @@ fn calc_planar_velocity<S: ShapeSource>(s: &S,
         let y_dir = target.y < 0;
         let flat_y = Region::new(bounds.min.with_y(corner.y),
                                  bounds.max.with_y(corner.y));
-        if !check_boundary(s, flat_y, Axis::Y) {
+        if !check_boundary(s, flat_y, (Axis::Y, y_dir)) {
             flags.insert(if vy > 0 { SLIDE_Y_POS } else { SLIDE_Y_NEG });
             vy = 0;
         }
@@ -326,7 +346,7 @@ fn walk<S: ShapeSource>(s: &S,
         if overflowed.x != 0 && corner.x & TILE_MASK == 0 {
             let boundary = Region::new(bounds.min.with_x(corner.x),
                                        bounds.max.with_x(corner.x));
-            if !check_boundary(s, boundary, Axis::X) {
+            if !check_boundary(s, boundary, (Axis::X, dir.x < 0)) {
                 break;
             }
         }
@@ -334,7 +354,7 @@ fn walk<S: ShapeSource>(s: &S,
         if overflowed.y != 0 && corner.y & TILE_MASK == 0 {
             let boundary = Region::new(bounds.min.with_y(corner.y),
                                        bounds.max.with_y(corner.y));
-            if !check_boundary(s, boundary, Axis::Y) {
+            if !check_boundary(s, boundary, (Axis::Y, dir.y < 0)) {
                 break;
             }
         }
@@ -356,7 +376,7 @@ fn walk<S: ShapeSource>(s: &S,
                                            cur_bounds.max);
                 // Note the lack of `!` on this conditional - we stop if the boundary the entity is
                 // sliding against ever becomes *not* blocked.
-                if check_boundary(s, boundary, Axis::X) {
+                if check_boundary(s, boundary, v3::PosX) {
                     break;
                 }
             }
@@ -364,7 +384,7 @@ fn walk<S: ShapeSource>(s: &S,
             if flags.contains(SLIDE_X_NEG) {
                 let boundary = Region::new(cur_bounds.min,
                                            cur_bounds.max.with_x(cur_bounds.min.x));
-                if check_boundary(s, boundary, Axis::X) {
+                if check_boundary(s, boundary, v3::NegX) {
                     break;
                 }
             }
@@ -372,7 +392,7 @@ fn walk<S: ShapeSource>(s: &S,
             if flags.contains(SLIDE_Y_POS) {
                 let boundary = Region::new(cur_bounds.min.with_y(cur_bounds.max.y),
                                            cur_bounds.max);
-                if check_boundary(s, boundary, Axis::Y) {
+                if check_boundary(s, boundary, v3::PosY) {
                     break;
                 }
             }
@@ -380,7 +400,7 @@ fn walk<S: ShapeSource>(s: &S,
             if flags.contains(SLIDE_Y_NEG) {
                 let boundary = Region::new(cur_bounds.min,
                                            cur_bounds.max.with_y(cur_bounds.min.y));
-                if check_boundary(s, boundary, Axis::Y) {
+                if check_boundary(s, boundary, v3::NegY) {
                     break;
                 }
             }
