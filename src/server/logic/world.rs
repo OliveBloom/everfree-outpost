@@ -341,7 +341,7 @@ fn teleport_entity_internal(mut wf: WorldFragment,
         let e = e.borrow();
         let msg_gone = logic::vision::entity_gone_message(e);
         let msg_appear = logic::vision::entity_appear_message(e);
-        let msg_motion = logic::vision::entity_motion_message(e);
+        let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now);
         let messages = &mut eng.messages;
         if new_plane != old_plane || new_cpos != old_cpos {
             eng.vision.entity_add(eid, new_plane, new_cpos, |cid| {

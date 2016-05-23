@@ -15,7 +15,7 @@ pub fn entity_create(eng: &mut Engine, eid: EntityId) {
     eng.physics.add_entity(eid, eng.world.entity(eid).motion().velocity);
 
     let msg_appear = vision::entity_appear_message(e);
-    let msg_motion = vision::entity_motion_message(e);
+    let msg_motion = vision::entity_motion_message_adjusted(e, eng.now);
     let plane = e.plane_id();
     let cpos = e.pos(eng.now).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
     let messages = &mut eng.messages;
