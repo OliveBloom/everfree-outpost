@@ -33,11 +33,6 @@ pub struct Vertex {
     anim_step: u16,
 
     // 28
-    z_order: u8,
-    _pad0: u8,
-    _pad1: u16,
-
-    // 32
 }
 
 pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
@@ -57,7 +52,7 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
         },
         arrays! {
             // struct 
-            [32] attribs! {
+            [28] attribs! {
                 dest_pos: U16[2] @0,
                 src_pos: U16[2] @4,
                 sheet: U8[1] @8,
@@ -66,7 +61,6 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
                 ref_pos_size: U16[4] @12,
                 // Combine all anim properties as well
                 anim_info: U16[4] @20,
-                z_order: U8[1] @28,
             },
         },
         textures! {
@@ -87,7 +81,7 @@ pub struct GeomGen<'a> {
     now: i32,
     future: i32,
     pawn_id: Option<EntityId>,
-    next: u32,
+    next: Option<u32>,
 }
 
 const LOCAL_PX_MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
@@ -115,7 +109,7 @@ impl<'a> GeomGen<'a> {
             now: now,
             future: future,
             pawn_id: pawn_id,
-            next: 0,
+            next: None,
         }
     }
 
@@ -149,8 +143,14 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
     fn generate(&mut self,
                 buf: &mut [Vertex]) -> (usize, bool) {
         let mut idx = 0;
-        for (&id, e) in self.entities.iter_from(self.next) {
-            self.next = id;
+        let iter = if let Some(next) = self.next {
+            self.entities.iter_z_order_from(next)
+        } else {
+            self.entities.iter_z_order()
+        };
+        for e in iter {
+            let id = e.id;
+            self.next = Some(id);
             let is_pawn = Some(id) == self.pawn_id;
 
             let pos = self.entity_pos(id, e);
@@ -175,7 +175,6 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 
             const HACKY_ADJUSTMENT: u16 = 24;
 
-            let mut z_order = 0;
             for_each_layer(e.appearance, |layer_table_idx, color| {
                 let layer_idx = self.data.pony_layer_table()[layer_table_idx];
                 let l = self.data.sprite_layer(layer_idx);
@@ -211,16 +210,9 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         anim_rate: a.framerate as u16,
                         anim_start: (e.motion.start_time % 55440) as u16,
                         anim_step: g.size.0,
-
-                        z_order: z_order,
-
-                        _pad0: 0,
-                        _pad1: 0,
                     };
                     idx += 1;
                 }
-
-                z_order += 1;
             });
 
             let should_render_name = self.render_names && !is_pawn;
@@ -258,12 +250,6 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                                 anim_rate: 1,
                                 anim_start: 0,
                                 anim_step: 0,
-
-                                // Use the same z-order for all chars, since they don't overlap
-                                z_order: z_order,
-
-                                _pad0: 0,
-                                _pad1: 0,
                             };
                             idx += 1;
                         }

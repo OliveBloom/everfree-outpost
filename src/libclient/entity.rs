@@ -3,7 +3,9 @@ use std::collections::btree_map::{self, BTreeMap};
 use std::collections::VecDeque;
 use std::collections::Bound;
 use std::cmp::Ordering;
+use std::marker::PhantomData;
 use std::ops::Index;
+use std::ptr;
 
 use physics::v3::{V3, scalar};
 
@@ -71,9 +73,13 @@ impl Motion {
 }
 
 pub struct Entity {
+    // Kind of redundant to include `id` here, but we need it to ensure stable sorting.
+    pub id: EntityId,
     pub motion: Motion,
     pub appearance: u32,
     pub name: Option<String>,
+
+    z_next: *mut Entity,
 }
 
 impl Entity {
@@ -104,6 +110,10 @@ impl Update {
 pub struct Entities {
     map: BTreeMap<EntityId, Entity>,
     updates: VecDeque<(EntityId, Update)>,
+
+    /// We maintain an intrusive linked list that presents the entities sorted by `y + z` (in other
+    /// words, rendering depth).
+    z_list: *mut Entity,
 }
 
 impl Entities {
@@ -111,11 +121,18 @@ impl Entities {
         Entities {
             map: BTreeMap::new(),
             updates: VecDeque::new(),
+
+            z_list: ptr::null_mut(),
         }
+    }
+
+    fn invalidate_z_list(&mut self) {
+        self.z_list = ptr::null_mut();
     }
 
     pub fn clear(&mut self) {
         self.map.clear();
+        self.invalidate_z_list();
     }
 
     pub fn insert(&mut self,
@@ -123,13 +140,20 @@ impl Entities {
                   appearance: u32,
                   name: Option<String>) {
         self.map.insert(id, Entity {
+            id: id,
             motion: Motion::new(),
             appearance: appearance,
             name: name,
+            z_next: ptr::null_mut(),
         });
+        // Insertions may cause elements to move around
+        self.invalidate_z_list();
     }
 
     pub fn remove(&mut self, id: EntityId) -> Entity {
+        // Removals may cause elements to move around
+        self.invalidate_z_list();
+
         self.map.remove(&id).unwrap()
     }
 
@@ -160,6 +184,8 @@ impl Entities {
                 e.motion.apply(update);
             }
         }
+
+        // NB: We assume that get_mut never moves elements
     }
 
     pub fn ponyedit_hack(&mut self, id: EntityId, anim: u16) {
@@ -179,6 +205,77 @@ impl Entities {
     pub fn iter_from(&self, min: EntityId) -> RangeIter {
         self.map.range(Bound::Included(&min), Bound::Unbounded)
     }
+
+
+    fn sort_full<F: Fn(&Entity) -> i32>(&mut self, calc_z: F) {
+        let mut items = self.map.values().collect::<Vec<_>>();
+        items.sort_by_key(|&e| (calc_z(e), e.id));
+        unsafe {
+            // The address of the `next` pointer of the previous entry.
+            let mut last_ptr = &mut self.z_list;
+            for e in items {
+                let ptr = e as *const Entity as *mut Entity;
+                *last_ptr = ptr;
+                last_ptr = &mut (*ptr).z_next; 
+            }
+            *last_ptr = ptr::null_mut();
+        }
+    }
+
+    fn check_sorted<F: Fn(&Entity) -> i32>(&mut self, calc_z: F) -> bool {
+        if self.z_list.is_null() {
+            if self.map.len() == 0 {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        unsafe {
+            let mut last_key = (calc_z(&*self.z_list), (*self.z_list).id);
+            let mut cur = (*self.z_list).z_next;
+            while !cur.is_null() {
+                let cur_key = (calc_z(&*cur), (*cur).id);
+                if cur_key < last_key {
+                    return false;
+                }
+                last_key = cur_key;
+                cur = (*cur).z_next;
+            }
+
+            true
+        }
+    }
+
+    pub fn update_z_order<F: Fn(&Entity) -> i32>(&mut self, calc_z: F) {
+        if !self.check_sorted(|e| calc_z(e)) {
+            self.sort_full(calc_z);
+        }
+    }
+
+    pub fn iter_z_order(&self) -> ZOrderIter {
+        ZOrderIter {
+            cur: self.z_list,
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn iter_z_order_from(&self, eid: EntityId) -> ZOrderIter {
+        let ptr = if self.z_list.is_null() {
+            // List is invalid
+            ptr::null_mut()
+        } else if let Some(e) = self.map.get(&eid) {
+            // Every entity should be somewhere in the list
+            e as *const Entity as *mut Entity
+        } else {
+            // Entity not in self.map
+            ptr::null_mut()
+        };
+        ZOrderIter {
+            cur: ptr,
+            _marker: PhantomData,
+        }
+    }
 }
 
 pub type Iter<'a> = btree_map::Iter<'a, EntityId, Entity>;
@@ -188,5 +285,26 @@ impl Index<EntityId> for Entities {
     type Output = Entity;
     fn index(&self, idx: EntityId) -> &Entity {
         &self.map[&idx]
+    }
+}
+
+pub struct ZOrderIter<'a> {
+    cur: *mut Entity,
+    _marker: PhantomData<&'a Entity>,
+}
+
+impl<'a> Iterator for ZOrderIter<'a> {
+    type Item = &'a Entity;
+
+    fn next(&mut self) -> Option<&'a Entity> {
+        if self.cur.is_null() {
+            None
+        } else {
+            unsafe {
+                let e = self.cur;
+                self.cur = (*e).z_next;
+                Some(&*e)
+            }
+        }
     }
 }

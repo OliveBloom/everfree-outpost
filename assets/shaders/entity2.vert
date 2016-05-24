@@ -20,7 +20,6 @@ attribute float sheet;
 attribute vec3 color;
 attribute vec4 ref_pos_size;
 attribute vec4 anim_info;
-attribute float z_order;
 
 varying vec2 tex_coord;
 varying vec3 ref_pos;
@@ -53,18 +52,13 @@ void main(void) {
     // Currently we get confusing results when the player stands near a small
     // light (such as dungeon_exit).  The sprite gets lit as if the light
     // source were higher than it actually is.
-    float ref_v = (ref_pos.y - 32.0) - ref_pos.z;
-    float delta_v = pos.y - ref_v;
-    float pos_z = ref_pos.z - delta_v;
+    //float ref_v = (ref_pos.y - 32.0) - ref_pos.z;
+    //float delta_v = pos.y - ref_v;
+    //float pos_z = ref_pos.z - delta_v;
     vec2 norm_pos = (pos - camera_pos) / camera_size;
-    float norm_depth = (pos_z + 64.0) / (CHUNK_SIZE * TILE_SIZE + 2.0 * 64.0);
-    // Not entirely sure why we need to explictly adjust for z_order here.  It
-    // should happen naturally due to parts later in the buffer overwriting the
-    // earlier ones (depth func = GEQUAL), but that doesn't actually happen -
-    // we get z-fighting artifacts instead.
-    norm_depth += z_order / 32768.0;
+    //float norm_depth = (pos_z + 64.0) / (CHUNK_SIZE * TILE_SIZE + 2.0 * 64.0);
 
-    vec3 adj_pos = vec3(norm_pos, norm_depth) * 2.0 - 1.0;
+    vec3 adj_pos = vec3(norm_pos, 0.0) * 2.0 - 1.0;
     adj_pos.y = -adj_pos.y;
     gl_Position = vec4(adj_pos, 1.0);
 

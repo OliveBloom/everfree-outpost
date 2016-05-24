@@ -522,7 +522,6 @@ impl<GL: Context> Renderer<GL> {
             ])
             .output(&self.framebuffers.sprite)
             .viewport_size(scene.camera_size)
-            //.depth_test()
             .draw(&mut self.shaders.entity);
 
         DrawArgs::<GL>::new()
@@ -612,7 +611,6 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.sprite)
-            .depth_test()
             .draw(&mut self.shaders.entity);
     }
 

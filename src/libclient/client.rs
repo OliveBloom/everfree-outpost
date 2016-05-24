@@ -422,6 +422,22 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.update_structure_light_geometry(&self.data, &self.structures, light_bounds);
 
         // Entities can extend in any direction from their reference point.
+        {
+            let pawn_id = self.pawn_id;
+            let predictor = &self.predictor;
+            self.entities.update_z_order(|e| {
+                let mut pos =
+                    if Some(e.id) == pawn_id {
+                        predictor.motion().pos(future)
+                    } else {
+                        e.pos(scene.now)
+                    };
+                if pos.y < scene.camera_pos.y - CHUNK_SIZE * TILE_SIZE {
+                    pos.y += CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
+                }
+                pos.y - pos.z
+            });
+        }
         let entity_bounds = Region::new(chunk_bounds.min - V2::new(1, 1),
                                         chunk_bounds.max + V2::new(1, 1));
         self.renderer.update_entity_geometry(&self.data,
@@ -556,6 +572,7 @@ impl<'d, P: Platform> Client<'d, P> {
                                None);
 
         self.renderer.update_framebuffers(self.platform.gl(), &scene);
+        self.entities.update_z_order(|e| 0);
         self.renderer.update_entity_geometry(&self.data,
                                              &self.entities,
                                              &self.predictor,
