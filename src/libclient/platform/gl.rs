@@ -49,7 +49,7 @@ pub struct DrawArgs<'a, GL: ?Sized+Context+'a> {
     pub index_array: Option<&'a GL::Buffer>,
     pub range: Option<Range<usize>>,
     pub viewport: Option<Region<V2>>,
-    pub depth_test: bool,
+    pub depth_test: DepthMode,
     pub blend_mode: BlendMode,
 }
 
@@ -63,7 +63,7 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
             index_array: None,
             range: None,
             viewport: None,
-            depth_test: false,
+            depth_test: DepthMode::Disable,
             blend_mode: BlendMode::None,
         }
     }
@@ -109,8 +109,8 @@ impl<'a, GL: Context> DrawArgs<'a, GL> {
         self
     }
 
-    pub fn depth_test(&mut self) -> &mut Self {
-        self.depth_test = true;
+    pub fn depth_test(&mut self, mode: DepthMode) -> &mut Self {
+        self.depth_test = mode;
         self
     }
 
@@ -129,6 +129,13 @@ pub enum BlendMode {
     None = 0,
     Alpha = 1,
     Add = 2,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DepthMode {
+    Disable = 0,
+    GEqual = 1,
+    Always = 2,
 }
 
 

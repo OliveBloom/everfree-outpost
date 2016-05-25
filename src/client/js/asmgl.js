@@ -416,13 +416,20 @@ AsmGl.prototype.clear = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 };
 
-AsmGl.prototype.setDepthTest = function(enable) {
+AsmGl.prototype.setDepthTest = function(mode) {
     var gl = this.gl;
-    if (enable) {
-        gl.enable(gl.DEPTH_TEST);
-        gl.depthFunc(gl.GEQUAL);
-    } else {
-        gl.disable(gl.DEPTH_TEST);
+    switch (mode) {
+        case 0:
+            gl.disable(gl.DEPTH_TEST);
+            break;
+        case 1:
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.GEQUAL);
+            break;
+        case 2:
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.ALWAYS);
+            break;
     }
 };
 

@@ -14,7 +14,7 @@ use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
-use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, Feature, FeatureStatus};
+use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, DepthMode, Feature, FeatureStatus};
 use predict::Predictor;
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
@@ -545,7 +545,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.world_and_meta)
-            .depth_test()
+            .depth_test(DepthMode::GEqual)
             .draw(&mut self.shaders.terrain);
     }
 
@@ -564,7 +564,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.world_and_meta)
-            .depth_test()
+            .depth_test(DepthMode::GEqual)
             .draw(&mut self.shaders.structure);
     }
 
@@ -583,7 +583,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.shadow)
-            .depth_test()
+            .depth_test(DepthMode::GEqual)
             .draw(&mut self.shaders.structure_shadow);
 
         // Apply shadows
@@ -611,6 +611,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.textures.cavern_map,
             ])
             .output(&self.framebuffers.sprite)
+            .depth_test(DepthMode::Always)
             .draw(&mut self.shaders.entity);
     }
 

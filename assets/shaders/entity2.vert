@@ -48,17 +48,13 @@ void main(void) {
         pos.y -= WRAP_STEP;
     }
 
-    // TODO: hacky adjustment, somewhat matching HACKY_ADJUSTMENT in graphics/entitiy.rs
-    // Currently we get confusing results when the player stands near a small
-    // light (such as dungeon_exit).  The sprite gets lit as if the light
-    // source were higher than it actually is.
-    //float ref_v = (ref_pos.y - 32.0) - ref_pos.z;
-    //float delta_v = pos.y - ref_v;
-    //float pos_z = ref_pos.z - delta_v;
+    float ref_v = ref_pos.y - ref_pos.z;
+    float delta_v = pos.y - ref_v;
+    float pos_z = ref_pos.z - delta_v;
     vec2 norm_pos = (pos - camera_pos) / camera_size;
-    //float norm_depth = (pos_z + 64.0) / (CHUNK_SIZE * TILE_SIZE + 2.0 * 64.0);
+    float norm_depth = (pos_z + 64.0) / (CHUNK_SIZE * TILE_SIZE + 2.0 * 64.0);
 
-    vec3 adj_pos = vec3(norm_pos, 0.0) * 2.0 - 1.0;
+    vec3 adj_pos = vec3(norm_pos, norm_depth) * 2.0 - 1.0;
     adj_pos.y = -adj_pos.y;
     gl_Position = vec4(adj_pos, 1.0);
 
