@@ -84,6 +84,23 @@ var ability_inv;
 // Top-level initialization function
 
 function init() {
+
+    checkBrowser(dialog, function() {
+        loadAssets(function() {
+        });
+    });
+}
+
+//document.addEventListener('DOMContentLoaded', init);
+
+
+
+/** @constructor */
+function OutpostClient() {
+    this._init();
+}
+
+OutpostClient.prototype._init = function() {
     // Set up error_list first to catch errors in other parts of init.
     error_list = new ErrorList();
     error_list.attach(window);
@@ -122,91 +139,50 @@ function init() {
     ability_inv = null;
 
 
-    buildUI();
+    //buildUI();    // FIXME
+};
 
-    checkBrowser(dialog, function() {
-        loadAssets(function() {
-            asm_client.initClient(canvas.ctx, assets);
+OutpostClient.prototype.loadData = function(blob, next) {
+    var this_ = this;
+    loadPack(blob, function(assets_) {
+        assets = assets_;
+        //assets['server_info'] = server_info;  // FIXME
 
-            // Don't handle any input until the client is inited.
-            keyboard.attach(document);
-            input.handlers.push(new AsmClientInput(asm_client));
+        var items = assets['item_defs'];
+        for (var i = 0; i < items.length; ++i) {
+            ItemDef.register(i, items[i]);
+        }
 
-            // This should only happen after client init.
-            function doResize() {
-                handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
-                asm_client.resizeWindow(window.innerWidth, window.innerHeight);
-            }
-            window.addEventListener('resize', doResize);
-            doResize();
+        var recipes = assets['recipe_defs'];
+        for (var i = 0; i < recipes.length; ++i) {
+            RecipeDef.register(i, recipes[i]);
+        }
 
+        var css = '.item-icon {' +
+            'background-image: url("' + assets['items'] + '");' +
+        '}';
+        util.element('style', ['type=text/css', 'text=' + css], document.head);
 
-            var info = assets['server_info'];
-            openConn(info, function() {
-                timing = new Timing(conn);
-                timing.scheduleUpdates(5, 30);
-                inv_tracker = new InventoryTracker(conn, asm_client);
-                asm_client.conn = conn;
-
-                maybeRegister(info, function() {
-                    conn.sendLogin(Config.login_name.get(), Config.login_secret.get());
-
-                    // Show "Loading World..." banner.
-                    handleSyncStatus(net.SYNC_LOADING);
-                    canvas.start();
-                });
-            });
-        });
+        next();
     });
-}
+};
 
-document.addEventListener('DOMContentLoaded', init);
+OutpostClient.prototype.handoff = function(conn) {
+    asm_client.initClient(canvas.ctx, assets);
 
+    // Don't handle any input until the client is inited.
+    keyboard.attach(document);
+    input.handlers.push(new AsmClientInput(asm_client));
 
-// Major initialization steps.
-
-function loadAssets(next) {
-    loader.loadJson('server.json', function(server_info) {
-        // TODO: remove this hack since it prevents all caching
-        loader.loadPack('outpost.pack?' + Date.now(), function(loaded, total) {
-            banner.update('Loading... (' + (loaded >> 10)+ 'k / ' + (total >> 10) + 'k)', loaded / total);
-        }, function(assets_) {
-            assets = assets_;
-            assets['server_info'] = server_info;
-
-            var items = assets['item_defs'];
-            for (var i = 0; i < items.length; ++i) {
-                ItemDef.register(i, items[i]);
-            }
-
-            var recipes = assets['recipe_defs'];
-            for (var i = 0; i < recipes.length; ++i) {
-                RecipeDef.register(i, recipes[i]);
-            }
-
-            var css = '.item-icon {' +
-                'background-image: url("' + assets['items'] + '");' +
-            '}';
-            util.element('style', ['type=text/css', 'text=' + css], document.head);
-
-            next();
-        });
-    });
-}
-
-function openConn(info, next) {
-    var url = info['url'];
-    if (url == null) {
-        var elt = util.element('div', []);
-        elt.innerHTML = info['message'];
-        var w = new widget.Template('server-offline', {'msg': elt});
-        var f = new widget.Form(w);
-        f.oncancel = function() {};
-        dialog.show(f);
-        return;
+    // This should only happen after client init.
+    function doResize() {
+        handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
+        asm_client.resizeWindow(window.innerWidth, window.innerHeight);
     }
+    window.addEventListener('resize', doResize);
+    doResize();
 
-    banner.update('Connecting to server...', 0);
+
     conn = new net.Connection(url);
     conn.onOpen = next;
     conn.onClose = handleClose;
@@ -229,6 +205,35 @@ function openConn(info, next) {
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
     conn.onSyncStatus = handleSyncStatus;
     conn.onStructureReplace = handleStructureReplace;
+
+    timing = new Timing(conn);
+    timing.scheduleUpdates(5, 30);
+    inv_tracker = new InventoryTracker(conn, asm_client);
+    asm_client.conn = conn;
+
+    console.log('handoff complete');
+
+    /*
+    maybeRegister(info, function() {
+        conn.sendLogin(Config.login_name.get(), Config.login_secret.get());
+
+        // Show "Loading World..." banner.
+        handleSyncStatus(net.SYNC_LOADING);
+        canvas.start();
+    });
+    */
+};
+
+// Major initialization steps.
+
+function loadAssets(next) {
+    loader.loadJson('server.json', function(server_info) {
+        // TODO: remove this hack since it prevents all caching
+        loader.loadPack('outpost.pack?' + Date.now(), function(loaded, total) {
+            banner.update('Loading... (' + (loaded >> 10)+ 'k / ' + (total >> 10) + 'k)', loaded / total);
+        }, function(assets_) {
+        });
+    });
 }
 
 function maybeRegister(info, next) {

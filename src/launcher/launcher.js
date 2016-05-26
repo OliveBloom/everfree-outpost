@@ -365,20 +365,44 @@ Launcher.prototype._addCode = function(path, obj, next) {
 };
 
 Launcher.prototype._finishLoadCode = function() {
+    this.client = new window.OutpostClient();
     this._loadData();
 };
 
 //
-// 3 - download code
+// 3 - download data
 //
 
 Launcher.prototype._loadData = function() {
     if (this.error) {
         return;
     }
+    var this_ = this;
 
     this.current = 3;
-    console.log('loadData');
+
+    this.cur_bytes = 0;
+    this.total_bytes = 0;
+    this._xhr(new URL('outpost.pack', this.server_url).href, 'blob', {
+        progress: function(evt) {
+            this_.cur_bytes = evt.loaded;
+            this_.total_bytes = evt.lengthComputable ? evt.total : 0;
+        },
+        load: function(evt) {
+            this_._processData(evt.target.response);
+        },
+        error: function(evt) {
+            this_._error(evt.target.statusText || 'Connection error');
+        },
+    });
+};
+
+Launcher.prototype._processData = function(blob) {
+    console.log('loaded', blob);
+    var this_ = this;
+    this.client.loadData(blob, function() {
+        console.log('ready for handoff');
+    });
 };
 
 

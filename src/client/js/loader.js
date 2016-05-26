@@ -1,49 +1,9 @@
 var util = require('util/misc');
 
-function loadJson(url, next) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-
-    xhr.responseType = 'json';
-
-    var this_ = this;
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == XMLHttpRequest.DONE) {
-            next(xhr.response);
-        }
-    };
-
-    xhr.send();
-}
-exports.loadJson = loadJson;
-
-function loadPack(url, progress, next) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-
-    xhr.responseType = 'blob';
-
-    var this_ = this;
-    xhr.addEventListener("progress", function(evt) {
-        if (!evt.lengthComputable) {
-            return;
-        }
-        progress(evt.loaded, evt.total);
-    }, false);
-    xhr.addEventListener("load", function() {
-        handlePackLoad(xhr.response, next);
-    }, false);
-    xhr.addEventListener("error", function() {
-        throw ("Error loading data: " + xhr.statusText);
-    }, false);
-
-    xhr.send();
-}
-exports.loadPack = loadPack;
-
-function handlePackLoad(blob, next) {
+function loadPack(blob, next) {
     new PackReader(blob, next);
 }
+exports.loadPack = loadPack;
 
 /** @constructor */
 function PackReader(blob, next) {
