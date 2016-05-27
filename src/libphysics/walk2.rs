@@ -340,6 +340,7 @@ fn walk<S: ShapeSource>(s: &S,
         // Check if there is any reason for this move to be prevented.
 
         let corner = pos + corner_offset;
+        let bounds = Region::new(pos, pos + size);
 
         // This check handles the "standard" reason for stopping, running into a non-walkable cell
         // boundary.  Such collisions can only happen when passing through a cell boundary.
