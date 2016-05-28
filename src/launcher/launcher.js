@@ -44,12 +44,8 @@ function Launcher(server_url) {
     this.error = null;
 
     this.cur_files = null;
-    this.total_files = null;
-
     this.cur_bytes = null;          // downloaded bytes of the current file
-    this.total_bytes = null;        // total bytes of the current file
-    this.finished_bytes = null;     // donloaded bytes of finished files
-    this.all_bytes = null;          // total bytes of all files
+    this.completed_bytes = null;    // donloaded bytes of finished files
 
     // 0 - connect to server
     this.server_url = new URL(server_url);
@@ -63,13 +59,87 @@ function Launcher(server_url) {
 
     // 2 - load code
     this.client = null;
+    this.code_files = null;
+    this.code_bytes = null;
 
     // 3 - load data
-    this.data_array = null;
+    this.data_bytes = null;
 
     // 4 - load world
     // (no state here, only in the client)
 }
+
+
+function kb(b) {
+    return (b / 1024)|0;
+}
+
+function fileProgress(cur, total) {
+    if (total != null) {
+        return cur + '/' + total + ' files';
+    } else {
+        return cur + ' files';
+    }
+}
+
+function byteProgress(cur, total) {
+    if (total != null) {
+        var pct = (cur / total * 100)|0;
+        return kb(cur) + 'k/' + kb(total) + 'k bytes (' + pct + '%)';
+    } else {
+        return kb(cur) + 'k bytes';
+    }
+}
+
+Launcher.prototype.getMessage = function(idx) {
+    switch (idx) {
+        case 0: 
+            if (this.current < idx) {
+                return 'Connect to server';
+            } else if (this.current > idx) {
+                return 'Connected to server (version ' + this.server_info['version'] + ')';
+            }
+
+            if (!this.server_info) return 'Retrieving server info';
+            if (!this.version_info) return 'Retrieving version info';
+            return 'Connecting to server';
+
+        case 1:
+            if (this.current < idx) {
+                return 'Log in';
+            } else if (this.current > idx) {
+                return 'Logged in as ' + this.login_name;
+            }
+
+            return 'Logging in';
+
+        case 2:
+            if (this.current < idx) {
+                return 'Load code';
+            } else if (this.current > idx) {
+                return 'Loaded code: ' + this.code_files + ' files, ' +
+                    kb(this.code_bytes) + 'k bytes';
+            }
+
+            return 'Loading code: ' +
+                fileProgress(this.cur_files, this.code_files) + ', ' +
+                byteProgress(this.cur_bytes + this.completed_bytes, this.code_bytes);
+
+        case 3:
+            if (this.current < idx) {
+                return 'Load data';
+            } else if (this.current > idx) {
+                return 'Loaded data: ' + kb(this.data_bytes) + 'k bytes';
+            }
+
+            return 'Loading data: ' +
+                byteProgress(this.cur_bytes, this.data_bytes);
+
+        default:
+            return '???';
+    }
+};
+
 
 Launcher.prototype.start = function() {
     // TODO: set up canvas
@@ -277,7 +347,7 @@ Launcher.prototype._authResult = function(flags, result) {
         return;
     }
 
-    this.login_name = result;
+    this.login_name = s;
 
     this._loadCode();
 };
@@ -300,13 +370,11 @@ Launcher.prototype._loadCode = function() {
     document.body.appendChild(base);
 
     this.cur_files = 0;
-    this.total_files = this.version_info['files'].length;
+    this.code_files = this.version_info['files'].length;
 
     this.cur_bytes = 0;
-    this.total_bytes = 0;
-
     this.finished_bytes = 0;
-    this.all_bytes = this.version_info['total_size'];
+    this.code_bytes = this.version_info['total_size'];
 
     // Hacky module implementation
     window.exports = {};
@@ -321,22 +389,20 @@ Launcher.prototype._loadCodeIndexed = function(idx) {
     }
     var this_ = this;
 
-    if (idx >= this.total_files) {
+    if (idx >= this.code_files) {
         this._finishLoadCode();
         return;
     }
 
     var path = this.version_info['files'][idx];
     this.cur_bytes = 0;
-    this.total_bytes = 0;
     var type = path.endsWith('.html') ? 'document' : 'blob';
     this._xhr(new URL(path, this.base_url).href, type, {
         progress: function(evt) {
             this_.cur_bytes = evt.loaded;
-            this_.total_bytes = evt.lengthComputable ? evt.total : 0;
         },
         load: function(evt) {
-            this_.finished_bytes += this_.total_bytes;
+            this_.completed_bytes += evt.loaded;
             ++this_.cur_files;
             this_._addCode(path, evt.target.response, function() {
                 this_._loadCodeIndexed(idx + 1);
@@ -382,11 +448,11 @@ Launcher.prototype._loadData = function() {
     this.current = 3;
 
     this.cur_bytes = 0;
-    this.total_bytes = 0;
+    this.data_bytes = null;
     this._xhr(new URL('outpost.pack', this.server_url).href, 'blob', {
         progress: function(evt) {
             this_.cur_bytes = evt.loaded;
-            this_.total_bytes = evt.lengthComputable ? evt.total : 0;
+            this_.data_bytes = evt.lengthComputable ? evt.total : null;
         },
         load: function(evt) {
             this_._processData(evt.target.response);
@@ -408,3 +474,13 @@ Launcher.prototype._processData = function(blob) {
 
 window.L = new Launcher('http://localhost:8889/');
 window.L.start();
+
+setInterval(function() {
+    document.getElementById('status').innerHTML =
+        window.L.getMessage(0) + '<br>' +
+        window.L.getMessage(1) + '<br>' +
+        window.L.getMessage(2) + '<br>' +
+        window.L.getMessage(3) + '<br>' +
+        window.L.error;
+    //console.log(    document.getElementById('status').innerHTML);
+}, 100);
