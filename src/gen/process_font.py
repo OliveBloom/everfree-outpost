@@ -27,6 +27,8 @@ def build_parser():
             help='font color to use in the generated image')
     parser.add_argument('--no-shadow', action='store_true',
             help='don\'t add a drop shadow in the generated image')
+    parser.add_argument('--bold', action='store_true',
+            help='generate a bold font')
 
     parser.add_argument('--font-image-out', metavar='FILE',
             required=True,
@@ -101,7 +103,7 @@ def adjust_palette(img):
             palette[i * 3 : i * 3 + 3] = [255, 255, 255]
     img.putpalette(palette)
 
-def build_metrics(boxes, margin_x, margin_y):
+def build_metrics(boxes, margin_x, margin_y, bold):
     first_char = min(boxes.keys())
     last_char = max(boxes.keys())
     num_chars = last_char - first_char + 1
@@ -120,7 +122,7 @@ def build_metrics(boxes, margin_x, margin_y):
         xs[code - first_char] = cur_x
         xs2.append(cur_x)
 
-        w = x1 - x0 + margin_x
+        w = x1 - x0 + margin_x + (1 if bold else 0)
         widths[code - first_char] = w
         widths2.append(w)
         cur_x += w
@@ -142,7 +144,7 @@ def build_metrics(boxes, margin_x, margin_y):
             'widths2': widths2,
             }
 
-def build_mask(src, code_boxes, metrics):
+def build_mask(src, code_boxes, metrics, bold):
     out_w = metrics['xs2'][-1] + metrics['widths2'][-1]
     out_h = metrics['height']
 
@@ -154,6 +156,9 @@ def build_mask(src, code_boxes, metrics):
             x_pos = metrics['xs2'][idx]
             glyph = src.crop(code_boxes[code])
             out.paste(glyph, (x_pos, 0))
+
+            if bold:
+                out.paste(glyph, (x_pos + 1, 0), glyph.convert('L'))
 
     return out
 
@@ -174,8 +179,9 @@ def main():
     boxes = get_glyph_boxes(img)
     code_boxes = build_code_boxes(args, boxes)
     adjust_palette(img)
-    metrics = build_metrics(code_boxes, mx, my)
-    mask = build_mask(img, code_boxes, metrics)
+    metrics = build_metrics(code_boxes, mx, my, args.bold)
+    mask = build_mask(img, code_boxes, metrics, args.bold)
+    print(args.bold)
 
     out = Image.new('RGBA', mask.size, (0, 0, 0, 0))
     for offset in offsets:
