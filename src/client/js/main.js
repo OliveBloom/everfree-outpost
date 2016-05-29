@@ -106,10 +106,7 @@ OutpostClient.prototype._init = function() {
     error_list.attach(window);
     document.body.appendChild(error_list.container);
 
-    canvas = new AnimCanvas(frame, 'webgl', [
-            'WEBGL_depth_texture',
-            'WEBGL_draw_buffers',
-    ]);
+    canvas = null;
 
     asm_client = new DynAsm();
 
@@ -123,10 +120,6 @@ OutpostClient.prototype._init = function() {
     music_test = new MusicTest();
 
     input = new Input();
-
-    canvas.canvas.addEventListener('webglcontextlost', function(evt) {
-        throw 'context lost!';
-    });
 
     initMenus();
 
@@ -167,8 +160,15 @@ OutpostClient.prototype.loadData = function(blob, next) {
     });
 };
 
-OutpostClient.prototype.handoff = function(conn) {
-    asm_client.initClient(canvas.ctx, assets);
+OutpostClient.prototype.handoff = function(old_canvas, ws) {
+    canvas = document.createElement('canvas');
+    document.body.replaceChild(canvas, old_canvas);
+
+    canvas.addEventListener('webglcontextlost', function(evt) {
+        throw 'context lost!';
+    });
+
+    asm_client.initClient(canvas.getContext('webgl'), assets);
 
     // Don't handle any input until the client is inited.
     keyboard.attach(document);
@@ -176,15 +176,16 @@ OutpostClient.prototype.handoff = function(conn) {
 
     // This should only happen after client init.
     function doResize() {
-        handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
         asm_client.resizeWindow(window.innerWidth, window.innerHeight);
     }
     window.addEventListener('resize', doResize);
     doResize();
 
 
-    conn = new net.Connection(url);
-    conn.onOpen = next;
+    conn = new net.Connection(ws);
+    //conn.onOpen = next;   // TODO - probably remove?
     conn.onClose = handleClose;
     conn.onInit = handleInit;
     conn.onTerrainChunk = handleTerrainChunk;
@@ -759,7 +760,9 @@ function resetAll() {
 
 // Rendering
 
-function frame(ac, client_now) {
+function frame() {
+    window.requestAnimationFrame(frame);
+
     if (synced != net.SYNC_OK) {
         return;
     }

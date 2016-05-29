@@ -55,14 +55,23 @@ exports.SYNC_RESET = 2;
 exports.SYNC_REFRESH = 3;
 
 /** @constructor */
-function Connection(url) {
+function Connection(x) {
     var this_ = this;
 
-    var socket = new WebSocket(url);
+    var socket;
+    if (typeof x === 'string') {
+        var url = x;
+        socket = new WebSocket(url);
+    } else {
+        socket = x;
+    }
     socket.binaryType = 'arraybuffer';
     socket.onopen = function(evt) { this_._handleOpen(evt); };
     socket.onmessage = function(evt) { this_._handleMessage(evt); };
     socket.onclose = function(evt) { this_._handleClose(evt); };
+    if (socket.readyState == WebSocket.OPEN) {
+        setTimeout(function() { this_._handleOpen(null); }, 0);
+    }
     this.socket = socket;
 
     this._last_kick_reason = null;

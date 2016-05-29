@@ -43,6 +43,8 @@ function Launcher(server_url) {
     this.xhr = null;
     this.error = null;
 
+    this.onload = null;
+
     this.cur_progress = null;
     this.cur_total = null;
     this.completed_progress = null;
@@ -123,9 +125,6 @@ Launcher.prototype.getProgress = function() {
 
 
 Launcher.prototype.start = function() {
-    // TODO: set up canvas
-    // TODO: set up resize handler
-
     this._getServerInfo();
 };
 
@@ -379,11 +378,6 @@ Launcher.prototype._loadData = function() {
 /*
  * TODO
 Launcher.prototype._processData = function(blob) {
-    console.log('loaded', blob);
-    var this_ = this;
-    this.client.loadData(blob, function() {
-        console.log('ready for handoff');
-    });
 };
 */
 
@@ -418,7 +412,7 @@ Launcher.prototype._loadCodeIndexed = function(idx) {
     var this_ = this;
 
     if (idx >= this.version_info['files'].length) {
-        this._finishLoadCode();
+        this._prepareClient();
         return;
     }
 
@@ -464,17 +458,26 @@ Launcher.prototype._addCode = function(path, obj, next) {
     }
 };
 
-Launcher.prototype._finishLoadCode = function() {
+Launcher.prototype._prepareClient = function() {
+    var this_ = this;
+    window.onerror = function(msg, url, line, col, err) {
+        this_.error = msg;
+    };
+
     this.client = new window.OutpostClient();
-    // TODO
-    //this._loadData();
+    this.client.loadData(this.data_blob, function() {
+        console.log('loaded data', this_.onload);
+        if (this_.onload != null) {
+            this_.onload();
+        }
+    });
 };
 
 
 
 /** @constructor */
-function LauncherUI() {
-    this.launcher = null;
+function LauncherUI(launcher) {
+    this.launcher = launcher;
 
     this.img_banner = null;
     this.img_font = null;
@@ -488,6 +491,10 @@ function LauncherUI() {
 
 function autoResize(canvas) {
     function handleResize() {
+        if (canvas.parentNode == null) {
+            window.removeEventListener('resize', handleResize);
+            return;
+        }
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
@@ -531,8 +538,8 @@ LauncherUI.prototype.initCanvas = function() {
     this.canvas.style.position = 'absolute';
     this.canvas.style.top = '0px';
     this.canvas.style.left = '0px';
-    autoResize(this.canvas);
     document.body.insertBefore(this.canvas, document.body.firstChild);
+    autoResize(this.canvas);
 
     var i = document.getElementById('i');
     i.parentNode.removeChild(i);
@@ -657,22 +664,19 @@ LauncherUI.prototype.renderFrame = function() {
 
 
 
+function launch(url) {
+    var l = new Launcher(url);
+    var ui = new LauncherUI(l);
 
-window.L = new Launcher('http://localhost:8889/');
-window.L.start();
+    l.onload = function() {
+        delete window['L'];
+        window['C'] = l.client;
+        l.client.handoff(ui.canvas, l.conn);
+    };
 
-window.L_UI = new LauncherUI();
-window.L_UI.launcher = window.L;
-window.L_UI.init();
+    ui.init();
+    l.start();
+    window['L'] = l;
+}
 
-/*
-setInterval(function() {
-    document.getElementById('status').innerHTML =
-        window.L.getMessage(0) + '<br>' +
-        window.L.getMessage(1) + '<br>' +
-        window.L.getMessage(2) + '<br>' +
-        window.L.getMessage(3) + '<br>' +
-        window.L.error;
-    //console.log(    document.getElementById('status').innerHTML);
-}, 100);
-*/
+launch('http://localhost:8889/');
