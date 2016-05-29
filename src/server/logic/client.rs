@@ -15,6 +15,7 @@
 use types::*;
 
 use chunks;
+use engine::Engine;
 use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
@@ -28,6 +29,67 @@ use vision;
 
 const DAY_NIGHT_CYCLE_TICKS: u32 = 24_000;
 const DAY_NIGHT_CYCLE_MS: u32 = 24 * 60 * 1000;
+
+pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
+    let (flags, name) = unwrap!(eng.extra.wire_info.remove(&wire_id));
+
+    // Load or create the client bundle.
+    let bundle =
+        if let Some(mut file) = eng.storage.open_client_file(&name) {
+            let b = try!(bundle::read_bundle(&mut file));
+            if b.clients.len() != 1 {
+                fail!("expected exactly one client in bundle");
+            }
+            b
+        } else {
+            let mut b = Builder::new(eng.data);
+            b.client().name(&name);
+            b.finish()
+        };
+
+
+    // Load the plane and nearby chunks
+    let (stable_pid, pos) = if let Some(eid) = bundle.clients[0].pawn {
+        let e = unwrap!(bundle.entities.get(eid.unwrap() as usize));
+        // TODO: stop entity motions on logout
+        // The current scheme allows players to pass through walls if they're walking at logout.
+        (e.stable_plane, e.motion.pos(eng.now))
+    } else {
+        // The Client has no pawn, so center the view on the spawn point instead.
+        (STABLE_PLANE_FOREST, scalar(0))
+    };
+
+    let region = vision::vision_region(pos);
+    let pid = chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(), stable_pid);
+    for cpos in region.points() {
+        logic::chunks::load_chunk(eng.as_ref(), pid, cpos);
+    }
+
+
+    // Import the client bundle.
+    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let cid = importer.import(&ClientId(0));
+    let opt_eid = importer.import(&bundle.clients[0].pawn);
+
+
+    // Set up the client to receive messages
+    info!("{:?}: logged in as {} ({:?})", wire_id, name, cid);
+    eng.messages.add_client(cid, wire_id, &name);
+
+    // Send the client's startup messages.
+    let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
+    eng.messages.send_client(cid, ClientResponse::Init(opt_eid,
+                                                             eng.now,
+                                                             cycle_base,
+                                                             DAY_NIGHT_CYCLE_MS));
+
+    vision::Fragment::add_client(&mut eng.as_ref().as_vision_fragment(), cid, pid, region);
+    //warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
+    eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
+
+
+    Ok(cid)
+}
 
 pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
     let mut b = Builder::new(eng.data());

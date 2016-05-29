@@ -229,7 +229,7 @@ impl<'d> Engine<'d> {
 
             Ready => {
                 info!("wire ready: {:?}", wire_id);
-                // TODO
+                warn_on_err!(logic::client::ready(self, wire_id));
             },
 
             BadRequest => {

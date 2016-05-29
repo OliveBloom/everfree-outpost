@@ -214,6 +214,9 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
     inv_tracker = new InventoryTracker(conn, asm_client);
     asm_client.conn = conn;
 
+    // Start the requestAnimationFrame loop
+    frame();
+
     console.log('handoff complete');
 
     /*
