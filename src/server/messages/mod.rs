@@ -42,8 +42,7 @@ pub enum ControlEvent {
 }
 
 pub enum WireEvent {
-    Login(String, Secret),
-    Register(String, Secret, u32),
+    Ready,
     BadRequest,
 }
 
@@ -251,10 +250,8 @@ impl Messages {
                 self.send_raw(wire_id, Response::Pong(cookie, now.to_local()));
                 None
             },
-            Request::Login(name, secret) =>
-                Some(Event::Wire(wire_id, WireEvent::Login(name, secret))),
-            Request::Register(name, secret, appearance) =>
-                Some(Event::Wire(wire_id, WireEvent::Register(name, secret, appearance))),
+            Request::Ready =>
+                Some(Event::Wire(wire_id, WireEvent::Ready)),
             _ => {
                 warn!("bad pre-login request from {:?}: {:?}", wire_id, req);
                 Some(Event::Wire(wire_id, WireEvent::BadRequest))

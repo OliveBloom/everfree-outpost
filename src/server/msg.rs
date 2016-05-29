@@ -59,6 +59,7 @@ mod op {
         MoveItem = 0x0013,
         AuthResponse = 0x0014,
         CreateCharacter = 0x0015,
+        Ready = 0x0016,
 
         // Deprecated requests
         GetTerrain = 0x0001,
@@ -125,11 +126,9 @@ pub enum Request {
     // Ordinary requests
     Ping(u16),
     Input(LocalTime, u16),
-    Login(String, [u32; 4]),
     UnsubscribeInventory(InventoryId),
     CraftRecipe(StructureId, InventoryId, RecipeId, u16),
     Chat(String),
-    Register(String, [u32; 4], u32),
     Interact(LocalTime),
     UseItem(LocalTime, ItemId),
     UseAbility(LocalTime, ItemId),
@@ -137,6 +136,7 @@ pub enum Request {
     UseItemWithArgs(LocalTime, ItemId, ExtraArg),
     UseAbilityWithArgs(LocalTime, ItemId, ExtraArg),
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
+    Ready,
 
     // Control messages
     AddClient(WireId, u16, String),
@@ -160,11 +160,6 @@ impl Request {
                 let (a, b): (LocalTime, u16) = try!(wr.read());
                 Input(a, b)
             },
-            op::Login => {
-                // Shuffle order since the String must be last on the wire
-                let (b, a) = try!(wr.read());
-                Login(a, b)
-            },
             op::UnsubscribeInventory => {
                 let a = try!(wr.read());
                 UnsubscribeInventory(a)
@@ -176,11 +171,6 @@ impl Request {
             op::Chat => {
                 let a = try!(wr.read());
                 Chat(a)
-            },
-            op::Register => {
-                // Shuffle order since the String must be last on the wire
-                let (b, c, a) = try!(wr.read());
-                Register(a, b, c)
             },
             op::Interact => {
                 let a = try!(wr.read());
@@ -209,6 +199,9 @@ impl Request {
             op::MoveItem => {
                 let (a, b, c, d, e) = try!(wr.read());
                 MoveItem(a, b, c, d, e)
+            },
+            op::Ready => {
+                Ready
             },
 
             op::AddClient => {

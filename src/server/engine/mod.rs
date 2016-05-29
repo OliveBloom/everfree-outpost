@@ -156,6 +156,7 @@ impl<'d> Engine<'d> {
         match evt {
             OpenWire(wire_id, flags, name) => {
                 info!("OpenWire: {:?}, {:x}, {}", wire_id, flags, name);
+                self.extra.wire_info.insert(wire_id, (flags, name));
             },
 
             CloseWire(wire_id, opt_cid) => {
@@ -163,16 +164,11 @@ impl<'d> Engine<'d> {
                     self.cleanup_client(cid);
                 }
                 self.messages.send_control(WireClosed(wire_id));
+                self.extra.wire_info.remove(&wire_id);
             },
 
             ReplCommand(cookie, msg) => {
-                // TODO: remove
-                let mut msg = &msg as &str;
-                if msg.starts_with("@") {
-                    msg = &msg[1..];
-                }
-
-                let result = self.script_hooks.call_eval(self.as_ref(), msg);
+                let result = self.script_hooks.call_eval(self.as_ref(), &msg);
                 let result_str = match result {
                     Ok(s) => {
                         let mut s = s;
@@ -206,6 +202,7 @@ impl<'d> Engine<'d> {
         use messages::WireEvent::*;
         use messages::WireResponse::*;
         match evt {
+            /*
             Login(name, secret) => {
                 match self.auth.login(&*name, &secret) {
                     Ok(true) => {
@@ -227,6 +224,12 @@ impl<'d> Engine<'d> {
             Register(name, secret, appearance) => {
                 let (code, msg) = self.do_register(wire_id, name, secret, appearance);
                 self.messages.send_wire(wire_id, RegisterResult(code, msg));
+            },
+            */
+
+            Ready => {
+                info!("wire ready: {:?}", wire_id);
+                // TODO
             },
 
             BadRequest => {
@@ -308,12 +311,14 @@ impl<'d> Engine<'d> {
         self.messages.send_client(cid, ClientResponse::KickReason(msg.into()));
         self.cleanup_client(cid);
         self.messages.send_control(ControlResponse::WireClosed(wire_id));
+        // If there's a Client object, the wire_info should already have been removed.
     }
 
     pub fn kick_wire<'a, S: Into<String>>(&mut self, wire_id: WireId, msg: S) {
         self.messages.send_wire(wire_id, WireResponse::KickReason(msg.into()));
         self.cleanup_wire(wire_id);
         self.messages.send_control(ControlResponse::WireClosed(wire_id));
+        self.extra.wire_info.remove(&wire_id);
     }
 
 

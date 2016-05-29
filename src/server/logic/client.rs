@@ -1,3 +1,17 @@
+//! The client login flow looks like this:
+//!
+//! (1) A new wire (connection) appears.  Initially, the game client is not ready for any messages,
+//!     so don't send anything.  Also, don't create or load a Client object yet, so the character
+//!     doesn't appear to other users while the client is still in the loading screen.
+//!
+//! (2) The game client indicates readiness.  It's now okay to create or load the Client.
+//!
+//! (3) If the Client has no pawn, the player needs to complete character customization.  For
+//!     vision purposes, show the area around the spawn point.
+//!
+//! (4) Once the client has a pawn, they are fully logged in and everything operates normally.
+//!     Vision tracks the pawn as it moves around.
+
 use types::*;
 
 use chunks;
