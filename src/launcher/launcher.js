@@ -43,9 +43,10 @@ function Launcher(server_url) {
     this.xhr = null;
     this.error = null;
 
-    this.cur_files = null;
-    this.cur_bytes = null;          // downloaded bytes of the current file
-    this.completed_bytes = null;    // donloaded bytes of finished files
+    this.cur_progress = null;
+    this.cur_total = null;
+    this.completed_progress = null;
+    this.grand_total = null;
 
     // 0 - connect to server
     this.server_url = new URL(server_url);
@@ -57,13 +58,11 @@ function Launcher(server_url) {
     // 1 - log in
     this.login_name = null;
 
-    // 2 - load code
-    this.client = null;
-    this.code_files = null;
-    this.code_bytes = null;
+    // 2 - load data
+    this.data_blob = null;
 
-    // 3 - load data
-    this.data_bytes = null;
+    // 3 - load code
+    this.client = null;
 
     // 4 - load world
     // (no state here, only in the client)
@@ -73,69 +72,52 @@ function kb(b) {
     return (b / 1024)|0;
 }
 
-function fileProgress(cur, total) {
-    if (total != null) {
-        return cur + '/' + total + ' files';
-    } else {
-        return cur + ' files';
-    }
-}
-
 function byteProgress(cur, total) {
-    if (total != null) {
-        var pct = (cur / total * 100)|0;
-        return kb(cur) + 'k/' + kb(total) + 'k bytes (' + pct + '%)';
-    } else {
-        return kb(cur) + 'k bytes';
-    }
+    var pct = (cur / total * 100)|0;
+    return kb(cur) + 'k/' + kb(total) + 'k bytes (' + pct + '%)';
 }
 
-Launcher.prototype.getMessage = function(idx) {
-    switch (idx) {
-        case 0: 
-            if (this.current < idx) {
-                return 'Connect to server';
-            } else if (this.current > idx) {
-                return 'Connected to server (version ' + this.server_info['version'] + ')';
-            }
+Launcher.prototype.getMessage = function() {
+    if (this.error != null) {
+        return 'Error: ' + this.error;
+    }
 
+    switch (this.current) {
+        case 0: 
             if (!this.server_info) return 'Retrieving server info';
             if (!this.version_info) return 'Retrieving version info';
             return 'Connecting to server';
 
         case 1:
-            if (this.current < idx) {
-                return 'Log in';
-            } else if (this.current > idx) {
-                return 'Logged in as ' + this.login_name;
-            }
-
             return 'Logging in';
 
         case 2:
-            if (this.current < idx) {
-                return 'Load code';
-            } else if (this.current > idx) {
-                return 'Loaded code: ' + this.code_files + ' files, ' +
-                    kb(this.code_bytes) + 'k bytes';
-            }
-
-            return 'Loading code: ' +
-                fileProgress(this.cur_files, this.code_files) + ', ' +
-                byteProgress(this.cur_bytes + this.completed_bytes, this.code_bytes);
-
         case 3:
-            if (this.current < idx) {
-                return 'Load data';
-            } else if (this.current > idx) {
-                return 'Loaded data: ' + kb(this.data_bytes) + 'k bytes';
-            }
-
-            return 'Loading data: ' +
-                byteProgress(this.cur_bytes, this.data_bytes);
+            // grand_total may be null prior to the first xhr progress event
+            if (this.grand_total == null) return 'Loading';
+            return 'Loading: ' +
+                byteProgress(this.cur_progress + this.completed_progress, this.grand_total);
 
         default:
             return '???';
+    }
+};
+
+Launcher.prototype.getProgress = function() {
+    switch (this.current) {
+        case 0:
+            return 0;
+
+        case 1:
+            return 0;
+
+        case 2:
+        case 3:
+            if (this.grand_total == null) return 0;
+            return (this.cur_progress + this.completed_progress) / this.grand_total;
+
+        default:
+            return 0;
     }
 };
 
@@ -348,11 +330,65 @@ Launcher.prototype._authResult = function(flags, result) {
 
     this.login_name = s;
 
-    this._loadCode();
+    this._loadData();
 };
 
 //
-// 2 - download code
+// 2 - download data
+//
+
+Launcher.prototype._loadData = function() {
+    if (this.error) {
+        return;
+    }
+    var this_ = this;
+
+    this.current = 2;
+
+    this.cur_progress = 0;
+    this.completed_progress = 0;
+    this._xhr(new URL('outpost.pack', this.server_url).href, 'blob', {
+        progress: function(evt) {
+            this_.cur_progress = evt.loaded;
+            // Assume the pack is no more than a megabyte
+            this_.cur_total = evt.lengthComputable ? evt.total : 1024 * 1024;
+            if (this_.grand_total == null) {
+                this_.grand_total = this_.cur_total + this_.version_info['total_size'];
+            }
+        },
+        load: function(evt) {
+            // In case the progress event never fires
+            if (this_.cur_total == null) {
+                this_.cur_total = evt.lengthComputable ? evt.total : 1024 * 1024;
+                if (this_.grand_total == null) {
+                    this_.grand_total = this_.cur_total + this_.version_info['total_size'];
+                }
+            }
+
+            this_.completed_progress += this_.cur_total;
+            this_.cur_progress = 0;
+            this_.data_blob = evt.target.response;
+            this_._loadCode();
+        },
+        error: function(evt) {
+            this_._error(evt.target.statusText || 'Connection error');
+        },
+    });
+};
+
+/*
+ * TODO
+Launcher.prototype._processData = function(blob) {
+    console.log('loaded', blob);
+    var this_ = this;
+    this.client.loadData(blob, function() {
+        console.log('ready for handoff');
+    });
+};
+*/
+
+//
+// 3 - download code
 //
 
 Launcher.prototype._loadCode = function() {
@@ -360,20 +396,13 @@ Launcher.prototype._loadCode = function() {
         return;
     }
 
-    this.current = 2;
+    this.current = 3;
 
     // From now on, resolve paths relative to this.base_url.  Note this only
     // applies to URLs in the document (such as CSS image URLs), not to XHRs.
     var base = document.createElement('base');
     base.setAttribute('href', this.base_url);
     document.body.appendChild(base);
-
-    this.cur_files = 0;
-    this.code_files = this.version_info['files'].length;
-
-    this.cur_bytes = 0;
-    this.finished_bytes = 0;
-    this.code_bytes = this.version_info['total_size'];
 
     // Hacky module implementation
     window.exports = {};
@@ -388,21 +417,27 @@ Launcher.prototype._loadCodeIndexed = function(idx) {
     }
     var this_ = this;
 
-    if (idx >= this.code_files) {
+    if (idx >= this.version_info['files'].length) {
         this._finishLoadCode();
         return;
     }
 
     var path = this.version_info['files'][idx];
-    this.cur_bytes = 0;
+    this.cur_progress = 0;
+    this.cur_total = null;
     var type = path.endsWith('.html') ? 'document' : 'blob';
     this._xhr(new URL(path, this.base_url).href, type, {
         progress: function(evt) {
-            this_.cur_bytes = evt.loaded;
+            this_.cur_progress = evt.loaded;
+            this_.cur_total = evt.lengthComputable ? evt.total : 1024 * 1024;
         },
         load: function(evt) {
-            this_.completed_bytes += evt.loaded;
-            ++this_.cur_files;
+            if (this_.cur_total == null) {
+                this_.cur_total = evt.lengthComputable ? evt.total : 1024 * 1024;
+            }
+
+            this_.completed_progress += this_.cur_total;
+            this_.cur_progress = 0;
             this_._addCode(path, evt.target.response, function() {
                 this_._loadCodeIndexed(idx + 1);
             });
@@ -431,43 +466,8 @@ Launcher.prototype._addCode = function(path, obj, next) {
 
 Launcher.prototype._finishLoadCode = function() {
     this.client = new window.OutpostClient();
-    this._loadData();
-};
-
-//
-// 3 - download data
-//
-
-Launcher.prototype._loadData = function() {
-    if (this.error) {
-        return;
-    }
-    var this_ = this;
-
-    this.current = 3;
-
-    this.cur_bytes = 0;
-    this.data_bytes = null;
-    this._xhr(new URL('outpost.pack', this.server_url).href, 'blob', {
-        progress: function(evt) {
-            this_.cur_bytes = evt.loaded;
-            this_.data_bytes = evt.lengthComputable ? evt.total : null;
-        },
-        load: function(evt) {
-            this_._processData(evt.target.response);
-        },
-        error: function(evt) {
-            this_._error(evt.target.statusText || 'Connection error');
-        },
-    });
-};
-
-Launcher.prototype._processData = function(blob) {
-    console.log('loaded', blob);
-    var this_ = this;
-    this.client.loadData(blob, function() {
-        console.log('ready for handoff');
-    });
+    // TODO
+    //this._loadData();
 };
 
 
@@ -478,7 +478,8 @@ function LauncherUI() {
 
     this.img_banner = null;
     this.img_font = null;
-    this.imgs_pending = 0;
+    this.metrics = null;
+    this.pending = 0;
 
     this.canvas = null;
     this.ctx = null;
@@ -497,20 +498,29 @@ function autoResize(canvas) {
 LauncherUI.prototype.init = function() {
     var this_ = this;
 
-    this.imgs_pending = 2;
+    this.pending = 3;
 
     this.img_banner = new Image();
-    this.img_banner.onload = function() { this_._imageReady(); };
+    this.img_banner.onload = function() { this_._finishedPending(); };
     this.img_banner.src = 'logo.png';
 
     this.img_font = new Image();
-    this.img_font.onload = function() { this_._imageReady(); };
+    this.img_font.onload = function() { this_._finishedPending(); };
     this.img_font.src = 'font.png';
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'font_metrics.json', true);
+    xhr.responseType = 'json';
+    xhr.onload = function(evt) {
+        this_.metrics = evt.target.response;
+        this_._finishedPending();
+    };
+    xhr.send();
 };
 
-LauncherUI.prototype._imageReady = function() {
-    --this.imgs_pending;
-    if (this.imgs_pending == 0) {
+LauncherUI.prototype._finishedPending = function() {
+    --this.pending;
+    if (this.pending == 0) {
         var this_ = this;
         setTimeout(function() { this_.initCanvas(); }, 500);
     }
@@ -542,9 +552,67 @@ function calcBannerPos() {
     var px = Math.max(w, h);
     var scale = Math.max(1, Math.round(px / 1024));
     var x = Math.floor(w / 2 / scale) - 80;
-    var y = Math.floor(h / 2 / scale) - 100;
+    var y = Math.floor(h / 2 / scale) - 60;
     // NB: x and y are pre-scaling coordinates
     return {x: x, y: y, scale: scale};
+}
+
+function findGlyph(fm, gm, c) {
+    if (gm[c] == null) {
+        var code = c.charCodeAt(0);
+        var glyph = -1;
+        for (var j = 0; j < fm['spans'].length; ++j) {
+            var span = fm['spans'][j];
+            if (span[0] <= code && code < span[1]) {
+                glyph = span[2] + (code - span[0]);
+                break;
+            }
+        }
+        gm[c] = glyph;
+    }
+
+    return gm[c];
+}
+
+function measureString(fm, s, gm) {
+    var glyph_map = gm || {};
+    var x = 0;
+    for (var i = 0; i < s.length; ++i) {
+        var c = s.charAt(i);
+
+        var glyph = findGlyph(fm, glyph_map, c);
+        if (glyph == -1) {
+            x += fm['space_width'];
+        } else {
+            x += fm['widths2'][glyph] + (i > 0 ? fm['spacing'] : 0);
+        }
+    }
+
+    return x;
+}
+
+function drawString(ctx, fm, img, s, base_x, base_y, gm) {
+    var glyph_map = gm || {};
+    var dest_x = 0;
+    var height = fm['height'];
+
+    for (var i = 0; i < s.length; ++i) {
+        var c = s.charAt(i);
+
+        var glyph = findGlyph(fm, glyph_map, c);
+        if (glyph == -1) {
+            dest_x += fm['space_width'];
+        } else {
+            var src_x = fm['xs2'][glyph];
+            var width = fm['widths2'][glyph];
+
+            ctx.drawImage(img,
+                    src_x, 0, width, height,
+                    dest_x + base_x, base_y, width, height);
+
+            dest_x += width + (i > 0 ? fm['spacing'] : 0);
+        }
+    }
 }
 
 LauncherUI.prototype.renderFrame = function() {
@@ -552,16 +620,39 @@ LauncherUI.prototype.renderFrame = function() {
         // The canvas has been handed off to the OutpostClient.
         return;
     }
+
+    var this_ = this;
+    window.requestAnimationFrame(function() { this_.renderFrame(); });
+
     var ctx = this.ctx;
 
     var banner = calcBannerPos();
     ctx.save();
     ctx.scale(banner.scale, banner.scale);
     ctx.translate(banner.x, banner.y);
+    ctx.clearRect(0, 0, 160, 120);
     ctx.drawImage(this.img_banner, 0, 0);
 
-    var this_ = this;
-    window.requestAnimationFrame(function() { this_.renderFrame(); });
+    var bar_x0 = 19;
+    var bar_x1 = 141;
+    var bar_y = 105;
+
+    var frac = this.launcher.getProgress();
+    var width = ((bar_x1 - bar_x0) * frac)|0;
+    ctx.fillStyle = '#dad45e';
+    ctx.fillRect(bar_x0, bar_y, width, 2);
+    ctx.fillStyle = '#6daa2c';
+    ctx.fillRect(bar_x0, bar_y + 2, width, 2);
+
+    var gm = {};
+    var msg = this.launcher.getMessage();
+    var width = measureString(this.metrics, msg, gm);
+    var msg_y = 118;
+    ctx.clearRect(-160, msg_y, 480, this.metrics['height']);
+    drawString(ctx, this.metrics, this.img_font,
+            msg, 80 - (width / 2)|0, msg_y, gm);
+
+    ctx.restore();
 };
 
 
