@@ -139,7 +139,7 @@ pub enum Request {
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
 
     // Control messages
-    AddClient(WireId),
+    AddClient(WireId, u16, String),
     RemoveClient(WireId),
     ReplCommand(u16, String),
     Shutdown,
@@ -212,8 +212,8 @@ impl Request {
             },
 
             op::AddClient => {
-                let a = try!(wr.read());
-                AddClient(a)
+                let (a, b, c) = try!(wr.read());
+                AddClient(a, b, c)
             },
             op::RemoveClient => {
                 let a = try!(wr.read());

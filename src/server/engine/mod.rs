@@ -154,7 +154,9 @@ impl<'d> Engine<'d> {
         use messages::ControlEvent::*;
         use messages::ControlResponse::*;
         match evt {
-            OpenWire(_wire_id) => {},
+            OpenWire(wire_id, flags, name) => {
+                info!("OpenWire: {:?}, {:x}, {}", wire_id, flags, name);
+            },
 
             CloseWire(wire_id, opt_cid) => {
                 if let Some(cid) = opt_cid {

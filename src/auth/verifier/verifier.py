@@ -117,7 +117,8 @@ def main():
                     else:
                         msg = struct.pack('<H', 1) + name.encode()
                         b_out.write(build_raw(cid, OP_AUTH_RESULT, msg))
-                        msg = struct.pack('<HH', cid, 0) + name.encode()
+                        name_b = name.encode()
+                        msg = struct.pack('<HHH', cid, 0, len(name_b)) + name_b
                         b_out.write(build_raw(0, OP_AUTH_DONE, msg))
                         print('DONE client %d (name = %r)' % (cid, name),
                                 file=sys.stderr)
