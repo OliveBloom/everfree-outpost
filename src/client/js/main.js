@@ -162,7 +162,6 @@ OutpostClient.prototype.loadData = function(blob, next) {
 
 OutpostClient.prototype.handoff = function(old_canvas, ws) {
     canvas = document.createElement('canvas');
-    document.body.replaceChild(canvas, old_canvas);
 
     canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';
@@ -204,9 +203,19 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
     conn.onGetInteractArgs = handleGetInteractArgs;
     conn.onGetUseItemArgs = handleGetUseItemArgs;
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
-    conn.onSyncStatus = handleSyncStatus;
     conn.onStructureReplace = handleStructureReplace;
     conn.onInitNoPawn = handleInitNoPawn;
+
+    conn.onSyncStatus = function(new_synced) {
+        // The first time the status becomes SYNC_OK, swap out the canvas and
+        // start the requestAnimationFrame loop.
+        if (new_synced == net.SYNC_OK) {
+            document.body.replaceChild(canvas, old_canvas);
+            conn.onSyncStatus = handleSyncStatus;
+            window.requestAnimationFrame(frame);
+        }
+        handleSyncStatus(new_synced);
+    };
 
     conn.sendReady();
 

@@ -100,6 +100,9 @@ Launcher.prototype.getMessage = function() {
             return 'Loading: ' +
                 byteProgress(this.cur_progress + this.completed_progress, this.grand_total);
 
+        case 4:
+            return 'Loading world';
+
         default:
             return '???';
     }
@@ -117,6 +120,9 @@ Launcher.prototype.getProgress = function() {
         case 3:
             if (this.grand_total == null) return 0;
             return (this.cur_progress + this.completed_progress) / this.grand_total;
+
+        case 4:
+            return 1;
 
         default:
             return 0;
@@ -458,7 +464,17 @@ Launcher.prototype._addCode = function(path, obj, next) {
     }
 };
 
+//
+// 4 - handoff to OutpostClient
+//
+
 Launcher.prototype._prepareClient = function() {
+    if (this.error) {
+        return;
+    }
+
+    this.current = 4;
+
     var this_ = this;
     window.onerror = function(msg, url, line, col, err) {
         this_.error = msg;

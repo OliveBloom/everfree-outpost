@@ -160,7 +160,6 @@ Connection.prototype._handleMessage = function(evt) {
 
             case 2:
                 var len = get16();
-                console.log('reading array', len);
                 var arr = new Array(len);
                 for (var i = 0; i < len; ++i) {
                     arr[i] = getArg();
@@ -170,7 +169,6 @@ Connection.prototype._handleMessage = function(evt) {
             case 3:
                 var len = get16();
                 var map = new Object();
-                console.log('reading map', len);
                 for (var i = 0; i < len; ++i) {
                     var k = getArg();
                     var v = getArg();
@@ -181,7 +179,6 @@ Connection.prototype._handleMessage = function(evt) {
     }
 
     var opcode = get16();
-    console.log('RECV: ' + opcode.toString(16));
 
     switch (opcode) {
         case OP_TERRAIN_CHUNK:
