@@ -165,6 +165,14 @@ pub unsafe extern fn set_pawn_id(client: &mut Client,
     }
 }
 
+#[no_mangle]
+pub unsafe extern fn set_default_camera_pos(client: &mut Client,
+                                            x: i32,
+                                            y: i32,
+                                            z: i32) {
+    client.set_default_camera_pos(V3::new(x, y, z));
+}
+
 // Inventories
 
 #[no_mangle]

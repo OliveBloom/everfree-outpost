@@ -84,6 +84,7 @@ pub enum SyncKind {
 #[derive(Debug, Clone)]
 pub enum ClientResponse {
     Init(Option<EntityId>, Time, u32, u32),
+    InitNoPawn(V3, Time, u32, u32),
 
     TerrainChunk(V2, Vec<u16>),
     UnloadChunk(V2),
@@ -382,6 +383,13 @@ impl Messages {
                     cycle_ms: cycle_ms,
                 };
                 self.send_raw(wire_id, Response::Init(data));
+            },
+
+            ClientResponse::InitNoPawn(pos, time, cycle_base, cycle_ms) => {
+                self.send_raw(wire_id, Response::InitNoPawn(client.local_pos_tuple(pos),
+                                                            time.to_local(),
+                                                            cycle_base,
+                                                            cycle_ms));
             },
 
             ClientResponse::TerrainChunk(cpos, data) => {

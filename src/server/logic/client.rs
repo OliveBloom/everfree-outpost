@@ -56,7 +56,8 @@ pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
         (e.stable_plane, e.motion.pos(eng.now))
     } else {
         // The Client has no pawn, so center the view on the spawn point instead.
-        (STABLE_PLANE_FOREST, scalar(0))
+        // TODO: hardcoded spawn point
+        (STABLE_PLANE_FOREST, V3::new(32, 32, 0))
     };
 
     let region = vision::vision_region(pos);
@@ -78,7 +79,7 @@ pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
 
     // Send the client's startup messages.
     let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
-    eng.messages.send_client(cid, ClientResponse::Init(opt_eid,
+    eng.messages.send_client(cid, ClientResponse::InitNoPawn(pos,
                                                              eng.now,
                                                              cycle_base,
                                                              DAY_NIGHT_CYCLE_MS));

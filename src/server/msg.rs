@@ -97,6 +97,7 @@ mod op {
         InventoryGone = 0x801b,
         AuthChallenge = 0x801c,     // For auth verifier only
         AuthResult = 0x801d,        // For auth verifier only
+        InitNoPawn = 0x801e,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -267,6 +268,7 @@ pub enum Response {
     InventoryUpdate(InventoryId, u8, (u8, u8, ItemId)),
     InventoryAppear(InventoryId, Vec<(u8, u8, ItemId)>),
     InventoryGone(InventoryId),
+    InitNoPawn((u16, u16, u16), LocalTime, u32, u32),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -325,6 +327,8 @@ impl Response {
                 ww.write_msg(id, (op::InventoryAppear, inventory_id, all_slot_data)),
             InventoryGone(inventory_id) =>
                 ww.write_msg(id, (op::InventoryGone, inventory_id)),
+            InitNoPawn(pos, now, cycle_base, cycle_ms) =>
+                ww.write_msg(id, (op::InitNoPawn, pos, now, cycle_base, cycle_ms)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

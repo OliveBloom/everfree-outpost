@@ -500,6 +500,10 @@ DynAsm.prototype.setPawnId = function(entity_id) {
     this._raw['set_pawn_id'](this.client, entity_id);
 };
 
+DynAsm.prototype.setDefaultCameraPos = function(x, y, z) {
+    this._raw['set_default_camera_pos'](this.client, x, y, z);
+};
+
 DynAsm.prototype.inventoryAppear = function(id, items) {
     var item_arr = this._heapAlloc(Uint8Array, items.length * this.SIZEOF.Item);
     var view = new DataView(item_arr.buffer, item_arr.byteOffset, item_arr.byteLength);

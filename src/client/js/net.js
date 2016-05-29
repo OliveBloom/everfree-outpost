@@ -51,6 +51,9 @@ var OP_STRUCTURE_REPLACE =      0x8018;
 var OP_INVENTORY_UPDATE =       0x8019;
 var OP_INVENTORY_APPEAR =       0x801a;
 var OP_INVENTORY_GONE =         0x801b;
+// AUTH ONLY                    0x801c;
+// AUTH ONLY                    0x801d;
+var OP_INIT_NO_PAWN =           0x801e;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -104,6 +107,7 @@ function Connection(x) {
     this.onInventoryUpdate = null;
     this.onInventoryAppear = null;
     this.onInventoryGone = null;
+    this.onInitNoPawn = null;
 }
 exports.Connection = Connection;
 
@@ -414,6 +418,18 @@ Connection.prototype._handleMessage = function(evt) {
             if (this.onInventoryGone != null) {
                 var inventory_id = get32();
                 this.onInventoryGone(inventory_id);
+            };
+            break;
+
+        case OP_INIT_NO_PAWN:
+            if (this.onInitNoPawn != null) {
+                var x = get16();
+                var y = get16();
+                var z = get16();
+                var now = get16();
+                var cycle_base = get32();
+                var cycle_ms = get32();
+                this.onInitNoPawn(x, y, z, now, cycle_base, cycle_ms);
             };
             break;
 

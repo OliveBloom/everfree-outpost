@@ -206,6 +206,7 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
     conn.onSyncStatus = handleSyncStatus;
     conn.onStructureReplace = handleStructureReplace;
+    conn.onInitNoPawn = handleInitNoPawn;
 
     conn.sendReady();
 
@@ -581,6 +582,12 @@ function handleClose(evt, reason) {
 
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
     asm_client.setPawnId(entity_id);
+    var pst_now = timing.decodeRecv(now);
+    asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
+}
+
+function handleInitNoPawn(x, y, z, now, cycle_base, cycle_ms) {
+    asm_client.setDefaultCameraPos(x, y, z);
     var pst_now = timing.decodeRecv(now);
     asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
 }

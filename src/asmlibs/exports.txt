@@ -18,6 +18,7 @@ entity_appear
 entity_gone
 entity_update
 set_pawn_id
+set_default_camera_pos
 inventory_appear
 inventory_gone
 inventory_update

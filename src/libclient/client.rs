@@ -53,6 +53,7 @@ pub struct Client<'d, P: Platform> {
     renderer: Renderer<P::GL>,
 
     pawn_id: Option<EntityId>,
+    default_camera_pos: V3,
     window_size: (u16, u16),
     view_size: (u16, u16),
 
@@ -82,6 +83,7 @@ impl<'d, P: Platform> Client<'d, P> {
             renderer: renderer,
 
             pawn_id: None,
+            default_camera_pos: V3::new(4096, 4096, 0),
             window_size: (640, 480),
             view_size: (640, 480),
 
@@ -269,6 +271,10 @@ impl<'d, P: Platform> Client<'d, P> {
         self.pawn_id = None;
     }
 
+    pub fn set_default_camera_pos(&mut self, pos: V3) {
+        self.default_camera_pos = pos;
+    }
+
     // Inventory tracking
 
     pub fn inventory_appear(&mut self,
@@ -448,7 +454,7 @@ impl<'d, P: Platform> Client<'d, P> {
                 // TODO: hardcoded constant based on entity size
                 self.predictor.motion().pos(future) + V3::new(16, 16, 0)
             } else {
-                V3::new(4096, 4096, 0)
+                self.default_camera_pos
             };
         self.debug.pos = pos;
 
