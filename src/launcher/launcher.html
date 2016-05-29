@@ -21,7 +21,7 @@ body { background-color: #140c1c }
     var px = Math.max(w, h);
     var scale = Math.max(1, Math.round(px / 1024));
     var x = Math.floor(w / 2 / scale) * scale - 80;
-    var y = Math.floor(h / 2 / scale) * scale - 50;
+    var y = Math.floor(h / 2 / scale) * scale - 50 - (scale * 50)|0;
     var i = document.getElementById('i');
     i.style.left = x + 'px';
     i.style.top = y + 'px';
@@ -29,9 +29,6 @@ body { background-color: #140c1c }
     i.style.display = 'block';
 })();
         </script>
-
-        <div id='status' style='color:#deeed6'>
-        </div>
 
         <script src='launcher.js'></script>
     </body>

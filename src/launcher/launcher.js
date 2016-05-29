@@ -69,7 +69,6 @@ function Launcher(server_url) {
     // (no state here, only in the client)
 }
 
-
 function kb(b) {
     return (b / 1024)|0;
 }
@@ -472,9 +471,110 @@ Launcher.prototype._processData = function(blob) {
 };
 
 
+
+/** @constructor */
+function LauncherUI() {
+    this.launcher = null;
+
+    this.img_banner = null;
+    this.img_font = null;
+    this.imgs_pending = 0;
+
+    this.canvas = null;
+    this.ctx = null;
+    this.start_time = null;
+}
+
+function autoResize(canvas) {
+    function handleResize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+}
+
+LauncherUI.prototype.init = function() {
+    var this_ = this;
+
+    this.imgs_pending = 2;
+
+    this.img_banner = new Image();
+    this.img_banner.onload = function() { this_._imageReady(); };
+    this.img_banner.src = 'logo.png';
+
+    this.img_font = new Image();
+    this.img_font.onload = function() { this_._imageReady(); };
+    this.img_font.src = 'font.png';
+};
+
+LauncherUI.prototype._imageReady = function() {
+    --this.imgs_pending;
+    if (this.imgs_pending == 0) {
+        var this_ = this;
+        setTimeout(function() { this_.initCanvas(); }, 500);
+    }
+};
+
+LauncherUI.prototype.initCanvas = function() {
+    this.canvas = document.createElement('canvas');
+    this.canvas.style.position = 'absolute';
+    this.canvas.style.top = '0px';
+    this.canvas.style.left = '0px';
+    autoResize(this.canvas);
+    document.body.insertBefore(this.canvas, document.body.firstChild);
+
+    var i = document.getElementById('i');
+    i.parentNode.removeChild(i);
+
+    this.ctx = this.canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.mozImageSmoothingEnabled = false;
+    this.ctx.webkitImageSmoothingEnabled = false;
+
+    this.start_time = Date.now();
+    this.renderFrame();
+};
+
+function calcBannerPos() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var px = Math.max(w, h);
+    var scale = Math.max(1, Math.round(px / 1024));
+    var x = Math.floor(w / 2 / scale) - 80;
+    var y = Math.floor(h / 2 / scale) - 100;
+    // NB: x and y are pre-scaling coordinates
+    return {x: x, y: y, scale: scale};
+}
+
+LauncherUI.prototype.renderFrame = function() {
+    if (this.ctx == null) {
+        // The canvas has been handed off to the OutpostClient.
+        return;
+    }
+    var ctx = this.ctx;
+
+    var banner = calcBannerPos();
+    ctx.save();
+    ctx.scale(banner.scale, banner.scale);
+    ctx.translate(banner.x, banner.y);
+    ctx.drawImage(this.img_banner, 0, 0);
+
+    var this_ = this;
+    window.requestAnimationFrame(function() { this_.renderFrame(); });
+};
+
+
+
+
 window.L = new Launcher('http://localhost:8889/');
 window.L.start();
 
+window.L_UI = new LauncherUI();
+window.L_UI.launcher = window.L;
+window.L_UI.init();
+
+/*
 setInterval(function() {
     document.getElementById('status').innerHTML =
         window.L.getMessage(0) + '<br>' +
@@ -484,3 +584,4 @@ setInterval(function() {
         window.L.error;
     //console.log(    document.getElementById('status').innerHTML);
 }, 100);
+*/

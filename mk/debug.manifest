@@ -6,4 +6,5 @@ outpost.ini: $root/util/outpost_debug.ini
 
 www/launcher.html: $root/src/launcher/launcher.html
 www/logo.png: $root/src/launcher/logo.png
+www/font.png: $b_data/fonts/name.png
 www/launcher.js: $root/src/launcher/launcher.js
