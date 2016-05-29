@@ -57,7 +57,7 @@ mod op {
         UseItemWithArgs = 0x0011,
         UseAbilityWithArgs = 0x0012,
         MoveItem = 0x0013,
-        AuthResponse = 0x0014,
+        AuthResponse = 0x0014,      // For auth verifier only
         CreateCharacter = 0x0015,
         Ready = 0x0016,
 
@@ -95,8 +95,8 @@ mod op {
         InventoryUpdate = 0x8019,
         InventoryAppear = 0x801a,
         InventoryGone = 0x801b,
-        AuthChallenge = 0x801c,
-        AuthResult = 0x801d,
+        AuthChallenge = 0x801c,     // For auth verifier only
+        AuthResult = 0x801d,        // For auth verifier only
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -113,9 +113,9 @@ mod op {
         RestartServer = 0xff06,
         RestartClient = 0xff07,
         RestartBoth = 0xff08,
-        AuthStart = 0xff09,
-        AuthCancel = 0xff0a,
-        AuthFinish = 0xff0b,
+        AuthStart = 0xff09,         // For auth verifier only
+        AuthCancel = 0xff0a,        // For auth verifier only
+        AuthFinish = 0xff0b,        // For auth verifier only
     }
 }
 

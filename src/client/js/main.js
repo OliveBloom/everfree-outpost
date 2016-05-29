@@ -207,6 +207,8 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
     conn.onSyncStatus = handleSyncStatus;
     conn.onStructureReplace = handleStructureReplace;
 
+    conn.sendReady();
+
     timing = new Timing(conn);
     timing.scheduleUpdates(5, 30);
     inv_tracker = new InventoryTracker(conn, asm_client);

@@ -5,13 +5,13 @@ var decodeUtf8 = require('util/misc').decodeUtf8;
 // DEPRECATED                   0x0002;
 var OP_PING =                   0x0003;
 var OP_INPUT =                  0x0004;
-var OP_LOGIN =                  0x0005;
+// DEPRECATED                   0x0005;
 // DEPRECATED                   0x0006;
 var OP_UNSUBSCRIBE_INVENTORY =  0x0007;
 // DEPRECATED                   0x0008;
 var OP_CRAFT_RECIPE =           0x0009;
 var OP_CHAT =                   0x000a;
-var OP_REGISTER =               0x000b;
+// DEPRECATED                   0x000b;
 var OP_INTERACT =               0x000c;
 var OP_USE_ITEM =               0x000d;
 var OP_USE_ABILITY =            0x000e;
@@ -20,6 +20,9 @@ var OP_INTERACT_WITH_ARGS =     0x0010;
 var OP_USE_ITEM_WITH_ARGS =     0x0011;
 var OP_USE_ABILITY_WITH_ARGS =  0x0012;
 var OP_MOVE_ITEM =              0x0013;
+// AUTH ONLY                    0x0014;
+var OP_CREATE_CHARACTER =       0x0015;
+var OP_READY =                  0x0016;
 
 var OP_TERRAIN_CHUNK =          0x8001;
 // DEPRECATED                   0x8002;
@@ -514,18 +517,6 @@ Connection.prototype.sendInput = function(time, input) {
     this.socket.send(msg.done());
 };
 
-Connection.prototype.sendLogin = function(name, secret) {
-    var msg = MESSAGE_BUILDER.reset();
-
-    msg.put16(OP_LOGIN);
-    for (var i = 0; i < 4; ++i) {
-        msg.put32(secret[i]);
-    }
-    msg.putString(name);
-
-    this.socket.send(msg.done());
-};
-
 Connection.prototype.sendUnsubscribeInventory = function(inventory_id) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_UNSUBSCRIBE_INVENTORY);
@@ -547,19 +538,6 @@ Connection.prototype.sendChat = function(text) {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_CHAT);
     msg.putString(text);
-    this.socket.send(msg.done());
-};
-
-Connection.prototype.sendRegister = function(name, secret, appearance) {
-    var msg = MESSAGE_BUILDER.reset();
-
-    msg.put16(OP_REGISTER);
-    for (var i = 0; i < 4; ++i) {
-        msg.put32(secret[i]);
-    }
-    msg.put32(appearance);
-    msg.putString(name);
-
     this.socket.send(msg.done());
 };
 
@@ -621,5 +599,11 @@ Connection.prototype.sendMoveItem = function(
     msg.put32(to_inventory);
     msg.put8(to_slot);
     msg.put8(amount);
+    this.socket.send(msg.done());
+};
+
+Connection.prototype.sendReady = function() {
+    var msg = MESSAGE_BUILDER.reset();
+    msg.put16(OP_READY);
     this.socket.send(msg.done());
 };
