@@ -178,6 +178,7 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         asm_client.resizeWindow(window.innerWidth, window.innerHeight);
+        handleResize(null, ui_div, window.innerWidth, window.innerHeight);
     }
     window.addEventListener('resize', doResize);
     doResize();
@@ -211,6 +212,8 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
         // start the requestAnimationFrame loop.
         if (new_synced == net.SYNC_OK) {
             document.body.replaceChild(canvas, old_canvas);
+            console.log('building UI');
+            buildUI();
             conn.onSyncStatus = handleSyncStatus;
             window.requestAnimationFrame(frame);
         }
@@ -332,7 +335,6 @@ function buildUI() {
 
     banner.show('Loading...', 0, keyboard, function() { return false; });
 
-    document.body.appendChild(canvas.canvas);
     document.body.appendChild(ui_div);
 }
 
