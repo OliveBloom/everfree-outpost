@@ -33,7 +33,7 @@ pub fn tick(eng: &mut Engine) {
     for (cid, (input, count)) in eng.input.inputs() {
         let opt_eid = if let Some(c) = eng.world.get_client(cid) {
             if let Some(e) = c.pawn() {
-                eng.physics.set_target_velocity(e.id(), input.to_velocity());
+                eng.physics.set_input(e.id(), input);
             }
             eng.messages.send_client(cid, ClientResponse::ProcessedInputs(now, count));
             c.pawn_id()

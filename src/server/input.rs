@@ -4,35 +4,16 @@ use types::*;
 
 use msg::ExtraArg;
 
-
-bitflags! {
-    pub flags InputBits: u16 {
-        const INPUT_LEFT =      0x0001,
-        const INPUT_RIGHT =     0x0002,
-        const INPUT_UP =        0x0004,
-        const INPUT_DOWN =      0x0008,
-        const INPUT_RUN =       0x0010,
-
-        const INPUT_DIR_MASK =  INPUT_LEFT.bits |
-                                INPUT_RIGHT.bits |
-                                INPUT_UP.bits |
-                                INPUT_DOWN.bits,
-    }
-}
-
-impl InputBits {
-    pub fn to_velocity(&self) -> V3 {
-        let x =
-            if self.contains(INPUT_LEFT) { -1 } else { 0 } +
-            if self.contains(INPUT_RIGHT) { 1 } else { 0 };
-        let y =
-            if self.contains(INPUT_UP) { -1 } else { 0 } +
-            if self.contains(INPUT_DOWN) { 1 } else { 0 };
-        // TODO: player speed handling shouldn't be here
-        let speed = if self.contains(INPUT_RUN) { 150 } else { 50 };
-        V3::new(x, y, 0) * scalar(speed)
-    }
-}
+pub use libcommon_movement::{
+    InputBits,
+    INPUT_LEFT,
+    INPUT_RIGHT,
+    INPUT_UP,
+    INPUT_DOWN,
+    INPUT_RUN,
+    INPUT_HOLD,
+    INPUT_DIR_MASK,
+};
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

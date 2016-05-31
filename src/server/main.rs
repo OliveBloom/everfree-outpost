@@ -36,6 +36,7 @@ extern crate rusqlite;
 extern crate libsqlite3_sys as rusqlite_ffi;
 extern crate python3_sys;
 
+extern crate common_movement as libcommon_movement;
 extern crate physics as libphysics;
 extern crate terrain_gen as libterrain_gen;
 extern crate server_config as libserver_config;

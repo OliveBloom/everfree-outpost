@@ -2,6 +2,9 @@
 //! `libphysics`, so that it can be compiled to asm.js for use on the client.  This system just
 //! provides the glue to connect the physics engine to entities and the rest of the `World`.
 use std::collections::hash_map::{self, HashMap};
+
+use libcommon_movement as movement;
+use libcommon_movement::{InputBits, MovingEntity};
 use libphysics::{self, ShapeSource};
 use libphysics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE};
 
@@ -13,26 +16,12 @@ use util::Coroutine;
 use cache::TerrainCache;
 use data::Data;
 use timing::{next_tick, TICK_MS};
-use world::{self, World};
+use world::{self, World, Entity};
 use world::{Motion, Activity};
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
 
-
-struct MovingEntity {
-    target_velocity: V3,
-    force_update: bool,
-}
-
-impl MovingEntity {
-    fn new() -> MovingEntity {
-        MovingEntity {
-            target_velocity: scalar(0),
-            force_update: false,
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum UpdateKind {
@@ -64,16 +53,15 @@ impl<'d> Physics<'d> {
         self.moving_entities.remove(&eid);
     }
 
-    pub fn set_target_velocity(&mut self, eid: EntityId, v: V3) {
+    pub fn set_input(&mut self, eid: EntityId, input: InputBits) {
         let me = self.moving_entities.entry(eid).or_insert_with(MovingEntity::new);
-        me.target_velocity = v;
-        me.force_update = true;
+        me.set_input(input);
     }
 
     pub fn force_update(&mut self, eid: EntityId) {
         let me = unwrap_or!(self.moving_entities.get_mut(&eid),
                             { warn!("no such MovingEntity: {:?}", eid); return; });
-        me.force_update = true;
+        me.force_update();
     }
 }
 
@@ -95,106 +83,106 @@ impl<'d> Physics<'d> {
     }
 }
 
+struct EntityWrapper<'a, 'd, F: World_Fragment<'d>+'a> {
+    entity: ObjectRefMut<'a, 'd, Entity, F>,
+    started: bool,
+    ended: bool,
+}
+
+impl<'a, 'd, F: World_Fragment<'d>> EntityWrapper<'a, 'd, F> {
+    fn new(entity: ObjectRefMut<'a, 'd, Entity, F>) -> EntityWrapper<'a, 'd, F> {
+        EntityWrapper {
+            entity: entity,
+            started: false,
+            ended: false,
+        }
+    }
+}
+
+impl<'a, 'd, F: World_Fragment<'d>> movement::Entity for EntityWrapper<'a, 'd, F> {
+    fn activity(&self) -> movement::Activity {
+        match self.entity.activity() {
+            Activity::Move => movement::Activity::Walk,
+            Activity::Special(_, _) => movement::Activity::Busy,
+        }
+    }
+
+    fn facing(&self) -> V3 {
+        self.entity.facing()
+    }
+
+    fn speed(&self) -> u8 {
+        // TODO
+        0
+    }
+
+    fn velocity(&self) -> V3 {
+        self.entity.motion().velocity
+    }
+
+    
+    type Time = Time;
+
+    fn pos(&self, now: Time) -> V3 {
+        self.entity.pos(now)
+    }
+
+
+    fn start_motion(&mut self, now: Time, pos: V3, facing: V3, speed: u8, velocity: V3) {
+        self.started = true;
+        *self.entity.motion_mut() = Motion {
+            start_pos: pos,
+            velocity: velocity,
+            start_time: now,
+            end_time: None,
+        };
+        self.entity.set_facing(facing);
+        let data = self.entity.world().data();
+        self.entity.set_anim(facing_anim(data, facing, speed as usize));
+    }
+
+    fn end_motion(&mut self, now: Time) {
+        self.ended = true;
+        self.entity.motion_mut().end_time = Some(now);
+    }
+}
+
 impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'a, 'd> {
     type Item = (EntityId, Motion, AnimId, UpdateKind);
 
     fn send(&mut self, args: (&'b mut World<'d>, &'b TerrainCache)) -> Option<Self::Item> {
         let (world, cache) = args;
+        let mut wf = DummyFragment::new(world);
 
         for (&eid, me) in &mut self.inner {
             let now = self.now;
             let next = next_tick(now);
 
-            let (mut m, s) = {
-                let e = match world.get_entity(eid) {
-                    Some(e) => e,
-                    None => {
-                        error!("BUG: no such entity: {:?}", eid);
-                        continue;
-                    },
-                };
-
-                if e.activity() != Activity::Move {
+            let mut e = match wf.get_entity_mut(eid) {
+                Some(e) => EntityWrapper::new(e),
+                None => {
+                    error!("BUG: no such entity: {:?}", eid);
                     continue;
-                }
-
-                let m = e.motion().clone();
-
-                let s = ChunksSource {
-                    cache: cache,
-                    base_tile: scalar(0),
-                    plane: e.plane_id(),
-                };
-
-                (m, s)
+                },
             };
 
-            let pos = m.pos(now);
-            let size = V3::new(32, 32, 48);
-            let mut collider = libphysics::walk2::Collider::new(&s, Region::new(pos, pos + size));
-
-
-            // 1) Compute the actual velocity for this tick
-            let velocity = collider.calc_velocity(me.target_velocity);
-            let started = velocity != m.velocity || me.force_update;
-            if started {
-                me.force_update = false;
-                m = Motion {
-                    start_pos: pos,
-                    velocity: velocity,
-                    start_time: now,
-                    end_time: None,
-                };
-            }
-
-            let next_pos = m.pos(next);
-            let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
-            let ended = dur != TICK_MS as i32;
-            if ended {
-                m.end_time = Some(now + dur as Time);
-            }
-
-
-            // 2) Actually update the world
-            let anim = {
-                let data = world.data();
-                let mut wf = DummyFragment::new(world);
-                let mut e = wf.entity_mut(eid);
-
-                if started || ended {
-                    e.set_motion(m.clone());
-                }
-
-                if started {
-                    let facing = if me.target_velocity != scalar(0) {
-                        me.target_velocity.signum()
-                    } else if e.facing() != scalar(0) {
-                        e.facing()
-                    } else {
-                        V3::new(1, 0, 0)
-                    };
-                    e.set_facing(facing);
-
-                    let speed = me.target_velocity.abs().max() as usize / 50;
-                    let anim = facing_anim(data, facing, speed);
-                    e.set_anim(anim);
-
-                    anim
-                } else {
-                    e.anim()
-                }
+            let s = ChunksSource {
+                cache: cache,
+                base_tile: scalar(0),
+                plane: e.entity.plane_id(),
             };
 
 
-            // 3) Compute result
+            me.update(&mut e, &s, now, next);
 
-            let kind = match (started, ended) {
+
+            let kind = match (e.started, e.ended) {
                 (false, false) => UpdateKind::Move,
                 (true, false) => UpdateKind::Start,
                 (false, true) => UpdateKind::End,
                 (true, true) => UpdateKind::StartEnd,
             };
-            return Some((eid, m, anim, kind));
+            return Some((eid, e.entity.motion().clone(), e.entity.anim(), kind));
         }
 
         None

@@ -78,7 +78,9 @@ impl super::Entity {
         &self.motion
     }
 
-    // No motion_mut since modifying `self.motion` affects lookup tables.
+    pub fn motion_mut(&mut self) -> &mut Motion {
+        &mut self.motion
+    }
 
     pub fn anim(&self) -> AnimId {
         self.anim

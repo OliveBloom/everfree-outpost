@@ -53,6 +53,9 @@ Here is a list of the layout of the src/ directory and what each component does.
 
 ## Common
 
+ * `src/libcommon_movement`: High-level movement handling.  Given input bits,
+   computes an entity's motion and animation.  Used by both server-side physics
+   and client-side motion prediction.
  * `src/libphysics`: The core physics engine.  Performs collision detection and
    nothing else.  This library also contains the definitions of the `V2`, `V3`,
    and `Region` types, which are used pervasively throughout the server and
