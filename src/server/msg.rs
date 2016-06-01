@@ -96,6 +96,7 @@ mod op {
         EntityMotionEnd = 0x801d,
         EntityMotionStartEnd = 0x801e,
         ProcessedInputs = 0x801f,
+        ActivityChange = 0x8020,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -275,6 +276,7 @@ pub enum Response {
     EntityMotionEnd(EntityId, LocalTime),
     EntityMotionStartEnd(EntityId, (u16, u16, u16), LocalTime, (i16, i16, i16), AnimId, LocalTime),
     ProcessedInputs(LocalTime, u16),
+    ActivityChange(u8),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -341,6 +343,8 @@ impl Response {
                                   pos, time, velocity, end_time, anim_id)),
             ProcessedInputs(time, count) =>
                 ww.write_msg(id, (op::ProcessedInputs, time, count)),
+            ActivityChange(activity) =>
+                ww.write_msg(id, (op::ActivityChange, activity)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

@@ -11,7 +11,7 @@ use libphysics::TILE_SIZE;
 use auth::Secret;
 use input::InputBits;
 use msg::{Request, Response, InitData, ExtraArg};
-use world::{self, Motion};
+use world::{self, Motion, Activity};
 
 use self::clients::Clients;
 
@@ -94,6 +94,7 @@ pub enum ClientResponse {
     EntityMotionStartEnd(EntityId, V3, Time, V3, AnimId, Time),
     EntityMotionEnd(EntityId, Time),
     EntityGone(EntityId, Time),
+    ActivityChange(Activity),
 
     StructureAppear(StructureId, TemplateId, V3),
     StructureGone(StructureId),
@@ -425,6 +426,16 @@ impl Messages {
             ClientResponse::EntityGone(eid, time) => {
                 let time = time.to_local();
                 self.send_raw(wire_id, Response::EntityGone(eid, time));
+            },
+
+            ClientResponse::ActivityChange(activity) => {
+                let code = match activity {
+                    Activity::Move => 0,
+                    // fly => 1
+                    Activity::Special(_, true) => 2,    // interruptible
+                    Activity::Special(_, false) => 3,   // uninterruptible
+                };
+                self.send_raw(wire_id, Response::ActivityChange(code));
             },
 
 

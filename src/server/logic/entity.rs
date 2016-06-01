@@ -69,6 +69,10 @@ pub fn set_activity(world: &mut World,
     e.set_activity(activity);
     physics.force_update(eid);
 
+    if let Some(c) = e.pawn_owner() {
+        messages.send_client(c.id(), ClientResponse::ActivityChange(activity));
+    }
+
     let send_msg = match activity {
         Activity::Move => {
             // Let physics handle the message.  Otherwise we'll just send one made-up motion
