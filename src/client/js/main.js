@@ -537,7 +537,7 @@ function setupKeyHandler() {
         var arrival = timing.nextArrival() + Config.input_delay.get();
         conn.sendInput(timing.encodeSend(arrival), bits);
 
-        asm_client.feedInput(arrival, target_velocity);
+        asm_client.feedInput(arrival, bits);
     }
 
     function alwaysStop(evt) {

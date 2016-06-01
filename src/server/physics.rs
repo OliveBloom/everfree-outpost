@@ -111,11 +111,6 @@ impl<'a, 'd, F: World_Fragment<'d>> movement::Entity for EntityWrapper<'a, 'd, F
         self.entity.facing()
     }
 
-    fn speed(&self) -> u8 {
-        // TODO
-        0
-    }
-
     fn velocity(&self) -> V3 {
         self.entity.motion().velocity
     }

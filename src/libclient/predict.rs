@@ -5,6 +5,7 @@ use std::u16;
 use physics::v3::{V3, Vn, scalar, Region};
 use physics::ShapeSource;
 use physics::walk2::Collider;
+use common_movement::{self, InputBits, INPUT_DIR_MASK, MovingEntity};
 
 use Time;
 use data::Data;
@@ -13,7 +14,15 @@ use entity::{Motion, Update};
 
 struct Input {
     time: Time,
-    dir: V3,
+    input: InputBits,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Activity {
+    Walk,
+    // Fly,
+    Emote,  // Busy, interruptible
+    Work,   // Busy, not interruptible
 }
 
 /// The `Predictor` answers queries about the player's future position, based on inputs that have
@@ -33,9 +42,12 @@ pub struct Predictor {
     /// Last canonical motion received from the server.
     canon_motion: Motion,
 
-    /// Last canonical target velocity, derived from `pending_inputs` when we receive an "inputs
-    /// processed" message.
-    canon_target: V3,
+    /// Last canonical input, derived from `pending_inputs` when we receive an "inputs processed"
+    /// message.
+    canon_input: InputBits,
+
+    /// Current activity, as reported by the server.
+    canon_activity: Activity,
 
 
     /// The current motion as of the future time.
@@ -43,6 +55,8 @@ pub struct Predictor {
 
     /// Timestamp of the last update.
     current_time: Time,
+
+    me: MovingEntity,
 }
 
 // This must match the server tick.
@@ -54,20 +68,33 @@ impl Predictor {
             pending_inputs: VecDeque::new(),
 
             canon_motion: Motion::new(),
-            canon_target: scalar(0),
+            canon_input: InputBits::empty(),
+            canon_activity: Activity::Walk,
 
             current_motion: Motion::new(),
             // Initialize to a time far in the future.  The first `canonical_motion_update` will
             // rewind it to something reasonable.
             current_time: 65536,
+
+            me: MovingEntity::new(),
         }
+    }
+
+    fn rewind(&mut self, when: Time) {
+        self.current_time = when;
+        self.me = MovingEntity::new();
+        self.me.set_input(self.canon_input);
     }
 
     pub fn canonical_motion_update(&mut self, update: Update) {
         self.canon_motion.apply(update);
         self.current_motion = self.canon_motion.clone();
         // Rewind the current time to the time of the update, so that inputs will be replayed.
-        self.current_time = update.when();
+        self.rewind(update.when());
+    }
+
+    pub fn activity_update(&mut self, activity: Activity) {
+        self.canon_activity = activity;
     }
 
     pub fn processed_inputs(&mut self, time: Time, count: usize) {
@@ -78,16 +105,15 @@ impl Predictor {
             }
 
             let i = self.pending_inputs.pop_front().unwrap();
-            self.canon_target = i.dir;
+            self.canon_input = i.input;
         }
 
-        self.current_time = time;
+        self.rewind(time);
     }
 
-    pub fn input<S>(&mut self, time: Time, dir: V3, shape: &S, data: &Data)
-            where S: ShapeSource {
-        let input = Input { time: time, dir: dir };
-        self.pending_inputs.push_back(input);
+    pub fn input(&mut self, time: Time, input: InputBits) {
+        let i = Input { time: time, input: input };
+        self.pending_inputs.push_back(i);
     }
 
     pub fn update<S>(&mut self, future: Time, shape: &S, data: &Data)
@@ -99,19 +125,37 @@ impl Predictor {
 
         let cur_tick = future & !(TICK_MS - 1);
         let mut input_iter = self.pending_inputs.iter().peekable();
-        let mut target_velocity = self.canon_target;
+        let mut activity = self.canon_activity;
         while self.current_time < future {
             // This mimics the event loop body in server/logic/tick.rs
             let now = self.current_time;
 
-            // Run through pending inputs to find the current target velocity.
+            // Run through pending inputs to find the current input bits.
             while input_iter.peek().map_or(false, |i| i.time <= now) {
+                // `self.me` keeps track of the latest input internally.  Avoid replaying old
+                // inputs, since that will force extra MovingEntity updates that didn't happen on
+                // the server.
                 let i = input_iter.next().unwrap();
-                target_velocity = i.dir;
+                if i.time > now - TICK_MS {
+                    self.me.set_input(i.input);
+                }
+
+                // Input will interrupt any active emote.
+                if i.input & INPUT_DIR_MASK != InputBits::empty() &&
+                   activity == Activity::Emote {
+                    activity = Activity::Walk;
+                }
             }
 
             // Take a step
-            step_physics(shape, data, &mut self.current_motion, now, target_velocity);
+            if activity == Activity::Walk {
+                let mut e = EntityWrapper {
+                    data: data,
+                    motion: &mut self.current_motion,
+                    activity: activity,
+                };
+                self.me.update(&mut e, shape, now, now + TICK_MS);
+            }
             self.current_time += TICK_MS;
         }
     }
@@ -121,136 +165,68 @@ impl Predictor {
     }
 }
 
-fn step_physics<S>(shape: &S,
-                   data: &Data,
-                   motion: &mut Motion,
-                   now: Time,
-                   target_velocity: V3)
-        where S: ShapeSource {
-    let next = now + TICK_MS;
+struct EntityWrapper<'a, 'd> {
+    data: &'d Data,
+    motion: &'a mut Motion,
+    activity: Activity,
+}
 
-    let pos = motion.pos(now);
-    let size = V3::new(32, 32, 48);
-    let mut collider = Collider::new(shape, Region::new(pos, pos + size));
-
-    if data.anim_dir(motion.anim_id).is_none() {
-        // It's a special activity, so leave it alone.
-        // TODO: make this less ugly by directly notifying about activity changes
-        return;
+impl<'a, 'd> common_movement::Entity for EntityWrapper<'a, 'd> {
+    fn activity(&self) -> common_movement::Activity {
+        match self.activity {
+            Activity::Walk => common_movement::Activity::Walk,
+            //Activity::Fly => common_movement::Activity::Fly,
+            Activity::Emote |
+            Activity::Work => common_movement::Activity::Busy,
+        }
     }
 
-    let new_anim = walk_anim(data, motion.anim_id, target_velocity);
+    fn facing(&self) -> V3 {
+        let dir = self.data.anim_dir(self.motion.anim_id).unwrap_or(0);
+        let (x, y) = [
+            ( 1,  0),
+            ( 1,  1),
+            ( 0,  1),
+            (-1,  1),
+            (-1,  0),
+            (-1, -1),
+            ( 0, -1),
+            ( 1, -1),
+        ][dir as usize];
+        V3::new(x, y, 0)
+    }
 
-    // 1) Compute the actual velocity for this tick
-    let velocity = collider.calc_velocity(target_velocity);
-    let started = velocity != motion.velocity || new_anim != motion.anim_id;
-    if started {
-        *motion = Motion {
+    fn velocity(&self) -> V3 {
+        self.motion.velocity
+    }
+
+
+    type Time = Time;
+
+    fn pos(&self, now: Time) -> V3 {
+        self.motion.pos(now)
+    }
+
+
+    fn start_motion(&mut self, now: Time, pos: V3, facing: V3, speed: u8, velocity: V3) {
+        *self.motion = Motion {
             start_pos: pos,
             velocity: velocity,
             start_time: now,
             end_time: None,
-            anim_id: new_anim,
+            anim_id: walk_anim(self.data, facing, speed),
         };
+        println!("set velocity to {:?}", velocity);
     }
 
-    let next_pos = motion.pos(next);
-    let (step, dur) = collider.walk(next_pos - pos, TICK_MS as i32);
-    let ended = dur != TICK_MS as i32;
-    if ended {
-        motion.end_time = Some(now + dur as Time);
+    fn end_motion(&mut self, now: Time) {
+        self.motion.end_time = Some(now);
     }
 }
 
-fn walk_anim(data: &Data, old_anim: u16, velocity: V3) -> u16 {
-    let speed = velocity.abs().max() / 50;
-    let dir_vec = velocity.signum();
-    let idx = (3 * (dir_vec.x + 1) + (dir_vec.y + 1)) as usize;
-    let old_dir = match data.anim_dir(old_anim) {
-        Some(x) => x,
-        // If None, it's a special (non-movement) anim, like "sit".
-        None => return old_anim,
-    };
-    let dir = [5, 4, 3, 6, old_dir, 2, 7, 0, 1][idx];
+fn walk_anim(data: &Data, facing: V3, speed: u8) -> u16 {
+    let idx = (3 * (facing.x + 1) + (facing.y + 1)) as usize;
+    let dir = [5, 4, 3, 6, 0, 2, 7, 0, 1][idx];
 
     data.physics_anim_table()[speed as usize][dir as usize]
 }
-
-/*
-fn play_input<S>(motion: &mut Motion,
-                 dir: &mut V3,
-                 input: &Input,
-                 shape: &S,
-                 data: &Data)
-        where S: ShapeSource {
-    // Play forward until the time of the input event.
-    while motion.end_time < input.time {
-        *motion = predict(shape,
-                          data,
-                          motion.end_pos,
-                          motion.end_time,
-                          motion.anim_id,
-                          *dir);
-    }
-
-    // Play the input event.
-    *dir = input.dir;
-    *motion = predict(shape,
-                      data,
-                      motion.pos(input.time),
-                      input.time,
-                      motion.anim_id,
-                      *dir);
-}
-*/
-
-/*
-fn predict<S: ShapeSource>(shape: &S,
-                           data: &Data,
-                           start_pos: V3,
-                           start_time: Time,
-                           old_anim: u16,
-                           target_velocity: V3) -> Motion {
-    // TODO: hardcoded constant
-    let size = V3::new(32, 32, 64);
-    let (mut end_pos, mut dur) = physics::collide(shape, start_pos, size, target_velocity);
-
-
-    // NB: keep this in sync with server/physics.rs
-    const DURATION_MAX: u16 = u16::MAX;
-    if dur > DURATION_MAX as i32 {
-        let offset = end_pos - start_pos;
-        end_pos = start_pos + offset * scalar(DURATION_MAX as i32) / scalar(dur);
-        dur = DURATION_MAX as i32;
-    } else if dur == 0 {
-        dur = DURATION_MAX as i32;
-    }
-
-    // TODO: hardcoded constant
-    let speed = target_velocity.abs().max() / 50;
-    let old_dir = data.anim_dir(old_anim);
-    let new_anim =
-        if old_dir.is_none() && end_pos == start_pos {
-            // Old anim was a special (non-physics) animation
-            old_anim
-        } else {
-            let old_dir = old_dir.unwrap_or(0);
-            let new_dir = velocity_dir(target_velocity, old_dir as usize);
-            data.physics_anim_table()[speed as usize][new_dir as usize]
-        };
-
-    Motion {
-        start_time: start_time,
-        end_time: start_time + dur as Time,
-        start_pos: start_pos,
-        end_pos: end_pos,
-        anim_id: new_anim,
-    }
-}
-
-fn velocity_dir(v: V3, old_dir: usize) -> usize {
-    let s = v.signum();
-    let idx = (3 * (s.x + 1) + (s.y + 1)) as usize;
-    [5, 4, 3, 6, old_dir, 2, 7, 0, 1][idx]
-}
-*/

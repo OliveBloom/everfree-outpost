@@ -20,6 +20,7 @@
 
 extern crate client_fonts;
 extern crate client_ui_atlas;
+extern crate common_movement;
 extern crate physics;
 
 pub use client::Client;

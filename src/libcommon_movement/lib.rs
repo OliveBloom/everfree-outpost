@@ -94,7 +94,6 @@ impl Time for i64 {
 pub trait Entity {
     fn activity(&self) -> Activity;
     fn facing(&self) -> V3;
-    fn speed(&self) -> u8;
     fn velocity(&self) -> V3;
 
     type Time: Time;
@@ -119,7 +118,10 @@ impl MovingEntity {
     }
 
     pub fn set_input(&mut self, input: InputBits) {
-        self.input = input;
+        if input != self.input {
+            self.input = input;
+            self.force_update = true;
+        }
     }
 
     pub fn force_update(&mut self) {
@@ -142,9 +144,7 @@ impl MovingEntity {
         let target_velocity = facing * scalar(speed as i32 * 50);
 
         let velocity = collider.calc_velocity(target_velocity);
-        let started = facing != e.facing() ||
-                      //speed != e.speed() ||   // TODO
-                      velocity != e.velocity() ||
+        let started = velocity != e.velocity() ||
                       self.force_update;
         if started {
             self.force_update = false;

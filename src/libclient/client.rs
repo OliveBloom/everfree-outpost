@@ -17,6 +17,7 @@ use physics;
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE};
 use physics::Shape;
 use physics::v3::{V3, V2, Vn, scalar, Region};
+use common_movement::InputBits;
 
 use Time;
 use data::Data;
@@ -387,8 +388,8 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Physics
 
-    pub fn feed_input(&mut self, time: Time, dir: V3) {
-        self.predictor.input(time, dir, &*self.terrain_shape, &self.data);
+    pub fn feed_input(&mut self, time: Time, bits: u16) {
+        self.predictor.input(time, InputBits::from_bits(bits).expect("invalid input bits"));
     }
 
     pub fn processed_inputs(&mut self, time: Time, count: u16) {

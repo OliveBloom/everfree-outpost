@@ -284,10 +284,8 @@ pub unsafe extern fn get_active_ability(client: &mut Client) -> u16 {
 #[no_mangle]
 pub extern fn feed_input(client: &mut Client,
                          time: i32,
-                         dir_x: i32,
-                         dir_y: i32,
-                         dir_z: i32) {
-    client.feed_input(time, V3::new(dir_x, dir_y, dir_z));
+                         bits: u16) {
+    client.feed_input(time, bits);
 }
 
 #[no_mangle]

@@ -614,8 +614,8 @@ DynAsm.prototype.collide = function(pos, size, velocity) {
     return result;
 };
 
-DynAsm.prototype.feedInput = function(time, dir) {
-    this._raw['feed_input'](this.client, time, dir.x, dir.y, dir.z);
+DynAsm.prototype.feedInput = function(time, bits) {
+    this._raw['feed_input'](this.client, time, bits);
 };
 
 DynAsm.prototype.processedInputs = function(time, count) {
