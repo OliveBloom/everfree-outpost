@@ -231,6 +231,7 @@ function openConn(info, next) {
     conn.onEntityMotionEnd = handleEntityMotionEnd;
     conn.onEntityMotionStartEnd = handleEntityMotionStartEnd;
     conn.onProcessedInputs = handleProcessedInputs;
+    conn.onActivityChange = handleActivityChange;
 }
 
 function maybeRegister(info, next) {
@@ -724,6 +725,10 @@ function handleEntityMotionStartEnd(id, m, anim) {
 
 function handleProcessedInputs(time, count) {
     asm_client.processedInputs(timing.decodeRecv(time), count);
+}
+
+function handleActivityChange(activity) {
+    asm_client.activityChange(activity);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.

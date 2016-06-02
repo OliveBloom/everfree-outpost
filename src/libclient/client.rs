@@ -28,7 +28,7 @@ use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use misc::Misc;
-use predict::Predictor;
+use predict::{Predictor, Activity};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -394,6 +394,17 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn processed_inputs(&mut self, time: Time, count: u16) {
         self.predictor.processed_inputs(time, count as usize);
+    }
+
+    pub fn activity_change(&mut self, activity: u8) {
+        let activity = match activity {
+            0 => Activity::Walk,
+            //1 => Activity::Fly,
+            2 => Activity::Emote,
+            3 => Activity::Work,
+            _ => panic!("invalid activity value: {}", activity),
+        };
+        self.predictor.activity_update(activity);
     }
 
 

@@ -622,6 +622,10 @@ DynAsm.prototype.processedInputs = function(time, count) {
     this._raw['processed_inputs'](this.client, time, count);
 };
 
+DynAsm.prototype.activityChange = function(activity) {
+    this._raw['activity_change'](this.client, activity);
+};
+
 DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
     var buf = this._heapAlloc(Uint16Array, data.length);
     buf.set(data);

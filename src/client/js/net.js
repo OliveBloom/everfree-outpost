@@ -53,6 +53,7 @@ var OP_ENTITY_MOTION_START =    0x801c;
 var OP_ENTITY_MOTION_END =      0x801d;
 var OP_ENTITY_MOTION_START_END =0x801e;
 var OP_PROCESSED_INPUTS =       0x801f;
+var OP_ACTIVITY_CHANGE =        0x8020;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -107,6 +108,7 @@ function Connection(url) {
     this.onEntityMotionEnd = null;
     this.onEntityMotionStartEnd = null;
     this.onProcessedInputs = null;
+    this.onActivityChange = null;
 }
 exports.Connection = Connection;
 
@@ -471,6 +473,13 @@ Connection.prototype._handleMessage = function(evt) {
                 var time =          get16();
                 var count =         get16();
                 this.onProcessedInputs(time, count);
+            }
+            break;
+
+        case OP_ACTIVITY_CHANGE:
+            if (this.onActivityChange != null) {
+                var activity = get8();
+                this.onActivityChange(activity);
             }
             break;
 

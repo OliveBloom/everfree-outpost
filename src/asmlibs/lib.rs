@@ -295,6 +295,12 @@ pub extern fn processed_inputs(client: &mut Client,
     client.processed_inputs(time, count);
 }
 
+#[no_mangle]
+pub extern fn activity_change(client: &mut Client,
+                              activity: u8) {
+    client.activity_change(activity);
+}
+
 
 // Graphics
 
