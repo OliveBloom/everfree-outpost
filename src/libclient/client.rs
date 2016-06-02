@@ -504,6 +504,8 @@ impl<'d, P: Platform> Client<'d, P> {
             } else {
                 V3::new(4096, 4096, 0)
             };
+        // Wrap `pos` to 2k .. 6k region
+        let pos = util::wrap_base(pos, V3::new(2048, 2048, 0));
         self.debug.pos = pos;
 
         let ambient_light =

@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 use std::intrinsics;
-use physics::v3::{V3, V2, Vn, Region};
+use physics::v3::{V3, V2, Vn, Region, scalar};
 
 pub fn unpack_v3(v: (u8, u8, u8)) -> V3 {
     V3::new(v.0 as i32,
@@ -21,4 +21,8 @@ pub fn contains_wrapped(bounds: Region<V2>, pos: V2, mask: V2) -> bool {
 
     delta.x < size.x &&
     delta.y < size.y
+}
+
+pub fn wrap_base(pos: V3, base: V3) -> V3 {
+    ((pos - base) & scalar::<V3>(4095)) + base
 }

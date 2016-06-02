@@ -154,7 +154,8 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             let is_pawn = Some(id) == self.pawn_id;
 
             let pos = self.entity_pos(id, e);
-            if !util::contains_wrapped(self.bounds, pos.reduce(), scalar(LOCAL_PX_MASK)) {
+            let pos = util::wrap_base(pos, self.bounds.min.extend(0));
+            if !self.bounds.contains(pos.reduce()) {
                 // Not visible
                 continue;
             }
