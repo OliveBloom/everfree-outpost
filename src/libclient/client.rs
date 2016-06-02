@@ -219,7 +219,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let (pos, old_t) = {
             let s = &self.structures[id];
             (s.pos,
-             self.data.template(template_id))
+             self.data.template(s.template_id))
         };
         let new_t = self.data.template(template_id);
 
