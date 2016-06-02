@@ -619,7 +619,7 @@ def init():
                 continue
             seen.add(name)
 
-            bb = floor_bb if 'w' not in letters else empty_bb
+            bb = floor_bb if all(l not in 'wlp' for l in letters) else empty_bb
             bb.new(name).bottom(img)
     
     # Variants
@@ -627,7 +627,8 @@ def init():
         name = layer.name * 4
         for i in range(4):
             key = 'full/v%d' % i if i > 0 else 'full'
-            floor_bb.new('%s/v%d' % (name, i)).bottom(layer.dct[key])
+            bb = floor_bb if layer.name not in 'wlp' else empty_bb
+            bb.new('%s/v%d' % (name, i)).bottom(layer.dct[key])
 
 
     # Hilltop edges
