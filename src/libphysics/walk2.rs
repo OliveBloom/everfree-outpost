@@ -281,6 +281,7 @@ fn check_floor<S: ShapeSource>(s: &S,
 
 fn calc_velocity(planar: V2,
                  floor: FloorState) -> V3 {
+    // TODO: sliding doesn't occur when the player is blocked by hitting the ceiling (on a ramp)
     match floor {
         // Entities in mid-air fall due to gravity.
         //FloorState::MidAir => V3::new(0, 0, -300),
@@ -357,6 +358,24 @@ fn walk<S: ShapeSource>(s: &S,
                                        bounds.max.with_y(corner.y));
             if !check_boundary(s, boundary, (Axis::Y, dir.y < 0)) {
                 break;
+            }
+        }
+
+        if overflowed.z != 0 && corner.z & TILE_MASK == 0 {
+            // Check if we've hit a floor or ceiling.
+            let boundary = Region::new(bounds.min.with_z(corner.z),
+                                       bounds.max.with_z(corner.z + 1));
+            let boundary = boundary.div_round_signed(TILE_SIZE);
+            if dir.z == 1 {
+                // Check if any of the cells above are non-Empty.
+                if boundary.points().map(|p| s.get_shape(p)).any(|s| s != Shape::Empty) {
+                    break;
+                }
+            } else {
+                // Check if any of the cells below are Floor.
+                if boundary.points().map(|p| s.get_shape(p)).any(|s| s == Shape::Floor) {
+                    break;
+                }
             }
         }
 
