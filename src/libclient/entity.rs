@@ -139,13 +139,27 @@ impl Entities {
                   id: EntityId,
                   appearance: u32,
                   name: Option<String>) {
-        self.map.insert(id, Entity {
-            id: id,
-            motion: Motion::new(),
-            appearance: appearance,
-            name: name,
-            z_next: ptr::null_mut(),
-        });
+        use std::collections::btree_map::Entry::*;
+        match self.map.entry(id) {
+            Vacant(e) => {
+                e.insert(Entity {
+                    id: id,
+                    motion: Motion::new(),
+                    appearance: appearance,
+                    name: name,
+                    z_next: ptr::null_mut(),
+                });
+            },
+            Occupied(e) => {
+                // The entity already exists, but its appearance may have changed.  (The
+                // EntityAppear message is currently used for both "entity came into view" and
+                // "entity's appearance has changed".)
+                let e = e.into_mut();
+                e.appearance = appearance;
+                e.name = name;
+            },
+        }
+
         // Insertions may cause elements to move around
         self.invalidate_z_list();
     }
