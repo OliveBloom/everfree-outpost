@@ -525,7 +525,7 @@ LauncherUI.prototype.init = function() {
 
     this.img_banner = new Image();
     this.img_banner.onload = function() { this_._finishedPending(); };
-    this.img_banner.src = 'logo.png';
+    this.img_banner.src = 'logo-bar.png';
 
     this.img_font = new Image();
     this.img_font.onload = function() { this_._finishedPending(); };

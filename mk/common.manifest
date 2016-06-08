@@ -16,9 +16,13 @@ www/instructions.html: $root/src/client/instructions.html
 www/credits.html: $b_data/credits.html
 www/outpost.pack: $b_data/outpost.pack
 www/server.json: $b_data/server.json
+www/img/: $root/assets/ui/png
 
 www/configedit.html: $root/src/client/configedit.html
 www/configedit.js: $b_js/configedit.js
+
+www/serverlist.html: $root/src/launcher/serverlist.html
+www/serverlist.js: $root/src/launcher/serverlist.js
 
 www/versions/${version}/client_parts.html: $root/src/client/client_parts.html
 www/versions/${version}/outpost.js: $b_js/outpost.js

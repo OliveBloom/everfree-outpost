@@ -211,6 +211,7 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
         // The first time the status becomes SYNC_OK, swap out the canvas and
         // start the requestAnimationFrame loop.
         if (new_synced == net.SYNC_OK) {
+            console.log(old_canvas);
             document.body.replaceChild(canvas, old_canvas);
             console.log('building UI');
             buildUI();

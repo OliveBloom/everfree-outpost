@@ -85,6 +85,23 @@ def unpack_args(f):
         return f(**args)
     return g
 
+def check_origin(f):
+    @functools.wraps(f)
+    def g(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            resp = make_response('')
+        else:
+            if request.headers.get('Origin') == cfg['allowed_origin']:
+                resp = make_response(f(*args, **kwargs))
+            else:
+                resp = make_response(('', 403))
+
+        resp.headers['Access-Control-Allow-Origin'] = cfg['allowed_origin']
+        resp.headers['Access-Control-Allow-Credentials'] = 'true'
+        return resp
+
+    return g
+
 NORM_RE = re.compile(r'\s+')
 def normalize_name(name):
     return NORM_RE.sub(' ', name.strip())
@@ -202,6 +219,18 @@ def do_get_verify_key():
     return ok(key=key_str)
 
 @unpack_args
+def do_check_login(auto_guest=False):
+    if 'name' in session:
+        return ok(type='normal', name=session['name'])
+
+    if auto_guest:
+        # TODO: generate new guest account
+        return ok(type='guest', name='Anon1234')
+
+    return ok(type='none')
+
+
+@unpack_args
 def do_sign_challenge(challenge):
     if 'uid' not in session or 'name' not in session:
         return error(reason='not_logged_in')
@@ -257,20 +286,23 @@ def api_get_verify_key():
     result = do_get_verify_key()
     return api_dispatch(result)
 
-@app.route('/api/sign_challenge', methods=['POST', 'OPTIONS'])
-def api_sign_challenge():
+@app.route('/api/check_login', methods=['GET', 'POST', 'OPTIONS'])
+@check_origin
+def api_check_login():
     if request.method == 'POST':
-        if request.headers.get('Origin') == cfg['allowed_origin']:
-            result = do_sign_challenge(request.get_json(force=True))
-            resp = make_response(api_dispatch(result))
-        else:
-            resp = make_response(('', 403))
+        args = request.get_json(force=True)
     else:
-        resp = make_response('')
+        args = {}
 
-    resp.headers['Access-Control-Allow-Origin'] = cfg['allowed_origin']
-    resp.headers['Access-Control-Allow-Credentials'] = 'true'
-    return resp
+    result = do_check_login(args)
+    return api_dispatch(result)
+
+@app.route('/api/sign_challenge', methods=['POST', 'OPTIONS'])
+@check_origin
+def api_sign_challenge():
+    result = do_sign_challenge(request.get_json(force=True))
+    return api_dispatch(result)
+
 
 if __name__ == '__main__':
     app.run()

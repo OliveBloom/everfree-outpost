@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Everfree Outpost</title>
+
+        <script>
+            if (location.hash.startsWith('#s=')) {
+                var x = 'launcher.html' + location.hash;
+                location.replace(new URL(x, location));
+            }
+        </script>
+
+        <style type='text/css'>
+
+            html {
+                width: 50vw;
+                height: 50vh;
+                display: flex;
+                transform-origin: top left;
+                transform: scale(2);
+                position: relative;
+
+                overflow-x: hidden;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+
+                margin: 0;
+                padding: 0;
+
+                width: 100%;
+                min-height: 100%;
+
+                background-image: url('background.png');
+                background-color: rgba(255, 255, 255, 0.5);
+                background-size: 1024px 1024px;
+            }
+
+            * {
+                flex: 0 0 auto;
+            }
+
+            main, .grow {
+                flex: 1 0 auto;
+            }
+
+            main {
+                /* TODO: fix this filename */
+                border-color: #d27d2c;
+                border-image-source: url('img/panel-outer-border-border.png');
+                border-image-slice: 6 6 6 6;
+                border-image-width: auto;
+                border-image-repeat: repeat;
+                border-width: 5px;
+                border-style: solid;
+
+                background-clip: padding-box;
+                background-color: #4e4a4e;
+                color: #deeed6;
+
+                width: 250px;
+                padding: 5px;
+                margin: 5px 0;
+            }
+
+            h1 {
+                font-size: 150%;
+                text-align: center;
+            }
+
+            * {
+                image-rendering: optimizeSpeed;
+                image-rendering: -moz-crisp-edges;
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: -o-crisp-edges;
+                image-rendering: pixelated;
+                -ms-interpolation-mode: nearest-neighbor;
+            }
+
+
+            button { all: unset; }
+
+            button,
+            .g-button-large {
+                display: inline-block;
+                min-width: 27px;
+                height: 14px;
+                font-size: 10px;
+
+                border-image-source: url('img/buttons-large-normal.png');
+                border-image-slice: 9 12 9 35;
+                border-image-width: auto;
+                border-image-repeat: repeat;
+                border-width: 2px 10px;
+                border-style: solid;
+
+                background-clip: padding-box;
+                background-color: #d27d2c;
+                color: #140c1c;
+
+                padding: 0 1px;
+                margin: 0 2px;
+                text-align: center;
+            }
+
+            button:hover,
+            .g-button-large:hover {
+                border-image-source: url('img/buttons-large-hover.png');
+            }
+
+            button:active,
+            .g-button-large:active {
+                border-image-source: url('img/buttons-large-active.png');
+            }
+
+            a:link, a:visited, a:hover, a:active {
+                color: #6dc2ca;
+            }
+
+
+            #logo {
+                background-color: rgba(0, 0, 0, 0.5);
+                border-color: rgba(0, 0, 0, 0.5);
+                border-radius: 5px;
+                margin: 3px 0;
+            }
+
+            #login-status {
+                font-size: 70%;
+                text-align: right;
+            }
+
+            #login-status.pending {
+                color: #98aab8;
+            }
+
+            .server-entry {
+                padding: 2px 3px;
+                padding-right: 12px;
+
+                border-image-source: url('img/list-item.png');
+                border-image-slice: 1 9 2 2;
+                border-image-width: auto;
+                border-image-repeat: repeat;
+                /* In Chrome, 'border-width: 0px' disables the border completely. */
+                border-width: 1px;
+                border-style: solid;
+
+                background-color: #854c30;
+                background-clip: padding-box;
+            }
+
+            .server-arrow {
+                padding-right: 3px;
+                visibility: hidden;
+            }
+
+            .server-entry.active > .server-arrow {
+                visibility: visible;
+            }
+
+
+            /* Higher specificity than `.server-link`, so it can override a:link */
+            a.server-link {
+                color: #deeed6;
+            }
+
+            main {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <img src='logo.png' id='logo'>
+        <main>
+            <div id='login-status' class='pending'>Checking...</div>
+            <div id='server-list' class='grow'>
+                <!-- populated by javascript -->
+            </div>
+            <div style='font-size: 70%'>
+                <!--
+                <a href='#' id='add-server'>Add server</a>
+                -->
+            </div>
+        </main>
+
+        <script src='serverlist.js'></script>
+    </body>
+</html>
+
