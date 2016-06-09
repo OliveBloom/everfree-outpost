@@ -24,10 +24,7 @@ def configure(ctx):
             chk_python3_lib, deps=('python3',))
 
 def requirements(ctx):
-    reqs = ('python3', 'python3_pil', 'python3_yaml', 'python3_json')
-    if not ctx.info.data_only:
-        reqs += ('python3_config',)
-    return reqs
+    return ('python3', 'python3_pil', 'python3_yaml', 'python3_json', 'python3_config')
 
 
 def chk_python3(ctx, python3):

@@ -55,12 +55,9 @@ def configure(ctx):
     ctx.copy_arg('rust_extra_libdir', 'Rust extra library directory')
 
 def requirements(ctx):
-    if ctx.info.data_only:
-        return ()
-    else:
-        return ('rustc',) + \
-                tuple('rust_lib%s_path' % l for l in NEED_RUST_LIBS) + \
-                tuple('rust_lib%s_src' % l for l in NEED_RUST_LIB_SRC)
+    return ('rustc',) + \
+            tuple('rust_lib%s_path' % l for l in NEED_RUST_LIBS) + \
+            tuple('rust_lib%s_src' % l for l in NEED_RUST_LIB_SRC)
 
 def configure_lib(ctx, crate_name):
     key = 'rust_lib%s_path' % crate_name

@@ -16,14 +16,11 @@ def build_parser():
     args.add_argument('--dist-dir', default=None,
             help='directory to store distribution image')
 
-    args.add_argument('--data-only', action='store_true', default=False,
-            help='generate data files only; don\'t compile any code')
-    args.add_argument('--use-prebuilt',
-            help='use prebuild versions of the named files/directories')
-    args.add_argument('--prebuilt-dir', default=None,
-            help='directory containing a previously compiled version')
     args.add_argument('--reconfigure', action='store_true', default=False,
             help='reuse cached configuration info when possible')
+
+    args.add_argument('--components', default='all',
+            help='list of components to build')
     args.add_argument('--mods',
             help='list of mods to include in the compiled game')
 
@@ -74,30 +71,8 @@ def build_parser():
     return args
 
 
-class Info(object):
-    def __init__(self, args):
-        self._args = args
-
-        script_dir = os.path.dirname(sys.argv[0])
-        if script_dir == '':
-            self.root_dir = '.'
-        else:
-            self.root_dir = os.path.normpath(os.path.join(script_dir, '..', '..'))
-
-        in_tree = self.root_dir == '.' or self.root_dir == os.getcwd()
-
-        if args.build_dir is None:
-            self.build_dir = 'build' if in_tree else '.'
-        else:
-            self.build_dir = args.build_dir
-
-        if args.dist_dir is None:
-            self.dist_dir = 'dist' if in_tree else os.path.join(self.build_dir, 'dist')
-        else:
-            self.dist_dir = args.dist_dir
-
-    def __getattr__(self, k):
-        return getattr(self._args, k)
+def parse_components(s):
+    parts = s.split(',')
 
 
 def header(i):
@@ -112,7 +87,6 @@ def header(i):
         # variable that determines where `.ninja_log` is stored.
         builddir = %{os.path.normpath(i.build_dir)}
         dist = %{os.path.normpath(i.dist_dir)}
-        prebuilt = %{os.path.normpath(i.prebuilt_dir or '')}
 
         _exe = %{'' if not i.win32 else '.exe'}
         _so = %{'.so' if not i.win32 else '.dll'}
@@ -139,19 +113,6 @@ def header(i):
 
         version = dev
     ''', os=os, **locals())
-
-
-def fix_bitflags(src_out, src_in):
-    return template('''
-        rule fix_bitflags_src
-            command = $
-                echo '#![feature(no_std)]' >$out && $
-                echo '#![no_std]' >>$out && $
-                cat $in >> $out
-            description = PATCH bitflags.rs
-
-        build %src_out: fix_bitflags_src %src_in
-    ''', **locals())
 
 
 if __name__ == '__main__':
@@ -182,8 +143,6 @@ if __name__ == '__main__':
 
     dist_manifest = os.path.join(i.root_dir, 'mk', dist_manifest_base)
     common_manifest = os.path.join(i.root_dir, 'mk', 'common.manifest')
-    maybe_data_filter = os.path.join(i.root_dir, 'mk', 'data_files.txt') \
-            if i.data_only else None
 
     dist_extra = []
     if i.with_server_gui:
@@ -192,145 +151,156 @@ if __name__ == '__main__':
     content = header(i)
     content += '\n\n'.join((
         '',
+        '# Dist',
         dist.rules(i),
-        ))
-
-    if not i.data_only:
-        content += '\n\n'.join((
-            '',
-            '# Native',
-            native.rules(i),
-            native.rust('syntax_exts', 'dylib', (), extra_flags='-C prefer-dynamic'),
-            native.rust('physics', 'lib', ()),
-            native.rust('server_types', 'lib', ('physics',)),
-            native.rust('server_config', 'lib', ('server_types',)),
-            native.rust('server_extra', 'lib', ('server_types',)),
-            native.rust('server_util', 'lib', ('server_types',)),
-            native.rust('server_world_types', 'lib', ('server_types',)),
-            native.rust('server_bundle', 'lib',
-                ('physics', 'server_config', 'server_extra', 'server_types',
-                    'server_util', 'server_world_types')),
-            native.rust('server_bundle', 'staticlib',
-                ('physics', 'server_config', 'server_extra', 'server_types',
-                    'server_util', 'server_world_types'),
-                extra_flags='--cfg ffi'),
-            native.rust('terrain_gen_algo', 'lib', ('server_types',), build_type='release'),
-            native.rust('terrain_gen', 'lib',
-                ('physics', 'server_config', 'server_types', 'server_util', 'terrain_gen_algo'),
-                # Slow terrain gen algorithms cause serious problems in debug
-                # builds (3000+ ms to generate each chunk).
-                build_type='release'),
-            native.rust('backend', 'bin',
-                ('physics', 'terrain_gen',
-                    'server_bundle', 'server_config', 'server_extra',
-                    'server_types', 'server_util', 'server_world_types',),
-                dyn_deps=('syntax_exts',),
-                src_file='$root/src/server/main.rs'),
-            native.cxx('wrapper', 'bin',
-                ('$root/src/wrapper/%s' % f
-                    for f in os.listdir(os.path.join(i.root_dir, 'src', 'wrapper'))
-                    if f.endswith('.cpp')),
-                cxxflags='-DWEBSOCKETPP_STRICT_MASKING',
-                ldflags='-static',
-                # TODO: detect these lib flags
-                libs='-lboost_system -lpthread' if not i.win32 else
-                    '-lboost_system-mt -lpthread -lwsock32 -lws2_32'),
-            native.cxx('outpost_savegame', 'shlib',
-                ('$root/util/savegame_py/%s' % f
-                    for f in os.listdir(os.path.join(i.root_dir, 'util/savegame_py'))
-                    if f.endswith('.c')),
-                cflags=py_includes,
-                ldflags=py_ldflags,
-                ),
-
-            native.rust('terrain_gen_ffi', 'staticlib',
-                ('terrain_gen', 'server_config', 'server_types'),
-                src_file='$root/src/test_terrain_gen/ffi.rs'),
-            native.cxx('outpost_terrain_gen', 'shlib',
-                ('$root/src/test_terrain_gen/py.c',),
-                cflags=py_includes,
-                ldflags=py_ldflags,
-                link_extra=['$b_native/libterrain_gen_ffi$_a'],
-                ),
-
-            'build pymodules: phony '
-                '$b_native/outpost_savegame$_so '
-                '$b_native/outpost_terrain_gen$_so',
-
-            native.rust('equip_sprites_render', 'dylib',
-                    ('physics',),
-                    src_file='$root/src/gen/equip_sprites/render.rs'),
-            dist.copy('$b_native/libequip_sprites_render$_so',
-                      '$b_native/equip_sprites_render$_so'),
-
-            '# Asm.js',
-            asmjs.rules(i),
-            asmjs.rlib('core', (), i.rust_libcore_src),
-            asmjs.rlib('alloc', ('core',), i.rust_liballoc_src),
-            asmjs.rlib('rustc_unicode', ('core',), i.rust_librustc_unicode_src),
-            asmjs.rlib('collections', ('core', 'alloc', 'rustc_unicode'),
-                    i.rust_libcollections_src),
-            asmjs.rlib('asmrt', ('core',)),
-            asmjs.rlib('asmmalloc', ('core', 'asmrt')),
-            asmjs.rlib('fakestd', ('core', 'alloc', 'rustc_unicode', 'collections',
-                'asmrt', 'asmmalloc')),
-            asmjs.rlib('bitflags', ('core',), i.rust_libbitflags_src),
-            asmjs.rlib('physics', ('fakestd', 'bitflags')),
-            asmjs.rlib('client_ui_atlas', ('physics',), '$b_data/ui_atlas.rs'),
-            asmjs.rlib('client_fonts', (), '$b_data/fonts_metrics.rs'),
-            asmjs.rlib('client', ('fakestd', 'physics',
-                'client_ui_atlas', 'client_fonts')),
-            asmjs.asmlibs('asmlibs',
-                '$root/src/asmlibs/lib.rs',
-                ('core', 'collections', 'asmrt', 'asmmalloc', 'physics', 'client'),
-                '$root/src/asmlibs/exports.txt',
-                '$root/src/asmlibs/template.js'),
-
-            '# Javascript',
-            js.rules(i),
-            js.compile(i, '$b_js/outpost.js', '$root/src/client/js/main.js'),
-            js.minify(i, '$b_js/asmlibs.js', '$b_asmjs/asmlibs.js'),
-            js.compile(i, '$b_js/configedit.js', '$root/src/client/js/configedit.js'),
-            js.client_manifest(i, '$b_js/manifest.json'),
-
-            '# uvedit',
-            asmjs.asmlibs('uvedit_asm',
-                '$root/src/uvedit/lib.rs',
-                ('core', 'collections', 'asmrt', 'asmmalloc', 'physics'),
-                '$root/src/uvedit/asm_exports.txt',
-                '$root/src/uvedit/asm_template.js'),
-            js.minify(i, '$b_js/uvedit_asm.js', '$b_asmjs/uvedit_asm.js'),
-            js.compile(i, '$b_js/uvedit.js', '$root/src/uvedit/main.js'),
-            ))
-
-    content += '\n\n'.join((
         '',
+
+        '# Server - backend',
+        native.rules(i),
+        native.rust('syntax_exts', 'dylib', (), extra_flags='-C prefer-dynamic'),
+        native.rust('physics', 'lib', ()),
+        native.rust('server_types', 'lib', ('physics',)),
+        native.rust('server_config', 'lib', ('server_types',)),
+        native.rust('server_extra', 'lib', ('server_types',)),
+        native.rust('server_util', 'lib', ('server_types',)),
+        native.rust('server_world_types', 'lib', ('server_types',)),
+        native.rust('server_bundle', 'lib',
+            ('physics', 'server_config', 'server_extra', 'server_types',
+                'server_util', 'server_world_types')),
+        native.rust('server_bundle', 'staticlib',
+            ('physics', 'server_config', 'server_extra', 'server_types',
+                'server_util', 'server_world_types'),
+            extra_flags='--cfg ffi'),
+        native.rust('terrain_gen_algo', 'lib', ('server_types',), build_type='release'),
+        native.rust('terrain_gen', 'lib',
+            ('physics', 'server_config', 'server_types', 'server_util', 'terrain_gen_algo'),
+            # Slow terrain gen algorithms cause serious problems in debug
+            # builds (3000+ ms to generate each chunk).
+            build_type='release'),
+        native.rust('backend', 'bin',
+            ('physics', 'terrain_gen',
+                'server_bundle', 'server_config', 'server_extra',
+                'server_types', 'server_util', 'server_world_types',),
+            dyn_deps=('syntax_exts',),
+            src_file='$root/src/server/main.rs'),
+        '',
+
+        '# Server - wrapper',
+        native.cxx('wrapper', 'bin',
+            ('$root/src/wrapper/%s' % f
+                for f in os.listdir(os.path.join(i.root_dir, 'src', 'wrapper'))
+                if f.endswith('.cpp')),
+            cxxflags='-DWEBSOCKETPP_STRICT_MASKING',
+            ldflags='-static',
+            # TODO: detect these lib flags
+            libs='-lboost_system -lpthread' if not i.win32 else
+                '-lboost_system-mt -lpthread -lwsock32 -lws2_32'),
+        '',
+
+        '# Python libs',
+        native.cxx('outpost_savegame', 'shlib',
+            ('$root/util/savegame_py/%s' % f
+                for f in os.listdir(os.path.join(i.root_dir, 'util/savegame_py'))
+                if f.endswith('.c')),
+            cflags=py_includes,
+            ldflags=py_ldflags,
+            ),
+
+        native.rust('terrain_gen_ffi', 'staticlib',
+            ('terrain_gen', 'server_config', 'server_types'),
+            src_file='$root/src/test_terrain_gen/ffi.rs'),
+        native.cxx('outpost_terrain_gen', 'shlib',
+            ('$root/src/test_terrain_gen/py.c',),
+            cflags=py_includes,
+            ldflags=py_ldflags,
+            link_extra=['$b_native/libterrain_gen_ffi$_a'],
+            ),
+
+        'build pymodules: phony '
+            '$b_native/outpost_savegame$_so '
+            '$b_native/outpost_terrain_gen$_so',
+        '',
+
+        '# Equipment sprite generator',
+        native.rust('equip_sprites_render', 'dylib',
+                ('physics',),
+                src_file='$root/src/gen/equip_sprites/render.rs'),
+        dist.copy('$b_native/libequip_sprites_render$_so',
+                  '$b_native/equip_sprites_render$_so'),
+        '',
+
+        '# Client - asmlibs',
+        asmjs.rules(i),
+        asmjs.rlib('core', (), i.rust_libcore_src),
+        asmjs.rlib('alloc', ('core',), i.rust_liballoc_src),
+        asmjs.rlib('rustc_unicode', ('core',), i.rust_librustc_unicode_src),
+        asmjs.rlib('collections', ('core', 'alloc', 'rustc_unicode'),
+                i.rust_libcollections_src),
+        asmjs.rlib('asmrt', ('core',)),
+        asmjs.rlib('asmmalloc', ('core', 'asmrt')),
+        asmjs.rlib('fakestd', ('core', 'alloc', 'rustc_unicode', 'collections',
+            'asmrt', 'asmmalloc')),
+        asmjs.rlib('bitflags', ('core',), i.rust_libbitflags_src),
+        asmjs.rlib('physics', ('fakestd', 'bitflags')),
+        asmjs.rlib('client_ui_atlas', ('physics',), '$b_data/ui_atlas.rs'),
+        asmjs.rlib('client_fonts', (), '$b_data/fonts_metrics.rs'),
+        asmjs.rlib('client', ('fakestd', 'physics',
+            'client_ui_atlas', 'client_fonts')),
+        asmjs.asmlibs('asmlibs',
+            '$root/src/asmlibs/lib.rs',
+            ('core', 'collections', 'asmrt', 'asmmalloc', 'physics', 'client'),
+            '$root/src/asmlibs/exports.txt',
+            '$root/src/asmlibs/template.js'),
+        '',
+
+        '# Client - Javascript',
+        js.rules(i),
+        js.compile(i, '$b_js/outpost.js', '$root/src/client/js/main.js'),
+        js.minify(i, '$b_js/asmlibs.js', '$b_asmjs/asmlibs.js'),
+        js.compile(i, '$b_js/configedit.js', '$root/src/client/js/configedit.js'),
+        js.client_manifest(i, '$b_js/manifest.json'),
+        '',
+
+        '# uvedit',
+        asmjs.asmlibs('uvedit_asm',
+            '$root/src/uvedit/lib.rs',
+            ('core', 'collections', 'asmrt', 'asmmalloc', 'physics'),
+            '$root/src/uvedit/asm_exports.txt',
+            '$root/src/uvedit/asm_template.js'),
+
+        js.minify(i, '$b_js/uvedit_asm.js', '$b_asmjs/uvedit_asm.js'),
+        js.compile(i, '$b_js/uvedit.js', '$root/src/uvedit/main.js'),
+        '',
+
         '# Data',
         data.rules(i),
+
+        data.day_night('$b_data/day_night.json', '$root/assets/misc/day_night_pixels.png'),
         data.font('name', '$root/assets/misc/NeoSans.png'),
         data.font('title', '$root/assets/misc/Alagard.png',
             extra_args='--no-shadow --color=0xdeeed6'),
         data.font('hotbar', '$root/assets/misc/hotbar-font.png',
             charset_args='--char-list="0123456789.k"'),
         data.font_stack('$b_data/fonts', ('name', 'hotbar', 'title')),
-        data.day_night('$b_data/day_night.json', '$root/assets/misc/day_night_pixels.png'),
         data.server_json('$b_data/server.json'),
         data.ui_atlas('$b_data', '$root/assets/ui_gl/png'),
+
         data.process(),
         data.binary_defs('$b_data/client_data.bin'),
         data.pack(),
+
         data.credits('$b_data/credits.html'),
+        '',
 
         '# Server-side scripts',
         scripts.rules(i),
         scripts.copy_mod_scripts(i.mod_list),
+        '',
 
         '# Distribution',
         # dist rules go at the top so other parts can refer to `dist.copy`
-        dist.from_manifest(common_manifest, dist_manifest,
-                filter_path=maybe_data_filter,
-                exclude_names=i.use_prebuilt,
-                extra=dist_extra),
+        dist.components(i, i.components),
+        '',
 
         'default $builddir/dist.stamp',
         '', # ensure there's a newline after the last command

@@ -1,0 +1,14 @@
+
+server/bin/backend$_exe: $b_native/backend$_exe
+server/bin/auth.py: $root/src/auth/verifier/verifier.py
+server/bin/wrapper$_exe: $b_native/wrapper$_exe
+server/bin/run_server.sh: $root/util/run_server.sh
+
+server/outpost.ini: $root/util/outpost_debug.ini
+
+server/scripts/: $b_scripts/gen/
+
+server/util/map.tmpl.html: $root/util/map.tmpl.html
+server/util/outpost_savegame$_so: $b_native/outpost_savegame$_so
+server/util/render_map.py: $root/util/render_map.py
+server/util/nginx.conf: $root/util/nginx.conf

@@ -3,6 +3,36 @@ import platform
 import sys
 import tempfile
 
+COMPONENT_ALIASES = {
+        'server': ('server-code', 'server-data'),
+        'client': ('client-code', 'client-data'),
+        'all': (
+            'server',
+            'client',
+            'launcher',
+            'auth',
+            'uvedit',
+            )
+        }
+
+def parse_components(s):
+    parts = s.split(',')
+    cs = set()
+
+    def go(p):
+        if p in COMPONENT_ALIASES:
+            for q in COMPONENT_ALIASES[p]:
+                go(q)
+            return
+
+        cs.add(p)
+
+    for p in parts:
+        go(p)
+
+    return tuple(sorted(cs))
+
+
 def pre_configure(ctx):
     '''Compute basic info.  This step avoids referring to ctx.args as much as
     possible, since that introduces dependencies that can prevent --reconfigure
@@ -45,9 +75,8 @@ def post_configure(ctx):
     ctx.info.mod_list = ('outpost',) + \
             (tuple(ctx.args.mods.split(',')) if ctx.args.mods else ())
 
-    ctx.copy_arg('data_only', 'build data only?')
-    ctx.copy_arg('use_prebuilt', 'use prebuilt files')
-    ctx.copy_arg('prebuilt_dir', 'path to prebuilt files')
+    ctx.info.add('components', 'components to build')
+    ctx.info.components = parse_components(ctx.args.components)
 
     ctx.copy_arg('cflags', 'extra C compiler flags', default='')
     ctx.copy_arg('cxxflags', 'extra C++ compiler flags', default='')
@@ -57,15 +86,6 @@ def post_configure(ctx):
 
 def check(ctx, need_vars):
     ok = True
-
-    if ctx.info.data_only and ctx.info.prebuilt_dir is None:
-        ctx.out('Error: --prebuilt-dir must be set because --data-only is set',
-                level='ERR')
-        ok = False
-    if ctx.info.use_prebuilt and ctx.info.prebuilt_dir is None:
-        ctx.out('Error: --prebuilt-dir must be set because --use-prebuilt is set',
-                level='ERR')
-        ok = False
 
     for k in need_vars:
         if getattr(ctx.info, k) is None:

@@ -1,0 +1,4 @@
+
+auth/server.py: $root/src/auth/server/server.py
+auth/config_tool.py: $root/src/auth/server/config_tool.py
+auth/templates/: $root/src/auth/server/templates
