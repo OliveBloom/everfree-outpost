@@ -1,0 +1,3 @@
+website/index.html: $b_www/index.html
+website/main.css: $b_www/main.css
+website/img/: @$b_www/img/all.txt

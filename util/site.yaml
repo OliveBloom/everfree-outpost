@@ -1,0 +1,9 @@
+urls:
+    launcher: http://localhost:8889/launcher/
+    versions: http://localhost:8889/versions/
+    website: http://localhost:8889/website/
+    auth: http://localhost:5000/
+
+server_list:
+    - name: Test Server
+      url: http://localhost:8889/server/

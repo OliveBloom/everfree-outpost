@@ -12,10 +12,7 @@ def configure(ctx):
             lambda ctx, cxx: chk_cc(ctx, cxx, src, out))
 
 def requirements(ctx):
-    if ctx.info.data_only:
-        return ()
-    else:
-        return ('cc', 'cxx')
+    return ('cc', 'cxx')
 
 
 def chk_cc(ctx, cc, src, out):

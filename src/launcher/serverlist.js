@@ -1,21 +1,14 @@
 
-var AUTH_URL = 'http://localhost:5000/';
-
-var BUILTIN_SERVERS = [
-    { name: 'everfree-outpost.com', url: '/server' },
-    { name: 'outpost.mlpg.co', url: 'http://outpost.mlpg.co/' },
-];
-
 function buildServerEntry(info) {
     var div = document.createElement('div');
     var img = document.createElement('img');
     var link = document.createElement('a');
 
     div.classList.add('server-entry');
-    img.src = 'img/arrow-yellow.png';
+    img.src = ARROW_URL;
     img.classList.add('server-arrow');
     link.textContent = info.name;
-    link.href = '/launcher.html#s=' + info.url;
+    link.href = 'launcher.html#s=' + info.url;
     link.classList.add('server-link');
 
     div.appendChild(img);
