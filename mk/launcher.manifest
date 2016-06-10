@@ -11,4 +11,4 @@ launcher/serverlist.html: $b_www/serverlist.html
 launcher/serverlist.js: $root/src/launcher/serverlist.js
 
 # TODO: remove this, reference www.e-o.com css/imgs instead
-launcher/img/: $root/assets/ui/png
+launcher/img/: @$b_www/img/all.txt

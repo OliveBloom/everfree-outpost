@@ -298,6 +298,8 @@ if __name__ == '__main__':
         '# Launcher',
         www.rules(i),
         www.render_template('$b_www/serverlist.html', '$root/src/launcher/serverlist.html'),
+        www.collect_img_lists('$b_www/img/all.txt',
+                ('serverlist.html',)),
         '',
 
         '# Distribution',

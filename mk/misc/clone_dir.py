@@ -1,7 +1,24 @@
+import argparse
 import os
 import shutil
 import stat
 import sys
+
+def build_parser():
+    args = argparse.ArgumentParser()
+
+    args.add_argument('--mode', default='dir',
+            choices=('dir', 'list'),
+            help='clone directory, or copy files from a list?')
+
+    args.add_argument('src',
+            help='source directory or file list')
+    args.add_argument('dest',
+            help='destination directory')
+    args.add_argument('stamp',
+            help='path to stamp file')
+
+    return args
 
 
 def read_tree(base, d, out):
@@ -16,6 +33,18 @@ def read_tree(base, d, out):
             out[path] = None
         else:
             out[path] = st.st_mtime
+
+def read_list(list_path, out):
+    base = os.path.dirname(list_path)
+    with open(list_path, 'r') as f:
+        for path in f.readlines():
+            path = path.strip()
+
+            st = os.stat(os.path.join(base, path))
+            if stat.S_ISDIR(st.st_mode):
+                raise ValueError("can't handle directories in file list")
+            else:
+                out[path] = st.st_mtime
 
 
 def clean_dest(base, d, src_files, seen):
@@ -53,13 +82,24 @@ def clean_dest(base, d, src_files, seen):
             if is_dir:
                 clean_dest(base, path, src_files, seen)
 
-def main(src, dest, stamp):
+def main():
+    parser = build_parser()
+    args = parser.parse_args(sys.argv[1:])
+    src = args.src
+    dest = args.dest
+    stamp = args.stamp
+
     os.makedirs(dest, exist_ok=True)
 
     # 1) Collect all files in the source directory and their mtimes.
     src_files = {}
-    read_tree(src, '', src_files)
-    
+    if args.mode == 'dir':
+        read_tree(src, '', src_files)
+    else:
+        read_list(src, src_files)
+        # Remaining code expects src to be a directory
+        src = os.path.dirname(src)
+
     # 2) Remove all unwanted or outdated files from the dest directory.
     present = set()
     clean_dest(dest, '', src_files, present)
@@ -91,5 +131,4 @@ def main(src, dest, stamp):
         f.write('\n\n')
 
 if __name__ == '__main__':
-    src, dest, stamp = sys.argv[1:]
-    main(src, dest, stamp)
+    main()

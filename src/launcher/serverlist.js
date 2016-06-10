@@ -5,7 +5,7 @@ function buildServerEntry(info) {
     var link = document.createElement('a');
 
     div.classList.add('server-entry');
-    img.src = 'img/arrow-yellow.png';
+    img.src = ARROW_URL;
     img.classList.add('server-arrow');
     link.textContent = info.name;
     link.href = '/launcher.html#s=' + info.url;

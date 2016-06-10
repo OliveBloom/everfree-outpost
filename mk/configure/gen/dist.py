@@ -16,7 +16,14 @@ def rules(i):
             description = COPY $out
 
         rule copy_dir_stamp
-            command = $python3 $root/mk/misc/clone_dir.py $copy_src $copy_dest $stamp
+            command = $python3 $root/mk/misc/clone_dir.py --mode dir $
+                $copy_src $copy_dest $stamp
+            description = COPY $copy_dest ($stamp)
+            depfile = $stamp.d
+
+        rule copy_list_stamp
+            command = $python3 $root/mk/misc/clone_dir.py --mode list $
+                $list_src $copy_dest $stamp
             description = COPY $copy_dest ($stamp)
             depfile = $stamp.d
     ''', **locals())
@@ -44,7 +51,20 @@ def from_manifest(contents, manifest_stamp):
     dist_deps = []
 
     for dest, src in contents:
-        if dest.endswith('/'):
+        if src.startswith('@'):
+            assert dest.endswith('/'), \
+                    'copy src is a file list but dest is not a directory'
+            src = src[1:]
+            stamp = '$builddir/dist_%s.stamp' % dest.strip('/').replace('/', '_')
+            add_build('''
+                build %stamp: copy_list_stamp | %src $root/mk/misc/clone_dir.py
+                    list_src = %src
+                    copy_dest = $dist/%dest
+                    stamp = %stamp
+            ''', **locals())
+            dist_deps.append(stamp)
+
+        elif dest.endswith('/'):
             stamp = '$builddir/dist_%s.stamp' % dest.strip('/').replace('/', '_')
             add_build('''
                 build %stamp: copy_dir_stamp | %src $root/mk/misc/clone_dir.py
@@ -53,6 +73,7 @@ def from_manifest(contents, manifest_stamp):
                     stamp = %stamp
             ''', **locals())
             dist_deps.append(stamp)
+
         else:
             add_build('''
                 build $dist/%dest: copy_file %src

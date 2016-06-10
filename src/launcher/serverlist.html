@@ -9,13 +9,6 @@
                 var x = 'launcher.html' + location.hash;
                 location.replace(new URL(x, location));
             }
-
-            window.AUTH_URL = %{repr(urls.auth)}
-            window.BUILTIN_SERVERS = [
-                %for s in server_list
-                { name: %{repr(s.name)}, url: %{repr(s.url)} },
-                %end
-            ];
         </script>
 
         <style type='text/css'>
@@ -42,7 +35,7 @@
                 width: 100%;
                 min-height: 100%;
 
-                background-image: url('background.png');
+                background-image: url("%{img_url('src/launcher/background.png')}");
                 background-color: rgba(255, 255, 255, 0.5);
                 background-size: 1024px 1024px;
             }
@@ -58,7 +51,8 @@
             main {
                 /* TODO: fix this filename */
                 border-color: #d27d2c;
-                border-image-source: url('img/panel-outer-border-border.png');
+                border-image-source:
+                    url("%{img_url('assets/ui/png/panel-outer-border-border.png')}");
                 border-image-slice: 6 6 6 6;
                 border-image-width: auto;
                 border-image-repeat: repeat;
@@ -98,7 +92,8 @@
                 height: 14px;
                 font-size: 10px;
 
-                border-image-source: url('img/buttons-large-normal.png');
+                border-image-source:
+                    url("%{img_url('assets/ui/png/buttons-large-normal.png')}");
                 border-image-slice: 9 12 9 35;
                 border-image-width: auto;
                 border-image-repeat: repeat;
@@ -116,12 +111,14 @@
 
             button:hover,
             .g-button-large:hover {
-                border-image-source: url('img/buttons-large-hover.png');
+                border-image-source:
+                    url("%{img_url('assets/ui/png/buttons-large-hover.png')}");
             }
 
             button:active,
             .g-button-large:active {
-                border-image-source: url('img/buttons-large-active.png');
+                border-image-source:
+                    url("%{img_url('assets/ui/png/buttons-large-active.png')}");
             }
 
             a:link, a:visited, a:hover, a:active {
@@ -149,7 +146,8 @@
                 padding: 2px 3px;
                 padding-right: 12px;
 
-                border-image-source: url('img/list-item.png');
+                border-image-source:
+                    url("%{img_url('assets/ui/png/list-item.png')}");
                 border-image-slice: 1 9 2 2;
                 border-image-width: auto;
                 border-image-repeat: repeat;
@@ -186,7 +184,7 @@
     </head>
 
     <body>
-        <img src='logo.png' id='logo'>
+        <img src="%{img_url('src/launcher/logo.png')}" id='logo'>
         <main>
             <div id='login-status' class='pending'>Checking...</div>
             <div id='server-list' class='grow'>
@@ -199,6 +197,15 @@
             </div>
         </main>
 
+        <script>
+            window.AUTH_URL = %{repr(urls.auth)}
+            window.BUILTIN_SERVERS = [
+                %for s in server_list
+                { name: %{repr(s.name)}, url: %{repr(s.url)} },
+                %end
+            ];
+            window.ARROW_URL = %{repr(img_url('assets/ui/png/arrow-yellow.png'))};
+        </script>
         <script src='serverlist.js'></script>
     </body>
 </html>
