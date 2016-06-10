@@ -89,14 +89,18 @@ if __name__ == '__main__':
     with open(args.site_config) as f:
         cfg = yaml.load(f)
 
+
     img_base = ['img/']
     def img_url(src):
         return get_image(args, src, img_base[0])
     def set_img_base(url):
         img_base[0] = url
+        return ''
+
 
     dct = {k: wrap(v) for k,v in cfg.items()}
     dct['img_url'] = img_url
+    dct['set_img_base'] = set_img_base
 
     with open(args.in_file, 'r') as f:
         tmpl = f.read()

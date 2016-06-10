@@ -12,6 +12,7 @@ COMPONENT_ALIASES = {
             'launcher',
             'auth',
             'uvedit',
+            'website',
             )
         }
 
