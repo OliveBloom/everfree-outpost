@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 from configure import checks
-from configure.gen import native, asmjs, data, js, dist, scripts
+from configure.gen import native, asmjs, data, js, dist, scripts, www
 from configure.template import template
 
 
@@ -65,8 +65,8 @@ def build_parser():
     args.add_argument('--ldflags',
             help='extra flags for the C/C++ linker')
 
-    args.add_argument('--with-server-gui', action='store_true',
-            help='include server_gui.py in the build')
+    args.add_argument('--site-config',
+            help='YAML file containing site-specific config')
 
     return args
 
@@ -97,6 +97,7 @@ def header(i):
         b_data = %{b('data')}
         b_js = %{b('js')}
         b_scripts = %{b('scripts')}
+        b_www = %{b('www')}
 
         mods = %{','.join(i.mod_list)}
 
@@ -112,6 +113,7 @@ def header(i):
         user_ldflags = %{i.ldflags}
 
         version = dev
+        site_config = %{i.site_config_path}
     ''', os=os, **locals())
 
 
@@ -143,10 +145,6 @@ if __name__ == '__main__':
 
     dist_manifest = os.path.join(i.root_dir, 'mk', dist_manifest_base)
     common_manifest = os.path.join(i.root_dir, 'mk', 'common.manifest')
-
-    dist_extra = []
-    if i.with_server_gui:
-        dist_extra.append(('server_gui.py', '$root/util/server_gui.py'))
 
     content = header(i)
     content += '\n\n'.join((
@@ -295,6 +293,11 @@ if __name__ == '__main__':
         '# Server-side scripts',
         scripts.rules(i),
         scripts.copy_mod_scripts(i.mod_list),
+        '',
+
+        '# Launcher',
+        www.rules(i),
+        www.render_template('$b_www/serverlist.html', '$root/src/launcher/serverlist.html'),
         '',
 
         '# Distribution',

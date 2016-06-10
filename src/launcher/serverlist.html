@@ -9,6 +9,13 @@
                 var x = 'launcher.html' + location.hash;
                 location.replace(new URL(x, location));
             }
+
+            window.AUTH_URL = %{repr(urls.auth)}
+            window.BUILTIN_SERVERS = [
+                %for s in server_list
+                { name: %{repr(s.name)}, url: %{repr(s.url)} },
+                %end
+            ];
         </script>
 
         <style type='text/css'>

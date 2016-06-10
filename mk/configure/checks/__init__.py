@@ -69,7 +69,6 @@ def post_configure(ctx):
         ctx.info.dist_dir = ctx.args.dist_dir
 
     ctx.copy_arg('debug', 'debug build')
-    ctx.copy_arg('with_server_gui', 'include server_gui.py')
 
     ctx.info.add('mod_list', 'included mods')
     ctx.info.mod_list = ('outpost',) + \
@@ -77,6 +76,12 @@ def post_configure(ctx):
 
     ctx.info.add('components', 'components to build')
     ctx.info.components = parse_components(ctx.args.components)
+
+    ctx.info.add('site_config_path', 'site config file')
+    if ctx.args.site_config is None:
+        ctx.info.site_config_path = '$root/util/site.yaml'
+    else:
+        ctx.info.site_config_path = os.path.abspath(ctx.args.site_config)
 
     ctx.copy_arg('cflags', 'extra C compiler flags', default='')
     ctx.copy_arg('cxxflags', 'extra C++ compiler flags', default='')

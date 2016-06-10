@@ -695,4 +695,5 @@ function launch(url) {
     window['L'] = l;
 }
 
+// TODO: read #s=... part of URL to find the server
 launch('http://localhost:8889/');

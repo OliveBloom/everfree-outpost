@@ -10,6 +10,7 @@ client/manifest.json: $b_js/manifest.json
 client/img/: $root/assets/ui/png/
 client/font/: $root/assets/fonts/ttf/
 
+# TODO: configedit.js probably doesn't build right in debug mode
 client/configedit.html: $root/src/client/configedit.html
 client/configedit.js: $b_js/configedit.js
 

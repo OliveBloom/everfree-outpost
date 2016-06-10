@@ -1,11 +1,4 @@
 
-var AUTH_URL = 'http://localhost:5000/';
-
-var BUILTIN_SERVERS = [
-    { name: 'everfree-outpost.com', url: '/server' },
-    { name: 'outpost.mlpg.co', url: 'http://outpost.mlpg.co/' },
-];
-
 function buildServerEntry(info) {
     var div = document.createElement('div');
     var img = document.createElement('img');
