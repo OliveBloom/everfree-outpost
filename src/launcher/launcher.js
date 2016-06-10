@@ -34,8 +34,6 @@ var OP_AUTH_RESULT =        0x801d;
 var MODE_SSO =      0;
 var MODE_LOCAL =    1;
 
-var SSO_ENDPOINT = 'http://localhost:5000/api/';
-
 
 /** @constructor */
 function Launcher(server_url) {
@@ -210,7 +208,7 @@ Launcher.prototype._getVersionInfo = function() {
     var this_ = this;
 
     var version = this.server_info['version'];
-    this.base_url = new URL('versions/' + version + '/', document.location).href;
+    this.base_url = new URL('' + version + '/', VERSIONS_BASE).href;
     this._xhr(new URL('manifest.json', this.base_url).href, 'json', {
         load: function(evt) {
             this_.version_info = evt.target.response;
@@ -525,7 +523,7 @@ LauncherUI.prototype.init = function() {
 
     this.img_banner = new Image();
     this.img_banner.onload = function() { this_._finishedPending(); };
-    this.img_banner.src = 'logo-bar.png';
+    this.img_banner.src = LOGO_BAR_URL;
 
     this.img_font = new Image();
     this.img_font.onload = function() { this_._finishedPending(); };
@@ -696,4 +694,8 @@ function launch(url) {
 }
 
 // TODO: read #s=... part of URL to find the server
-launch('http://localhost:8889/');
+if (!location.hash.startsWith('#s=')) {
+    location.replace('serverlist.html');
+}
+
+launch(location.hash.substr(3));

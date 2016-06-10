@@ -8,7 +8,7 @@ function buildServerEntry(info) {
     img.src = ARROW_URL;
     img.classList.add('server-arrow');
     link.textContent = info.name;
-    link.href = '/launcher.html#s=' + info.url;
+    link.href = 'launcher.html#s=' + info.url;
     link.classList.add('server-link');
 
     div.appendChild(img);

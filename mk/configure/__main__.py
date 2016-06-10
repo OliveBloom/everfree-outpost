@@ -297,11 +297,12 @@ if __name__ == '__main__':
 
         '# Launcher',
         www.rules(i),
-        www.render_template('$b_www/serverlist.html', '$root/src/launcher/serverlist.html'),
         www.render_template('$b_www/index.html', '$root/src/www/index.html'),
         www.render_template('$b_www/main.css', '$root/src/www/main.css'),
+        www.render_template('$b_www/serverlist.html', '$root/src/launcher/serverlist.html'),
+        www.render_template('$b_www/launcher.html', '$root/src/launcher/launcher.html'),
         www.collect_img_lists('$b_www/img/all.txt',
-                ('serverlist.html', 'index.html', 'main.css')),
+                ('index.html', 'main.css', 'serverlist.html', 'launcher.html')),
         '',
 
         '# Distribution',
