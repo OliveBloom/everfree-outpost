@@ -60,9 +60,7 @@ function finishLoginCheck(result) {
 
     var link = '<a href="' + new URL('login', AUTH_URL).href + '">Log In</a>'
     if (result.type == 'none') {
-        stat.innerHTML = 'Not logged in &ndash; ' + link;
-    } else if (result.type == 'guest') {
-        stat.innerHTML = 'Using guest account ' + result['name'] + ' &ndash; ' + link;
+        stat.innerHTML = 'Using guest account &ndash; ' + link;
     } else if (result.type == 'normal') {
         stat.innerHTML = 'Logged in as ' + result['name'];
     }

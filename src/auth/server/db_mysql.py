@@ -19,6 +19,11 @@ class Database:
                 **kwargs
                 )
 
+    def next_id(self):
+        with self.db as curs:
+            curs.execute('SELECT next_counter();')
+            return curs.fetchone()[0]
+
     def lookup_user(self, name):
         with self.db as curs:
             curs.execute('SELECT id, name, password FROM users '
@@ -32,16 +37,16 @@ class Database:
         else:
             assert False, 'UNIQUE constraint should forbid >1 row in result'
 
-    def register(self, name, pass_hash, email):
+    def register(self, uid, name, pass_hash, email):
         try:
             with self.db as curs:
-                curs.execute('INSERT INTO users (name, name_lower, password, email) '
-                    'VALUES (%s, %s, %s, %s)',
-                    (name, name.lower(), pass_hash, email))
-                return curs.lastrowid
+                curs.execute('INSERT INTO users (id, name, name_lower, password, email) '
+                    'VALUES (%s, %s, %s, %s, %s)',
+                    (uid, name, name.lower(), pass_hash, email))
+                return True
         except MySQLdb.IntegrityError as e:
             if e.args[0] == MySQLdb.constants.ER.DUP_ENTRY:
-                return None
+                return False
             else:
                 raise
 

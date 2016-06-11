@@ -151,15 +151,10 @@ def api_dispatch(result):
 
 # Common actions
 
-def start_session(uid, name):
-    session['uid'] = uid
-    session['name'] = name
-
-def clear_session():
-    if 'uid' in session:
-        del session['uid']
-    if 'name' in session:
-        del session['name']
+# The session has two fields:
+#  uid      - A unique ID for this user.  For registered users, there will be a
+#             corresponding row in the `users` table.
+#  name     - The user's name.  Only set for registered users.
 
 LOGIN_ERROR = 'Invalid username or password.'
 @unpack_args
@@ -177,7 +172,8 @@ def do_login(name, password):
     if pass_hash != old_hash:
         return error(LOGIN_ERROR)
 
-    start_session(uid, name)
+    session['uid'] = uid
+    session['name'] = name
     return ok('Logged in as %r.' % name)
 
 NAME_RE = re.compile(r'^[a-zA-Z0-9- ]*$')
@@ -196,13 +192,15 @@ def do_register(name, password, email):
 
     pass_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
 
-    uid = db.register(name, pass_hash, email)
-    if uid is None:
+    if 'uid' not in session:
+        session['uid'] = db.next_id()
+
+    ok = db.register(session['uid'], name, pass_hash, email)
+    if not ok:
         return error('Account name %r is already in use.' % name)
 
-    start_session(uid, name)
+    session['name'] = name
     return ok('Registered as %r.' % name)
-
 
 def do_get_verify_key():
     key = cfg['signing_key'].verify_key
@@ -212,24 +210,24 @@ def do_get_verify_key():
 @unpack_args
 def do_check_login(auto_guest=False):
     if 'name' in session:
-        return ok(type='normal', name=session['name'])
+        return ok(type='normal', uid=session['uid'], name=session['name'])
 
-    if auto_guest:
-        # TODO: generate new guest account
-        return ok(type='guest', name='Anon1234')
-
-    return ok(type='none')
-
+    return ok(type='none', uid=session['uid'])
 
 @unpack_args
 def do_sign_challenge(challenge):
-    if 'uid' not in session or 'name' not in session:
-        return error(reason='not_logged_in')
+    if 'uid' not in session:
+        session['uid'] = db.next_id()
     uid = session['uid']
-    name = session['name']
+
     nonce_bytes = URLSafeBase64Encoder.decode(challenge.encode('ascii'))
 
-    name_bytes = name.encode('utf-8')
+    if 'name' in session:
+        name = session['name']
+        name_bytes = name.encode('utf-8')
+    else:
+        name_bytes = b''
+
     header = struct.pack('<BBBBI', len(nonce_bytes), len(name_bytes), 0, 0, uid)
     b = header + nonce_bytes + name_bytes
     signed = cfg['signing_key'].sign(b)
