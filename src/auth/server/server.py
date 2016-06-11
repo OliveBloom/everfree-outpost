@@ -127,15 +127,15 @@ def error(*msgs, **kwargs):
 def bug(*msgs, **kwargs):
     return build_result(*msgs, status='bug', **kwargs)
 
-def user_dispatch(result, ok_url, err_url):
+def user_dispatch(result, ok_url, err_url, flash_category=None):
     print(result)
     if result['status'] == 'ok':
         for msg in result.get('msgs', ()):
-            flash(msg)
+            flash(msg, flash_category)
         return redirect(ok_url)
     elif result['status'] == 'error':
         for msg in result.get('msgs', ()):
-            flash(msg)
+            flash(msg, flash_category)
         return redirect(err_url)
     elif result['status'] == 'bug':
         abort(400)
@@ -195,8 +195,8 @@ def do_register(name, password, email):
     if 'uid' not in session:
         session['uid'] = db.next_id()
 
-    ok = db.register(session['uid'], name, pass_hash, email)
-    if not ok:
+    reg_ok = db.register(session['uid'], name, pass_hash, email)
+    if not reg_ok:
         return error('Account name %r is already in use.' % name)
 
     session['name'] = name
@@ -251,7 +251,8 @@ def login():
         result = do_login(request.form)
         return user_dispatch(result,
                 url_for('index'),
-                url_for('login'))
+                url_for('login'),
+                flash_category='login')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -261,11 +262,15 @@ def register():
         result = do_register(request.form)
         return user_dispatch(result,
                 url_for('index'),
-                url_for('register'))
+                url_for('register'),
+                flash_category='register')
 
 @app.route('/logout')
 def logout():
-    clear_session()
+    if 'uid' in session:
+        del session['uid']
+    if 'name' in session:
+        del session['name']
     flash('Logged out.')
     return redirect(url_for('index'))
 

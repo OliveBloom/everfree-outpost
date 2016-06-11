@@ -1,23 +1,68 @@
 {% extends "_base.html" %}
 {% block title %} Log In &ndash; Everfree Outpost {% endblock %}
-{% block title_display %} Log In {% endblock %}
 
 {% block content %}
+
+
+<h1>Log In</h1>
+
+{% for msg in get_flashed_messages(category_filter=['login']) %}
+<p class='msg'>{{ msg }}</p>
+{% endfor %}
+
+<style>
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 0;
+}
+</style>
+
 <form action='/login' method='post'>
-    <table>
-        <tr>
-            <td>Name:</td>
-            <td><input type='text' name='name' autofocus></td>
-        </tr>
-        <tr>
-            <td>Password:</td>
-            <td><input type='password' name='password'></td>
-        </tr>
-        <tr>
-            <td colspan='2' style='text-align: right'>
-                <input type='submit' value='Log In'>
-            </td>
-        </tr>
-    </table>
+    <div>
+        <div class='row'>
+            <span style='width: 6em'>Name:</span>
+            <input type='text' name='name' class='grow' autofocus>
+        </div>
+        <div class='row'>
+            <span style='width: 6em'>Password:</span>
+            <input type='password' name='password' class='grow'>
+        </div>
+        <div style='text-align: right; padding: 2px 0'>
+            <input type='submit' value='Log In'>
+        </div>
+    </div>
 </form>
+
+
+<hr>
+
+
+<h1>Register</h1>
+
+{% for msg in get_flashed_messages(category_filter=['register']) %}
+<p class='msg'>{{ msg }}</p>
+{% endfor %}
+
+<form action='/register' method='post'>
+    <div>
+        <div class='row'>
+            <span style='width: 6em'>Name:</span>
+            <input type='text' name='name' class='grow' autofocus>
+        </div>
+        <div class='row'>
+            <span style='width: 6em'>Password:</span>
+            <input type='password' name='password' class='grow'>
+        </div>
+        <div class='row'>
+            <span style='width: 6em'>Email:</span>
+            <input type='text' name='email' class='grow'>
+        </div>
+        <div style='text-align: right; padding: 2px 0'>
+            <input type='submit' value='Register'>
+        </div>
+    </div>
+</form>
+
 {% endblock %}

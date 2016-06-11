@@ -32,7 +32,7 @@ class Database:
     def register(self, uid, name, pass_hash, email):
         try:
             with self.db as db, db.cursor() as curs:
-                curs.execute('INSERT INTO users (uid, name, name_lower, password, email) '
+                curs.execute('INSERT INTO users (id, name, name_lower, password, email) '
                     'VALUES (%s, %s, %s, %s, %s)',
                     (uid, name, name.lower(), pass_hash, email))
                 return True

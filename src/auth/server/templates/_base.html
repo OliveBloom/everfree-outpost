@@ -2,17 +2,18 @@
 <html>
     <head>
         <title>{% block title %}{% endblock %}</title>
-<style>
-.msg { color: blue; }
-</style>
+
+        <link rel='stylesheet' type='text/css' href='%{urls.website}main.css'>
+        %{set_img_base(urls.website + 'img/')}
+
+        <style>
+            .msg { color: #dad45e; }
+        </style>
     </head>
     <body>
-        <h1>{% block title_display %}{% endblock %}</h1>
-
-        {% for msg in get_flashed_messages() %}
-        <p class='msg'>{{ msg }}</p>
-        {% endfor %}
-
-        {% block content %}{% endblock %}
+        <img src="%{img_url('assets/www/logo.png')}" id='logo'>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
     </body>
 </html>

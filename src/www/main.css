@@ -70,9 +70,9 @@ h1 {
 }
 
 
-button { all: unset; }
+button, input[type=submit] { all: unset; }
 
-button,
+button, input[type=submit],
 .g-button-large {
     display: inline-block;
     min-width: 27px;
@@ -96,17 +96,18 @@ button,
     text-align: center;
 }
 
-button:hover,
+button:hover, input[type=submit]:hover,
 .g-button-large:hover {
     border-image-source:
         url("%{img_url('assets/ui/png/buttons-large-normal.png')}");
 }
 
-button:active,
+button:active, input[type=submit]:active,
 .g-button-large:active {
     border-image-source:
         url("%{img_url('assets/ui/png/buttons-large-normal.png')}");
 }
+
 
 .g-button-large:link, .g-button-large:visited, .g-button-large:hover, .g-button-large:active {
     color: #140c1c;
@@ -116,6 +117,33 @@ button:active,
 a:link, a:visited, a:hover, a:active {
     color: #6dc2ca;
 }
+
+
+input[type=text], input[type=password] { all: unset; }
+
+input[type=text],
+input[type=password],
+.g-input {
+    min-width: 22px;
+    min-height: 2px;
+
+    border-image-source:
+        url("%{img_url('assets/ui/png/input-border.png')}");
+    border-image-slice: 4 21 4 4;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 3px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #854c30;
+    color: #deeed6;
+
+    max-width: 20rem;
+    padding: 0 2px;
+}
+
+
 
 
 .flex-row, flex-col {
