@@ -1,6 +1,7 @@
 import configparser
 import functools
 import inspect
+import json
 import os
 import re
 import struct
@@ -35,6 +36,15 @@ def read_config():
         value = get(k)
         return box.decrypt(URLSafeBase64Encoder.decode(value.encode('ascii')))
 
+
+    reserved_names_path = get_default('reserved_names', None)
+    if reserved_names_path is not None:
+        with open(reserved_names_path) as f:
+            reserved_names = json.load(f)
+    else:
+        reserved_names = {}
+
+
     return {
             'flask_debug': int(get_default('flask_debug', 0)),
             'flask_secret_key': decrypt('flask_secret_key'),
@@ -50,6 +60,8 @@ def read_config():
 
             'allowed_origin': get('allowed_origin'),
             'redir_url': get_default('redir_url', None),
+
+            'reserved_names': reserved_names,
             }
 
 cfg = read_config()
@@ -182,6 +194,9 @@ NAME_RE = re.compile(r'^[a-zA-Z0-9- ]*$')
 ALNUM_RE = re.compile(r'[a-zA-Z0-9]')
 @unpack_args
 def do_register(name, password, email):
+    if 'name' in session:
+        return error('You must log out first.')
+
     name = normalize_name(name)
     if len(name) == 0:
         return error('You must enter an account name.')
@@ -191,6 +206,13 @@ def do_register(name, password, email):
         return error('Name may only contain letters, numbers, spaces, and hyphens.')
     if not ALNUM_RE.search(name):
         return error('Name must contain at least one letter or digit.')
+
+    if len(password) < 8:
+        return error('Password must be at least 8 characters long')
+
+    if name in cfg['reserved_names']:
+        if request.remote_addr != cfg['reserved_names'][name]:
+            return error('That name is reserved for someone else.')
 
     pass_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
 
