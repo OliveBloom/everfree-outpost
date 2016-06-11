@@ -17,7 +17,7 @@ def rules(i):
                 %end
                 --site-config $site_config
             description = GEN $out
-            depfile = $out.d
+            depfile = $out_file.d
 
         rule collect_img_lists
             command = cat $in >$out
