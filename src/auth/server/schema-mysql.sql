@@ -12,7 +12,7 @@ CREATE TABLE counter (
     value       INTEGER NOT NULL
 );
 
-INSERT INTO counter (value) VALUES (0);
+INSERT INTO counter (value) VALUES (1);
 
 DELIMITER //
 CREATE FUNCTION next_counter()
