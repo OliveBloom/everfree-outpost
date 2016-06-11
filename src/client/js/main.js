@@ -137,7 +137,7 @@ OutpostClient.prototype._init = function() {
 
 OutpostClient.prototype.loadData = function(blob, next) {
     var this_ = this;
-    loadPack(blob, function(assets_) {
+    loader.loadPack(blob, function(assets_) {
         assets = assets_;
         //assets['server_info'] = server_info;  // FIXME
 

@@ -36,7 +36,7 @@ def read_config():
         return box.decrypt(URLSafeBase64Encoder.decode(value.encode('ascii')))
 
     return {
-            'flask_debug': int(get('flask_debug')),
+            'flask_debug': int(get_default('flask_debug', 0)),
             'flask_secret_key': decrypt('flask_secret_key'),
 
             'signing_key': nacl.signing.SigningKey(decrypt('signing_key')),
