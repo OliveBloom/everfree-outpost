@@ -154,9 +154,9 @@ impl<'d> Engine<'d> {
         use messages::ControlEvent::*;
         use messages::ControlResponse::*;
         match evt {
-            OpenWire(wire_id, flags, name) => {
-                info!("OpenWire: {:?}, {:x}, {}", wire_id, flags, name);
-                self.extra.wire_info.insert(wire_id, (flags, name));
+            OpenWire(wire_id, uid, name) => {
+                info!("OpenWire: {:?}, {:x}, {}", wire_id, uid, name);
+                self.extra.wire_info.insert(wire_id, (uid, name));
             },
 
             CloseWire(wire_id, opt_cid) => {
@@ -295,7 +295,7 @@ impl<'d> Engine<'d> {
 
 
     fn cleanup_client(&mut self, cid: ClientId) {
-        warn_on_err!(logic::client::logout(self.as_ref(), cid));
+        warn_on_err!(logic::client::logout(self, cid));
     }
 
     fn cleanup_wire(&mut self, wire_id: WireId) {
@@ -327,6 +327,8 @@ impl<'d> Engine<'d> {
     }
 
 
+    /*
+     * FIXME remove
     fn do_register(&mut self,
                    wire_id: WireId,
                    name: String,
@@ -360,6 +362,7 @@ impl<'d> Engine<'d> {
             }
         }
     }
+    */
 
     pub fn now(&self) -> Time {
         self.now

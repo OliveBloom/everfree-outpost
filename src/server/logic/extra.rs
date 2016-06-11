@@ -15,7 +15,10 @@ pub struct Extra {
     /// information in the meantime.
     ///
     /// Once the wire indicates readiness, its wire_info entry will be removed.
-    pub wire_info: HashMap<WireId, (u16, String)>,
+    pub wire_info: HashMap<WireId, (u32, String)>,
+
+    /// Map each client to its user ID.  This is used for saving and loading .client files.
+    pub client_uid: HashMap<ClientId, u32>
 }
 
 impl Extra {
@@ -24,6 +27,7 @@ impl Extra {
             client_view_update_timer: HashMap::new(),
             entity_physics_update_timer: HashMap::new(),
             wire_info: HashMap::new(),
+            client_uid: HashMap::new(),
         }
     }
 }

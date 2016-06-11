@@ -162,6 +162,7 @@ OutpostClient.prototype.loadData = function(blob, next) {
 
 OutpostClient.prototype.handoff = function(old_canvas, ws) {
     canvas = document.createElement('canvas');
+    console.log('orig', old_canvas);
 
     canvas.addEventListener('webglcontextlost', function(evt) {
         throw 'context lost!';

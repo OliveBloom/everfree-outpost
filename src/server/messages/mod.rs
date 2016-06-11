@@ -34,7 +34,7 @@ pub enum Event {
 
 
 pub enum ControlEvent {
-    OpenWire(WireId, u16, String),
+    OpenWire(WireId, u32, String),
     CloseWire(WireId, Option<ClientId>),
     ReplCommand(u16, String),
     Shutdown,
@@ -223,9 +223,9 @@ impl Messages {
 
     fn handle_control_req(&mut self, _now: Time, req: Request) -> Option<Event> {
         match req {
-            Request::AddClient(wire_id, flags, name) =>
+            Request::AddClient(wire_id, uid, name) =>
                 // Let the caller decide when to actually add the client.
-                Some(Event::Control(ControlEvent::OpenWire(wire_id, flags, name))),
+                Some(Event::Control(ControlEvent::OpenWire(wire_id, uid, name))),
             Request::RemoveClient(wire_id) => {
                 // Let the caller decide when to actually remove the client.
                 let opt_cid = self.clients.wire_to_client(wire_id);

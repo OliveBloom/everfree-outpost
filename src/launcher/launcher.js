@@ -542,8 +542,7 @@ LauncherUI.prototype.init = function() {
 LauncherUI.prototype._finishedPending = function() {
     --this.pending;
     if (this.pending == 0) {
-        var this_ = this;
-        setTimeout(function() { this_.initCanvas(); }, 500);
+        this.initCanvas();
     }
 };
 
@@ -682,13 +681,14 @@ function launch(url) {
     var l = new Launcher(url);
     var ui = new LauncherUI(l);
 
+    ui.init();
+
     l.onload = function() {
         delete window['L'];
         window['C'] = l.client;
         l.client.handoff(ui.canvas, l.conn);
     };
 
-    ui.init();
     l.start();
     window['L'] = l;
 }

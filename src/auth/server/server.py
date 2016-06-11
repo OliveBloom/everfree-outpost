@@ -212,7 +212,7 @@ def do_check_login(auto_guest=False):
     if 'name' in session:
         return ok(type='normal', uid=session['uid'], name=session['name'])
 
-    return ok(type='none', uid=session['uid'])
+    return ok(type='none', uid=session.get('uid'))
 
 @unpack_args
 def do_sign_challenge(challenge):

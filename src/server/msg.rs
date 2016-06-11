@@ -140,7 +140,7 @@ pub enum Request {
     Ready,
 
     // Control messages
-    AddClient(WireId, u16, String),
+    AddClient(WireId, u32, String),
     RemoveClient(WireId),
     ReplCommand(u16, String),
     Shutdown,

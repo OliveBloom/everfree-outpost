@@ -68,7 +68,7 @@ def check_response(key, data, expected_nonce):
         return None
 
     print('response ok', file=sys.stderr)
-    return name.decode()
+    return uid, name.decode()
 
 def main():
     cfg = read_config()
@@ -108,7 +108,7 @@ def main():
                     assert False, 'bad opcode: %x' % opcode
             else:
                 if opcode == OP_AUTH_RESPONSE:
-                    name = check_response(key, data, pending_nonces.pop(cid))
+                    uid, name = check_response(key, data, pending_nonces.pop(cid))
                     if name is None:
                         msg = struct.pack('<H', 0) + 'Login failed'.encode()
                         b_out.write(build_raw(cid, OP_AUTH_RESULT, msg))
@@ -118,7 +118,7 @@ def main():
                         msg = struct.pack('<H', 1) + name.encode()
                         b_out.write(build_raw(cid, OP_AUTH_RESULT, msg))
                         name_b = name.encode()
-                        msg = struct.pack('<HHH', cid, 0, len(name_b)) + name_b
+                        msg = struct.pack('<HIH', cid, uid, len(name_b)) + name_b
                         b_out.write(build_raw(0, OP_AUTH_DONE, msg))
                         print('DONE client %d (name = %r)' % (cid, name),
                                 file=sys.stderr)

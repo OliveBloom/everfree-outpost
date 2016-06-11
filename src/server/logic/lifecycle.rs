@@ -3,6 +3,7 @@ use std::fs::File;
 use types::*;
 use util::now;
 
+use engine::Engine;
 use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
@@ -52,7 +53,7 @@ pub fn start_up(mut eng: EngineRef) {
 
 pub fn shut_down(mut eng: EngineRef) {
     while let Some(cid) = eng.world().clients().next().map(|c| c.id()) {
-        warn_on_err!(logic::client::logout(eng.borrow(), cid));
+        warn_on_err!(logic::client::logout(eng.borrow().unwrap(), cid));
     }
 
     while let Some((pid, cpos)) = eng.world().terrain_chunks().next()
@@ -80,36 +81,51 @@ pub fn shut_down(mut eng: EngineRef) {
 
 
 pub fn pre_restart(eng: EngineRef) {
+    pre_restart_(eng.unwrap());
+}
+
+pub fn pre_restart_(eng: &mut Engine) {
     let msg = ClientResponse::ChatUpdate("***\tServer restarting...".to_owned());
-    eng.messages().broadcast_clients(msg);
-    eng.messages().broadcast_clients(ClientResponse::SyncStatus(SyncKind::Reset));
+    eng.messages.broadcast_clients(msg);
+    eng.messages.broadcast_clients(ClientResponse::SyncStatus(SyncKind::Reset));
 
     {
         info!("recording clients to file...");
-        let file = eng.storage().create_restart_file();
+        let file = eng.storage.create_restart_file();
         let mut ww = WireWriter::new(file);
-        for c in eng.world().clients() {
-            let wire_id = match eng.messages().client_to_wire(c.id()) {
+        for c in eng.world.clients() {
+            let wire_id = match eng.messages.client_to_wire(c.id()) {
                 Some(x) => x,
                 None => {
                     warn!("no wire for client {:?}", c.id());
                     continue;
                 },
             };
-            ww.write_msg(wire_id, c.name()).unwrap();
+            let uid = match eng.extra.client_uid.get(&c.id()) {
+                Some(x) => x,
+                None => {
+                    warn!("no user ID for client {:?}", c.id());
+                    continue;
+                },
+            };
+            ww.write_msg(wire_id, (uid, c.name())).unwrap();
         }
     }
 }
 
-pub fn post_restart(mut eng: EngineRef, file: File) {
+pub fn post_restart(eng: EngineRef, file: File) {
+    post_restart_(eng.unwrap(), file);
+}
+
+pub fn post_restart_(eng: &mut Engine, file: File) {
     info!("retrieving clients from file...");
 
     let mut wr = WireReader::new(file);
     while let Ok(wire_id) = wr.read_header() {
-        let name = wr.read::<String>().unwrap();
-        warn_on_err!(logic::client::login(eng.borrow(), wire_id, &name));
+        let (uid, name) = wr.read::<(u32, String)>().unwrap();
+        warn_on_err!(logic::client::login(eng, wire_id, uid, name));
     }
 
     let msg = ClientResponse::ChatUpdate("***\tServer restarted".to_owned());
-    eng.messages().broadcast_clients(msg);
+    eng.messages.broadcast_clients(msg);
 }

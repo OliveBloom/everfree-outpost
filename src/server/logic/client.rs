@@ -31,11 +31,22 @@ const DAY_NIGHT_CYCLE_TICKS: u32 = 24_000;
 const DAY_NIGHT_CYCLE_MS: u32 = 24 * 60 * 1000;
 
 pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
-    let (flags, name) = unwrap!(eng.extra.wire_info.remove(&wire_id));
+    let (uid, name) = unwrap!(eng.extra.wire_info.remove(&wire_id));
+    login(eng, wire_id, uid, name)
+}
+
+pub fn login(eng: &mut Engine,
+             wire_id: WireId,
+             uid: u32,
+             name: String) -> bundle::Result<ClientId> {
+    let name = if &name == "" { format!("Anon:{:04}", uid) } else { name };
+    info!("logging in: wire {:?}, uid {:x}, name {:?}", wire_id, uid, name);
+
+    // FIXME: kick previous client with this uid
 
     // Load or create the client bundle.
     let bundle =
-        if let Some(mut file) = eng.storage.open_client_file(&name) {
+        if let Some(mut file) = eng.storage.open_client_file(uid) {
             let b = try!(bundle::read_bundle(&mut file));
             if b.clients.len() != 1 {
                 fail!("expected exactly one client in bundle");
@@ -72,6 +83,8 @@ pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
     let cid = importer.import(&ClientId(0));
     let opt_eid = importer.import(&bundle.clients[0].pawn);
 
+    eng.extra.client_uid.insert(cid, uid);
+
 
     // Set up the client to receive messages
     info!("{:?}: logged in as {} ({:?})", wire_id, name, cid);
@@ -92,6 +105,7 @@ pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
     Ok(cid)
 }
 
+/*
 pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
     let mut b = Builder::new(eng.data());
 
@@ -124,7 +138,7 @@ pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<(
 
     let b = b.finish();
 
-    let mut file = eng.storage().create_client_file(name);
+    let mut file = eng.storage().create_client_file(uid);
     try!(bundle::write_bundle(&mut file, &b));
 
     Ok(())
@@ -181,31 +195,35 @@ pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<
 
     Ok(())
 }
+*/
 
-pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
-    eng.messages_mut().remove_client(cid);
+pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
+    eng.messages.remove_client(cid);
 
-    let old_region = eng.vision().client_view_area(cid);
-    let old_pid = eng.vision().client_view_plane(cid);
-    vision::Fragment::remove_client(&mut eng.as_vision_fragment(), cid);
+    let old_region = eng.vision.client_view_area(cid);
+    let old_pid = eng.vision.client_view_plane(cid);
+    vision::Fragment::remove_client(&mut eng.as_ref().as_vision_fragment(), cid);
     if let (Some(old_region), Some(old_pid)) = (old_region, old_pid) {
         for cpos in old_region.points() {
-            logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);
+            logic::chunks::unload_chunk(eng.as_ref(), old_pid, cpos);
         }
     }
 
+    let uid = eng.extra.client_uid.remove(&cid).expect("no user ID for client");
+
     // Actually save and destroy the client
     {
-        let c = eng.world().client(cid);
+        let c = eng.world.client(cid);
+        info!("logging out: uid {:x}, name {:?}", uid, c.name());
 
-        let mut exporter = bundle::Exporter::new(eng.data());
+        let mut exporter = bundle::Exporter::new(eng.data);
         exporter.add_client(&c);
         let b = exporter.finish();
 
-        let mut file = eng.storage().create_client_file(c.name());
+        let mut file = eng.storage.create_client_file(uid);
         try!(bundle::write_bundle(&mut file, &b));
     }
-    try!(world::Fragment::destroy_client(&mut eng.as_world_fragment(), cid));
+    try!(world::Fragment::destroy_client(&mut eng.as_ref().as_world_fragment(), cid));
     Ok(())
 }
 

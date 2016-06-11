@@ -94,9 +94,9 @@ impl Storage {
         self.base.join(SAVE_DIR).join(AUTH_DB_FILE_NAME)
     }
 
-    pub fn client_path(&self, name: &str) -> PathBuf {
+    pub fn client_path(&self, uid: u32) -> PathBuf {
         self.base.join(SAVE_DIR).join(CLIENT_DIR)
-            .join(&*sanitize(name))
+            .join(format!("{:x}", uid))
             .with_extension("client")
     }
 
@@ -129,8 +129,8 @@ impl Storage {
         try_open_file(self.world_path())
     }
 
-    pub fn open_client_file(&self, name: &str) -> Option<File> {
-        try_open_file(self.client_path(name))
+    pub fn open_client_file(&self, uid: u32) -> Option<File> {
+        try_open_file(self.client_path(uid))
     }
 
     pub fn open_plane_file(&self, stable_pid: Stable<PlaneId>) -> Option<File> {
@@ -156,8 +156,8 @@ impl Storage {
         File::create(self.world_path()).unwrap()
     }
 
-    pub fn create_client_file(&self, name: &str) -> File {
-        File::create(self.client_path(name)).unwrap()
+    pub fn create_client_file(&self, uid: u32) -> File {
+        File::create(self.client_path(uid)).unwrap()
     }
 
     pub fn create_plane_file(&self, stable_pid: Stable<PlaneId>) -> File {
