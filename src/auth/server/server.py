@@ -49,6 +49,7 @@ def read_config():
             'db_connstr': get_default('db_connstr', None),
 
             'allowed_origin': get('allowed_origin'),
+            'redir_url': get_default('redir_url', None),
             }
 
 cfg = read_config()
@@ -127,11 +128,12 @@ def error(*msgs, **kwargs):
 def bug(*msgs, **kwargs):
     return build_result(*msgs, status='bug', **kwargs)
 
-def user_dispatch(result, ok_url, err_url, flash_category=None):
+def user_dispatch(result, ok_url, err_url, flash_ok=True, flash_category=None):
     print(result)
     if result['status'] == 'ok':
-        for msg in result.get('msgs', ()):
-            flash(msg, flash_category)
+        if flash_ok:
+            for msg in result.get('msgs', ()):
+                flash(msg, flash_category)
         return redirect(ok_url)
     elif result['status'] == 'error':
         for msg in result.get('msgs', ()):
@@ -250,8 +252,9 @@ def login():
     else:
         result = do_login(request.form)
         return user_dispatch(result,
-                url_for('index'),
+                cfg['redir_url'] or url_for('index'),
                 url_for('login'),
+                flash_ok=cfg['redir_url'] is None,
                 flash_category='login')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -261,8 +264,9 @@ def register():
     else:
         result = do_register(request.form)
         return user_dispatch(result,
-                url_for('index'),
+                cfg['redir_url'] or url_for('index'),
                 url_for('register'),
+                flash_ok=cfg['redir_url'] is None,
                 flash_category='register')
 
 @app.route('/logout')
@@ -271,8 +275,9 @@ def logout():
         del session['uid']
     if 'name' in session:
         del session['name']
-    flash('Logged out.')
-    return redirect(url_for('index'))
+    if cfg['redir_url'] is None:
+        flash('Logged out.')
+    return redirect(cfg['redir_url'] or url_for('index'))
 
 
 @app.route('/api/get_verify_key')

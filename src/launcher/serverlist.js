@@ -58,11 +58,14 @@ function finishLoginCheck(result) {
         return;
     }
 
-    var link = '<a href="' + new URL('login', AUTH_URL).href + '">Log In</a>'
+    function link(url, text) {
+        return '<a href="' + new URL(url, AUTH_URL).href + '">' + text + '</a>'
+    }
     if (result.type == 'none') {
-        stat.innerHTML = 'Using guest account &ndash; ' + link;
+        stat.innerHTML = 'Using guest account &ndash; ' + link('login', 'Log In');
     } else if (result.type == 'normal') {
-        stat.innerHTML = 'Logged in as ' + result['name'];
+        stat.innerHTML = 'Logged in as ' + result['name'] +
+            ' &ndash; ' + link('logout', 'Log Out');
     }
 }
 
