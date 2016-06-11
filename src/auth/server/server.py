@@ -12,8 +12,6 @@ import bcrypt
 import nacl.secret
 import nacl.signing
 from nacl.encoding import RawEncoder, URLSafeBase64Encoder
-import psycopg2
-import psycopg2.errorcodes
 
 
 def get_config_key():
@@ -30,6 +28,9 @@ def read_config():
     def get(k):
         return config['DEFAULT'].get(k)
 
+    def get_default(k, default):
+        return config['DEFAULT'].get(k, default)
+
     def decrypt(k):
         value = get(k)
         return box.decrypt(URLSafeBase64Encoder.decode(value.encode('ascii')))
@@ -40,24 +41,29 @@ def read_config():
 
             'signing_key': nacl.signing.SigningKey(decrypt('signing_key')),
 
+            'db_type': get_default('db_type', 'postgres'),
             'db_name': get('db_name'),
             'db_user': get('db_user'),
             'db_pass': decrypt('db_pass').decode('utf-8'),
+            'db_host': get_default('db_host', None),
+            'db_connstr': get_default('db_connstr', None),
 
             'allowed_origin': get('allowed_origin'),
             }
 
 cfg = read_config()
 
+if cfg['db_type'] == 'postgres':
+    from db_postgres import Database
+elif cfg['db_type'] == 'mysql':
+    from db_mysql import Database
+else:
+    raise ValueError('db_type must be "postgres" or "mysql" (got %r)' % cfg['db_type'])
+db = Database(cfg)
+
 app = Flask(__name__)
 app.debug = bool(cfg['flask_debug'])
 app.secret_key = cfg['flask_secret_key']
-
-db = psycopg2.connect(
-        database=cfg['db_name'],
-        user=cfg['db_user'],
-        password=cfg['db_pass'],
-        )
 
 
 # Misc. helper functions
@@ -160,17 +166,10 @@ LOGIN_ERROR = 'Invalid username or password.'
 def do_login(name, password):
     name = normalize_name(name)
 
-    with db, db.cursor() as curs:
-        curs.execute('SELECT id, name, password FROM users '
-                'WHERE name_lower = %s;',
-                (name.lower(),))
-        rows = curs.fetchall()
-
-    if len(rows) == 0:
+    result = db.lookup_user(name)
+    if result is None:
         return error(LOGIN_ERROR)
-    assert len(rows) == 1, 'impossible to have more than one row with the same name_lower'
-
-    uid, name, old_hash = rows[0]
+    uid, name, old_hash = result
 
     pass_hash = bcrypt.hashpw(password.encode('utf-8'), old_hash.encode('ascii')).decode('ascii')
     # According to the python bcrypt devs, this non-timing-safe comparison is
@@ -197,17 +196,9 @@ def do_register(name, password, email):
 
     pass_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('ascii')
 
-    try:
-        with db, db.cursor() as curs:
-            curs.execute('INSERT INTO users (name, name_lower, password, email) '
-                'VALUES (%s, %s, %s, %s) RETURNING id',
-                (name, name.lower(), pass_hash, email))
-            uid, = curs.fetchone()
-    except psycopg2.IntegrityError as e:
-        if psycopg2.errorcodes.lookup(e.pgcode) == 'UNIQUE_VIOLATION':
-            return error('Account name %r is already in use.' % name)
-        else:
-            raise
+    uid = db.register(name, pass_hash, email)
+    if uid is None:
+        return error('Account name %r is already in use.' % name)
 
     start_session(uid, name)
     return ok('Registered as %r.' % name)
