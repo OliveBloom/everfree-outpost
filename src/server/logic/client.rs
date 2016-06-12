@@ -226,14 +226,16 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
     let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
     let eid = importer.import(&EntityId(0));
 
-    DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid));
-    logic::handle::entity_create(eng, eid);
-
+    // Send Init before EntityAppear/MotionStart, so that the client will recognize those messages
+    // as applying to its own pawn (for motion prediction purposes).
     let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
     eng.messages.send_client(cid, ClientResponse::Init(eid,
                                                        eng.now,
                                                        cycle_base,
                                                        DAY_NIGHT_CYCLE_MS));
+
+    DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid));
+    logic::handle::entity_create(eng, eid);
 
 
     Ok(())
