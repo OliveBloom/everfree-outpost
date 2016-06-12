@@ -84,6 +84,7 @@ var ability_inv;
 function OutpostClient() {
     this._init();
 }
+window['OutpostClient'] = OutpostClient;
 
 OutpostClient.prototype._init = function() {
     // Set up error_list first to catch errors in other parts of init.
