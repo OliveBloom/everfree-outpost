@@ -1,216 +1,3 @@
-use types::*;
-use libphysics::{CHUNK_SIZE, TILE_SIZE};
-
-use chunks;
-use engine::Engine;
-use engine::split::EngineRef;
-use logic;
-use messages::{ClientResponse, SyncKind};
-use world;
-use world::Motion;
-use world::bundle::{self, Builder, AnyId};
-use world::extra;
-use world::object::*;
-use vision;
-
-
-const DAY_NIGHT_CYCLE_TICKS: u32 = 24_000;
-const DAY_NIGHT_CYCLE_MS: u32 = 24 * 60 * 1000;
-
-pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
-    let mut b = Builder::new(eng.data());
-
-    b.client()
-     .name(name)
-     .pawn(|e| {
-        let mut main_inv = None;
-        let mut ability_inv = None;
-        e.stable_plane(STABLE_PLANE_FOREST)
-         .motion(Motion::stationary(V3::new(32, 32, 0), eng.now()))
-         .anim("pony//stand-0")
-         .appearance(appearance)
-         .inventory(|i| {
-            main_inv = Some(i.id());
-            i.size(30);
-         })
-         .inventory(|i| {
-            ability_inv = Some(i.id());
-            i.size(30);
-            if appearance & (1 << 7) != 0 {
-                i.item(0, "ability/light", 1);
-            }
-         })
-         .extra(|x| {
-            let mut inv = x.set_hash("inv");
-            inv.borrow().set("main", extra::Value::InventoryId(main_inv.unwrap()));
-            inv.borrow().set("ability", extra::Value::InventoryId(ability_inv.unwrap()));
-         });
-     });
-
-    let b = b.finish();
-
-    let mut file = eng.storage().create_client_file(name);
-    try!(bundle::write_bundle(&mut file, &b));
-
-    Ok(())
-}
-
-pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<()> {
-    let now = eng.now();
-
-    if let Some(old_cid) = eng.messages().name_to_client(name) {
-        // `kick_client` forces a logout, including saving the current position.
-        eng.borrow().unwrap().kick_client(old_cid, "logged in from another location");
-    }
-
-    // Load the client bundle
-    let mut file = unwrap!(eng.storage().open_client_file(name),
-                           "client file not found");
-    let b = try!(bundle::read_bundle(&mut file));
-
-    if b.clients.len() != 1 {
-        fail!("expected exactly one client in bundle");
-    }
-    if b.entities.len() != 1 {
-        fail!("expected exactly one entity in bundle");
-        // Otherwise import may fail.  We ensure the plane is loaded before importing the pawn, but
-        // we don't check for any other entities at the moment.
-    }
-    let c = &b.clients[0];
-    let b_eid = unwrap!(c.pawn, "client with no pawn is not yet supported");
-    let e = unwrap!(b.entities.get(b_eid.unwrap() as usize));
-
-
-    // TODO: make sure login cannot fail past this point
-
-
-    // Import the bundle, but first import the plane so that entity import will succeed.
-    let pid = chunks::Fragment::get_plane_id(&mut eng.as_chunks_fragment(), e.stable_plane);
-
-    let importer = bundle::import_bundle(&mut eng.as_world_fragment(), &b);
-    let cid = importer.import(&ClientId(0));
-    let eid = importer.import(&b_eid);
-
-    // TODO: stop entity motions on logout
-    let pos = eng.world().entity(eid).pos(now);
-    let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-
-    // Run handler logic
-    logic::handle::entity_create(eng.borrow().unwrap(), eid);
-
-    // Init messages and chat
-    info!("{:?}: logged in as {} ({:?})", wire_id, name, cid);
-    eng.messages_mut().add_client(cid, wire_id, name);
-
-    let cycle_base = (now % DAY_NIGHT_CYCLE_MS as Time) as u32;
-    eng.messages_mut().send_client(cid, ClientResponse::Init(Some(eid),
-                                                             now,
-                                                             cycle_base,
-                                                             DAY_NIGHT_CYCLE_MS));
-
-    eng.chat_mut().add_client(cid, pid, cpos);
-
-    // Init vision
-    let region = vision::vision_region(pos);
-    for cpos in region.points() {
-        logic::chunks::load_chunk(eng.borrow(), pid, cpos);
-    }
-    // TODO: figure out why add_client needs to happen after load_chunks
-    // (current guess is that load_chunk is using HiddenVisionFragment)
-    vision::Fragment::add_client(&mut eng.as_vision_fragment(), cid, pid, region);
-
-    // Init scripts
-    warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
-
-
-    // Done logging in
-    eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
-    Ok(())
-}
-
-pub fn logout(mut eng: EngineRef, cid: ClientId) -> bundle::Result<()> {
-    let now = eng.now();
-
-    let (eid, pid, pos) = {
-        let w = eng.world();
-        let c = w.client(cid);
-        let e = c.pawn().unwrap();
-        (e.id(),
-         e.plane_id(),
-         e.motion().pos(now))
-    };
-    let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-
-    // Shut down messages and chat
-    eng.messages_mut().remove_client(cid);
-
-    eng.chat_mut().remove_client(cid, pid, cpos);
-
-    // Shut down vision
-    vision::Fragment::remove_client(&mut eng.as_vision_fragment(), cid);
-
-    // Export the client bundle.
-    let exporter = {
-        let c = eng.world().client(cid);
-
-        let mut exporter = bundle::Exporter::new(eng.data());
-        exporter.add_client(&c);
-        let b = exporter.finish();
-
-        let mut file = eng.storage().create_client_file(c.name());
-        try!(bundle::write_bundle(&mut file, &b));
-
-        exporter
-    };
-
-    // Run handler logic
-    exporter.iter_exports(|id| match id {
-        AnyId::Entity(eid) => logic::handle::entity_destroy(eng.borrow().unwrap(), eid),
-        _ => {},
-    });
-
-    // Destroy the client and associated objects
-    try!(world::Fragment::destroy_client(&mut eng.as_world_fragment(), cid));
-
-    // Now that the Entity is gone, it's safe to unload the chunks (which may trigger unloading of
-    // the Plane).
-    let region = vision::vision_region(pos);
-    for cpos in region.points() {
-        logic::chunks::unload_chunk(eng.borrow(), pid, cpos);
-    }
-
-    Ok(())
-}
-
-pub fn update_view(eng: &mut Engine,
-                   cid: ClientId,
-                   old_plane: PlaneId,
-                   old_cpos: V2,
-                   new_plane: PlaneId,
-                   new_cpos: V2) {
-    let now = eng.now();
-
-    let old_region = vision::vision_region_chunk(old_cpos);
-    let new_region = vision::vision_region_chunk(new_cpos);
-    let plane_change = new_plane != old_plane;
-
-    for cpos in new_region.points().filter(|&p| !old_region.contains(p) || plane_change) {
-        logic::chunks::load_chunk(eng.as_ref(), new_plane, cpos);
-    }
-
-    vision::Fragment::set_client_area(&mut eng.as_ref().as_vision_fragment(),
-                                      cid, new_plane, new_region);
-
-    for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
-        logic::chunks::unload_chunk(eng.as_ref(), old_plane, cpos);
-    }
-
-    eng.chat.set_client_location(cid, old_plane, old_cpos, new_plane, new_cpos);
-
-    eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
-}
-
-/*
 //! The client login flow looks like this:
 //!
 //! (1) A new wire (connection) appears.  Initially, the game client is not ready for any messages,
@@ -226,6 +13,7 @@ pub fn update_view(eng: &mut Engine,
 //!     Vision tracks the pawn as it moves around.
 
 use types::*;
+use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use chunks;
 use engine::Engine;
@@ -234,8 +22,9 @@ use logic;
 use messages::{ClientResponse, SyncKind, Dialog};
 use world;
 use world::Motion;
-use world::bundle::{self, Builder};
+use world::bundle::{self, Bundle, Builder, AnyId};
 use world::extra;
+use world::fragment::DummyFragment;
 use world::fragment::Fragment as World_Fragment;
 use world::object::*;
 use vision;
@@ -249,14 +38,24 @@ pub fn ready(eng: &mut Engine, wire_id: WireId) -> bundle::Result<ClientId> {
     login(eng, wire_id, uid, name)
 }
 
+struct LoginPart {
+    cid: ClientId,
+    opt_eid: Option<EntityId>,
+    pid: PlaneId,
+    pos: V3,
+}
+
 pub fn login(eng: &mut Engine,
              wire_id: WireId,
              uid: u32,
              name: String) -> bundle::Result<ClientId> {
+    if let Some(&old_cid) = eng.extra.uid_client.get(&uid) {
+        // `kick_client` forces a logout, including saving the current position.
+        eng.kick_client(old_cid, "logged in from another location");
+    }
+
     let name = if &name == "" { format!("Anon:{:04}", uid) } else { name };
     info!("logging in: wire {:?}, uid {:x}, name {:?}", wire_id, uid, name);
-
-    // FIXME: kick previous client with this uid
 
     // Load or create the client bundle.
     let bundle =
@@ -264,6 +63,11 @@ pub fn login(eng: &mut Engine,
             let mut b = try!(bundle::read_bundle(&mut file));
             if b.clients.len() != 1 {
                 fail!("expected exactly one client in bundle");
+            }
+            if b.entities.len() > 1 {
+                fail!("expected at most one entity in bundle");
+                // Otherwise import may fail.  We ensure the plane is loaded before importing the
+                // pawn, but we don't check for any other entities at the moment.
             }
             b.clients[0].name = name.clone().into_boxed_str();
             b
@@ -274,38 +78,19 @@ pub fn login(eng: &mut Engine,
         };
 
 
-    // Load the plane and nearby chunks
-    let (stable_pid, pos) = if let Some(eid) = bundle.clients[0].pawn {
-        let e = unwrap!(bundle.entities.get(eid.unwrap() as usize));
-        // TODO: stop entity motions on logout
-        // The current scheme allows players to pass through walls if they're walking at logout.
-        (e.stable_plane, e.motion.pos(eng.now))
-    } else {
-        // The Client has no pawn, so center the view on the spawn point instead.
-        // TODO: hardcoded spawn point
-        (STABLE_PLANE_FOREST, V3::new(32, 32, 0))
-    };
-
-    let region = vision::vision_region(pos);
-    let pid = chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(), stable_pid);
-    for cpos in region.points() {
-        logic::chunks::load_chunk(eng.as_ref(), pid, cpos);
-    }
+    let LoginPart { cid, opt_eid, pid, pos } =
+        if bundle.clients[0].pawn.is_none() {
+            try!(login_no_pawn(eng, bundle))
+        } else {
+            try!(login_with_pawn(eng, bundle))
+        };
+    let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
 
 
-    // Import the client bundle.
-    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
-    let cid = importer.import(&ClientId(0));
-    let opt_eid = importer.import(&bundle.clients[0].pawn);
-
-    eng.extra.client_uid.insert(cid, uid);
-
-
-    // Set up the client to receive messages
+    // Init messages and chat
     info!("{:?}: logged in as {} ({:?})", wire_id, name, cid);
     eng.messages.add_client(cid, wire_id, &name);
 
-    // Send the client's startup messages.
     let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
     if let Some(eid) = opt_eid {
         eng.messages.send_client(cid, ClientResponse::Init(eid,
@@ -319,17 +104,90 @@ pub fn login(eng: &mut Engine,
                                                                  DAY_NIGHT_CYCLE_MS));
     }
 
-    vision::Fragment::add_client(&mut eng.as_ref().as_vision_fragment(), cid, pid, region);
-    //warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
-    eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
+    eng.chat.add_client(cid, pid, cpos);
 
-    if opt_eid.is_none() {
+    eng.extra.client_uid.insert(cid, uid);
+    eng.extra.uid_client.insert(uid, cid);
+
+    // Init vision
+    let region = vision::vision_region(pos);
+    for cpos in region.points() {
+        logic::chunks::load_chunk(eng.as_ref(), pid, cpos);
+    }
+    // TODO: figure out why add_client needs to happen after load_chunks
+    // (current guess is that load_chunk is using HiddenVisionFragment)
+    vision::Fragment::add_client(&mut eng.as_ref().as_vision_fragment(), cid, pid, region);
+
+    if opt_eid.is_some() {
+        // Init scripts
+        warn_on_err!(eng.script_hooks.call_client_login(eng.as_ref(), cid));
+    } else {
         eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::PonyEdit(name.clone())));
     }
 
 
+    // Done logging in
+    eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
+
+
     Ok(cid)
 }
+
+
+fn login_no_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart> {
+    let c = &bundle.clients[0];
+
+
+    // TODO: make sure login cannot fail past this point
+
+
+    // Import the bundle.
+    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let cid = importer.import(&ClientId(0));
+
+    let pid = chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(),
+                                             STABLE_PLANE_FOREST);
+
+    Ok(LoginPart {
+        cid: cid,
+        opt_eid: None,
+        pid: pid,
+        // TODO: hardcoded spawn point
+        pos: V3::new(32, 32, 0),
+    })
+}
+
+fn login_with_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart> {
+    let c = &bundle.clients[0];
+    let b_eid = unwrap!(c.pawn, "client with no pawn is not yet supported");
+    let e = unwrap!(bundle.entities.get(b_eid.unwrap() as usize));
+
+
+    // TODO: make sure login cannot fail past this point
+
+
+    // Import the bundle, but first import the plane so that entity import will succeed.
+    let pid = chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(),
+                                             e.stable_plane);
+
+    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let cid = importer.import(&ClientId(0));
+    let eid = importer.import(&b_eid);
+
+    // TODO: stop entity motions on logout
+    let pos = eng.world.entity(eid).pos(eng.now);
+
+    // Run handler logic
+    logic::handle::entity_create(eng, eid);
+
+    Ok(LoginPart {
+        cid: cid,
+        opt_eid: Some(eid),
+        pid: pid,
+        pos: pos,
+    })
+}
+
 
 pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bundle::Result<()> {
     let _ = unwrap!(eng.world.get_client(cid));
@@ -368,7 +226,8 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
     let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
     let eid = importer.import(&EntityId(0));
 
-    eng.as_ref().as_world_fragment().client_mut(cid).set_pawn(Some(eid));
+    DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid));
+    logic::handle::entity_create(eng, eid);
 
     let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
     eng.messages.send_client(cid, ClientResponse::Init(eid,
@@ -380,94 +239,30 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
     Ok(())
 }
 
-/*
-pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
-    let mut b = Builder::new(eng.data());
-
-    b.client()
-     .name(name)
-     .pawn(|e| {
-     });
-
-    let b = b.finish();
-
-    let mut file = eng.storage().create_client_file(uid);
-    try!(bundle::write_bundle(&mut file, &b));
-
-    Ok(())
-}
-
-pub fn login(mut eng: EngineRef, wire_id: WireId, name: &str) -> bundle::Result<()> {
-    let now = eng.now();
-
-    if let Some(old_cid) = eng.messages().name_to_client(name) {
-        eng.borrow().unwrap().kick_client(old_cid, "logged in from another location");
-    }
-
-    // Load the client bundle
-    let mut file = unwrap!(eng.storage().open_client_file(name),
-                           "client file not found");
-    let b = try!(bundle::read_bundle(&mut file));
-
-    if b.clients.len() != 1 {
-        fail!("expected exactly one client in bundle");
-    }
-    let c = &b.clients[0];
-    let b_eid = unwrap!(c.pawn, "client with no pawn is not yet supported");
-    let e = unwrap!(b.entities.get(b_eid.unwrap() as usize));
-
-    // TODO: make sure login cannot fail past this point
-
-    // Load the plane and nearby chunks
-    // TODO: stop entity motions on logout
-    let region = vision::vision_region(e.motion.end_pos);
-    let pid = chunks::Fragment::get_plane_id(&mut eng.as_chunks_fragment(), e.stable_plane);
-    for cpos in region.points() {
-        logic::chunks::load_chunk(eng.borrow(), pid, cpos);
-    }
-
-    // Import the client and associated objects into the world
-    let importer = bundle::import_bundle(&mut eng.as_world_fragment(), &b);
-    let cid = importer.import(&ClientId(0));
-    let eid = importer.import(&b_eid);
-
-    // Set up the client to receive messages
-    info!("{:?}: logged in as {} ({:?})", wire_id, name, cid);
-    eng.messages_mut().add_client(cid, wire_id, name);
-
-    // Send the client's startup messages.
-    let cycle_base = (now % DAY_NIGHT_CYCLE_MS as Time) as u32;
-    eng.messages_mut().send_client(cid, ClientResponse::Init(Some(eid),
-                                                             now,
-                                                             cycle_base,
-                                                             DAY_NIGHT_CYCLE_MS));
-
-    vision::Fragment::add_client(&mut eng.as_vision_fragment(), cid, pid, region);
-    warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
-    eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
-
-    Ok(())
-}
-*/
-
 pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
+    let uid = eng.extra.client_uid.remove(&cid).expect("no user ID for client");
+    eng.extra.uid_client.remove(&uid);
+
+    let (eid, pid, pos) = {
+        let c = eng.world.client(cid);
+        let e = c.pawn().unwrap();
+        (e.id(),
+         e.plane_id(),
+         e.motion().pos(eng.now))
+    };
+    let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+
+    // Shut down messages and chat
     eng.messages.remove_client(cid);
 
-    let old_region = eng.vision.client_view_area(cid);
-    let old_pid = eng.vision.client_view_plane(cid);
+    eng.chat.remove_client(cid, pid, cpos);
+
+    // Shut down vision
     vision::Fragment::remove_client(&mut eng.as_ref().as_vision_fragment(), cid);
-    if let (Some(old_region), Some(old_pid)) = (old_region, old_pid) {
-        for cpos in old_region.points() {
-            logic::chunks::unload_chunk(eng.as_ref(), old_pid, cpos);
-        }
-    }
 
-    let uid = eng.extra.client_uid.remove(&cid).expect("no user ID for client");
-
-    // Actually save and destroy the client
-    {
+    // Export the client bundle.
+    let exporter = {
         let c = eng.world.client(cid);
-        info!("logging out: uid {:x}, name {:?}", uid, c.name());
 
         let mut exporter = bundle::Exporter::new(eng.data);
         exporter.add_client(&c);
@@ -475,51 +270,54 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
 
         let mut file = eng.storage.create_client_file(uid);
         try!(bundle::write_bundle(&mut file, &b));
-    }
+
+        exporter
+    };
+
+    // Run handler logic
+    exporter.iter_exports(|id| match id {
+        AnyId::Entity(eid) => logic::handle::entity_destroy(eng, eid),
+        _ => {},
+    });
+
+    // Destroy the client and associated objects
     try!(world::Fragment::destroy_client(&mut eng.as_ref().as_world_fragment(), cid));
+
+    // Now that the Entity is gone, it's safe to unload the chunks (which may trigger unloading of
+    // the Plane).
+    let region = vision::vision_region(pos);
+    for cpos in region.points() {
+        logic::chunks::unload_chunk(eng.as_ref(), pid, cpos);
+    }
+
     Ok(())
+
 }
 
-pub fn update_view(mut eng: EngineRef, cid: ClientId) {
+pub fn update_view(eng: &mut Engine,
+                   cid: ClientId,
+                   old_plane: PlaneId,
+                   old_cpos: V2,
+                   new_plane: PlaneId,
+                   new_cpos: V2) {
     let now = eng.now();
 
-    let old_region = unwrap_or!(eng.vision().client_view_area(cid));
-    let old_pid = unwrap_or!(eng.vision().client_view_plane(cid));
-
-    let (new_stable_pid, new_region, pawn_id) = {
-        // TODO: warn on None? - may indicate inconsistency between World and Vision
-        let client = unwrap_or!(eng.world().get_client(cid));
-
-        // TODO: make sure return is the right thing to do on None
-        let pawn = unwrap_or!(client.pawn());
-
-        (pawn.stable_plane_id(),
-         vision::vision_region(pawn.pos(now)),
-         pawn.id())
-    };
-    let new_pid = chunks::Fragment::get_plane_id(&mut eng.as_chunks_fragment(), new_stable_pid);
-
-    let plane_change = new_pid != old_pid;
-
-    // un/load_chunk use HiddenWorldFragment, so do the calls in this specific order to make sure
-    // the chunks being un/loaded are actually not in the client's vision.
+    let old_region = vision::vision_region_chunk(old_cpos);
+    let new_region = vision::vision_region_chunk(new_cpos);
+    let plane_change = new_plane != old_plane;
 
     for cpos in new_region.points().filter(|&p| !old_region.contains(p) || plane_change) {
-        logic::chunks::load_chunk(eng.borrow(), new_pid, cpos);
+        logic::chunks::load_chunk(eng.as_ref(), new_plane, cpos);
     }
 
-    vision::Fragment::set_client_area(&mut eng.as_vision_fragment(), cid, new_pid, new_region);
+    vision::Fragment::set_client_area(&mut eng.as_ref().as_vision_fragment(),
+                                      cid, new_plane, new_region);
 
     for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
-        logic::chunks::unload_chunk(eng.borrow(), old_pid, cpos);
+        logic::chunks::unload_chunk(eng.as_ref(), old_plane, cpos);
     }
 
-    eng.messages().send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
+    eng.chat.set_client_location(cid, old_plane, old_cpos, new_plane, new_cpos);
 
-    // TODO: using `with_hooks` here is gross, move schedule_view_update somewhere better
-    {
-        use world::fragment::Fragment;
-        eng.as_world_fragment().with_hooks(|h| h.schedule_view_update(pawn_id));
-    }
+    eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
 }
-*/

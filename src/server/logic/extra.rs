@@ -18,7 +18,8 @@ pub struct Extra {
     pub wire_info: HashMap<WireId, (u32, String)>,
 
     /// Map each client to its user ID.  This is used for saving and loading .client files.
-    pub client_uid: HashMap<ClientId, u32>
+    pub client_uid: HashMap<ClientId, u32>,
+    pub uid_client: HashMap<u32, ClientId>,
 }
 
 impl Extra {
@@ -28,6 +29,7 @@ impl Extra {
             entity_physics_update_timer: HashMap::new(),
             wire_info: HashMap::new(),
             client_uid: HashMap::new(),
+            uid_client: HashMap::new(),
         }
     }
 }
