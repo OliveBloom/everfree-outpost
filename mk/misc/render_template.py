@@ -64,7 +64,7 @@ def get_image(args, src, rel=None):
         if args.optimize is None or ext != '.png':
             shutil.copyfile(src, dest)
         else:
-            subprocess.check_call((args.optimize, '-force', '-out', dest, src))
+            subprocess.check_call((args.optimize, '-clobber', '-out', dest, src))
 
     if os.path.getsize(dest) < 1024 and args.optimize is not None and ext == '.png':
         with open(dest, 'rb') as f:
