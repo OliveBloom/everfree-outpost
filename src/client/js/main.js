@@ -153,7 +153,10 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
 
     // Don't handle any input until the client is inited.
     keyboard.attach(document);
+    setupKeyHandler();
     input.handlers.push(new AsmClientInput(asm_client));
+    input.attach(document);
+
 
     // This should only happen after client init.
     function doResize() {
@@ -234,9 +237,6 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
 // Initialization helpers
 
 function buildUI() {
-    input.attach(document);
-    setupKeyHandler();
-
     var key_list = $('key-list');
 
     ui_div.appendChild(key_list);
