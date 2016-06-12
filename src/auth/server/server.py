@@ -60,6 +60,7 @@ def read_config():
 
             'allowed_origin': get('allowed_origin'),
             'redir_url': get_default('redir_url', None),
+            'secure': int(get_default('secure', 0)),
 
             'reserved_names': reserved_names,
             }
@@ -77,6 +78,11 @@ db = Database(cfg)
 app = Flask(__name__)
 app.debug = bool(cfg['flask_debug'])
 app.secret_key = cfg['flask_secret_key']
+
+app.session_cookie_httponly = True
+if cfg['secure']:
+    app.session_cookie_secure = True
+    app.preferred_url_scheme = 'https'
 
 
 # Misc. helper functions
