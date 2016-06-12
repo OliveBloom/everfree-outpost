@@ -47,11 +47,9 @@ mod op {
         // Requests
         Ping = 0x0003,
         Input = 0x0004,
-        Login = 0x0005,
         UnsubscribeInventory = 0x0007,
         CraftRecipe = 0x0009,
         Chat = 0x000a,
-        Register = 0x000b,
         Interact = 0x000c,
         UseItem = 0x000d,
         UseAbility = 0x000e,
@@ -59,12 +57,17 @@ mod op {
         UseItemWithArgs = 0x0011,
         UseAbilityWithArgs = 0x0012,
         MoveItem = 0x0013,
+        AuthResponse = 0x0014,      // For auth verifier only
+        CreateCharacter = 0x0015,
+        Ready = 0x0016,
 
         // Deprecated requests
         GetTerrain = 0x0001,
         UpdateMotion = 0x0002,
+        Login = 0x0005,
         Action = 0x0006,
         old_MoveItem = 0x0008,
+        Register = 0x000b,
         OpenInventory = 0x000f,
 
         // Responses
@@ -78,7 +81,6 @@ mod op {
         ChatUpdate = 0x800b,
         EntityAppear = 0x800c,
         EntityGone = 0x800d,
-        RegisterResult = 0x800e,
         StructureAppear = 0x800f,
         StructureGone = 0x8010,
         MainInventory = 0x8011,
@@ -97,11 +99,16 @@ mod op {
         EntityMotionStartEnd = 0x801e,
         ProcessedInputs = 0x801f,
         ActivityChange = 0x8020,
+        AuthChallenge = 0x8021,     // For auth verifier only
+        AuthResult = 0x8022,        // For auth verifier only
+        InitNoPawn = 0x8023,
+        OpenPonyEdit = 0x8024,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
         old_EntityUpdate = 0x8004,
         old_InventoryUpdate = 0x8009,
+        RegisterResult = 0x800e,
 
         // Control messages
         AddClient = 0xff00,
@@ -113,6 +120,9 @@ mod op {
         RestartServer = 0xff06,
         RestartClient = 0xff07,
         RestartBoth = 0xff08,
+        AuthStart = 0xff09,         // For auth verifier only
+        AuthCancel = 0xff0a,        // For auth verifier only
+        AuthFinish = 0xff0b,        // For auth verifier only
     }
 }
 
@@ -123,11 +133,9 @@ pub enum Request {
     // Ordinary requests
     Ping(u16),
     Input(LocalTime, u16),
-    Login(String, [u32; 4]),
     UnsubscribeInventory(InventoryId),
     CraftRecipe(StructureId, InventoryId, RecipeId, u16),
     Chat(String),
-    Register(String, [u32; 4], u32),
     Interact(LocalTime),
     UseItem(LocalTime, ItemId),
     UseAbility(LocalTime, ItemId),
@@ -135,9 +143,11 @@ pub enum Request {
     UseItemWithArgs(LocalTime, ItemId, ExtraArg),
     UseAbilityWithArgs(LocalTime, ItemId, ExtraArg),
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
+    CreateCharacter(u32),
+    Ready,
 
     // Control messages
-    AddClient(WireId),
+    AddClient(WireId, u32, String),
     RemoveClient(WireId),
     ReplCommand(u16, String),
     Shutdown,
@@ -158,11 +168,6 @@ impl Request {
                 let (a, b): (LocalTime, u16) = try!(wr.read());
                 Input(a, b)
             },
-            op::Login => {
-                // Shuffle order since the String must be last on the wire
-                let (b, a) = try!(wr.read());
-                Login(a, b)
-            },
             op::UnsubscribeInventory => {
                 let a = try!(wr.read());
                 UnsubscribeInventory(a)
@@ -174,11 +179,6 @@ impl Request {
             op::Chat => {
                 let a = try!(wr.read());
                 Chat(a)
-            },
-            op::Register => {
-                // Shuffle order since the String must be last on the wire
-                let (b, c, a) = try!(wr.read());
-                Register(a, b, c)
             },
             op::Interact => {
                 let a = try!(wr.read());
@@ -208,10 +208,17 @@ impl Request {
                 let (a, b, c, d, e) = try!(wr.read());
                 MoveItem(a, b, c, d, e)
             },
+            op::CreateCharacter => {
+                let a = try!(wr.read());
+                CreateCharacter(a)
+            },
+            op::Ready => {
+                Ready
+            },
 
             op::AddClient => {
-                let a = try!(wr.read());
-                AddClient(a)
+                let (a, b, c) = try!(wr.read());
+                AddClient(a, b, c)
             },
             op::RemoveClient => {
                 let a = try!(wr.read());
@@ -250,7 +257,7 @@ impl Request {
 pub enum Response {
     TerrainChunk(u16, Vec<u16>),
     Pong(u16, LocalTime),
-    Init(InitData),
+    Init(EntityId, LocalTime, u32, u32),
     KickReason(String),
     UnloadChunk(u16),
     OpenDialog(u32, Vec<u32>),
@@ -277,6 +284,8 @@ pub enum Response {
     EntityMotionStartEnd(EntityId, (u16, u16, u16), LocalTime, (i16, i16, i16), AnimId, LocalTime),
     ProcessedInputs(LocalTime, u16),
     ActivityChange(u8),
+    InitNoPawn((u16, u16, u16), LocalTime, u32, u32),
+    OpenPonyEdit(String),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -289,8 +298,8 @@ impl Response {
                 ww.write_msg(id, (op::TerrainChunk, idx, data)),
             Pong(data, time) =>
                 ww.write_msg(id, (op::Pong, data, time)),
-            Init(ref data) =>
-                ww.write_msg(id, (op::Init, data.flatten())),
+            Init(pawn_id, now, cycle_base, cycle_ms) =>
+                ww.write_msg(id, (op::Init, pawn_id, now, cycle_base, cycle_ms)),
             KickReason(ref msg) =>
                 ww.write_msg(id, (op::KickReason, msg)),
             UnloadChunk(idx) =>
@@ -345,6 +354,10 @@ impl Response {
                 ww.write_msg(id, (op::ProcessedInputs, time, count)),
             ActivityChange(activity) =>
                 ww.write_msg(id, (op::ActivityChange, activity)),
+            InitNoPawn(pos, now, cycle_base, cycle_ms) =>
+                ww.write_msg(id, (op::InitNoPawn, pos, now, cycle_base, cycle_ms)),
+            OpenPonyEdit(ref name) =>
+                ww.write_msg(id, (op::OpenPonyEdit, name)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),
@@ -352,22 +365,6 @@ impl Response {
                 ww.write_msg(id, (op::ReplResult, cookie, msg)),
         });
         ww.flush()
-    }
-}
-
-
-#[derive(Debug)]
-pub struct InitData {
-    pub entity_id: EntityId,
-    pub now: LocalTime,
-    pub cycle_base: u32,
-    pub cycle_ms: u32,
-}
-
-impl InitData {
-    fn flatten(&self) -> (EntityId, LocalTime, u32, u32) {
-        let InitData { entity_id, now, cycle_base, cycle_ms } = *self;
-        (entity_id, now, cycle_base, cycle_ms)
     }
 }
 

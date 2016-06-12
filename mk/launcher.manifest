@@ -1,0 +1,9 @@
+
+launcher/launcher.html: $b_www/launcher.html
+launcher/launcher.js: $root/src/launcher/launcher.js
+# TODO: font is here because img_url() can't reference $b_data
+launcher/font.png: $b_data/fonts/name.png
+launcher/font_metrics.json: $b_data/fonts/name_metrics.json
+
+launcher/serverlist.html: $b_www/serverlist.html
+launcher/serverlist.js: $root/src/launcher/serverlist.js

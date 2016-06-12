@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+{% block title %} Everfree Outpost {% endblock %}
+{% block title_display %} {% endblock %}
+{% block content %}
+
+{% for msg in get_flashed_messages() %}
+<p class='msg'>{{ msg }}</p>
+{% endfor %}
+
+<p>
+{% if not username %}
+    Not logged in.
+{% else %}
+    Logged in as <b>{{ username }}</b> &ndash;
+    <a href='http://play.everfree-outpost.com/'>Play Now</a>
+{% endif %}
+</p>
+
+{% if not username %}
+<ul>
+    <li><a href='/login'>Log in</a></li>
+    <li><a href='/register'>Register</a></li>
+</ul>
+{% else %}
+<ul>
+    <li><a href='/logout'>Log out</a></li>
+</ul>
+{% endif %}
+
+{% endblock %}

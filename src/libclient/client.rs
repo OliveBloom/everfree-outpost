@@ -54,6 +54,7 @@ pub struct Client<'d, P: Platform> {
     renderer: Renderer<P::GL>,
 
     pawn_id: Option<EntityId>,
+    default_camera_pos: V3,
     window_size: (u16, u16),
     view_size: (u16, u16),
 
@@ -86,6 +87,7 @@ impl<'d, P: Platform> Client<'d, P> {
             renderer: renderer,
 
             pawn_id: None,
+            default_camera_pos: V3::new(4096, 4096, 0),
             window_size: (640, 480),
             view_size: (640, 480),
 
@@ -283,6 +285,10 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn clear_pawn_id(&mut self) {
         self.pawn_id = None;
+    }
+
+    pub fn set_default_camera_pos(&mut self, pos: V3) {
+        self.default_camera_pos = pos;
     }
 
     // Inventory tracking
@@ -502,7 +508,7 @@ impl<'d, P: Platform> Client<'d, P> {
                 // TODO: hardcoded constant based on entity size
                 self.predictor.motion().pos(future) + V3::new(16, 16, 0)
             } else {
-                V3::new(4096, 4096, 0)
+                self.default_camera_pos
             };
         // Wrap `pos` to 2k .. 6k region
         let pos = util::wrap_base(pos, V3::new(2048, 2048, 0));
@@ -550,11 +556,24 @@ impl<'d, P: Platform> Client<'d, P> {
         self.misc.show_cursor = !self.misc.show_cursor;
     }
 
-    pub fn resize_window(&mut self, size: (u16, u16)) {
+    pub fn calc_scale(&self, size: (u16, u16)) -> i16 {
         let scale_config = self.platform.config().get_int(ConfigKey::ScaleWorld) as i16;
-        let scale =
-            if scale_config != 0 { scale_config }
-            else { self.calc_scale(size) };
+        if scale_config != 0 {
+            return scale_config;
+        }
+
+        let (w, h) = size;
+        let max_dim = cmp::max(w, h);
+        const TARGET: u16 = 1024;
+        if max_dim > TARGET {
+            ((max_dim + TARGET / 2) / TARGET) as i16
+        } else {
+            -(((TARGET + max_dim / 2) / max_dim) as i16)
+        }
+    }
+
+    pub fn resize_window(&mut self, size: (u16, u16)) {
+        let scale = self.calc_scale(size);
         println!("set scale to {} ({:?})", scale, size);
 
         let view_size =
@@ -607,18 +626,6 @@ impl<'d, P: Platform> Client<'d, P> {
             //self.renderer.load_ui_geometry(&geom);
         }
         println!("counter {}", counter);
-    }
-
-
-    fn calc_scale(&self, size: (u16, u16)) -> i16 {
-        let (w, h) = size;
-        let max_dim = cmp::max(w, h);
-        const TARGET: u16 = 1024;
-        if max_dim > TARGET {
-            ((max_dim + TARGET / 2) / TARGET) as i16
-        } else {
-            -(((TARGET + max_dim / 2) / max_dim) as i16)
-        }
     }
 }
 

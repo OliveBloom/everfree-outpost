@@ -16,15 +16,25 @@ def rules(i):
             description = COPY $out
 
         rule copy_dir_stamp
-            command = $python3 $root/mk/misc/clone_dir.py $copy_src $copy_dest $stamp
+            command = $python3 $root/mk/misc/clone_dir.py --mode dir $
+                $copy_src $copy_dest $stamp
+            description = COPY $copy_dest ($stamp)
+            depfile = $stamp.d
+
+        rule copy_list_stamp
+            command = $python3 $root/mk/misc/clone_dir.py --mode list $
+                $list_src $copy_dest $stamp
             description = COPY $copy_dest ($stamp)
             depfile = $stamp.d
     ''', **locals())
 
-def read_manifest(path):
+def read_manifest(i, path):
     contents = []
     with open(path) as f:
-        for line in f:
+        s = f.read()
+        s = template(s, i=i)
+
+        for line in s.splitlines():
             line = line.strip()
             if line == '' or line[0] == '#':
                 continue
@@ -33,43 +43,7 @@ def read_manifest(path):
             contents.append((dest, src))
     return contents
 
-def read_filter(path):
-    contents = set()
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if line == '' or line[0] == '#':
-                continue
-            contents.add(line)
-    return contents
-
-def apply_filter(manifest, filter_):
-    for i in range(len(manifest)):
-        dest, src = manifest[i]
-        if dest not in filter_:
-            src = '$prebuilt/%s' % dest
-            manifest[i] = (dest, src)
-
-def apply_exclude(manifest, names):
-    for i in range(len(manifest)):
-        dest, src = manifest[i]
-        if dest in names or any(dest.startswith(n + '/') for n in names):
-            src = '$prebuilt/%s' % dest
-            manifest[i] = (dest, src)
-
-def from_manifest(common_path, extra_path, filter_path=None, exclude_names=None, extra=()):
-    contents = list(extra)
-
-    for path in (common_path, extra_path):
-        contents.extend(read_manifest(path))
-
-    if filter_path is not None:
-        apply_filter(contents, read_filter(filter_path))
-
-    if exclude_names is not None:
-        apply_exclude(contents, set(n.strip() for n in exclude_names.split(',')))
-
-
+def from_manifest(contents, manifest_stamp):
     builds = []
     def add_build(*args, **kwargs):
         builds.append(template(*args, **kwargs))
@@ -77,7 +51,20 @@ def from_manifest(common_path, extra_path, filter_path=None, exclude_names=None,
     dist_deps = []
 
     for dest, src in contents:
-        if dest.endswith('/'):
+        if src.startswith('@'):
+            assert dest.endswith('/'), \
+                    'copy src is a file list but dest is not a directory'
+            src = src[1:]
+            stamp = '$builddir/dist_%s.stamp' % dest.strip('/').replace('/', '_')
+            add_build('''
+                build %stamp: copy_list_stamp | %src $root/mk/misc/clone_dir.py
+                    list_src = %src
+                    copy_dest = $dist/%dest
+                    stamp = %stamp
+            ''', **locals())
+            dist_deps.append(stamp)
+
+        elif dest.endswith('/'):
             stamp = '$builddir/dist_%s.stamp' % dest.strip('/').replace('/', '_')
             add_build('''
                 build %stamp: copy_dir_stamp | %src $root/mk/misc/clone_dir.py
@@ -86,6 +73,7 @@ def from_manifest(common_path, extra_path, filter_path=None, exclude_names=None,
                     stamp = %stamp
             ''', **locals())
             dist_deps.append(stamp)
+
         else:
             add_build('''
                 build $dist/%dest: copy_file %src
@@ -93,7 +81,7 @@ def from_manifest(common_path, extra_path, filter_path=None, exclude_names=None,
             dist_deps.append('$dist/%s' % dest)
 
     add_build(r'''
-        build $builddir/dist.stamp: dist_stamp | $
+        build $builddir/%manifest_stamp: dist_stamp | $
             %for d in dist_deps
             %{d} $
             %end
@@ -101,6 +89,21 @@ def from_manifest(common_path, extra_path, filter_path=None, exclude_names=None,
     ''', **locals())
 
     return '\n\n'.join(builds)
+
+def component(i, name):
+    contents = read_manifest(i, os.path.join(i.root_dir, 'mk', '%s.manifest' % name))
+    return from_manifest(contents, 'dist_component_%s.stamp' % name)
+
+def components(i, names):
+    rules = '\n\n'.join(component(i, name) for name in names)
+
+    return rules + '\n\n' + template(r'''
+        build $builddir/dist.stamp: dist_stamp | $
+            %for n in names
+            $builddir/dist_component_%{n}.stamp $
+            %end
+            %{'\n'}
+    ''', **locals())
 
 def copy(src, dest):
     return template('''

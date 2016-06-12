@@ -80,18 +80,18 @@ var item_inv;
 var ability_inv;
 
 
-// Top-level initialization function
+/** @constructor */
+function OutpostClient() {
+    this._init();
+}
 
-function init() {
+OutpostClient.prototype._init = function() {
     // Set up error_list first to catch errors in other parts of init.
     error_list = new ErrorList();
     error_list.attach(window);
     document.body.appendChild(error_list.container);
 
-    canvas = new AnimCanvas(frame, 'webgl', [
-            'WEBGL_depth_texture',
-            'WEBGL_draw_buffers',
-    ]);
+    canvas = null;
 
     asm_client = new DynAsm();
 
@@ -106,10 +106,6 @@ function init() {
 
     input = new Input();
 
-    canvas.canvas.addEventListener('webglcontextlost', function(evt) {
-        throw 'context lost!';
-    });
-
     initMenus();
 
     assets = null;
@@ -119,95 +115,59 @@ function init() {
 
     item_inv = null;
     ability_inv = null;
+};
 
+OutpostClient.prototype.loadData = function(blob, next) {
+    var this_ = this;
+    loader.loadPack(blob, function(assets_) {
+        assets = assets_;
 
-    buildUI();
+        var items = assets['item_defs'];
+        for (var i = 0; i < items.length; ++i) {
+            ItemDef.register(i, items[i]);
+        }
 
-    checkBrowser(dialog, function() {
-        loadAssets(function() {
-            asm_client.initClient(canvas.ctx, assets);
+        var recipes = assets['recipe_defs'];
+        for (var i = 0; i < recipes.length; ++i) {
+            RecipeDef.register(i, recipes[i]);
+        }
 
-            // Don't handle any input until the client is inited.
-            keyboard.attach(document);
-            input.handlers.push(new AsmClientInput(asm_client));
+        var css = '.item-icon {' +
+            'background-image: url("' + assets['items'] + '");' +
+        '}';
+        util.element('style', ['type=text/css', 'text=' + css], document.head);
 
-            // This should only happen after client init.
-            function doResize() {
-                handleResize(canvas, ui_div, window.innerWidth, window.innerHeight);
-                asm_client.resizeWindow(window.innerWidth, window.innerHeight);
-            }
-            window.addEventListener('resize', doResize);
-            doResize();
-
-
-            var info = assets['server_info'];
-            openConn(info, function() {
-                timing = new Timing(conn);
-                timing.scheduleUpdates(5, 30);
-                inv_tracker = new InventoryTracker(conn, asm_client);
-                asm_client.conn = conn;
-
-                maybeRegister(info, function() {
-                    conn.sendLogin(Config.login_name.get(), Config.login_secret.get());
-
-                    // Show "Loading World..." banner.
-                    handleSyncStatus(net.SYNC_LOADING);
-                    canvas.start();
-                });
-            });
-        });
+        next();
     });
-}
+};
 
-document.addEventListener('DOMContentLoaded', init);
+OutpostClient.prototype.handoff = function(old_canvas, ws) {
+    canvas = document.createElement('canvas');
+    console.log('orig', old_canvas);
 
-
-// Major initialization steps.
-
-function loadAssets(next) {
-    loader.loadJson('server.json', function(server_info) {
-        // TODO: remove this hack since it prevents all caching
-        loader.loadPack('outpost.pack?' + Date.now(), function(loaded, total) {
-            banner.update('Loading... (' + (loaded >> 10)+ 'k / ' + (total >> 10) + 'k)', loaded / total);
-        }, function(assets_) {
-            assets = assets_;
-            assets['server_info'] = server_info;
-
-            var items = assets['item_defs'];
-            for (var i = 0; i < items.length; ++i) {
-                ItemDef.register(i, items[i]);
-            }
-
-            var recipes = assets['recipe_defs'];
-            for (var i = 0; i < recipes.length; ++i) {
-                RecipeDef.register(i, recipes[i]);
-            }
-
-            var css = '.item-icon {' +
-                'background-image: url("' + assets['items'] + '");' +
-            '}';
-            util.element('style', ['type=text/css', 'text=' + css], document.head);
-
-            next();
-        });
+    canvas.addEventListener('webglcontextlost', function(evt) {
+        throw 'context lost!';
     });
-}
 
-function openConn(info, next) {
-    var url = info['url'];
-    if (url == null) {
-        var elt = util.element('div', []);
-        elt.innerHTML = info['message'];
-        var w = new widget.Template('server-offline', {'msg': elt});
-        var f = new widget.Form(w);
-        f.oncancel = function() {};
-        dialog.show(f);
-        return;
+    asm_client.initClient(canvas.getContext('webgl'), assets);
+
+    // Don't handle any input until the client is inited.
+    keyboard.attach(document);
+    input.handlers.push(new AsmClientInput(asm_client));
+
+    // This should only happen after client init.
+    function doResize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        asm_client.resizeWindow(window.innerWidth, window.innerHeight);
+        handleResize(null, ui_div, window.innerWidth, window.innerHeight);
     }
+    window.addEventListener('resize', doResize);
+    doResize();
 
-    banner.update('Connecting to server...', 0);
-    conn = new net.Connection(url);
-    conn.onOpen = next;
+
+    conn = new net.Connection(ws);
+    //conn.onOpen = next;   // TODO - probably remove?
     conn.onClose = handleClose;
     conn.onInit = handleInit;
     conn.onTerrainChunk = handleTerrainChunk;
@@ -225,62 +185,51 @@ function openConn(info, next) {
     conn.onGetInteractArgs = handleGetInteractArgs;
     conn.onGetUseItemArgs = handleGetUseItemArgs;
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
-    conn.onSyncStatus = handleSyncStatus;
     conn.onStructureReplace = handleStructureReplace;
     conn.onEntityMotionStart = handleEntityMotionStart;
     conn.onEntityMotionEnd = handleEntityMotionEnd;
     conn.onEntityMotionStartEnd = handleEntityMotionStartEnd;
     conn.onProcessedInputs = handleProcessedInputs;
     conn.onActivityChange = handleActivityChange;
-}
+    conn.onInitNoPawn = handleInitNoPawn;
+    conn.onOpenPonyEdit = handleOpenPonyEdit;
 
-function maybeRegister(info, next) {
-    if (Config.login_name.isSet() && Config.login_secret.isSet() &&
-            Config.world_version.get() == info['world_version']) {
-        console.log('secret already set');
-        next();
-        return;
-    }
-
-    var default_name = Config.login_name.get() || generateName();
-    var secret = makeSecret();
-
-    var editor = new PonyEditor(default_name, drawPony);
-
-    var last_name = null;
-
-    function send_register(name, app_info) {
-        editor.onfinish = null;
-        editor.setMessage("Registering...");
-        last_name = name;
-
-        var appearance = calcAppearance(app_info);
-        saveAppearance(app_info);
-        conn.onRegisterResult = handle_result;
-        conn.sendRegister(name,
-                          secret,
-                          appearance);
-    }
-
-    function handle_result(code, msg) {
-        conn.onRegisterResult = null;
-        if (code == 0) {
-            Config.login_name.set(last_name);
-            Config.login_secret.set(secret);
-            Config.world_version.set(info['world_version']);
-            dialog.hide();
-            next();
-        } else {
-            editor.setError(code, msg);
-            editor.onfinish = send_register;
+    conn.onSyncStatus = function(new_synced) {
+        // The first time the status becomes SYNC_OK, swap out the canvas and
+        // start the requestAnimationFrame loop.
+        if (new_synced == net.SYNC_OK) {
+            console.log(old_canvas);
+            document.body.replaceChild(canvas, old_canvas);
+            console.log('building UI');
+            buildUI();
+            conn.onSyncStatus = handleSyncStatus;
+            window.requestAnimationFrame(frame);
         }
-    }
+        handleSyncStatus(new_synced);
+    };
 
-    editor.onsubmit = send_register;
-    editor.oncancel = function() {};
-    dialog.show(editor);
-}
+    conn.sendReady();
 
+    timing = new Timing(conn);
+    timing.scheduleUpdates(5, 30);
+    inv_tracker = new InventoryTracker(conn, asm_client);
+    asm_client.conn = conn;
+
+    // Start the requestAnimationFrame loop
+    frame();
+
+    console.log('handoff complete');
+
+    /*
+    maybeRegister(info, function() {
+        conn.sendLogin(Config.login_name.get(), Config.login_secret.get());
+
+        // Show "Loading World..." banner.
+        handleSyncStatus(net.SYNC_LOADING);
+        canvas.start();
+    });
+    */
+};
 
 // Initialization helpers
 
@@ -314,7 +263,6 @@ function buildUI() {
 
     banner.show('Loading...', 0, keyboard, function() { return false; });
 
-    document.body.appendChild(canvas.canvas);
     document.body.appendChild(ui_div);
 }
 
@@ -336,34 +284,6 @@ function initMenus() {
             ['&Config Editor', function() { dialog.show(new ConfigEditor()); }],
             ['&Music Test', function() { dialog.show(music_test); }],
     ]);
-}
-
-function generateName() {
-    var number = '' + Math.floor(Math.random() * 10000);
-    while (number.length < 4) {
-        number = '0' + number;
-    }
-
-    return "Anon" + number;
-}
-
-function makeSecret() {
-    console.log('producing secret');
-    var secret_buf = [0, 0, 0, 0];
-    if (window.crypto.getRandomValues) {
-        var typedBuf = new Uint32Array(4);
-        window.crypto.getRandomValues(typedBuf);
-        for (var i = 0; i < 4; ++i) {
-            secret_buf[i] = typedBuf[i];
-        }
-    } else {
-        console.log("warning: window.crypto.getRandomValues is not available.  " +
-                "Login secret will be weak!");
-        for (var i = 0; i < 4; ++i) {
-            secret_buf[i] = Math.floor(Math.random() * 0xffffffff);
-        }
-    }
-    return secret_buf;
 }
 
 function calcAppearance(a) {
@@ -396,13 +316,17 @@ function saveAppearance(a) {
 function drawPony(ctx, app_info) {
     var app = calcAppearance(app_info);
     asm_client.ponyeditRender(app);
+    var scale = asm_client.calcScale(canvas.width, canvas.height);
+    if (scale < 0) {
+        scale = 1 / -scale;
+    }
 
     ctx.clearRect(0, 0, 96, 96);
-    var size = Math.round(96 * canvas.canvas.width / canvas.virtualWidth);
-    var extra = Math.round(40 * canvas.canvas.width / canvas.virtualWidth);
-    var cx = ((canvas.canvas.width - size) / 2)|0;
-    var cy = ((canvas.canvas.height - size - extra) / 2)|0;
-    ctx.drawImage(canvas.canvas, cx, cy, size, size, 0, 0, 96, 96);
+    var size = Math.round(96 * scale);
+    var extra = Math.round(40 * scale);
+    var cx = ((canvas.width - size) / 2)|0;
+    var cy = ((canvas.height - size - extra) / 2)|0;
+    ctx.drawImage(canvas, cx, cy, size, size, 0, 0, 96, 96);
 }
 
 
@@ -577,6 +501,12 @@ function handleInit(entity_id, now, cycle_base, cycle_ms) {
     asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
 }
 
+function handleInitNoPawn(x, y, z, now, cycle_base, cycle_ms) {
+    asm_client.setDefaultCameraPos(x, y, z);
+    var pst_now = timing.decodeRecv(now);
+    asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
+}
+
 function handleTerrainChunk(i, data) {
     var cx = (i % LOCAL_SIZE)|0;
     var cy = (i / LOCAL_SIZE)|0;
@@ -731,6 +661,23 @@ function handleActivityChange(activity) {
     asm_client.activityChange(activity);
 }
 
+function handleOpenPonyEdit(name) {
+    var editor = new PonyEditor(name, drawPony);
+
+    function send_register(app_info) {
+        var appearance = calcAppearance(app_info);
+        saveAppearance(app_info);
+
+        console.log('appearance: ' + appearance.toString(16));
+        conn.sendCreateCharacter(appearance);
+        dialog.hide();
+    }
+
+    editor.onsubmit = send_register;
+    editor.oncancel = function() { handleOpenPonyEdit(name); };
+    dialog.show(editor);
+}
+
 // Reset (nearly) all client-side state to pre-login conditions.
 function resetAll() {
     inv_tracker.reset();
@@ -747,7 +694,9 @@ function resetAll() {
 
 // Rendering
 
-function frame(ac, client_now) {
+function frame() {
+    window.requestAnimationFrame(frame);
+
     if (synced != net.SYNC_OK) {
         return;
     }

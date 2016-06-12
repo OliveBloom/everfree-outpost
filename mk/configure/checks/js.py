@@ -9,10 +9,7 @@ def configure(ctx):
             ('yui-compressor',), chk_yui)
 
 def requirements(ctx):
-    if ctx.info.data_only:
-        return ()
-    else:
-        return ('closure_compiler', 'yui_compressor')
+    return ('closure_compiler', 'yui_compressor')
 
 
 def chk_closure(ctx, closure):

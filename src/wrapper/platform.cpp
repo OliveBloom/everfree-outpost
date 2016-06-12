@@ -4,7 +4,7 @@ using namespace std;
 
 #ifndef _WIN32
 
-pair<int, int> platform::spawn_backend(const char* path) {
+pair<int, int> platform::spawn_backend(char** cmd) {
     int from_backend[2];
     int to_backend[2];
 
@@ -18,7 +18,7 @@ pair<int, int> platform::spawn_backend(const char* path) {
         close(to_backend[1]);
         close(from_backend[0]);
         close(from_backend[1]);
-        execl(path, path, ".", NULL);
+        execvp(cmd[0], cmd);
         assert(0 && "backend failed to start");
     } else {
         close(to_backend[0]);
@@ -62,7 +62,7 @@ static pair<HANDLE, HANDLE> create_overlapped_pipe(const char* name,
     return make_pair(read, write);
 }
 
-pair<HANDLE, HANDLE> platform::spawn_backend(const char* path) {
+pair<HANDLE, HANDLE> platform::spawn_backend(char** cmd) {
 
     char name_from[64] = {0};
     snprintf(name_from, sizeof(name_from),
@@ -85,18 +85,19 @@ pair<HANDLE, HANDLE> platform::spawn_backend(const char* path) {
     info.hStdError = GetStdHandle(STD_ERROR_HANDLE);
     info.dwFlags |= STARTF_USESTDHANDLES;
 
-    const char* suffix = ".exe .";
-    if (strlen(path) + strlen(suffix) >= 256) {
-        abort();
+    std::string buf;
+    buf += cmd[0];
+    buf += ".exe";
+    ++cmd;
+    while (*cmd != NULL) {
+        buf += " ";
+        buf += *cmd;
+        ++cmd;
     }
-
-    char buf[256] = {0};
-    strcpy(buf, path);
-    strcat(buf, suffix);
 
     CreateProcess(
             NULL,
-            buf,
+            buf.c_str(),
             NULL,
             NULL,
             true,

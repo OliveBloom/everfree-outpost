@@ -61,3 +61,24 @@ def minify(i, out_file, js_src):
             | %if i.debug% $root/mk/misc/minify.py %end%
             filter = | sed -e '1s/{/{"use asm";/'
     ''', **locals())
+
+def client_manifest(i, out_file):
+    return template('''
+        rule gen_client_manifest
+            command = $python3 $root/mk/misc/gen_client_manifest.py $
+                --file $b_js/asmlibs.js $
+                --file $root/src/client/client_parts.html $
+                %if not i.debug
+                --file $b_js/outpost.js $
+                %else
+                --walk-js-file $root/src/client/js/main.js::js $
+                %end
+                --output $out
+            description = GEN $out
+            depfile = $out.d
+
+        build %out_file: gen_client_manifest $
+            | $root/mk/misc/gen_client_manifest.py $
+              $b_js/asmlibs.js $
+              %if not i.debug% $b_js/outpost.js %end%
+    ''', **locals())

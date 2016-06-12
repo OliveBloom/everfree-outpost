@@ -1,0 +1,19 @@
+client/client_parts.html: $root/src/client/client_parts.html
+%if i.debug
+    client/js/: $root/src/client/js/
+%else
+    client/outpost.js: $b_js/outpost.js
+%end
+client/asmlibs.js: $b_js/asmlibs.js
+client/manifest.json: $b_js/manifest.json
+
+client/img/: $root/assets/ui/png/
+client/font/: $root/assets/fonts/ttf/
+
+# TODO: configedit.js probably doesn't build right in debug mode
+client/configedit.html: $root/src/client/configedit.html
+client/configedit.js: $b_js/configedit.js
+
+client/instructions.html: $root/src/client/instructions.html
+client/credits.html: $b_data/credits.html
+

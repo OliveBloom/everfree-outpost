@@ -11,6 +11,7 @@ enum opcode {
     OP_RESTART_SERVER =     0xff06,
     OP_RESTART_CLIENT =     0xff07,
     OP_RESTART_BOTH =       0xff08,
+    OP_AUTH_DONE =          0xff09,
 };
 
 #endif // OUTPOST_WRAPPER_OPCODES_HPP

@@ -55,7 +55,19 @@ void websocket::handle_message(connection_hdl conn, ws_server_asio::message_ptr 
         return;
     }
 
-    owner.handle_websocket_request(data.id, msg->get_payload());
+    const string& payload = msg->get_payload();
+    if (payload.size() < 2) {
+        cerr << "client " << data.id << ": message has no opcode" << endl;
+        // TODO: send a kick message and shut down
+        return;
+    }
+
+    auto begin = payload.begin();
+    auto end = payload.end();
+    uint16_t opcode = *(uint16_t*)&*begin;
+    vector<uint8_t> msg_data(begin + 2, end);
+
+    owner.handle_websocket_request(message(data.id, opcode, move(msg_data)));
 }
 
 void websocket::handle_close(connection_hdl conn) {
@@ -75,8 +87,8 @@ void websocket::handle_close(connection_hdl conn) {
     }
 }
 
-void websocket::send_message(uint16_t client_id, std::vector<uint8_t> msg) {
-    auto conn_iter = id_to_client.find(client_id);
+void websocket::send_message(message msg) {
+    auto conn_iter = id_to_client.find(msg.client_id);
     if (conn_iter == id_to_client.end()) {
         return;
     }
@@ -92,10 +104,16 @@ void websocket::send_message(uint16_t client_id, std::vector<uint8_t> msg) {
         return;
     }
 
+    vector<uint8_t> buf;
+    buf.reserve(2 + msg.data.size());
+    buf.resize(2);
+    *(uint16_t*)&buf[0] = msg.opcode;
+    buf.insert(buf.end(), msg.data.begin(), msg.data.end());
+
     std::error_code ec;
-    ws_server.send(conn, msg.data(), msg.size(), websocketpp::frame::opcode::binary, ec);
+    ws_server.send(conn, buf.data(), buf.size(), websocketpp::frame::opcode::binary, ec);
     if (ec) {
-        cerr << "error sending to " << client_id << ": " << ec << endl;
+        cerr << "error sending to " << msg.client_id << ": " << ec << endl;
     }
 }
 

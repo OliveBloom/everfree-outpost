@@ -1,0 +1,7 @@
+# Note: this is data *for* the client, which is provided by the server.
+
+server/www/server.json: $b_data/server.json
+server/www/outpost.pack: $b_data/outpost.pack
+
+# TODO: the client should get at least part of the credits from the server
+# server/www/credits.html: $b_data/credits.html
