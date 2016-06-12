@@ -95,10 +95,10 @@ mod op {
         InventoryUpdate = 0x8019,
         InventoryAppear = 0x801a,
         InventoryGone = 0x801b,
-        AuthChallenge = 0x801c,     // For auth verifier only
-        AuthResult = 0x801d,        // For auth verifier only
-        InitNoPawn = 0x801e,
-        OpenPonyEdit = 0x801f,
+        AuthChallenge = 0x8021,     // For auth verifier only
+        AuthResult = 0x8022,        // For auth verifier only
+        InitNoPawn = 0x8023,
+        OpenPonyEdit = 0x8024,
 
         // Deprecated responses
         PlayerMotion = 0x8002,

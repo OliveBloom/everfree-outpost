@@ -11,8 +11,8 @@ import requests
 
 
 OP_AUTH_RESPONSE =      0x0014
-OP_AUTH_CHALLENGE =     0x801c
-OP_AUTH_RESULT =        0x801d
+OP_AUTH_CHALLENGE =     0x8021
+OP_AUTH_RESULT =        0x8022
 OP_ADD_CLIENT =         0xff00
 OP_REMOVE_CLIENT =      0xff01
 OP_CLIENT_REMOVED =     0xff02

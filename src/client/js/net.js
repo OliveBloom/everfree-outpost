@@ -51,10 +51,10 @@ var OP_STRUCTURE_REPLACE =      0x8018;
 var OP_INVENTORY_UPDATE =       0x8019;
 var OP_INVENTORY_APPEAR =       0x801a;
 var OP_INVENTORY_GONE =         0x801b;
-// AUTH ONLY                    0x801c;
-// AUTH ONLY                    0x801d;
-var OP_INIT_NO_PAWN =           0x801e;
-var OP_OPEN_PONYEDIT =          0x801f;
+// AUTH ONLY                    0x8021;
+// AUTH ONLY                    0x8022;
+var OP_INIT_NO_PAWN =           0x8023;
+var OP_OPEN_PONYEDIT =          0x8024;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;

@@ -28,8 +28,8 @@ function fromUTF8(s) {
 
 
 var OP_AUTH_RESPONSE =      0x0014;
-var OP_AUTH_CHALLENGE =     0x801c;
-var OP_AUTH_RESULT =        0x801d;
+var OP_AUTH_CHALLENGE =     0x8021;
+var OP_AUTH_RESULT =        0x8022;
 
 var MODE_SSO =      0;
 var MODE_LOCAL =    1;
