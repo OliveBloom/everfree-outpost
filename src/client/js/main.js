@@ -118,7 +118,7 @@ OutpostClient.prototype._init = function() {
     ability_inv = null;
 };
 
-OutpostClient.prototype.loadData = function(blob, next) {
+OutpostClient.prototype['loadData'] = function(blob, next) {
     var this_ = this;
     loader.loadPack(blob, function(assets_) {
         assets = assets_;
@@ -142,7 +142,7 @@ OutpostClient.prototype.loadData = function(blob, next) {
     });
 };
 
-OutpostClient.prototype.handoff = function(old_canvas, ws) {
+OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     canvas = document.createElement('canvas');
     console.log('orig', old_canvas);
 
