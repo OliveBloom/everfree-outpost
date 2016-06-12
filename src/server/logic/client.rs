@@ -18,7 +18,7 @@ use chunks;
 use engine::Engine;
 use engine::split::EngineRef;
 use logic;
-use messages::{ClientResponse, SyncKind};
+use messages::{ClientResponse, SyncKind, Dialog};
 use world;
 use world::Motion;
 use world::bundle::{self, Builder};
@@ -101,6 +101,10 @@ pub fn login(eng: &mut Engine,
     vision::Fragment::add_client(&mut eng.as_ref().as_vision_fragment(), cid, pid, region);
     //warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
     eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
+
+    if opt_eid.is_none() {
+        eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::PonyEdit(name.clone())));
+    }
 
 
     Ok(cid)

@@ -120,6 +120,7 @@ pub enum Dialog {
     Inventory(InventoryId),
     Container(InventoryId, InventoryId),
     Crafting(TemplateId, StructureId, InventoryId),
+    PonyEdit(String),
 }
 
 
@@ -479,6 +480,9 @@ impl Messages {
                                                                             iid2.unwrap()])),
                     Dialog::Crafting(template_id, sid, iid) =>
                         self.send_raw(wire_id, Response::OpenCrafting(template_id, sid, iid)),
+
+                    Dialog::PonyEdit(name) =>
+                        self.send_raw(wire_id, Response::OpenPonyEdit(name)),
                 }
             },
 

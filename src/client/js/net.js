@@ -54,6 +54,7 @@ var OP_INVENTORY_GONE =         0x801b;
 // AUTH ONLY                    0x801c;
 // AUTH ONLY                    0x801d;
 var OP_INIT_NO_PAWN =           0x801e;
+var OP_OPEN_PONYEDIT =          0x801f;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -108,6 +109,7 @@ function Connection(x) {
     this.onInventoryAppear = null;
     this.onInventoryGone = null;
     this.onInitNoPawn = null;
+    this.onOpenPonyEdit = null;
 }
 exports.Connection = Connection;
 
@@ -427,6 +429,14 @@ Connection.prototype._handleMessage = function(evt) {
                 var cycle_base = get32();
                 var cycle_ms = get32();
                 this.onInitNoPawn(x, y, z, now, cycle_base, cycle_ms);
+            };
+            break;
+
+        case OP_OPEN_PONYEDIT:
+            if (this.onOpenPonyEdit != null) {
+                var name = getString();
+                console.log('ponyedit', name);
+                this.onOpenPonyEdit(name);
             };
             break;
 

@@ -43,9 +43,6 @@ function PonyEditor(name, draw) {
 
     // Build widgets
 
-    this.name = new widget.TextField(parts['name-field']);
-    var nameRow = new widget.Container(parts['name-row'], this.name);
-
     function rowWidget(parts) {
         var items = new Array(parts.items.length);
         for (var i = 0; i < parts.items.length; ++i) {
@@ -70,7 +67,7 @@ function PonyEditor(name, draw) {
     done.onclick = function() { this_.submit(); };
 
     var list = new widget.SimpleList(parts['top'],
-            [nameRow, this.sex, this.tribe,
+            [this.sex, this.tribe,
              this.mane, this.tail,
              this.red, this.green, this.blue,
              done]);
@@ -94,17 +91,10 @@ function PonyEditor(name, draw) {
 
     // Initial setup
 
-    this.name.dom.value = name;
-    var name_dom = this.name.dom;
-    this.name.onfocus = util.chain(this.name.onfocus, function() {
-        var len = name_dom.value.length;
-        name_dom.setSelectionRange(len, len);
-    });
+    parts['name-field'].textContent = name;
 
     // Disable drawing during initialization.
     this.draw = function() { };
-
-    this.name.value = name;
 
     function oldInit(choice, saved) {
         if (saved != null) {
@@ -175,8 +165,7 @@ PonyEditor.prototype._refresh = function() {
 PonyEditor.prototype.submit = function() {
     console.log('submit');
     if (this.onsubmit != null) {
-        var name = this.name.dom.value;
-        this.onsubmit(name, this._getAppearanceInfo());
+        this.onsubmit(this._getAppearanceInfo());
     }
 };
 
@@ -197,8 +186,4 @@ PonyEditor.prototype.setError = function(code, msg) {
     this._fixWidth();
     this.message.classList.add('error');
     this.message.textContent = msg;
-    if (code == 1) {
-        // An error regarding the name.
-        this.body.setFocus(0);
-    }
 };

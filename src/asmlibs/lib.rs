@@ -326,6 +326,13 @@ pub unsafe extern fn toggle_cursor(client: &mut Client) {
 }
 
 #[no_mangle]
+pub unsafe extern fn calc_scale(client: &Client,
+                                size_x: u16,
+                                size_y: u16) -> i16 {
+    client.calc_scale((size_x, size_y))
+}
+
+#[no_mangle]
 pub unsafe extern fn resize_window(client: &mut Client,
                                    width: u16,
                                    height: u16) {

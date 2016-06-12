@@ -98,6 +98,7 @@ mod op {
         AuthChallenge = 0x801c,     // For auth verifier only
         AuthResult = 0x801d,        // For auth verifier only
         InitNoPawn = 0x801e,
+        OpenPonyEdit = 0x801f,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -269,6 +270,7 @@ pub enum Response {
     InventoryAppear(InventoryId, Vec<(u8, u8, ItemId)>),
     InventoryGone(InventoryId),
     InitNoPawn((u16, u16, u16), LocalTime, u32, u32),
+    OpenPonyEdit(String),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -329,6 +331,8 @@ impl Response {
                 ww.write_msg(id, (op::InventoryGone, inventory_id)),
             InitNoPawn(pos, now, cycle_base, cycle_ms) =>
                 ww.write_msg(id, (op::InitNoPawn, pos, now, cycle_base, cycle_ms)),
+            OpenPonyEdit(ref name) =>
+                ww.write_msg(id, (op::OpenPonyEdit, name)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

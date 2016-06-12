@@ -189,6 +189,7 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
     conn.onStructureReplace = handleStructureReplace;
     conn.onInitNoPawn = handleInitNoPawn;
+    conn.onOpenPonyEdit = handleOpenPonyEdit;
 
     conn.onSyncStatus = function(new_synced) {
         // The first time the status becomes SYNC_OK, swap out the canvas and
@@ -226,56 +227,6 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
     });
     */
 };
-
-// Major initialization steps.
-
-function maybeRegister(info, next) {
-    if (Config.login_name.isSet() && Config.login_secret.isSet() &&
-            Config.world_version.get() == info['world_version']) {
-        console.log('secret already set');
-        next();
-        return;
-    }
-
-    var default_name = Config.login_name.get() || generateName();
-    var secret = makeSecret();
-
-    var editor = new PonyEditor(default_name, drawPony);
-
-    var last_name = null;
-
-    function send_register(name, app_info) {
-        editor.onfinish = null;
-        editor.setMessage("Registering...");
-        last_name = name;
-
-        var appearance = calcAppearance(app_info);
-        saveAppearance(app_info);
-        conn.onRegisterResult = handle_result;
-        conn.sendRegister(name,
-                          secret,
-                          appearance);
-    }
-
-    function handle_result(code, msg) {
-        conn.onRegisterResult = null;
-        if (code == 0) {
-            Config.login_name.set(last_name);
-            Config.login_secret.set(secret);
-            Config.world_version.set(info['world_version']);
-            dialog.hide();
-            next();
-        } else {
-            editor.setError(code, msg);
-            editor.onfinish = send_register;
-        }
-    }
-
-    editor.onsubmit = send_register;
-    editor.oncancel = function() {};
-    dialog.show(editor);
-}
-
 
 // Initialization helpers
 
@@ -332,34 +283,6 @@ function initMenus() {
     ]);
 }
 
-function generateName() {
-    var number = '' + Math.floor(Math.random() * 10000);
-    while (number.length < 4) {
-        number = '0' + number;
-    }
-
-    return "Anon" + number;
-}
-
-function makeSecret() {
-    console.log('producing secret');
-    var secret_buf = [0, 0, 0, 0];
-    if (window.crypto.getRandomValues) {
-        var typedBuf = new Uint32Array(4);
-        window.crypto.getRandomValues(typedBuf);
-        for (var i = 0; i < 4; ++i) {
-            secret_buf[i] = typedBuf[i];
-        }
-    } else {
-        console.log("warning: window.crypto.getRandomValues is not available.  " +
-                "Login secret will be weak!");
-        for (var i = 0; i < 4; ++i) {
-            secret_buf[i] = Math.floor(Math.random() * 0xffffffff);
-        }
-    }
-    return secret_buf;
-}
-
 function calcAppearance(a) {
     var appearance =
         (a.eyes << 16) |
@@ -390,13 +313,17 @@ function saveAppearance(a) {
 function drawPony(ctx, app_info) {
     var app = calcAppearance(app_info);
     asm_client.ponyeditRender(app);
+    var scale = asm_client.calcScale(canvas.width, canvas.height);
+    if (scale < 0) {
+        scale = 1 / -scale;
+    }
 
     ctx.clearRect(0, 0, 96, 96);
-    var size = Math.round(96 * canvas.canvas.width / canvas.virtualWidth);
-    var extra = Math.round(40 * canvas.canvas.width / canvas.virtualWidth);
-    var cx = ((canvas.canvas.width - size) / 2)|0;
-    var cy = ((canvas.canvas.height - size - extra) / 2)|0;
-    ctx.drawImage(canvas.canvas, cx, cy, size, size, 0, 0, 96, 96);
+    var size = Math.round(96 * scale);
+    var extra = Math.round(40 * scale);
+    var cx = ((canvas.width - size) / 2)|0;
+    var cy = ((canvas.height - size - extra) / 2)|0;
+    ctx.drawImage(canvas, cx, cy, size, size, 0, 0, 96, 96);
 }
 
 
@@ -739,6 +666,27 @@ function handleSyncStatus(new_synced) {
     } else {
         banner.hide();
     }
+}
+
+function handleOpenPonyEdit(name) {
+    var editor = new PonyEditor(name, drawPony);
+
+    function send_register(app_info) {
+        var appearance = calcAppearance(app_info);
+        saveAppearance(app_info);
+        /* TODO
+        conn.onRegisterResult = handle_result;
+        conn.sendRegister(name,
+                          secret,
+                          appearance);
+                          */
+        console.log('appearance: ' + appearance.toString(16));
+        dialog.hide();
+    }
+
+    editor.onsubmit = send_register;
+    editor.oncancel = function() { handleOpenPonyEdit(name); };
+    dialog.show(editor);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.

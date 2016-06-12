@@ -650,6 +650,10 @@ DynAsm.prototype.toggleCursor = function() {
     this._raw['toggle_cursor'](this.client);
 };
 
+DynAsm.prototype.calcScale = function(width, height) {
+    return this._raw['calc_scale'](this.client, width, height);
+};
+
 DynAsm.prototype.resizeWindow = function(width, height) {
     this._raw['resize_window'](this.client, width, height);
 };
