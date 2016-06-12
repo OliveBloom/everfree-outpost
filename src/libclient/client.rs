@@ -592,30 +592,30 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn ponyedit_render(&mut self, appearance: u32) {
-        self.entities.insert(0, appearance, None);
+        let mut entities = Entities::new();
+        entities.insert(0, appearance, None);
         let anim = self.data().editor_anim();
-        self.entities.ponyedit_hack(0, anim);
-        println!("created entity #0 with app {:x}", appearance);
+        entities.ponyedit_hack(0, anim, self.default_camera_pos);
+        println!("created entity hack with app {:x}", appearance);
 
         let scene = Scene::new(0,
                                self.window_size,
                                self.view_size,
-                               V3::new(4096, 4096, 0) + V3::new(16, 16, 0),
+                               self.default_camera_pos + V3::new(16, 16, 0),
                                (255, 255, 255, 255),
                                None);
+        let cpos = self.default_camera_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
 
         self.renderer.update_framebuffers(self.platform.gl(), &scene);
-        self.entities.update_z_order(|e| 0);
+        entities.update_z_order(|e| 0);
         self.renderer.update_entity_geometry(&self.data,
-                                             &self.entities,
+                                             &entities,
                                              &self.predictor,
-                                             Region::new(scalar(-1), scalar(1)),
+                                             Region::new(scalar(-1), scalar(1)) + cpos,
                                              0,
                                              0,
                                              None);
         self.renderer.render_ponyedit_hack(&scene);
-
-        self.entities.remove(0);
     }
 
     pub fn bench(&mut self) {

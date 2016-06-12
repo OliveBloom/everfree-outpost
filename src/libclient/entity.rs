@@ -202,10 +202,10 @@ impl Entities {
         // NB: We assume that get_mut never moves elements
     }
 
-    pub fn ponyedit_hack(&mut self, id: EntityId, anim: u16) {
+    pub fn ponyedit_hack(&mut self, id: EntityId, anim: u16, pos: V3) {
         let e = self.map.get_mut(&id).unwrap();
         e.motion.anim_id = anim;
-        e.motion.start_pos = V3::new(4096, 4096, 0);
+        e.motion.start_pos = pos;
     }
 
     pub fn get(&self, id: EntityId) -> Option<&Entity> {

@@ -243,13 +243,17 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
     let uid = eng.extra.client_uid.remove(&cid).expect("no user ID for client");
     eng.extra.uid_client.remove(&uid);
 
-    let (eid, pid, pos) = {
-        let c = eng.world.client(cid);
-        let e = c.pawn().unwrap();
-        (e.id(),
-         e.plane_id(),
-         e.motion().pos(eng.now))
-    };
+    let (opt_eid, pid, pos) =
+        if let Some(e) = eng.world.client(cid).pawn() {
+            (Some(e.id()),
+             e.plane_id(),
+             e.motion().pos(eng.now))
+        } else {
+            (None,
+             unwrap!(eng.world.transient_plane_id(STABLE_PLANE_FOREST)),
+             // TODO: hardcoded spawn point
+             V3::new(32, 32, 0))
+        };
     let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
 
     // Shut down messages and chat
