@@ -47,10 +47,11 @@ pub fn login(eng: &mut Engine,
     // Load or create the client bundle.
     let bundle =
         if let Some(mut file) = eng.storage.open_client_file(uid) {
-            let b = try!(bundle::read_bundle(&mut file));
+            let mut b = try!(bundle::read_bundle(&mut file));
             if b.clients.len() != 1 {
                 fail!("expected exactly one client in bundle");
             }
+            b.clients[0].name = name.clone().into_boxed_str();
             b
         } else {
             let mut b = Builder::new(eng.data);
