@@ -10,7 +10,7 @@ use libphysics::TILE_SIZE;
 
 use auth::Secret;
 use input::InputBits;
-use msg::{Request, Response, InitData, ExtraArg};
+use msg::{Request, Response, ExtraArg};
 use world::{self, Motion};
 
 use self::clients::Clients;
@@ -57,6 +57,8 @@ pub enum ClientEvent {
     UseItem(Time, ItemId, Option<ExtraArg>),
     UseAbility(Time, ItemId, Option<ExtraArg>),
 
+    CreateCharacter(u32),
+
     BadRequest,
 }
 
@@ -83,7 +85,7 @@ pub enum SyncKind {
 
 #[derive(Debug, Clone)]
 pub enum ClientResponse {
-    Init(Option<EntityId>, Time, u32, u32),
+    Init(EntityId, Time, u32, u32),
     InitNoPawn(V3, Time, u32, u32),
 
     TerrainChunk(V2, Vec<u16>),
@@ -336,6 +338,10 @@ impl Messages {
             },
 
 
+            Request::CreateCharacter(appearance) =>
+                Ok(Some(ClientEvent::CreateCharacter(appearance))),
+
+
             _ => fail!("bad request: {:?}", req),
         }
     }
@@ -376,14 +382,11 @@ impl Messages {
         let wire_id = client.wire_id();
 
         match resp {
-            ClientResponse::Init(opt_eid, time, cycle_base, cycle_ms) => {
-                let data = InitData {
-                    entity_id: opt_eid.unwrap_or(EntityId(-1_i32 as u32)),
-                    now: time.to_local(),
-                    cycle_base: cycle_base,
-                    cycle_ms: cycle_ms,
-                };
-                self.send_raw(wire_id, Response::Init(data));
+            ClientResponse::Init(eid, time, cycle_base, cycle_ms) => {
+                self.send_raw(wire_id, Response::Init(eid,
+                                                      time.to_local(),
+                                                      cycle_base,
+                                                      cycle_ms));
             },
 
             ClientResponse::InitNoPawn(pos, time, cycle_base, cycle_ms) => {

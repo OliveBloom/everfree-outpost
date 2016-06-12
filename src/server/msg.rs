@@ -138,6 +138,7 @@ pub enum Request {
     UseItemWithArgs(LocalTime, ItemId, ExtraArg),
     UseAbilityWithArgs(LocalTime, ItemId, ExtraArg),
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
+    CreateCharacter(u32),
     Ready,
 
     // Control messages
@@ -202,6 +203,10 @@ impl Request {
                 let (a, b, c, d, e) = try!(wr.read());
                 MoveItem(a, b, c, d, e)
             },
+            op::CreateCharacter => {
+                let a = try!(wr.read());
+                CreateCharacter(a)
+            },
             op::Ready => {
                 Ready
             },
@@ -247,7 +252,7 @@ pub enum Response {
     TerrainChunk(u16, Vec<u16>),
     Pong(u16, LocalTime),
     EntityUpdate(EntityId, Motion, u16),
-    Init(InitData),
+    Init(EntityId, LocalTime, u32, u32),
     KickReason(String),
     UnloadChunk(u16),
     OpenDialog(u32, Vec<u32>),
@@ -285,8 +290,8 @@ impl Response {
                 ww.write_msg(id, (op::Pong, data, time)),
             EntityUpdate(entity_id, ref motion, anim) =>
                 ww.write_msg(id, (op::EntityUpdate, entity_id, motion, anim)),
-            Init(ref data) =>
-                ww.write_msg(id, (op::Init, data.flatten())),
+            Init(pawn_id, now, cycle_base, cycle_ms) =>
+                ww.write_msg(id, (op::Init, pawn_id, now, cycle_base, cycle_ms)),
             KickReason(ref msg) =>
                 ww.write_msg(id, (op::KickReason, msg)),
             UnloadChunk(idx) =>
@@ -340,21 +345,6 @@ impl Response {
                 ww.write_msg(id, (op::ReplResult, cookie, msg)),
         });
         ww.flush()
-    }
-}
-
-
-pub struct InitData {
-    pub entity_id: EntityId,
-    pub now: LocalTime,
-    pub cycle_base: u32,
-    pub cycle_ms: u32,
-}
-
-impl InitData {
-    fn flatten(&self) -> (EntityId, LocalTime, u32, u32) {
-        let InitData { entity_id, now, cycle_base, cycle_ms } = *self;
-        (entity_id, now, cycle_base, cycle_ms)
     }
 }
 

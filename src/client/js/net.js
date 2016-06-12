@@ -626,6 +626,13 @@ Connection.prototype.sendMoveItem = function(
     this.socket.send(msg.done());
 };
 
+Connection.prototype.sendCreateCharacter = function(appearance) {
+    var msg = MESSAGE_BUILDER.reset();
+    msg.put16(OP_CREATE_CHARACTER);
+    msg.put32(appearance);
+    this.socket.send(msg.done());
+};
+
 Connection.prototype.sendReady = function() {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_READY);

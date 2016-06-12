@@ -286,6 +286,10 @@ impl<'d> Engine<'d> {
                                     move |eng| logic::input::use_ability(eng, cid, item_id, args));
             },
 
+            CreateCharacter(appearance) => {
+                warn_on_err!(logic::client::create_character(self, cid, appearance));
+            },
+
             BadRequest => {
                 self.kick_client(cid, "bad request");
             },
@@ -325,44 +329,6 @@ impl<'d> Engine<'d> {
     pub fn as_ref<'b>(&'b mut self) -> EngineRef<'b, 'd> {
         EngineRef::new(self)
     }
-
-
-    /*
-     * FIXME remove
-    fn do_register(&mut self,
-                   wire_id: WireId,
-                   name: String,
-                   secret: Secret,
-                   appearance: u32) -> (u32, String) {
-        if let Err(msg) = name_valid(&*name) {
-            return (1, String::from(msg));
-        }
-
-        match self.auth.register(&*name, &secret) {
-            Ok(true) => {
-                info!("{:?}: registered as {}", wire_id, name);
-                match logic::client::register(self.as_ref(), &*name, appearance) {
-                    Ok(()) => (0, String::new()),
-                    Err(e) => {
-                        warn!("{:?}: error registering as {}: {}",
-                              wire_id, name, e.description());
-                        (2, String::from("An internal error occurred."))
-                    }
-                }
-            },
-            Ok(false) => {
-                info!("{:?}: registration as {} failed: name is in use",
-                      wire_id, name);
-                (1, String::from("That name is already in use."))
-            },
-            Err(e) => {
-                info!("{:?}: registration as {} failed: database error: {}",
-                      wire_id, name, e.description());
-                (2, String::from("An internal error occurred."))
-            }
-        }
-    }
-    */
 
     pub fn now(&self) -> Time {
         self.now

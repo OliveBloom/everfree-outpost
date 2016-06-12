@@ -23,6 +23,7 @@ use world;
 use world::Motion;
 use world::bundle::{self, Builder};
 use world::extra;
+use world::fragment::Fragment as World_Fragment;
 use world::object::*;
 use vision;
 
@@ -93,10 +94,17 @@ pub fn login(eng: &mut Engine,
 
     // Send the client's startup messages.
     let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
-    eng.messages.send_client(cid, ClientResponse::InitNoPawn(pos,
-                                                             eng.now,
-                                                             cycle_base,
-                                                             DAY_NIGHT_CYCLE_MS));
+    if let Some(eid) = opt_eid {
+        eng.messages.send_client(cid, ClientResponse::Init(eid,
+                                                           eng.now,
+                                                           cycle_base,
+                                                           DAY_NIGHT_CYCLE_MS));
+    } else {
+        eng.messages.send_client(cid, ClientResponse::InitNoPawn(pos,
+                                                                 eng.now,
+                                                                 cycle_base,
+                                                                 DAY_NIGHT_CYCLE_MS));
+    }
 
     vision::Fragment::add_client(&mut eng.as_ref().as_vision_fragment(), cid, pid, region);
     //warn_on_err!(eng.script_hooks().call_client_login(eng.borrow(), cid));
@@ -110,6 +118,55 @@ pub fn login(eng: &mut Engine,
     Ok(cid)
 }
 
+pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bundle::Result<()> {
+    let _ = unwrap!(eng.world.get_client(cid));
+
+
+    let mut b = Builder::new(eng.data);
+
+    let mut main_inv = None;
+    let mut ability_inv = None;
+    b.entity()
+     .stable_plane(STABLE_PLANE_FOREST)
+     .motion(Motion::stationary(V3::new(32, 32, 0), eng.now()))
+     .anim("pony//stand-0")
+     .appearance(appearance)
+     .inventory(|i| {
+        main_inv = Some(i.id());
+        i.size(30);
+     })
+     .inventory(|i| {
+        ability_inv = Some(i.id());
+        i.size(30);
+        if appearance & (1 << 7) != 0 {
+            i.item(0, "ability/light", 1);
+        }
+     })
+     .extra(|x| {
+        let mut inv = x.set_hash("inv");
+        inv.borrow().set("main", extra::Value::InventoryId(main_inv.unwrap()));
+        inv.borrow().set("ability", extra::Value::InventoryId(ability_inv.unwrap()));
+     });
+
+    let bundle = b.finish();
+
+
+    // Import the entity bundle.
+    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let eid = importer.import(&EntityId(0));
+
+    eng.as_ref().as_world_fragment().client_mut(cid).set_pawn(Some(eid));
+
+    let cycle_base = (eng.now % DAY_NIGHT_CYCLE_MS as Time) as u32;
+    eng.messages.send_client(cid, ClientResponse::Init(eid,
+                                                       eng.now,
+                                                       cycle_base,
+                                                       DAY_NIGHT_CYCLE_MS));
+
+
+    Ok(())
+}
+
 /*
 pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<()> {
     let mut b = Builder::new(eng.data());
@@ -117,28 +174,6 @@ pub fn register(eng: EngineRef, name: &str, appearance: u32) -> bundle::Result<(
     b.client()
      .name(name)
      .pawn(|e| {
-        let mut main_inv = None;
-        let mut ability_inv = None;
-        e.stable_plane(STABLE_PLANE_FOREST)
-         .motion(Motion::stationary(V3::new(32, 32, 0), eng.now()))
-         .anim("pony//stand-0")
-         .appearance(appearance)
-         .inventory(|i| {
-            main_inv = Some(i.id());
-            i.size(30);
-         })
-         .inventory(|i| {
-            ability_inv = Some(i.id());
-            i.size(30);
-            if appearance & (1 << 7) != 0 {
-                i.item(0, "ability/light", 1);
-            }
-         })
-         .extra(|x| {
-            let mut inv = x.set_hash("inv");
-            inv.borrow().set("main", extra::Value::InventoryId(main_inv.unwrap()));
-            inv.borrow().set("ability", extra::Value::InventoryId(ability_inv.unwrap()));
-         });
      });
 
     let b = b.finish();

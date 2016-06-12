@@ -674,13 +674,9 @@ function handleOpenPonyEdit(name) {
     function send_register(app_info) {
         var appearance = calcAppearance(app_info);
         saveAppearance(app_info);
-        /* TODO
-        conn.onRegisterResult = handle_result;
-        conn.sendRegister(name,
-                          secret,
-                          appearance);
-                          */
+
         console.log('appearance: ' + appearance.toString(16));
+        conn.sendCreateCharacter(appearance);
         dialog.hide();
     }
 
