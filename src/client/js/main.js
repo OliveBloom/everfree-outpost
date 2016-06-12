@@ -81,20 +81,6 @@ var item_inv;
 var ability_inv;
 
 
-// Top-level initialization function
-
-function init() {
-
-    checkBrowser(dialog, function() {
-        loadAssets(function() {
-        });
-    });
-}
-
-//document.addEventListener('DOMContentLoaded', init);
-
-
-
 /** @constructor */
 function OutpostClient() {
     this._init();
@@ -130,16 +116,12 @@ OutpostClient.prototype._init = function() {
 
     item_inv = null;
     ability_inv = null;
-
-
-    //buildUI();    // FIXME
 };
 
 OutpostClient.prototype.loadData = function(blob, next) {
     var this_ = this;
     loader.loadPack(blob, function(assets_) {
         assets = assets_;
-        //assets['server_info'] = server_info;  // FIXME
 
         var items = assets['item_defs'];
         for (var i = 0; i < items.length; ++i) {
@@ -246,16 +228,6 @@ OutpostClient.prototype.handoff = function(old_canvas, ws) {
 };
 
 // Major initialization steps.
-
-function loadAssets(next) {
-    loader.loadJson('server.json', function(server_info) {
-        // TODO: remove this hack since it prevents all caching
-        loader.loadPack('outpost.pack?' + Date.now(), function(loaded, total) {
-            banner.update('Loading... (' + (loaded >> 10)+ 'k / ' + (total >> 10) + 'k)', loaded / total);
-        }, function(assets_) {
-        });
-    });
-}
 
 function maybeRegister(info, next) {
     if (Config.login_name.isSet() && Config.login_secret.isSet() &&
