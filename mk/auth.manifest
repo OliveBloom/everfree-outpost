@@ -1,0 +1,10 @@
+
+auth/server.py: $root/src/auth/server/server.py
+auth/db_postgres.py: $root/src/auth/server/db_postgres.py
+auth/db_mysql.py: $root/src/auth/server/db_mysql.py
+auth/config_tool.py: $root/src/auth/server/config_tool.py
+
+auth/templates/_base.html: $b_www/templates/_base.html
+auth/templates/index.html: $root/src/auth/server/templates/index.html
+auth/templates/login.html: $root/src/auth/server/templates/login.html
+auth/templates/register.html: $root/src/auth/server/templates/register.html

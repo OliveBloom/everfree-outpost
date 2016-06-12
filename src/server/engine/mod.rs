@@ -165,13 +165,17 @@ impl<'d> Engine<'d> {
         use messages::ControlEvent::*;
         use messages::ControlResponse::*;
         match evt {
-            OpenWire(_wire_id) => {},
+            OpenWire(wire_id, uid, name) => {
+                info!("OpenWire: {:?}, {:x}, {}", wire_id, uid, name);
+                self.extra.wire_info.insert(wire_id, (uid, name));
+            },
 
             CloseWire(wire_id, opt_cid) => {
                 if let Some(cid) = opt_cid {
                     self.cleanup_client(cid);
                 }
                 self.messages.send_control(WireClosed(wire_id));
+                self.extra.wire_info.remove(&wire_id);
             },
 
             ReplCommand(cookie, msg) => {
@@ -205,6 +209,7 @@ impl<'d> Engine<'d> {
         use messages::WireEvent::*;
         use messages::WireResponse::*;
         match evt {
+            /*
             Login(name, secret) => {
                 match self.auth.login(&*name, &secret) {
                     Ok(true) => {
@@ -226,6 +231,12 @@ impl<'d> Engine<'d> {
             Register(name, secret, appearance) => {
                 let (code, msg) = self.do_register(wire_id, name, secret, appearance);
                 self.messages.send_wire(wire_id, RegisterResult(code, msg));
+            },
+            */
+
+            Ready => {
+                info!("wire ready: {:?}", wire_id);
+                warn_on_err!(logic::client::ready(self, wire_id));
             },
 
             BadRequest => {
@@ -279,6 +290,10 @@ impl<'d> Engine<'d> {
                 self.input.schedule_action(cid, Action::UseAbility(item_id), args);
             },
 
+            CreateCharacter(appearance) => {
+                warn_on_err!(logic::client::create_character(self, cid, appearance));
+            },
+
             BadRequest => {
                 self.kick_client(cid, "bad request");
             },
@@ -293,7 +308,7 @@ impl<'d> Engine<'d> {
 
 
     fn cleanup_client(&mut self, cid: ClientId) {
-        warn_on_err!(logic::client::logout(self.as_ref(), cid));
+        warn_on_err!(logic::client::logout(self, cid));
     }
 
     fn cleanup_wire(&mut self, wire_id: WireId) {
@@ -309,52 +324,19 @@ impl<'d> Engine<'d> {
         self.messages.send_client(cid, ClientResponse::KickReason(msg.into()));
         self.cleanup_client(cid);
         self.messages.send_control(ControlResponse::WireClosed(wire_id));
+        // If there's a Client object, the wire_info should already have been removed.
     }
 
     pub fn kick_wire<'a, S: Into<String>>(&mut self, wire_id: WireId, msg: S) {
         self.messages.send_wire(wire_id, WireResponse::KickReason(msg.into()));
         self.cleanup_wire(wire_id);
         self.messages.send_control(ControlResponse::WireClosed(wire_id));
+        self.extra.wire_info.remove(&wire_id);
     }
 
 
     pub fn as_ref<'b>(&'b mut self) -> EngineRef<'b, 'd> {
         EngineRef::new(self)
-    }
-
-
-    fn do_register(&mut self,
-                   wire_id: WireId,
-                   name: String,
-                   secret: Secret,
-                   appearance: u32) -> (u32, String) {
-        if let Err(msg) = name_valid(&*name) {
-            return (1, String::from(msg));
-        }
-
-        match self.auth.register(&*name, &secret) {
-            Ok(true) => {
-                info!("{:?}: registered as {}", wire_id, name);
-                match logic::client::register(self.as_ref(), &*name, appearance) {
-                    Ok(()) => (0, String::new()),
-                    Err(e) => {
-                        warn!("{:?}: error registering as {}: {}",
-                              wire_id, name, e.description());
-                        (2, String::from("An internal error occurred."))
-                    }
-                }
-            },
-            Ok(false) => {
-                info!("{:?}: registration as {} failed: name is in use",
-                      wire_id, name);
-                (1, String::from("That name is already in use."))
-            },
-            Err(e) => {
-                info!("{:?}: registration as {} failed: database error: {}",
-                      wire_id, name, e.description());
-                (2, String::from("An internal error occurred."))
-            }
-        }
     }
 
     pub fn now(&self) -> Time {

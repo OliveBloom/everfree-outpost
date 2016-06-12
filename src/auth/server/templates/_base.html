@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+    <head>
+        <title>{% block title %}{% endblock %}</title>
+
+        <link rel='stylesheet' type='text/css' href='%{urls.website}main.css'>
+        %{set_img_base(urls.website + 'img/')}
+
+        <style>
+            .msg { color: #dad45e; }
+        </style>
+    </head>
+    <body>
+        <img src="%{img_url('assets/www/logo.png')}" id='logo'>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </body>
+</html>

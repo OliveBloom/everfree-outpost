@@ -19,7 +19,6 @@ pub struct ClientInfo {
     wire_id: WireId,
     name: String,
     chunk_offset: (u8, u8),
-    last_check: Time,
 }
 
 impl Clients {
@@ -84,7 +83,6 @@ impl ClientInfo {
             wire_id: wire_id,
             name: String::from(name),
             chunk_offset: (offset_x, offset_y),
-            last_check: TIME_MIN,
         }
     }
 

@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Everfree Outpost</title>
+
+        <script>
+            if (location.hash.startsWith('#s=')) {
+                var x = 'launcher.html' + location.hash;
+                location.replace(new URL(x, location));
+            }
+        </script>
+
+        <link rel='stylesheet' type='text/css' href='%{urls.website}main.css'>
+        %{set_img_base(urls.website + 'img/')}
+        <style type='text/css'>
+            #login-status {
+                font-size: 70%;
+                text-align: right;
+            }
+
+            #login-status.pending {
+                color: #98aab8;
+            }
+
+            .server-entry {
+                padding: 2px 3px;
+                padding-right: 12px;
+
+                border-image-source:
+                    url("%{img_url('assets/ui/png/list-item.png')}");
+                border-image-slice: 1 9 2 2;
+                border-image-width: auto;
+                border-image-repeat: repeat;
+                /* In Chrome, 'border-width: 0px' disables the border completely. */
+                border-width: 1px;
+                border-style: solid;
+
+                background-color: #854c30;
+                background-clip: padding-box;
+            }
+
+            .server-arrow {
+                padding-right: 3px;
+                visibility: hidden;
+            }
+
+            .server-entry.active > .server-arrow {
+                visibility: visible;
+            }
+
+
+            /* Higher specificity than `.server-link`, so it can override a:link */
+            a.server-link {
+                color: #deeed6;
+            }
+
+            main {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+        </style>
+    </head>
+
+    <body>
+        <img src="%{img_url('assets/www/logo.png')}" id='logo'>
+        <main>
+            <div id='login-status' class='pending'>Checking...</div>
+            <div id='server-list' class='grow'>
+                <!-- populated by javascript -->
+            </div>
+            <div style='font-size: 70%'>
+                <!--
+                <a href='#' id='add-server'>Add server</a>
+                -->
+            </div>
+        </main>
+
+        <script>
+            window.AUTH_URL = %{repr(urls.auth)}
+            window.BUILTIN_SERVERS = [
+                %for s in server_list
+                { name: %{repr(s.name)}, url: %{repr(s.url)} },
+                %end
+            ];
+            window.ARROW_URL = %{repr(img_url('assets/ui/png/arrow-yellow.png'))};
+        </script>
+        <script src='serverlist.js'></script>
+    </body>
+</html>
+

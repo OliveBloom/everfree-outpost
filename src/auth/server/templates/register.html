@@ -1,0 +1,42 @@
+{% extends "_base.html" %}
+{% block title %} Register &ndash; Everfree Outpost {% endblock %}
+{% block title_display %} Register Account {% endblock %}
+
+{% block content %}
+
+<h1>Register</h1>
+
+{% for msg in get_flashed_messages() %}
+<p class='msg'>{{ msg }}</p>
+{% endfor %}
+
+<style>
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 0;
+}
+</style>
+
+<form action='/register' method='post'>
+    <div>
+        <div class='row'>
+            <span style='width: 6em'>Name:</span>
+            <input type='text' name='name' class='grow' autofocus>
+        </div>
+        <div class='row'>
+            <span style='width: 6em'>Password:</span>
+            <input type='password' name='password' class='grow'>
+        </div>
+        <div class='row'>
+            <span style='width: 6em'>Email:</span>
+            <input type='text' name='email' class='grow'>
+        </div>
+        <div style='text-align: right; padding: 2px 0'>
+            <input type='submit' value='Register'>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

@@ -14,10 +14,7 @@ def configure(ctx):
             lambda ctx, flag: chk_cc_flag(ctx, ctx.info.cxx, flag, src, out))
 
 def requirements(ctx):
-    if ctx.info.data_only:
-        return ()
-    else:
-        return ('cc', 'cxx')
+    return ('cc', 'cxx')
 
 
 def chk_cc(ctx, cc, src, out):

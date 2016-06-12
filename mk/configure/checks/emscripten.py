@@ -7,10 +7,7 @@ def configure(ctx):
             ('', '/usr', '/usr/local'), chk_fastcomp)
 
 def requirements(ctx):
-    if ctx.info.data_only:
-        return ()
-    else:
-        return ('emscripten_fastcomp_prefix',)
+    return ('emscripten_fastcomp_prefix',)
 
 
 def chk_fastcomp(ctx, prefix):

@@ -1,0 +1,1301 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+
+
+<style type='text/css'>
+    /*
+    * { all: unset; }
+    div { display: block; }
+    script, style { display: none; }
+    */
+
+    html {
+        width: 100%;
+        height: 100%;
+    }
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        overflow: hidden;
+    }
+
+    * {
+        image-rendering: optimizeSpeed;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: -o-crisp-edges;
+        image-rendering: pixelated;
+        -ms-interpolation-mode: nearest-neighbor;
+    }
+
+    body > canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+    }
+
+    .ui-container {
+        position: relative;
+        transform-origin: top left;
+    }
+
+    .title {
+        font-size: 1.3em;
+        text-align: center;
+    }
+
+    kbd {
+        font-family: 'helv12px';
+        font-size: 12px;
+        text-align: center;
+        vertical-align: middle;
+        display: inline-block;
+        border-style: outset;
+        border-width: 2px;
+        border-color: gray;
+        /* padding: .1em; */
+        min-width: 16px;
+        min-height: 16px;
+    }
+
+    .hidden {
+        display: none !important;
+    }
+
+    iframe {
+        width: 60%;
+        height: 60%;
+    }
+
+    .vertical-rule {
+        width: 0.125rem;
+        margin: 0.5rem 0.125rem;
+        background-color: black;
+    }
+
+    .horizontal-rule {
+        height: 0.125rem;
+        margin: 0.125rem 0.5rem;
+        background-color: black;
+    }
+
+    .dialog-body, .container-horiz {
+        display: flex;
+        align-items: stretch;
+        flex-direction: row;
+    }
+
+    .container-vert {
+        display: flex;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .stretch {
+        flex-grow: 1;
+    }
+
+
+
+@font-face {
+    font-family: 'helv10px';
+    src: url('font/helvR08_75dpi.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'helv12px';
+    src: url('font/helvR10_75dpi.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'helv16px';
+    src: url('font/helvR14_75dpi.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'helv21px';
+    src: url('font/helvR18_75dpi.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'helv21px';
+    src: url('font/helvB18_75dpi.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+html {
+    font-family: 'helv16px';
+    font-size: 16px;
+}
+
+
+
+.g-row, .g-col {
+    display: flex;
+    align-items: stretch;
+}
+
+.g-row {
+    flex-direction: row;
+}
+
+.g-col {
+    flex-direction: column;
+}
+
+
+button { all: unset; }
+
+button,
+.g-button-large {
+    display: inline-block;
+    min-width: 27px;
+    height: 14px;
+    font-size: 12px;
+    font-family: helv12px;
+
+    border-image-source: url('img/buttons-large-normal.png');
+    border-image-slice: 9 12 9 35;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 2px 10px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #d27d2c;
+    color: #140c1c;
+
+    padding: 0 1px;
+    margin: 0 2px;
+    text-align: center;
+}
+
+button:hover,
+.dialog > div > button.active,
+.dialog > div > div.active > button.active,
+.g-button-large:hover,
+.dialog > div > .g-button-large.active,
+.dialog > div > div.active > .g-button-large.active {
+    border-image-source: url('img/buttons-large-hover.png');
+}
+
+button:active,
+.g-button-large:active {
+    border-image-source: url('img/buttons-large-active.png');
+    border-image-slice: 9 35 9 12;
+
+    background-color: #854c30;
+}
+
+
+.g-button-medium {
+    display: inline-block;
+    min-width: 30px;
+    height: 14px;
+    font-size: 12px;
+    font-family: helv12px;
+
+    border-image-source: url('img/buttons-medium-normal.png');
+    border-image-slice: 8 9 8 23;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 1px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #d27d2c;
+    color: #140c1c;
+}
+
+.g-button-medium:hover {
+    border-image-source: url('img/buttons-medium-hover-border.png');
+
+    background-image: url('img/buttons-medium-hover-bg.png');
+    background-repeat: no-repeat;
+    background-position: right 2px bottom 2px;
+}
+
+.g-button-medium:active {
+    border-image-source: url('img/buttons-medium-active.png');
+    border-image-slice: 8 23 8 9;
+
+    background-color: #854c30;
+}
+
+
+.g-button-small {
+    display: inline-block;
+    min-width: 19px;
+    height: 8px;
+    font-size: 8px;
+
+    border-image-source: url('img/buttons-small-normal.png');
+    border-image-slice: 5 3 5 18;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 1px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #d27d2c;
+    color: #140c1c;
+}
+
+.g-button-small:hover {
+    border-image-source: url('img/buttons-small-hover-border.png');
+
+    background-image: url('img/buttons-small-hover-bg.png');
+    background-repeat: no-repeat;
+    background-position: right 2px bottom 2px;
+}
+
+.g-button-small:active {
+    border-image-source: url('img/buttons-small-active.png');
+    border-image-slice: 5 18 5 3;
+
+    background-color: #854c30;
+}
+
+
+input[type=text] { all: unset; }
+
+input[type=text],
+.g-input {
+    min-width: 22px;
+    min-height: 2px;
+
+    border-image-source: url('img/input-border.png');
+    border-image-slice: 4 21 4 4;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 3px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #854c30;
+    color: #deeed6;
+
+    max-width: 20rem;
+    padding: 0 2px;
+}
+
+.dialog > div > input[type=text].active,
+.dialog > div > div.active > input[type=text].active {
+    /* TODO */
+}
+
+
+.g-panel {
+    min-height: 2px;
+    min-width: 2px;
+
+    /* TODO: fix this filename */
+    border-image-source: url('img/panel-outer-border-border.png');
+    border-image-slice: 6 6 6 6;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 5px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #4e4a4e;
+    color: #deeed6;
+}
+
+.g-panel.g-with-spacer {
+    position: relative;
+    margin-top: 2px;
+}
+
+.g-panel.g-with-spacer::before {
+    /* NB: The quotes contain U+200B ZERO WIDTH SPACE.  I'd prefer to leave
+       them empty, but Chrome treats '' as `none` and removes the ::before
+       element from the page. */
+    content: '​';
+    position: absolute;
+    top: -7px;
+    left: 7px;
+    width: calc(100% - 14px);
+    height: 2px;
+    /* z-index: -1; */
+}
+
+.g-panel.g-with-spacer::before, .g-panel-spacer {
+    border: none;
+    background-image: url('img/panel-spacer-spacer.png');
+    background-repeat: space no-repeat;
+    background-size: 20px 5px;
+    background-position: bottom center;
+}
+
+
+.g-panel-title {
+    min-width: 19px;
+    height: 22px;
+
+    border-image-source: url('img/title-border.png');
+    border-image-slice: 16 15 16 15;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 5px;
+    border-style: solid;
+
+    background-clip: padding-box;
+    background-color: #4e4a4e;
+    color: #deeed6;
+    font-family: 'helv21px';
+    font-size: 21px;
+    font-weight: bold;
+}
+
+
+
+.g-scrollpane {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+
+    border-image-source: url('img/scroll-pane-outer.png');
+    border-image-slice: 3 3 3 3;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-width: 3px;
+    border-style: solid;
+
+    background-color: #854c30;
+    background-clip: padding-box;
+}
+
+.g-scrollpane-content {
+    overflow-y: hidden;
+    flex-grow: 1;
+    flex-shrink: 0;
+
+    background-image: url('img/scroll-pane-bg.png');
+}
+
+.g-scrollpane-bar {
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+
+.g-scrollbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+
+.g-scrollbar-button {
+    flex-grow: 0;
+    flex-shrink: 0;
+
+    width: 12px;
+    height: 12px;
+    background-image: url('img/scroll-bar-button.png');
+}
+
+.g-scrollbar-bar {
+    flex-grow: 1;
+    flex-shrink: 0;
+
+    width: 0px;
+    min-height: 2px;
+    position: relative;
+
+    border-image-source: url('img/scroll-bar-middle.png');
+    border-image-slice: 3 3 1 3;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    border-image-outset: 1px 0px;
+    border-width: 0px 3px;
+    border-style: solid;
+}
+
+.g-scrollbar-handle {
+    position: absolute;
+}
+
+
+.g-list {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.g-list-item {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-width: 11px;
+    min-height: 3px;
+
+    border-image-source: url('img/list-item.png');
+    border-image-slice: 1 9 2 2;
+    border-image-width: auto;
+    border-image-repeat: repeat;
+    /* In Chrome, 'border-width: 0px' disables the border completely. */
+    border-width: 1px;
+    border-style: solid;
+
+    background-color: #854c30;
+    background-clip: padding-box;
+}
+
+/*
+.g-list-item:last-child {
+    border-image-source: url('img/list-item-last.png');
+}
+*/
+
+
+.g-arrow-row::before {
+    /* NB: The quotes contain U+200B ZERO WIDTH SPACE.  I'd prefer to leave
+       them empty, but Chrome treats '' as `none` and removes the ::before
+       element from the page. */
+    content: '​';
+    width: 6px;
+    height: 100%;
+    margin-left: 2px;
+    margin-right: 2px;
+
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.g-arrow-row.active::before {
+    background-image: url('img/arrow-yellow.png');
+}
+</style>
+
+
+<style>
+    #banner-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+
+    #banner {
+        text-align: center;
+        position: absolute;
+        top: 50%;
+        width: 100%;
+        background-color: lightblue;
+        padding: 0.25rem 0;
+        margin-top: -1ex;
+        border: solid black;
+        border-width: 0.0625rem 0;
+    }
+
+    #banner-bar {
+        position: absolute;
+        border: solid darkblue;
+        border-width: 0 0 0.25rem;
+        left: 0;
+        bottom: 0;
+        width: 0%;
+        height: 100%;
+        min-height: 100%;
+    }
+</style>
+<div id="banner-bg" class='hidden'>
+    <div id="banner">
+        <span id="banner-text">Loading...</span>
+        <div id="banner-bar"></div>
+    </div>
+</div>
+
+<!-- Styles for purely Javascript-generated elements -->
+<style>
+    /* Menus */
+    .menu-container {
+        width: 10rem;
+    }
+
+    .menu-item.active {
+        background-color: lightblue;
+    }
+
+    .menu-item {
+        cursor: pointer;
+    }
+
+
+    /* Error list */
+    .error-list {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+
+        background-color: rgba(0, 0, 0, 0.5);
+        color: red;
+    }
+
+
+    /* Inventory update list */
+    .inv-update-list {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        padding-right: 0.25rem;
+
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+
+
+    /* Item icons */
+    .item-icon {
+        font-size: 0;
+        flex: 0;
+        width: 1rem;
+        height: 1rem;
+        min-width: 1rem;
+        min-height: 1rem;
+
+        /* background-image: url("assets/items.png"); */
+        /* The actual background-image property is filled in with a
+           blob URL by a separate Javascript-generated stylesheet. */
+        background-size: 32rem auto;
+    }
+
+    .item-qty {
+        position: absolute;
+        bottom: -2px;
+        right: 1px;
+        font-size: 10px;
+        font-family: 'helv10px';
+        color: #deeed6;
+        text-shadow: 0px 1px #140c1c, 1px 0px #140c1c;
+    }
+
+
+    /* Item lists */
+    .item-list {
+        width: 10rem;
+        overflow-x: hidden;
+        overflow-y: scroll;
+    }
+</style>
+
+<div style="display: none">
+
+    <style>
+        .dialog-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* dialog-expand has special handling.  If the dialog content
+           has .dialog-expand, then dialog.js will add .dialog-expanded
+           to the dialog container. */
+        .dialog-expanded > .dialog-wrapper {
+            height: 80%;
+        }
+
+        .dialog-expanded > * > .dialog {
+            /* Force child height to equal dialog height, but allow the
+               child to determine its own width.
+
+               We should be able to just give the child 'width: 100%',
+               but that doesn't work on Chrome for some reason.  */
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+        }
+
+        .dialog {
+            padding: 0.25rem;
+            flex-grow: 1;
+        }
+
+        .dialog-title {
+            padding: 0 0.25rem;
+            text-align: center;
+        }
+    </style>
+    <div id="dialog-container" class="dialog-container hidden">
+        <div class="dialog-wrapper g-col">
+            <div class="dialog-title g-panel-title" data-part="title">Dialog Title</div>
+            <div class="dialog g-panel g-with-spacer" data-part="inner"></div>
+        </div>
+    </div>
+
+    <style>
+        #key-list {
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+
+        #key-list td {
+            vertical-align: middle;
+        }
+
+        #key-list td:first-child {
+            text-align: right;
+        }
+
+        #key-list kbd, #key-list td:nth-child(2), #key-display kbd {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+
+        #key-list td:nth-child(2) {
+            padding: 0 0.5em;
+        }
+    </style>
+    <div id="key-list">
+        <table>
+            <tr>
+                <td>
+                    <kbd>&larr;</kbd>
+                    <kbd>&darr;</kbd>
+                    <kbd>&uarr;</kbd>
+                    <kbd>&rarr;</kbd>
+                </td>
+                <td>Move</td>
+            </tr>
+            <tr><td><kbd>A</kbd></td><td>Interact</td></tr>
+            <tr><td><kbd>D</kbd></td><td>Use Item</td></tr>
+            <tr><td><kbd>E</kbd></td><td>Inventory</td></tr>
+            <tr><td><kbd>S</kbd></td><td>Use Ability</td></tr>
+            <tr><td><kbd>W</kbd></td><td>Ability List</td></tr>
+            <tr><td><kbd>Space</kbd></td><td>Close Dialog</td></tr>
+            <tr><td><kbd>Enter</kbd></td><td>Chat</td></tr>
+            <tr><td><kbd>F1</kbd></td><td>Hide/Show<br>Controls</td></tr>
+            <tr><td><kbd>F2</kbd></td><td>Menu</td></tr>
+        </table>
+    </div>
+
+    <style>
+        /* Chat panel */
+        .chat-container {
+            width: 20rem;
+            background-color: rgba(255, 255, 255, 0.5);
+
+            display: flex;
+            flex-flow: column;
+            align-items: stretch;
+
+            position: absolute;
+            left: 0;
+            bottom: 0;
+
+            font-size: 12px;
+            font-family: helv12px;
+        }
+
+        .chat {
+            flex-grow: 1;
+            overflow-y: scroll;
+            height: 6.4rem;
+        }
+
+        .chat-line {
+            display: flex;
+        }
+
+        .chat-name {
+            flex-shrink: 0;
+            vertical-align: top;
+            margin-left: 0.125rem;
+            margin-right: 0.5rem;
+        }
+
+        .chat-text {
+            flex-grow: 1;
+        }
+
+        .server-message {
+            color: blue;
+        }
+
+        .chat-input {
+            flex-shrink: 0;
+            font-size: 0.7rem;
+        }
+    </style>
+    <div id="chat-panel" class="chat-container">
+        <div class="chat" data-part="content"></div>
+        <input type="text" class="chat-input"
+               maxlength="100" data-part="entry" disabled="true">
+    </div>
+    <div id="chat-line" class="chat-line">
+        <div class="chat-name" data-part="name"></div>
+        <div class="chat-text" data-part="text"></div>
+    </div>
+
+    <style>
+        .hotbar {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 24px;
+            padding-bottom: 1px;
+
+            border-image-source: url('img/hotbar-vertical-caps.png');
+            border-image-slice: 7 0 7 0;
+            border-image-width: 7px 5px 7px 5px;
+            border-width: 7px 0px;
+            border-style: solid;
+
+            background-clip: padding-box;
+            background-image: url('img/hotbar-vertical-bar.png');
+            background-repeat: repeat-y;
+            background-position: center;
+
+            display: inline-flex;
+            flex-direction: column;
+        }
+
+        .item-box {
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            flex-grow: 0;
+            flex-shrink: 0;
+            position: relative;
+
+            border-image-source: url('img/hotbar-box-yellow.png');
+            border-image-slice: 5 5 5 5;
+            border-image-width: auto;
+            border-width: 4px;
+            border-style: solid;
+
+            background-clip: padding-box;
+            background-color: #4e4a4e;
+        }
+        .item-box.active-item {
+            border-image-source: url('img/hotbar-box-green.png');
+        }
+        .item-box.active-ability {
+            border-image-source: url('img/hotbar-box-blue.png');
+        }
+    </style>
+    <div id="item-box" class="item-box">
+        <div class="item-icon" data-part="icon"></div>
+        <div class="item-qty" data-part="qty"></div>
+    </div>
+    <div id="hotbar" class="hotbar">
+    </div>
+
+    <style>
+        .item {
+            display: flex;
+            align-items: center;
+        }
+
+        .item-name {
+            padding-left: 0.25rem;
+            font-size: 1rem;
+            flex: 1;
+        }
+
+        .item > .item-qty2 {
+            flex: 0;
+            min-width: 3.0ch;
+            font-family: 'helv12px';
+            font-size: 12px;
+            padding-right: 0.125rem;
+            text-align: right;
+        }
+    </style>
+    <div id="item-row" class="item g-list-item g-arrow-row">
+        <div class="item-qty2" data-part="qty"></div>
+        <div class="item-icon" data-part="icon"></div>
+        <div class="item-name" data-part="name"></div>
+    </div>
+
+    <style>
+        .item-slot {
+            width: 16px;
+            height: 16px;
+            flex-grow: 0;
+            flex-shrink: 0;
+            position: relative;
+
+            border-image-source: url('img/slot-rounded.png');
+            border-image-slice: 2 2 2 2;
+            border-image-width: auto;
+            border-width: 1px;
+            border-style: solid;
+            margin: 1px;
+        }
+
+        .item-slot.active {
+            border-image-source: url('img/slot-rounded-active.png');
+            border-image-slice: 3 3 3 3;
+            border-width: 2px;
+            margin: 0;
+        }
+
+        .item-grid:not(.active) .item-slot.active {
+            border-image-source: url('img/slot-rounded-semiactive.png');
+        }
+
+        .item-slot.drag-source > * {
+            visibility: hidden;
+        }
+    </style>
+    <div id="item-slot" class="item-slot">
+        <div class="item-icon" data-part="icon"></div>
+        <div class="item-qty" data-part="qty"></div>
+    </div>
+
+    <style>
+        .inventory > .item-list {
+            flex-grow: 1;
+        }
+
+        .item-list:not(.active) > .item.g-arrow-row.active::before {
+            background-image: url('img/arrow-gray.png');
+        }
+    </style>
+    <div id="inventory" data-dialog-title="Inventory"
+                        class="inventory g-col">
+        <div class="hole" data-key="item_list"></div>
+        <div>
+            <kbd>&uarr;</kbd>
+            <kbd>&darr;</kbd>
+            &ndash; Navigate
+        </div>
+    </div>
+
+    <div id="container" data-dialog-title="Container" class="g-col">
+        <div class="g-row stretch">
+            <div class="hole" data-key="item_list1"></div>
+            <div class="vertical-rule"></div>
+            <div class="hole" data-key="item_list2"></div>
+        </div>
+        <div style="text-align: center">
+            <kbd>A</kbd>
+            &ndash; Move Item
+        </div>
+    </div>
+
+    <style>
+        .recipe {
+            padding: 0 0.25rem;
+            margin-left: 6px;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .recipe.active {
+            /* background-color: lightgray; */
+        }
+
+        .recipe.disabled {
+            color: darkgray;
+        }
+
+        .recipe-list:not(.active) > .recipe.g-arrow-row.active::before {
+            background-image: url('img/arrow-gray.png');
+        }
+
+        .recipe-name {
+            flex: 1 0 auto;
+        }
+
+        .g-arrow-marker {
+            flex: 0 0 auto;
+
+            width: 6px;
+            margin-left: 2px;
+            margin-right: 2px;
+
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .active > .g-arrow-marker {
+            background-image: url('img/arrow-yellow.png');
+        }
+
+        .recipe-list:not(.active) .active > .g-arrow-marker {
+            background-image: url('img/arrow-gray.png');
+        }
+
+    </style>
+    <div id="recipe" class="recipe">
+        <div class="g-arrow-marker"></div>
+        <div class="recipe-name" data-part="name"></div>
+    </div>
+
+    <style>
+        .recipe-list {
+            font-size: 12px;
+            font-family: helv12px;
+            width: 10rem;
+            overflow-x: hidden;
+            overflow-y: scroll;
+        }
+
+        .recipe-list.active > .recipe.active {
+            /* background-color: lightblue; */
+        }
+
+        .recipe-list-container {
+            position: relative;
+        }
+
+        .recipe-list-spacer {
+            width: 10rem;
+            height: 0;
+        }
+
+        .recipe-list {
+            position: absolute;
+            height: 100%;
+        }
+
+        .crafting .item-list {
+            flex: 1 0 auto;
+        }
+
+        .recipe-item-list {
+            height: calc(3 * 20px);
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            justify-content: center;
+            flex: 1 0 auto;
+            margin: 0 2px;
+        }
+
+        .recipe-item-list > .item.disabled {
+            color: darkgray;
+        }
+
+        .recipe-item-arrow {
+            text-align: center;
+            flex: 0 0 auto;
+        }
+
+        .recipe-item-arrow.disabled {
+            color: darkgray;
+        }
+
+    </style>
+    <div id="crafting" class="crafting g-row" data-dialog-title="Crafting">
+        <div class="recipe-list-container">
+            <div class="recipe-list-spacer"></div>
+            <div class="hole" data-key="recipe_list"></div>
+        </div>
+        <div class="vertical-rule"></div>
+        <div class="g-col">
+            <div class="hole" data-key="item_list"></div>
+            <div class="horizontal-rule"></div>
+            <div class="g-row" style="align-items: center">
+                <div class="hole" data-key="inputs"></div>
+                <div class="hole" data-key="arrow"></div>
+                <div class="hole" data-key="outputs"></div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .unsupported-option {
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .unsupported-or {
+            text-align: center;
+        }
+    </style>
+    <div id="unsupported-browser" data-dialog-title="Warning">
+        <p>This game has only been tested with Firefox and Chrome.</p>
+        <p>It may not work properly in other browsers.</p>
+        <div class="unsupported-option">
+            <a href="https://www.getfirefox.com/">Download Firefox</a>
+        </div>
+        <div class="unsupported-or">OR</div>
+        <div class="unsupported-option">
+            <a href="#" class="unsupported-try">Try to play anyway</a>
+        </div>
+    </div>
+    <div id="unsupported-mobile" data-dialog-title="Warning">
+        <p>This game has not been tested on mobile devices.</p>
+        <p>A keyboard is required to play this game.</p>
+        <div class="unsupported-option">Switch to a desktop computer</div>
+        <div class="unsupported-or">OR</div>
+        <div class="unsupported-option">
+            <a href="#" class="unsupported-try">Try to play anyway</a>
+        </div>
+    </div>
+
+    <div id="disconnected" data-dialog-title="Disconnected">
+        <p>You have been disconnected from the server.</p>
+        <p class="hole" data-key="reason"></p>
+        <p>Refresh the page to reconnect.</p>
+    </div>
+
+    <div id="server-offline" data-dialog-title="Server Offline">
+        <div class="title">Server Offline</div>
+        <div class="hole" data-key="msg"></div>
+    </div>
+
+    <style>
+        #key-display {
+            position: absolute;
+            width: 100%;
+            left: 0;
+            bottom: 10%;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+    </style>
+    <div id="key-display"></div>
+
+    <style>
+        .config-select {
+            display: block;
+            width: 100%;
+        }
+
+        .config-input {
+            display: block;
+            width: 100%;
+        }
+
+        .config-select > option.active:after {
+            content: " *";
+            color: blue;
+        }
+    </style>
+    <div id="config-editor" data-dialog-title="Config Editor">
+        <select class="config-select" size="10"></select>
+        <textarea class="config-input" rows="10"></textarea>
+        <div>
+            <button class="config-save">Save</button>
+            <button class="config-reset">Reset</button>
+            <button class="config-close">Close</button>
+        </div>
+    </div>
+
+    <style>
+        .pony-row.active,
+        .pony-done.active {
+            background-color: #597dce;
+        }
+
+        .pony-label {
+            /* Make it match the other option labels. */
+            width: 4rem;
+            padding: 0.125rem;
+            text-align: left;
+            flex-shrink: 0;
+        }
+        .pony-name {
+            border: none;
+            font-size: 1rem;
+            background-color: transparent;
+            flex-grow: 1;
+        }
+
+        .pony-option-cell {
+            padding: 0.125rem;
+            width: 1rem;
+            text-align: center;
+            cursor: pointer;
+        }
+        .pony-option-cell.active {
+            border: solid 0.125rem black;
+            padding: 0;
+        }
+
+        .pony-done {
+            padding: 0 0.125rem;
+        }
+
+        .pony-row,
+        .pony-editor-middle {
+            display: flex;
+        }
+
+        .pony-editor-middle {
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pony-editor-middle > * {
+            flex-shrink: 0;
+        }
+
+        .pony-row {
+            margin: 0.125rem 0;
+            align-items: center;
+        }
+
+        .pony-display {
+            margin-left: 1rem;
+        }
+
+        .pony-done {
+            margin: auto;
+            cursor: pointer;
+        }
+
+        .pony-done.active {
+            border-image-source: url('img/buttons-large-hover.png');
+        }
+
+        .pony-message.error {
+            color: red;
+        }
+    </style>
+    <div id="pony-editor" data-dialog-title="Create Character">
+        <div class="pony-row" data-part="name-row">
+            <div class="pony-label">Name: </div>
+            <div class="pony-name" data-part="name-field"></div>
+        </div>
+        <div class="pony-editor-middle">
+            <div data-part="options"></div>
+            <canvas class="pony-display" data-part="canvas"></canvas>
+        </div>
+        <div>
+            <button class="pony-done" data-part="done">Done</span>
+        </div>
+        <div class="pony-message" data-part="message"></div>
+    </div>
+
+    <style>
+        .music-select {
+            display: block;
+            width: 100%;
+        }
+    </style>
+    <div id="music-test" data-dialog-title="Music Test">
+        <select class="music-select" size="10"></select><br>
+        <input type="file" class="music-file"><br>
+        <audio loop="true" class="music-player"></audio>
+    </div>
+
+    <style>
+        .keybinding-list {
+            width: 15rem;
+            height: 50%;
+            overflow-x: hidden;
+            overflow-y: scroll;
+        }
+
+        .keybinding-item {
+            display: flex;
+        }
+
+        .keybinding-item.active {
+            background-color: lightblue;
+        }
+
+        .keybinding-name {
+            flex: 1 0 auto;
+        }
+
+        .keybinding-key {
+            flex: 0 0 auto;
+        }
+
+        .keybinding-header {
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+    <div id="keybinding-item" class="keybinding-item">
+        <div class="keybinding-name" data-part="name"></div>
+        <kbd class="keybinding-key" data-part="key"></kbd>
+    </div>
+    <div id="keybinding-editor">
+        <div class="title">Controls</div>
+        <div class="hole" data-key="list"></div>
+    </div>
+
+    <div id="sign-text" data-dialog-title="Sign Text">
+        <input type="text" size="100" data-part="input">
+        <div data-part="buttons">
+            <button data-part="submit">Done</button>
+            <button data-part="cancel">Cancel</button>
+        </div>
+    </div>
+
+    <style>
+        .labeled-row {
+            display: flex;
+            align-items: center;
+        }
+        .label {
+            flex-shrink: 0;
+            text-align: left;
+            padding: 0.125rem;
+        }
+
+        .teleport-setup .label {
+            width: 5rem;
+        }
+    </style>
+    <div id="teleport-setup" class="teleport-setup" data-dialog-title="Teleporter Setup">
+        <div class="labeled-row" data-part="name-row">
+            <div class="label">Name:</div>
+            <input type="text" size="20" data-part="name">
+        </div>
+        <div class="labeled-row" data-part="network-row">
+            <div class="label">Network:</div>
+            <input type="text" size="20" data-part="network" value="main">
+        </div>
+        <div data-part="buttons">
+            <button data-part="submit">Done</span>
+            <button data-part="cancel">Cancel</span>
+        </div>
+    </div>
+
+    <style>
+        .list {
+            width: 10rem;
+            overflow-x: hidden;
+            overflow-y: scroll;
+        }
+
+        .list-item.active {
+            background-color: lightblue;
+        }
+
+        .teleport-dest .list {
+            margin: auto;
+        }
+    </style>
+    <div id="teleport-dest" class="teleport-dest" data-dialog-title="Teleporter">
+        Choose a destination:<br>
+        <div class="hole" data-key="list"></div>
+    </div>
+
+</div>
+
+
+    </body>
+</html>

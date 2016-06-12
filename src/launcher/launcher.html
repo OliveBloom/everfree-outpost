@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Everfree Outpost</title>
+<style>
+body { background-color: #140c1c }
+#i { display:none; position:absolute; }
+* {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
+}
+</style>
+
+        %{set_img_base(urls.website + 'img/')}
+    </head>
+    <body>
+        <img id='i' src="%{img_url('assets/www/logo-bar.png')}">
+
+        <script>
+(function() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var px = Math.max(w, h);
+    var scale = Math.max(1, Math.round(px / 1024));
+    var x = Math.floor(w / 2 / scale) * scale - 80;
+    var y = Math.floor(h / 2 / scale) * scale - 60;
+    var i = document.getElementById('i');
+    i.style.left = x + 'px';
+    i.style.top = y + 'px';
+    i.style.transform = 'scale(' + scale + ')';
+    i.style.display = 'block';
+})();
+
+window.SSO_ENDPOINT = %{repr(urls.auth + 'api/')};
+window.VERSIONS_BASE = %{repr(urls.versions)};
+window.LOGO_BAR_URL = %{repr(img_url('assets/www/logo-bar.png'))};
+        </script>
+
+        <script src='launcher.js'></script>
+    </body>
+</html>

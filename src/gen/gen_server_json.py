@@ -6,5 +6,6 @@ if __name__ == '__main__':
     obj = {
             'url': 'ws://localhost:8888/ws',
             'world_version': int(time.time()),
+            'version': 'dev',
             }
     json.dump(obj, sys.stdout)

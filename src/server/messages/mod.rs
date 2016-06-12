@@ -10,7 +10,7 @@ use libphysics::TILE_SIZE;
 
 use auth::Secret;
 use input::InputBits;
-use msg::{Request, Response, InitData, ExtraArg};
+use msg::{Request, Response, ExtraArg};
 use world::{self, Motion, Activity};
 
 use self::clients::Clients;
@@ -34,7 +34,7 @@ pub enum Event {
 
 
 pub enum ControlEvent {
-    OpenWire(WireId),
+    OpenWire(WireId, u32, String),
     CloseWire(WireId, Option<ClientId>),
     ReplCommand(u16, String),
     Shutdown,
@@ -42,8 +42,7 @@ pub enum ControlEvent {
 }
 
 pub enum WireEvent {
-    Login(String, Secret),
-    Register(String, Secret, u32),
+    Ready,
     BadRequest,
 }
 
@@ -57,6 +56,8 @@ pub enum ClientEvent {
     Interact(Time, Option<ExtraArg>),
     UseItem(Time, ItemId, Option<ExtraArg>),
     UseAbility(Time, ItemId, Option<ExtraArg>),
+
+    CreateCharacter(u32),
 
     BadRequest,
 }
@@ -84,7 +85,8 @@ pub enum SyncKind {
 
 #[derive(Debug, Clone)]
 pub enum ClientResponse {
-    Init(Option<EntityId>, Time, u32, u32),
+    Init(EntityId, Time, u32, u32),
+    InitNoPawn(V3, Time, u32, u32),
 
     TerrainChunk(V2, Vec<u16>),
     UnloadChunk(V2),
@@ -124,6 +126,7 @@ pub enum Dialog {
     Inventory(InventoryId),
     Container(InventoryId, InventoryId),
     Crafting(TemplateId, StructureId, InventoryId),
+    PonyEdit(String),
 }
 
 
@@ -227,9 +230,9 @@ impl Messages {
 
     fn handle_control_req(&mut self, _now: Time, req: Request) -> Option<Event> {
         match req {
-            Request::AddClient(wire_id) =>
+            Request::AddClient(wire_id, uid, name) =>
                 // Let the caller decide when to actually add the client.
-                Some(Event::Control(ControlEvent::OpenWire(wire_id))),
+                Some(Event::Control(ControlEvent::OpenWire(wire_id, uid, name))),
             Request::RemoveClient(wire_id) => {
                 // Let the caller decide when to actually remove the client.
                 let opt_cid = self.clients.wire_to_client(wire_id);
@@ -255,10 +258,8 @@ impl Messages {
                 self.send_raw(wire_id, Response::Pong(cookie, now.to_local()));
                 None
             },
-            Request::Login(name, secret) =>
-                Some(Event::Wire(wire_id, WireEvent::Login(name, secret))),
-            Request::Register(name, secret, appearance) =>
-                Some(Event::Wire(wire_id, WireEvent::Register(name, secret, appearance))),
+            Request::Ready =>
+                Some(Event::Wire(wire_id, WireEvent::Ready)),
             _ => {
                 warn!("bad pre-login request from {:?}: {:?}", wire_id, req);
                 Some(Event::Wire(wire_id, WireEvent::BadRequest))
@@ -341,6 +342,10 @@ impl Messages {
             },
 
 
+            Request::CreateCharacter(appearance) =>
+                Ok(Some(ClientEvent::CreateCharacter(appearance))),
+
+
             _ => fail!("bad request: {:?}", req),
         }
     }
@@ -382,14 +387,18 @@ impl Messages {
         let wire_id = client.wire_id();
 
         match resp {
-            ClientResponse::Init(opt_eid, time, cycle_base, cycle_ms) => {
-                let data = InitData {
-                    entity_id: opt_eid.unwrap_or(EntityId(-1_i32 as u32)),
-                    now: time.to_local(),
-                    cycle_base: cycle_base,
-                    cycle_ms: cycle_ms,
-                };
-                self.send_raw(wire_id, Response::Init(data));
+            ClientResponse::Init(eid, time, cycle_base, cycle_ms) => {
+                self.send_raw(wire_id, Response::Init(eid,
+                                                      time.to_local(),
+                                                      cycle_base,
+                                                      cycle_ms));
+            },
+
+            ClientResponse::InitNoPawn(pos, time, cycle_base, cycle_ms) => {
+                self.send_raw(wire_id, Response::InitNoPawn(client.local_pos_tuple(pos),
+                                                            time.to_local(),
+                                                            cycle_base,
+                                                            cycle_ms));
             },
 
             ClientResponse::TerrainChunk(cpos, data) => {
@@ -501,6 +510,9 @@ impl Messages {
                                                                             iid2.unwrap()])),
                     Dialog::Crafting(template_id, sid, iid) =>
                         self.send_raw(wire_id, Response::OpenCrafting(template_id, sid, iid)),
+
+                    Dialog::PonyEdit(name) =>
+                        self.send_raw(wire_id, Response::OpenPonyEdit(name)),
                 }
             },
 

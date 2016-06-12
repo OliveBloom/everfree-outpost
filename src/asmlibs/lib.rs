@@ -182,6 +182,14 @@ pub unsafe extern fn set_pawn_id(client: &mut Client,
     }
 }
 
+#[no_mangle]
+pub unsafe extern fn set_default_camera_pos(client: &mut Client,
+                                            x: i32,
+                                            y: i32,
+                                            z: i32) {
+    client.set_default_camera_pos(V3::new(x, y, z));
+}
+
 // Inventories
 
 #[no_mangle]
@@ -354,6 +362,13 @@ pub unsafe extern fn set_plane_flags(client: &mut Client,
 #[no_mangle]
 pub unsafe extern fn toggle_cursor(client: &mut Client) {
     client.toggle_cursor();
+}
+
+#[no_mangle]
+pub unsafe extern fn calc_scale(client: &Client,
+                                size_x: u16,
+                                size_y: u16) -> i16 {
+    client.calc_scale((size_x, size_y))
 }
 
 #[no_mangle]

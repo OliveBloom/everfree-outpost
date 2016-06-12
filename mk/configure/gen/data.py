@@ -124,7 +124,7 @@ def process():
             %for name in data_files
                 $b_data/%{name} $
             %end
-            $b_data/tiles.png $b_data/items.png: $
+            $b_data/tiles.png $b_data/items.png $b_data/sprites/sprites0.png: $
             process_data | %{' '.join(deps)}
     ''', **locals())
 
