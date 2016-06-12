@@ -237,6 +237,8 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
     DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid));
     logic::handle::entity_create(eng, eid);
 
+    // Init scripts
+    warn_on_err!(eng.script_hooks.call_client_login(eng.as_ref(), cid));
 
     Ok(())
 }
