@@ -372,10 +372,13 @@ fn walk<S: ShapeSource>(s: &S,
                     break;
                 }
             } else {
+                // TODO: figure out what check to do here.
+                // The previous check completely prevents walking down stairs
+
                 // Check if any of the cells below are Floor.
-                if boundary.points().map(|p| s.get_shape(p)).any(|s| s == Shape::Floor) {
-                    break;
-                }
+                //if boundary.points().map(|p| s.get_shape(p)).any(|s| s == Shape::Floor) {
+                //    break;
+                //}
             }
         }
 
