@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 use std::mem;
 use std::slice;
 
-use physics::fill_flags;
+use physics::floodfill;
 use physics::TILE_SIZE;
 use physics::v3::{V3, V2, Vn, scalar, Region};
 
@@ -10,7 +10,6 @@ use Time;
 use data::Data;
 use debug;
 use entity::{Entities, EntityId};
-use graphics;
 use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
@@ -456,8 +455,8 @@ impl<GL: Context> Renderer<GL> {
     }
 
 
-    pub fn load_cavern_map(&mut self, data: &[fill_flags::Flags]) {
-        assert!(mem::size_of::<fill_flags::Flags>() == mem::size_of::<u8>());
+    pub fn load_cavern_map(&mut self, data: &[floodfill::flags::Flags]) {
+        assert!(mem::size_of::<floodfill::flags::Flags>() == mem::size_of::<u8>());
         let raw_data: &[u8] = unsafe {
             slice::from_raw_parts(data.as_ptr() as *const u8,
                                   data.len())

@@ -21,7 +21,7 @@ pub enum KeyAction {
 
 bitflags! {
     pub flags Modifiers: u8 {
-        const ModShift =    0x01,
+        const MOD_SHIFT =    0x01,
     }
 }
 
@@ -62,7 +62,7 @@ impl KeyEvent {
     }
 
     pub fn shift(&self) -> bool {
-        self.mods.contains(ModShift)
+        self.mods.contains(MOD_SHIFT)
     }
 }
 

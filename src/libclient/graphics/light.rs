@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
-use entity::{Entities, Entity, EntityId, Motion};
+use entity::{Entities, Entity, EntityId};
 use platform::gl;
 use predict::Predictor;
 use structures::Structures;
@@ -12,9 +12,9 @@ use util;
 use Time;
 use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
-use graphics::LOCAL_BITS;
 use graphics::entity;
 use graphics::types::{StructureTemplate, HAS_LIGHT};
+use terrain::LOCAL_BITS;
 
 
 
@@ -232,7 +232,6 @@ impl<'a> GeometryGenerator for EntityGeomGen<'a> {
         let mut idx = 0;
         for (&id, e) in self.entities.iter_from(self.next) {
             self.next = id;
-            let is_pawn = Some(id) == self.pawn_id;
 
             if e.appearance & entity::LIGHT == 0 {
                 continue;

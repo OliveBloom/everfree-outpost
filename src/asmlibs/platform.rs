@@ -1,7 +1,4 @@
 use std::prelude::v1::*;
-use std::cell::{Cell, UnsafeCell};
-use std::mem;
-use std::str::FromStr;
 
 use client::inventory::InventoryId;
 use client::platform;

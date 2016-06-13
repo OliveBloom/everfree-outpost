@@ -1,14 +1,14 @@
 use std::prelude::v1::*;
 use std::cmp;
 
-use physics::v3::{V2, Vn, scalar, Region, Align};
+use physics::v3::{V2, Vn, scalar, Region};
 
 use client::ClientObj;
 use inventory::Item;
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{self, KeyEvent, EventStatus};
+use ui::input::{KeyEvent, EventStatus};
 use ui::item;
 use ui::widget::*;
 
@@ -213,7 +213,7 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
         })
     }
 
-    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, data: &DragData) -> bool {
+    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, _data: &DragData) -> bool {
         // Just check that the mouse is over an actual slot.
         self.slot_at_offset(ctx.mouse_pos - rect.min).is_some()
     }

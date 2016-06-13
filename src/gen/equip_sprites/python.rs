@@ -12,7 +12,9 @@ use physics::v3::{V2, scalar};
 use super::{Renderer, Style};
 
 
+#[repr(C)]
 struct PyRenderer {
+    #[allow(dead_code)]
     base: PyObject,
     obj: Renderer,
 }
@@ -186,6 +188,7 @@ static mut MODULE_DEF: PyModuleDef = PyModuleDef {
     m_free: None,
 };
 
+#[allow(non_snake_case)]
 #[no_mangle]
 pub unsafe extern "C" fn PyInit_equip_sprites_render() -> *mut PyObject {
     {

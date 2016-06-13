@@ -2,7 +2,6 @@ use std::prelude::v1::*;
 use std::collections::btree_map::{self, BTreeMap};
 use std::collections::VecDeque;
 use std::collections::Bound;
-use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::ops::Index;
 use std::ptr;

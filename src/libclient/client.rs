@@ -1,7 +1,6 @@
 use std::prelude::v1::*;
 use std::boxed::FnBox;
 use std::cmp;
-use std::mem;
 
 use platform::{Platform, PlatformObj};
 use platform::{Config, ConfigKey};
@@ -9,7 +8,7 @@ use platform::Cursor;
 use platform::gl::Context as GlContext;
 use util;
 
-use graphics::types::{BlockChunk, LocalChunks};
+use graphics::types::LocalChunks;
 use graphics::types::HAS_LIGHT;
 use graphics::renderer::Renderer;
 
@@ -22,7 +21,7 @@ use common_movement::InputBits;
 use Time;
 use data::Data;
 use debug::Debug;
-use entity::{self, Entities, EntityId, Motion};
+use entity::{self, Entities, EntityId};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
@@ -136,7 +135,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Update self.chunks
         let bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
         let blocks = &mut self.chunks[bounds.index(cpos)];
-        rle16Decode(data, blocks);
+        rle16_decode(data, blocks);
 
         // Update self.terrain_shape
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
@@ -481,17 +480,17 @@ impl<'d, P: Platform> Client<'d, P> {
 
         // Update the cavern map
         // TODO: cache this
-        let mut grid = box [physics::fill_flags::Flags::empty(); 96 * 96];
+        let mut grid = box [physics::floodfill::flags::Flags::empty(); 96 * 96];
         let slice_offset = scene.slice_center.reduce() - scalar::<V2>(48);
         // `grid_bounds` is a region the size of the grid, centered at slice_center.
         let grid_bounds = Region::sized(scalar(96)) + slice_offset;
         let slice_bounds = Region::new(tile_bounds.min,
                                        tile_bounds.max + V2::new(0, 16));
-        physics::floodfill(scene.slice_center,
-                           slice_bounds.intersect(grid_bounds),
-                           &*self.terrain_shape,
-                           &mut *grid,
-                           grid_bounds);
+        physics::floodfill::floodfill(scene.slice_center,
+                                      slice_bounds.intersect(grid_bounds),
+                                      &*self.terrain_shape,
+                                      &mut *grid,
+                                      grid_bounds);
         self.renderer.load_cavern_map(&*grid);
     }
 
@@ -607,7 +606,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let cpos = self.default_camera_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
 
         self.renderer.update_framebuffers(self.platform.gl(), &scene);
-        entities.update_z_order(|e| 0);
+        entities.update_z_order(|_| 0);
         self.renderer.update_entity_geometry(&self.data,
                                              &entities,
                                              &self.predictor,
@@ -619,6 +618,7 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn bench(&mut self) {
+        #![allow(warnings)]
         let mut counter = 0;
         for i in 0 .. 10000 {
             //let geom = self.ui.generate_geom(&self.inventories);
@@ -679,7 +679,7 @@ impl<'d, P: Platform> ClientObj for Client<'d, P> {
 }
 
 
-fn rle16Decode(input: &[u16], output: &mut [u16]) {
+fn rle16_decode(input: &[u16], output: &mut [u16]) {
     let mut i = 0;
     let mut j = 0;
     while i < input.len() {
@@ -719,6 +719,7 @@ fn calc_cursor_pos(data: &Data, pos: V3, anim: u16) -> Option<V2> {
         None => return None,
     };
 
+    // TODO: need z + 16 adjustment to work right on stairs
     let tile = pos.div_floor(scalar(TILE_SIZE));
     let pos = tile + DIRS[dir as usize].extend(0);
     Some(V2::new(pos.x, pos.y - pos.z) * scalar(TILE_SIZE) + scalar(TILE_SIZE / 2))

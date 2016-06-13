@@ -1,7 +1,7 @@
-use std::prelude::v1::*;
+#[allow(unused_imports)] use std::prelude::v1::*;
 use std::u16;
 
-use physics::v3::{V3, scalar, Region, Align};
+use physics::v3::{V3, scalar};
 
 use Time;
 

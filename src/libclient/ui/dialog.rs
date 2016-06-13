@@ -5,7 +5,6 @@ use physics::v3::{V2, scalar, Region, Align};
 use fonts::{self, FontMetricsExt};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::inventory;
 use ui::widget::*;
 
 

@@ -3,8 +3,8 @@ use std::mem;
 
 use physics::v3::{V2, scalar, Region};
 
-use ui::{UI, Context, DragData};
-use ui::geom::{Geom, Special};
+use ui::{Context, DragData};
+use ui::geom::Geom;
 use ui::input::{KeyEvent, EventStatus};
 
 
@@ -71,7 +71,7 @@ pub trait Widget: Sized {
 }
 
 pub trait Visitor {
-    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {}
+    fn visit<W: Widget>(&mut self, _w: &mut W, _rect: Region<V2>) {}
 }
 
 
@@ -95,20 +95,6 @@ impl<'a, W, D: Copy> WidgetPack<'a, W, D> {
             dyn: dyn,
         }
     }
-
-    pub fn borrow<'b>(&'b mut self) -> WidgetPack<'b, W, D> {
-        WidgetPack {
-            state: self.state,
-            dyn: self.dyn,
-        }
-    }
-}
-
-
-struct NullVisitor;
-
-impl Visitor for NullVisitor {
-    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {}
 }
 
 
@@ -133,7 +119,7 @@ impl OnKeyVisitor {
 }
 
 impl Visitor for OnKeyVisitor {
-    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
+    fn visit<W: Widget>(&mut self, w: &mut W, _rect: Region<V2>) {
         if self.result.is_handled() {
             return;
         }
@@ -153,19 +139,16 @@ pub enum MouseEvent<'a> {
 pub struct MouseEventVisitor<'a, 'b> {
     kind: MouseEvent<'a>,
     ctx: &'b mut Context,
-    rect: Region<V2>,
 
     result: EventStatus,
 }
 
 impl<'a, 'b> MouseEventVisitor<'a, 'b> {
     pub fn new(kind: MouseEvent<'a>,
-               ctx: &'b mut Context,
-               rect: Region<V2>) -> MouseEventVisitor<'a, 'b> {
+               ctx: &'b mut Context) -> MouseEventVisitor<'a, 'b> {
         MouseEventVisitor {
             kind: kind,
             ctx: ctx,
-            rect: rect,
             result: EventStatus::Unhandled,
         }
     }
@@ -174,7 +157,7 @@ impl<'a, 'b> MouseEventVisitor<'a, 'b> {
                                         w: &mut W,
                                         ctx: &mut Context,
                                         rect: Region<V2>) -> EventStatus {
-        let mut v = MouseEventVisitor::new(kind, ctx, rect);
+        let mut v = MouseEventVisitor::new(kind, ctx);
         w.walk_layout(&mut v, rect.min);
         v.result
     }
@@ -204,19 +187,16 @@ impl<'a, 'b> Visitor for MouseEventVisitor<'a, 'b> {
 pub struct DropCheckVisitor<'a, 'b> {
     data: &'a DragData,
     ctx: &'b Context,
-    rect: Region<V2>,
 
     result: bool,
 }
 
 impl<'a, 'b> DropCheckVisitor<'a, 'b> {
     pub fn new(ctx: &'b Context,
-               rect: Region<V2>,
                data: &'a DragData) -> DropCheckVisitor<'a, 'b> {
         DropCheckVisitor {
             data: data,
             ctx: ctx,
-            rect: rect,
             result: false,
         }
     }
@@ -225,7 +205,7 @@ impl<'a, 'b> DropCheckVisitor<'a, 'b> {
                                         ctx: &Context,
                                         rect: Region<V2>,
                                         data: &DragData) -> bool {
-        let mut v = DropCheckVisitor::new(ctx, rect, data);
+        let mut v = DropCheckVisitor::new(ctx, data);
         w.walk_layout(&mut v, rect.min);
         v.result
     }

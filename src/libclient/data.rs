@@ -85,6 +85,8 @@ const SUPPORTED_VERSION: (u16, u16) = (0, 1);
 macro_rules! gen_data {
     ($($name:ident ($sect_name:pat): $ty:ty,)*) => {
         pub struct Data {
+            // `raw` is never referenced directly, but holds ownership for the other fields.
+            #[allow(dead_code)]
             raw: Box<[u8]>,
             strings: *const str,
 

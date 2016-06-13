@@ -1,6 +1,7 @@
 #![crate_name = "uvedit_asm"]
 #![no_std]
 #![feature(core_intrinsics)]
+#![allow(dead_code)]    // Much of Mesh is dead now, but will be needed 'soon'
 
 #[macro_use] extern crate fakestd as std;
 use std::prelude::v1::*;
@@ -148,15 +149,18 @@ impl State {
     fn load_sprite(&mut self, sprite: &[(u8, u8, u8, u8)]) {
         assert!(sprite.len() == (SPRITE_SIZE * SPRITE_SIZE) as usize);
         for i in 0 .. sprite.len() {
-            let (r,g,b,a) = sprite[i];
+            let (r,_g,_b,a) = sprite[i];
             self.sprite[i] = if a == 255 { r } else { 255 };
         }
     }
 
     fn update(&mut self) {
         self.lines.clear();
-        //self.mesh.draw(self.mouse_pos,
-        //               &mut self.lines);
+
+        if self.mode == Mode::EditMesh {
+            self.mesh.draw(self.mouse_pos,
+                           &mut self.lines);
+        }
 
         for c in &mut self.overlay {
             *c = (0, 0, 0, 0);
@@ -241,9 +245,7 @@ impl State {
 
             Mode::DrawMask(val) => {
                 let px_pos = pos.div_floor(scalar(RENDER_SCALE));
-                let idx = Region::sized(scalar(SPRITE_SIZE)).index(px_pos);
                 if shift {
-                    //self.floodfill_mask(px_pos, val);
                     self.action = Action::MaskOutline(val, px_pos);
                 } else {
                     self.action = Action::DrawMask(val);
@@ -360,11 +362,6 @@ struct Mesh {
 
 impl Mesh {
     fn new() -> Mesh {
-        let low = SPRITE_SIZE * 1 / 4 << FX_BITS;
-        let high = SPRITE_SIZE * 3 / 4 << FX_BITS;
-        let points = vec![V2::new(low, low),     V2::new(high, low),
-                          V2::new(low, high),    V2::new(high, high)].into_boxed_slice();
-
         let a = SPRITE_SIZE * 1 / 4 << FX_BITS;
         let b = SPRITE_SIZE * 2 / 4 << FX_BITS;
         let c = SPRITE_SIZE * 3 / 4 << FX_BITS;
@@ -398,7 +395,6 @@ impl Mesh {
 
     fn hit_vertex(&self, mouse_pos_px: V2) -> Option<usize> {
         let bounds = self.bounds();
-        let mut hit_vertex = false;
         for u in 0 .. self.u_sub + 1 {
             for v in 0 .. self.v_sub + 1 {
                 let pos = V2::new(u as i32, v as i32);
@@ -612,8 +608,8 @@ fn calc_quad_uv(a: V2, b: V2, c: V2, d: V2, x: V2) -> V2 {
         -k0 / (k1 >> FX_BITS)
     };
 
-    let numer = (h.x * FX_1 - f.x * v);
-    let denom = (e.x * FX_1 + g.x * v);
+    let numer = h.x * FX_1 - f.x * v;
+    let denom = e.x * FX_1 + g.x * v;
     let u = numer / (denom >> FX_BITS);
 
     V2::new(u, v)

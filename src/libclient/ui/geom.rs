@@ -1,5 +1,4 @@
 use std::prelude::v1::*;
-use std::mem;
 
 use physics::v3::{V2, scalar, Region};
 
@@ -8,6 +7,8 @@ use fonts::{FontMetrics, FontMetricsExt};
 use super::atlas::AtlasEntry;
 
 
+#[allow(dead_code)]
+#[repr(C)]
 pub struct Vertex {
     src_pos: (u16, u16),
     src_size: (u8, u8),

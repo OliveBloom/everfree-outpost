@@ -1,10 +1,8 @@
 use std::prelude::v1::*;
 use std::collections::VecDeque;
-use std::u16;
 
-use physics::v3::{V3, Vn, scalar, Region};
+use physics::v3::V3;
 use physics::ShapeSource;
-use physics::walk2::Collider;
 use common_movement::{self, InputBits, INPUT_DIR_MASK, MovingEntity};
 
 use Time;
@@ -123,7 +121,6 @@ impl Predictor {
                   self.current_time, future, (future - self.current_time) / TICK_MS);
         }
 
-        let cur_tick = future & !(TICK_MS - 1);
         let mut input_iter = self.pending_inputs.iter().peekable();
         let mut activity = self.canon_activity;
         while self.current_time < future {

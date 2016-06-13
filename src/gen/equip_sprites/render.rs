@@ -6,12 +6,10 @@ extern crate python3_sys;
 mod python;
 pub use python::PyInit_equip_sprites_render;
 
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::iter;
 use std::slice;
 
-use physics::v3::{V2, Vn, Region, scalar};
+use physics::v3::{V2, Region, scalar};
 
 
 fn make_array<T: Copy>(x: T, len: usize) -> Box<[T]> {

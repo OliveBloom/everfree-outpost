@@ -3,8 +3,6 @@ use std::prelude::v1::*;
 use physics::v3::{V2, scalar, Region, Align};
 
 use client::ClientObj;
-use data::Data;
-use platform::{Config, ConfigKey};
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
@@ -131,7 +129,7 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
         })
     }
 
-    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, data: &DragData) -> bool {
+    fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, _data: &DragData) -> bool {
         let y_off = ctx.mouse_pos.y - rect.min.y;
         let slot_idx = (y_off - 8) / (Slot::size().y + 1);
         if slot_idx < 0 || slot_idx >= 9 {

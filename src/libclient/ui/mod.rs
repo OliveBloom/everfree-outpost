@@ -2,9 +2,6 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region};
 
-use inventory::Item;
-use inventory::Inventories;
-use misc;
 use platform::Cursor;
 
 use self::widget::{Widget, Visitor};

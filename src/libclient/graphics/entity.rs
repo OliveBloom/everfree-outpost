@@ -4,7 +4,7 @@ use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
-use entity::{Entities, Entity, EntityId, Motion};
+use entity::{Entities, Entity, EntityId};
 use fonts::{self, FontMetricsExt};
 use platform::gl;
 use predict::Predictor;

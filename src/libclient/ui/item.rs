@@ -40,7 +40,7 @@ impl ItemDisplay {
 impl<'a> Widget for WidgetPack<'a, ItemDisplay, ItemDyn> {
     fn size(&mut self) -> V2 { ItemDisplay::size() }
 
-    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
+    fn walk_layout<V: Visitor>(&mut self, _v: &mut V, _pos: V2) {
         // No children
     }
 

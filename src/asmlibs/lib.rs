@@ -27,14 +27,12 @@ use std::slice;
 
 use client::Data;
 
-use physics::v3::{V3, V2, Region};
-use physics::TILE_BITS;
+use physics::v3::{V3, V2};
 
 use client::inventory;
 use client::graphics::light;
 use client::graphics::structure;
 use client::graphics::terrain;
-use client::graphics::types as gfx_types;
 use client::ui;
 
 mod gl;
@@ -314,10 +312,6 @@ pub extern fn activity_change(client: &mut Client,
 
 unsafe fn make_slice<T>(ptr: *const T, byte_len: usize) -> &'static [T] {
     slice::from_raw_parts(ptr, byte_len / mem::size_of::<T>())
-}
-
-unsafe fn make_slice_mut<T>(ptr: *mut T, byte_len: usize) -> &'static mut [T] {
-    slice::from_raw_parts_mut(ptr, byte_len / mem::size_of::<T>())
 }
 
 unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {

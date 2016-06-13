@@ -31,14 +31,17 @@ struct HotbarSlot {
 }
 
 impl HotbarSlot {
+    #[allow(dead_code)]
     fn is_item(&self) -> bool {
         self.item_id != 0 && !self.is_ability
     }
 
+    #[allow(dead_code)]
     fn is_ability(&self) -> bool {
         self.item_id != 0 && self.is_ability
     }
 
+    #[allow(dead_code)]
     fn is_empty(&self) -> bool {
         self.item_id == 0
     }
@@ -86,10 +89,12 @@ impl Hotbar {
         self.slots[idx as usize].item_id
     }
 
+    #[allow(dead_code)]
     pub fn is_item(&self, idx: u8) -> bool {
         self.slots[idx as usize].is_item()
     }
 
+    #[allow(dead_code)]
     pub fn is_ability(&self, idx: u8) -> bool {
         self.slots[idx as usize].is_ability()
     }

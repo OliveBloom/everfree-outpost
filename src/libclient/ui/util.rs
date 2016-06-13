@@ -23,7 +23,7 @@ impl<F: FnMut(Region<V2>)> RectVisitor<F> {
 }
 
 impl<F: FnMut(Region<V2>)> Visitor for RectVisitor<F> {
-    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
+    fn visit<W: Widget>(&mut self, _w: &mut W, rect: Region<V2>) {
         (self.f)(rect);
     }
 }

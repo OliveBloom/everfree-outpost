@@ -1,9 +1,7 @@
-use core::cmp;
-
 use v3::{self, V3, V2, Vn, Axis, scalar, Region};
 
 use super::{Shape, ShapeSource};
-use super::{TILE_SIZE, TILE_MASK, CHUNK_SIZE};
+use super::{TILE_SIZE, TILE_MASK};
 
 
 bitflags! {
@@ -65,7 +63,6 @@ fn check_boundary<S: ShapeSource>(s: &S,
     assert!(bounds.min.get(axis) % TILE_SIZE == 0,
             "bounds = {:?} does not lie on a cell boundary", bounds);
     assert!(bounds.size().get(axis) == 0);
-    let old_bounds = bounds;
 
     let bounds = Region::new(bounds.min - V3::on_axis(axis, 1),
                              bounds.max).div_round_signed(TILE_SIZE);

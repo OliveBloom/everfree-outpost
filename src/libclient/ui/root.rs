@@ -3,13 +3,10 @@ use std::prelude::v1::*;
 use physics::v3::{V2, scalar, Region, Align};
 
 use client::ClientObj;
-use data::Data;
 use debug::Debug as DebugDyn;
-use fonts::{self, FontMetricsExt};
 use inventory::{Inventory, Inventories};
 use misc;
-use platform::{Config, ConfigKey};
-use ui::atlas;
+use platform::Config;
 use ui::geom::Geom;
 use ui::input::{KeyAction, KeyEvent, EventStatus};
 use ui::{dialog, dialogs, hotbar, debug};

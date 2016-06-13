@@ -29,7 +29,6 @@ pub trait Context {
     fn create_depth_texture(&mut self, size: (u16, u16)) -> Self::Texture;
     fn create_luminance_texture(&mut self, size: (u16, u16)) -> Self::Texture;
     fn load_texture(&mut self, img_name: &str) -> Self::Texture;
-    fn texture_import_HACK(&mut self, name: u32, size: (u16, u16)) -> Self::Texture;
 
     type Framebuffer: Framebuffer<Self>;
     fn create_framebuffer(&mut self,

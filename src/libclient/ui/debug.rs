@@ -1,16 +1,13 @@
 use std::prelude::v1::*;
 
-use physics::v3::{V2, scalar, Region, Align};
+use physics::v3::{V2, scalar, Region};
 
 use client::ClientObj;
 use debug;
 use fonts::{self, FontMetricsExt};
 use platform::{Config, ConfigKey};
-use ui::{Context, DragData};
-use ui::atlas;
 use ui::geom::{Geom, Special};
 use ui::input::{EventStatus, KeyAction, KeyEvent};
-use ui::item;
 use ui::widget::*;
 
 
@@ -45,7 +42,6 @@ const FPS_WIDTH: i32 = 64;
 
 const LABEL_WIDTH: i32 = 32;
 const ROW_WIDTH: i32 = 128;
-const CONTENT_WIDTH: i32 = ROW_WIDTH - LABEL_WIDTH;
 const ROW_HEIGHT: i32 = 10;
 const GRAPH_HEIGHT: i32 = 20;
 
@@ -58,7 +54,7 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
         }
     }
 
-    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
+    fn walk_layout<V: Visitor>(&mut self, _v: &mut V, _pos: V2) {
         // No children
     }
 

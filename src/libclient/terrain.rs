@@ -1,6 +1,6 @@
 use std::mem;
 
-use physics::v3::{V3, V2, Vn, scalar, Region};
+use physics::v3::{V3, V2, scalar, Region};
 use physics::{Shape, ShapeSource};
 use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK};
 
@@ -49,16 +49,6 @@ impl ChunkShape {
             self.layers[layer][chunk_bounds.index(pos)] = f(pos);
         }
         self.refresh(inner_bounds);
-    }
-
-    fn find_ceiling(&self, pos: V3) -> i32 {
-        let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
-        for z in pos.z + 1 .. CHUNK_SIZE {
-            if self.merged[chunk_bounds.index(pos.with_z(z))] != Shape::Empty {
-                return z;
-            }
-        }
-        CHUNK_SIZE
     }
 }
 
@@ -131,15 +121,5 @@ impl TerrainShape {
 
     pub fn fill_shape_in_region(&mut self, bounds: Region, layer: usize, shape: Shape) {
         self.set_shape_in_region_by(bounds, layer, |_pos| shape);
-    }
-
-    pub fn find_ceiling(&self, pos: V3) -> i32 {
-        let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
-        let offset = pos - (cpos * scalar(CHUNK_SIZE)).extend(0);
-
-        let local_bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
-        let cpos = cpos & scalar(LOCAL_MASK);
-
-        self.chunks[local_bounds.index(cpos)].find_ceiling(offset)
     }
 }

@@ -1,6 +1,5 @@
 use std::prelude::v1::*;
-use std::cmp;
-use physics::v3::{V2, scalar, Region};
+use physics::v3::{V2, Region};
 
 use client::ClientObj;
 use inventory::{Item, InventoryId};
@@ -15,14 +14,12 @@ use ui::widget::*;
 
 pub struct Inventory {
     grid: inventory::Grid,
-    ability: bool,
 }
 
 impl Inventory {
-    pub fn new(ability: bool) -> Inventory {
+    pub fn new() -> Inventory {
         Inventory {
             grid: inventory::Grid::new(),
-            ability: ability,
         }
     }
 

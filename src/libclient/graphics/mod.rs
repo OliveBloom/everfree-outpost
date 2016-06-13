@@ -1,5 +1,3 @@
-
-
 pub mod renderer;
 
 pub mod types;
@@ -10,9 +8,6 @@ pub mod entity;
 
 
 const ATLAS_SIZE: u16 = 32;
-
-const LOCAL_BITS: usize = 3;
-const LOCAL_SIZE: i32 = 1 << LOCAL_BITS;
 
 
 pub trait IntrusiveCorner {

@@ -6,7 +6,6 @@ use std::iter;
 use std::marker::PhantomData;
 use std::mem;
 use std::slice;
-use std::str::FromStr;
 
 use physics::v3::{Region, V2, scalar};
 
@@ -14,6 +13,12 @@ use client::platform::gl;
 use client::platform::gl::{DrawArgs, UniformValue};
 
 mod ffi {
+    #[repr(C)]
+    pub struct Size16 {
+        pub x: u16,
+        pub y: u16,
+    }
+
     extern "C" {
         pub fn asmgl_has_extension(ptr: *const u8, len: usize) -> u8;
 
@@ -45,7 +50,7 @@ mod ffi {
 
         pub fn asmgl_load_texture(name_ptr: *const u8,
                                   name_len: usize,
-                                  size_p: *mut (u16, u16)) -> u32;
+                                  size_p: *mut Size16) -> u32;
         pub fn asmgl_gen_texture(width: u16, height: u16, kind: u8) -> u32;
         pub fn asmgl_delete_texture(name: u32);
         pub fn asmgl_active_texture(unit: usize);
@@ -188,7 +193,6 @@ const NO_BUFFER: Name<Buffer> = Name { raw: 0, _marker: PhantomData };
 const NO_SHADER: Name<Shader> = Name { raw: 0, _marker: PhantomData };
 const NO_TEXTURE: Name<Texture> = Name { raw: 0, _marker: PhantomData };
 const NO_FRAMEBUFFER: Name<Framebuffer> = Name { raw: 0, _marker: PhantomData };
-const NO_RENDERBUFFER: Name<Renderbuffer> = Name { raw: 0, _marker: PhantomData };
 
 
 // State tracker internals
@@ -197,6 +201,7 @@ const NO_RENDERBUFFER: Name<Renderbuffer> = Name { raw: 0, _marker: PhantomData 
 #[repr(u8)]
 pub enum BufferTarget {
     Array = 0,
+    #[allow(dead_code)]
     ElementArray = 1,
 }
 
@@ -354,7 +359,7 @@ impl Inner {
     }
 
     pub fn delete_shader(&mut self, name: Name<Shader>) {
-        unsafe { ffi::asmgl_delete_buffer(name.raw) };
+        unsafe { ffi::asmgl_delete_shader(name.raw) };
         if self.shader == name {
             self.shader = NO_SHADER;
         }
@@ -404,13 +409,18 @@ impl Inner {
     pub fn load_texture(&mut self,
                         img_name: &str,
                         size: &mut (u16, u16)) -> Name<Texture> {
+        let mut size16 = ffi::Size16 { x: 0, y: 0 };
+
         let name = unsafe {
             ffi::asmgl_load_texture(img_name.as_ptr(),
                                     img_name.len(),
-                                    size)
+                                    &mut size16)
         };
         assert!(name != 0);
         let name = Name::new(name);
+
+        *size = (size16.x, size16.y);
+
         // As a side effect, load_texture also binds the texture to the context, and sets the
         // current texture image unit to 0.
         self.texture_unit = 0;
@@ -632,7 +642,7 @@ enum Multi<T> {
 impl<T> Multi<T> {
     fn len(&self) -> usize {
         match *self {
-            Multi::One(ref x) => 1,
+            Multi::One(_) => 1,
             Multi::Many(ref xs) => xs.len(),
         }
     }
@@ -825,6 +835,8 @@ impl GL {
             },
         }
 
+        assert!(ctx.is_framebuffer_complete());
+
         Framebuffer_ {
             name: name,
         }
@@ -924,10 +936,6 @@ impl gl::Context for GL {
         }
     }
 
-    fn texture_import_HACK(&mut self, name: u32, size: (u16, u16)) -> Texture {
-        unimplemented!()
-    }
-
 
     type Framebuffer = Framebuffer;
 
@@ -989,10 +997,6 @@ pub struct Buffer {
 }
 
 impl Buffer {
-    pub fn name(&self) -> Name<Buffer> {
-        self.name
-    }
-
     pub fn len(&self) -> usize {
         self.len
     }
@@ -1267,13 +1271,6 @@ impl Drop for Texture {
 }
 
 
-fn iter_names<'a, T>(first: &'a Name<T>,
-                     rest: &'a [Name<T>])
-                     -> iter::Chain<iter::Once<&'a Name<T>>, slice::Iter<'a, Name<T>>> {
-    iter::once(first).chain(rest.iter())
-}
-
-
 pub struct Framebuffer {
     inner: InnerPtr,
     multi: Multi<Framebuffer_>,
@@ -1284,6 +1281,7 @@ pub struct Framebuffer {
 
     // For ownership purposes only.  The RBs are never used once the FB has been constructed, but
     // we need to keep them somewhere and ensure they get destroyed at an appropriate time.
+    #[allow(dead_code)]
     renderbuffers: Box<[Renderbuffer]>,
 }
 

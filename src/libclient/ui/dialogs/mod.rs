@@ -1,4 +1,4 @@
-use std::prelude::v1::*;
+#[allow(unused_imports)] use std::prelude::v1::*;
 use std::mem;
 use physics::v3::{V2, scalar, Region};
 
@@ -28,11 +28,11 @@ impl AnyDialog {
     }
 
     pub fn inventory() -> AnyDialog {
-        AnyDialog::Inventory(Inventory::new(false))
+        AnyDialog::Inventory(Inventory::new())
     }
 
     pub fn ability() -> AnyDialog {
-        AnyDialog::Ability(Inventory::new(true))
+        AnyDialog::Ability(Inventory::new())
     }
 
     pub fn container(inv_id1: InventoryId,
@@ -141,7 +141,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
 struct SizeVisitor<'a>(&'a mut V2);
 
 impl<'a> Visitor for SizeVisitor<'a> {
-    fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
+    fn visit<W: Widget>(&mut self, w: &mut W, _rect: Region<V2>) {
         *self.0 = w.size();
     }
 }
