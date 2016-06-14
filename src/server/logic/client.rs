@@ -17,7 +17,6 @@ use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use chunks;
 use engine::Engine;
-use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind, Dialog};
 use world;
@@ -135,9 +134,6 @@ pub fn login(eng: &mut Engine,
 
 
 fn login_no_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart> {
-    let c = &bundle.clients[0];
-
-
     // TODO: make sure login cannot fail past this point
 
 
@@ -234,7 +230,7 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
                                                        cycle_base,
                                                        DAY_NIGHT_CYCLE_MS));
 
-    DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid));
+    warn_on_err!(DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid)));
     logic::handle::entity_create(eng, eid);
 
     // Init scripts
@@ -247,14 +243,12 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
     let uid = eng.extra.client_uid.remove(&cid).expect("no user ID for client");
     eng.extra.uid_client.remove(&uid);
 
-    let (opt_eid, pid, pos) =
+    let (pid, pos) =
         if let Some(e) = eng.world.client(cid).pawn() {
-            (Some(e.id()),
-             e.plane_id(),
+            (e.plane_id(),
              e.motion().pos(eng.now))
         } else {
-            (None,
-             unwrap!(eng.world.transient_plane_id(STABLE_PLANE_FOREST)),
+            (unwrap!(eng.world.transient_plane_id(STABLE_PLANE_FOREST)),
              // TODO: hardcoded spawn point
              V3::new(32, 32, 0))
         };
@@ -308,8 +302,6 @@ pub fn update_view(eng: &mut Engine,
                    old_cpos: V2,
                    new_plane: PlaneId,
                    new_cpos: V2) {
-    let now = eng.now();
-
     let old_region = vision::vision_region_chunk(old_cpos);
     let new_region = vision::vision_region_chunk(new_cpos);
     let plane_change = new_plane != old_plane;

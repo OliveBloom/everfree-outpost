@@ -1,7 +1,6 @@
 use types::*;
 
 use data::StructureTemplate;
-use world::{Entity};
 
 
 #[allow(unused_variables)]
@@ -43,6 +42,7 @@ pub trait Hooks {
 }
 
 pub struct NoHooks;
+#[allow(unused_variables)]
 impl Hooks for NoHooks {
     fn check_structure_placement(&self,
                                  template: &StructureTemplate,

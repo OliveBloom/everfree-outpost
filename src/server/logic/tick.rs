@@ -7,7 +7,6 @@ use logic;
 use messages::ClientResponse;
 use physics::UpdateKind;
 use timing::next_tick;
-use vision;
 use world::Activity;
 use world::object::*;
 

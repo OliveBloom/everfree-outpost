@@ -8,10 +8,9 @@ use util::StringResult;
 use util::now;
 use libphysics::TILE_SIZE;
 
-use auth::Secret;
 use input::InputBits;
 use msg::{Request, Response, ExtraArg};
-use world::{self, Motion, Activity};
+use world::{self, Activity};
 
 use self::clients::Clients;
 
@@ -71,7 +70,6 @@ pub enum ControlResponse {
 
 #[derive(Debug, Clone)]
 pub enum WireResponse {
-    RegisterResult(u32, String),
     KickReason(String),
 }
 
@@ -369,8 +367,6 @@ impl Messages {
 
     pub fn send_wire(&self, wire_id: WireId, resp: WireResponse) {
         match resp {
-            WireResponse::RegisterResult(code, msg) =>
-                self.send_raw(wire_id, Response::RegisterResult(code, msg)),
             WireResponse::KickReason(msg) =>
                 self.send_raw(wire_id, Response::KickReason(msg)),
         }

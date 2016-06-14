@@ -5,18 +5,16 @@ use std::collections::hash_map::{self, HashMap};
 
 use libcommon_movement as movement;
 use libcommon_movement::{InputBits, MovingEntity};
-use libphysics::{self, ShapeSource};
-use libphysics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK, TILE_SIZE};
+use libphysics::ShapeSource;
+use libphysics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK};
 
 use types::*;
-use util::StrResult;
-use util::SmallVec;
 use util::Coroutine;
 
 use cache::TerrainCache;
 use data::Data;
-use timing::{next_tick, TICK_MS};
-use world::{self, World, Entity};
+use timing::next_tick;
+use world::{World, Entity};
 use world::{Motion, Activity};
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
@@ -44,9 +42,8 @@ impl<'d> Physics<'d> {
         }
     }
 
-    pub fn add_entity(&mut self, eid: EntityId, velocity: V3) {
-        let mut me = MovingEntity::new();
-        self.moving_entities.insert(eid, me);
+    pub fn add_entity(&mut self, eid: EntityId) {
+        self.moving_entities.insert(eid, MovingEntity::new());
     }
 
     pub fn remove_entity(&mut self, eid: EntityId) {
@@ -74,7 +71,6 @@ pub struct UpdateCo<'a, 'd: 'a> {
 
 impl<'d> Physics<'d> {
     pub fn update<'a>(&'a mut self, now: Time) -> UpdateCo<'a, 'd> {
-        let ptr = self as *mut _;
         UpdateCo {
             data: self.data,
             now: now,

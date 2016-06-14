@@ -1,10 +1,8 @@
 use std::boxed::FnBox;
-use std::error::Error;
 use std::sync::mpsc::{Sender, Receiver};
 
 use types::*;
 
-use auth::{Auth, Secret};
 use cache::TerrainCache;
 use chat::Chat;
 use chunks::Chunks;
@@ -47,7 +45,6 @@ pub struct Engine<'d> {
     pub timer: Timer,
     pub physics: Physics<'d>,
     pub vision: Vision,
-    pub auth: Auth,
     pub chunks: Chunks<'d>,
     pub cache: TerrainCache,
     pub terrain_gen: TerrainGen,
@@ -83,7 +80,6 @@ impl<'d> Engine<'d> {
             timer: Timer::new(),
             physics: Physics::new(data),
             vision: Vision::new(),
-            auth: Auth::new(&storage.auth_db_path()).unwrap(),
             chunks: Chunks::new(storage),
             cache: TerrainCache::new(),
             terrain_gen: TerrainGen::new(data, storage),
@@ -207,33 +203,7 @@ impl<'d> Engine<'d> {
                    wire_id: WireId,
                    evt: WireEvent) -> HandlerResult {
         use messages::WireEvent::*;
-        use messages::WireResponse::*;
         match evt {
-            /*
-            Login(name, secret) => {
-                match self.auth.login(&*name, &secret) {
-                    Ok(true) => {
-                        warn_on_err!(logic::client::login(self.as_ref(), wire_id, &*name));
-                    },
-                    Ok(false) => {
-                        info!("{:?}: login as {} failed: bad name/secret",
-                              wire_id, name);
-                        self.kick_wire(wire_id, "login failed")
-                    },
-                    Err(e) => {
-                        info!("{:?}: login as {} failed: auth error: {}",
-                              wire_id, name, e.description());
-                        self.kick_wire(wire_id, "login failed")
-                    },
-                }
-            },
-
-            Register(name, secret, appearance) => {
-                let (code, msg) = self.do_register(wire_id, name, secret, appearance);
-                self.messages.send_wire(wire_id, RegisterResult(code, msg));
-            },
-            */
-
             Ready => {
                 info!("wire ready: {:?}", wire_id);
                 warn_on_err!(logic::client::ready(self, wire_id));

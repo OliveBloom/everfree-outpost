@@ -10,16 +10,15 @@ use chunks;
 use data::StructureTemplate;
 use engine::Engine;
 use engine::glue::*;
-use engine::split::{Open, EngineRef};
+use engine::split::Open;
 use logic;
 use messages::{ClientResponse, SyncKind};
-use physics;
-use world::{self, World, Entity, Structure};
+use world::{self, World, Structure};
 use world::Motion;
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
-use vision::{self, vision_region};
+use vision;
 
 
 macro_rules! impl_world_Hooks {
@@ -293,7 +292,7 @@ fn compute_layer_mask_excluding(w: &World,
 }
 
 
-fn teleport_entity_internal(mut wf: WorldFragment,
+fn teleport_entity_internal(wf: WorldFragment,
                             eid: EntityId,
                             pid: Option<PlaneId>,
                             stable_pid: Option<Stable<PlaneId>>,

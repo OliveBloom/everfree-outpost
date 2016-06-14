@@ -1,10 +1,7 @@
 use types::*;
 
 use engine::split::{EngineRef, Open};
-use input::{InputBits};
 use msg::ExtraArg;
-use physics;
-use world::object::*;
 use vision;
 
 

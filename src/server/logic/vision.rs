@@ -4,7 +4,7 @@ use types::*;
 
 use engine::glue::*;
 use messages::{Messages, ClientResponse};
-use world::{self, World, Entity, Motion};
+use world::{World, Entity, Motion};
 use world::object::*;
 use vision::{self, Vision};
 
@@ -44,7 +44,7 @@ impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
         self.messages().send_client(cid, entity_gone_message2(eid));
     }
 
-    fn on_entity_motion_update(&mut self, cid: ClientId, eid: EntityId) {
+    fn on_entity_motion_update(&mut self, _cid: ClientId, _eid: EntityId) {
         // New physics code never uses these callbacks.
         unreachable!();
     }
@@ -194,7 +194,7 @@ pub fn add_entity(vision: &mut Vision,
 
 pub fn remove_entity(vision: &mut Vision,
                      messages: &mut Messages,
-                     world: &World,
+                     _world: &World,
                      eid: EntityId,
                      plane: PlaneId,
                      cpos: V2) {

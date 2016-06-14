@@ -1,13 +1,10 @@
 use types::*;
-use libphysics::{TILE_SIZE, CHUNK_SIZE};
 
 use engine::Engine;
-use input::Action;
 use logic;
 use messages::{Messages, ClientResponse};
-use physics::{Physics, UpdateKind};
-use timing::next_tick;
-use vision::{self, Vision};
+use physics::Physics;
+use vision::Vision;
 use world::{Activity, Motion, World};
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;

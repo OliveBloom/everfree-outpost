@@ -5,14 +5,13 @@ use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use engine::Engine;
 use logic::vision;
-use world::Entity;
 use world::object::*;
 
 
 pub fn entity_create(eng: &mut Engine, eid: EntityId) {
     let e = eng.world.entity(eid);
 
-    eng.physics.add_entity(eid, eng.world.entity(eid).motion().velocity);
+    eng.physics.add_entity(eid);
 
     let msg_appear = vision::entity_appear_message(e);
     let msg_motion = vision::entity_motion_message_adjusted(e, eng.now);

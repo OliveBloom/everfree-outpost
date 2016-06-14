@@ -1,7 +1,5 @@
-use cache::TerrainCache;
 use chunks::{self, Chunks};
 use engine::split::{EngineRef, Open, Part};
-use physics::{self, Physics};
 use terrain_gen;
 use vision::{self, Vision};
 use world::{self, World};

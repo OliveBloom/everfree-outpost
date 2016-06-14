@@ -5,9 +5,6 @@ use libphysics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use types::*;
 
-use msg;
-use world;
-
 
 pub struct Clients {
     clients: HashMap<ClientId, ClientInfo>,

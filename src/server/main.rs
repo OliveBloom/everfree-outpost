@@ -66,7 +66,6 @@ mod pubsub;
 mod chat;
 mod timing;
 
-mod auth;
 mod messages;
 mod physics;
 mod chunks;

@@ -14,7 +14,6 @@ use world::{TerrainChunkFlags, StructureFlags};
 use world::{Activity, Motion};
 use world::Item;
 use world::fragment::Fragment;
-use world::hooks::Hooks;
 use world::ops::{self, OpResult};
 
 
@@ -307,18 +306,14 @@ pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
     }
 
     fn set_activity(&mut self, activity: Activity) {
-        let eid = self.id();
         self.obj_mut().activity = activity;
     }
 
     fn set_motion(&mut self, motion: Motion) {
-        let eid = self.id();
-        // TODO: update entity-by-chunk cache
         self.obj_mut().motion = motion;
     }
 
     fn set_appearance(&mut self, appearance: u32) {
-        let eid = self.id();
         self.obj_mut().appearance = appearance;
     }
 

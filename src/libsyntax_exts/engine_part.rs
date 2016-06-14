@@ -40,15 +40,14 @@ mod parts {
             (3) TIMER =         ::timer::Timer;
             (4) PHYSICS =       ::physics::Physics<'d>;
             (5) VISION =        ::vision::Vision;
-            (6) AUTH =          ::auth::Auth;
-            (7) CHUNKS =        ::chunks::Chunks<'d>;
-            (8) CACHE =         ::cache::TerrainCache;
-            (9) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
-            (10) CHAT =         ::chat::Chat;
+            (6) CHUNKS =        ::chunks::Chunks<'d>;
+            (7) CACHE =         ::cache::TerrainCache;
+            (8) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
+            (9) CHAT =         ::chat::Chat;
     }
 }
 
-const NUM_PARTS: usize = 11;
+const NUM_PARTS: usize = 10;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]
@@ -73,7 +72,6 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         timer = TIMER;
         physics = PHYSICS;
         vision = VISION;
-        auth = AUTH;
         chunks = CHUNKS;
         cache = CACHE;
         terrain_gen = TERRAIN_GEN;
