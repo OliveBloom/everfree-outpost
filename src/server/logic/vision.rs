@@ -4,7 +4,7 @@ use types::*;
 
 use engine::glue::*;
 use messages::{Messages, ClientResponse};
-use world::{World, Entity, Motion};
+use world::{World, Entity, Structure, Motion};
 use world::object::*;
 use vision::{self, Vision};
 
@@ -160,4 +160,16 @@ pub fn entity_gone_message(e: ObjectRef<Entity>) -> ClientResponse {
 
 pub fn entity_gone_message2(eid: EntityId) -> ClientResponse {
     ClientResponse::EntityGone(eid, 0)
+}
+
+pub fn structure_appear_message(s: ObjectRef<Structure>) -> ClientResponse {
+    ClientResponse::StructureAppear(s.id(), s.template_id(), s.pos())
+}
+
+pub fn structure_gone_message(s: ObjectRef<Structure>) -> ClientResponse {
+    ClientResponse::StructureGone(s.id())
+}
+
+pub fn structure_replace_message(s: ObjectRef<Structure>) -> ClientResponse {
+    ClientResponse::StructureReplace(s.id(), s.template_id())
 }

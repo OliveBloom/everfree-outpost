@@ -251,6 +251,35 @@ impl Vision {
     }
 
 
+    pub fn structure_add<F>(&mut self,
+                            sid: StructureId,
+                            plane: PlaneId,
+                            cpos: V2,
+                            mut f: F)
+            where F: FnMut(ClientId) {
+        self.ps.publish(ViewableId::Structure(sid), (plane, cpos),
+                        |_, _, &cid| f(cid));
+    }
+
+    pub fn structure_remove<F>(&mut self,
+                               sid: StructureId,
+                               plane: PlaneId,
+                               cpos: V2,
+                               mut f: F)
+            where F: FnMut(ClientId) {
+        self.ps.unpublish(ViewableId::Structure(sid), (plane, cpos),
+                          |_, _, &cid| f(cid));
+    }
+
+    pub fn structure_update<F>(&mut self,
+                               sid: StructureId,
+                               mut f: F)
+            where F: FnMut(ClientId) {
+        self.ps.message(&ViewableId::Structure(sid),
+                        |_, &cid| f(cid));
+    }
+
+
     pub fn add_terrain_chunk<H>(&mut self,
                                 tcid: TerrainChunkId,
                                 plane: PlaneId,

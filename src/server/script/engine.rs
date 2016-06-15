@@ -580,14 +580,20 @@ define_python_class! {
                                   pos: V3,
                                   template_id: TemplateId) -> PyResult<StructureId> {
             let mut eng = eng;
+            // FIXME hacky transmute
+            let eng2 = unsafe { mem::transmute_copy(&eng) };
             let mut s = try!(eng.create_structure(pid, pos, template_id));
             try!(s.set_attachment(StructureAttachment::Chunk));
+            logic::structure::on_create(eng2, s.id());
             Ok(s.id())
         }
 
         fn world_structure_destroy(eng: glue::WorldFragment,
                                    sid: StructureId) -> PyResult<()> {
             let mut eng = eng;
+            // FIXME hacky transmute
+            let eng2 = unsafe { mem::transmute_copy(&eng) };
+            logic::structure::on_destroy(eng2, sid);
             try!(eng.destroy_structure(sid));
             Ok(())
         }
@@ -596,9 +602,13 @@ define_python_class! {
                                    sid: StructureId,
                                    template_id: TemplateId) -> PyResult<()> {
             let mut eng = eng;
+            // FIXME hacky transmute
+            let eng2 = unsafe { mem::transmute_copy(&eng) };
             let mut s = pyunwrap!(eng.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
+            let old_template_id = s.template_id();
             try!(s.set_template_id(template_id));
+            logic::structure::on_replace(eng2, sid, old_template_id);
             Ok(())
         }
 

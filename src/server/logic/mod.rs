@@ -8,4 +8,6 @@ pub mod world;
 pub mod misc;
 pub mod extra;
 pub mod tick;
+
 pub mod entity;
+pub mod structure;

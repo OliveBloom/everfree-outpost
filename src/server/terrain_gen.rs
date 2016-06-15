@@ -22,6 +22,7 @@ use util::StrResult;
 
 use data::Data;
 use engine::split::EngineRef;
+use logic;
 use storage::Storage;
 use world::Fragment as World_Fragment;
 use world::Hooks;
@@ -80,7 +81,7 @@ impl TerrainGen {
     }
 }
 
-pub trait Fragment<'d> {
+pub trait Fragment<'d>: Sized {
     fn terrain_gen_mut(&mut self) -> &mut TerrainGen;
 
     type WF: World_Fragment<'d>;
@@ -96,6 +97,8 @@ pub trait Fragment<'d> {
     }
 
     fn process(&mut self, evt: TerrainGenEvent) {
+        // FIXME
+        let eng2: &mut logic::structure::PartialEngine = unsafe { mem::transmute_copy(self) };
         let (stable_pid, cpos, gc) = evt;
         self.with_world(move |wf| {
             let pid = unwrap_or!(wf.world().transient_plane_id(stable_pid));
@@ -147,6 +150,9 @@ pub trait Fragment<'d> {
                         warn_on_err!(sh.call_hack_apply_structure_extras(eng.borrow(), sid, k, v));
                     }
                 }
+
+                // FIXME: hack - shouldn't talk to logic from here
+                logic::structure::on_create(&mut *eng2, sid);
             }
         });
     }

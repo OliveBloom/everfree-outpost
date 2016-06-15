@@ -1,12 +1,17 @@
+use std::mem;
+
 use types::*;
 
 use chunks;
+use engine::Engine;
 use engine::glue::*;
 use engine::split::EngineRef;
+use engine::split2::Coded;
+use logic;
 use terrain_gen::Fragment as TerrainGen_Fragment;
 use world;
 use world::Fragment as World_Fragment;
-use world::bundle;
+use world::bundle::{self, AnyId};
 use world::flags;
 use world::object::*;
 
@@ -36,14 +41,25 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
         trace!("Provider::load_plane({:?})", stable_pid);
         let mut file = unwrap!(self.storage().open_plane_file(stable_pid));
         let b = try!(bundle::read_bundle(&mut file));
-        bundle::import_bundle(&mut self.as_hidden_world_fragment(), &b);
+        let importer = bundle::import_bundle(&mut self.as_hidden_world_fragment(), &b);
+
+        {
+            // FIXME
+            let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
+            importer.iter_imports(|id| match id {
+                AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
+                AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
+                _ => {},
+            });
+        }
+
         Ok(())
     }
 
     fn unload_plane(&mut self, pid: PlaneId) -> bundle::Result<()> {
         let stable_pid = self.as_hidden_world_fragment().plane_mut(pid).stable_id();
         trace!("Provider::unload_plane({:?})", pid);
-        {
+        let exporter = {
             let p = self.world().plane(pid);
 
             let mut exporter = bundle::Exporter::new(self.data());
@@ -52,7 +68,20 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
 
             let mut file = self.storage().create_plane_file(stable_pid);
             try!(bundle::write_bundle(&mut file, &b));
+
+            exporter
+        };
+
+        {
+            // FIXME
+            let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
+            exporter.iter_exports(|id| match id {
+                AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
+                AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
+                _ => {},
+            });
         }
+
         try!(world::Fragment::destroy_plane(&mut self.as_hidden_world_fragment(), pid));
         Ok(())
     }
@@ -64,8 +93,18 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
         if let Some(mut file) = opt_file {
             trace!("Provider::load_terrain_chunk({:?}, {:?}): from file", pid, cpos);
             let b = try!(bundle::read_bundle(&mut file));
-            bundle::import_bundle(&mut self.as_hidden_world_fragment(), &b);
+            let importer = bundle::import_bundle(&mut self.as_hidden_world_fragment(), &b);
             // TODO: do something intelligent if loading fails, so the whole server doesn't crash
+
+            {
+                // FIXME
+                let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
+                importer.iter_imports(|id| match id {
+                    AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
+                    AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
+                    _ => {},
+                });
+            }
         } else {
             trace!("Provider::load_terrain_chunk({:?}, {:?}): from terrain_gen", pid, cpos);
             try!(self.as_terrain_gen_fragment().generate(pid, cpos));
@@ -77,15 +116,15 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
         // TODO(plane): use pid + cpos for filename
         trace!("Provider::unload_terrain_chunk({:?}, {:?})", pid, cpos);
         let stable_tcid = self.as_hidden_world_fragment().plane_mut(pid).save_terrain_chunk(cpos);
-        let tcid = {
+        let (tcid, exporter) = {
             let p = self.world().plane(pid);
             let tc = p.terrain_chunk(cpos);
 
             // Don't save chunks that are not fully generated, since they are filled with
             // 'placeholder' block instead of real data.  Instead, let the generated data be
             // discarded, and let the chunk be regenerated the next time it is needed.
+            let mut exporter = bundle::Exporter::new(self.data());
             if !tc.flags().contains(flags::TC_GENERATION_PENDING) {
-                let mut exporter = bundle::Exporter::new(self.data());
                 exporter.add_terrain_chunk(&tc);
                 let b = exporter.finish();
 
@@ -93,8 +132,19 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
                 try!(bundle::write_bundle(&mut file, &b));
             }
 
-            tc.id()
+            (tc.id(), exporter)
         };
+
+        {
+            // FIXME
+            let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
+            exporter.iter_exports(|id| match id {
+                AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
+                AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
+                _ => {},
+            });
+        }
+
         try!(world::Fragment::destroy_terrain_chunk(&mut self.as_hidden_world_fragment(), tcid));
         Ok(())
     }

@@ -42,7 +42,6 @@ pub fn create<'d, F>(f: &mut F,
 
     let sid = unwrap!(f.world_mut().structures.insert(s));
     add_to_lookup(&mut f.world_mut().structures_by_chunk, sid, pid, bounds);
-    f.with_hooks(|h| h.on_structure_create(sid));
     Ok(sid)
 }
 
@@ -120,7 +119,6 @@ pub fn destroy<'d, F>(f: &mut F,
         ops::inventory::destroy(f, iid).unwrap();
     }
 
-    f.with_hooks(|h| h.on_structure_destroy(sid, s.plane, bounds));
     Ok(())
 }
 
@@ -204,7 +202,6 @@ pub fn replace<'d, F>(f: &mut F,
         s.template = new_tid;
     }
 
-    f.with_hooks(|h| h.on_structure_replace(sid, pid, old_bounds));
     Ok(())
 }
 

@@ -68,60 +68,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
 
-    /*
-    fn on_entity_activity_change(&mut self, eid: EntityId) {
-        trace!("entity {:?} activity changed", eid);
-        let now = self.now();
-        // FIXME: need to schedule a physics update right away
-    }
-    */
-
-
-    fn on_structure_create(&mut self, sid: StructureId) {
-        let (pid, area) = {
-            let s = self.world().structure(sid);
-            (s.plane_id(), structure_area(s))
-        };
-        vision::Fragment::add_structure(&mut self.$as_vision_fragment(), sid, pid, area);
-
-        let Open { world, cache, .. } = (**self).open();
-        let s = world.structure(sid);
-        cache.update_region(world, pid, s.bounds());
-    }
-
-    fn on_structure_destroy(&mut self,
-                            sid: StructureId,
-                            old_pid: PlaneId,
-                            old_bounds: Region) {
-        vision::Fragment::remove_structure(&mut self.$as_vision_fragment(), sid);
-
-        {
-            let Open { world, cache, .. } = (**self).open();
-            cache.update_region(world, old_pid, old_bounds);
-        }
-    }
-
-    fn on_structure_replace(&mut self,
-                            sid: StructureId,
-                            pid: PlaneId,
-                            old_bounds: Region) {
-        {
-            let Open { world, cache, .. } = (**self).open();
-            cache.update_region(world, pid, old_bounds);
-        }
-
-        let (pid, area) = {
-            let s = self.world().structure(sid);
-            (s.plane_id(), structure_area(s))
-        };
-        vision::Fragment::set_structure_area(&mut self.$as_vision_fragment(), sid, pid, area);
-        vision::Fragment::change_structure_template(&mut self.$as_vision_fragment(), sid);
-
-        let Open { world, cache, .. } = (**self).open();
-        let s = world.structure(sid);
-        cache.update_region(world, pid, old_bounds.join(s.bounds()));
-    }
-
     fn check_structure_placement(&self,
                                  template: &StructureTemplate,
                                  pid: PlaneId,
