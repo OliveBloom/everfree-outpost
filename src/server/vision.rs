@@ -58,8 +58,6 @@ pub struct Vision {
     ps: PubSub<ViewableId, Location, ViewerId>,
 
     viewer_pos: HashMap<ViewerId, (PlaneId, Region<V2>)>,
-    structure_pos: HashMap<StructureId, (PlaneId, SmallSet<V2>)>,
-    terrain_chunk_pos: HashMap<TerrainChunkId, (PlaneId, V2)>,
 
     inv_ps: PubSub<InventoryId, (), ViewerId>,
     viewer_invs: HashMap<ViewerId, Vec<InventoryId>>,
@@ -134,8 +132,6 @@ impl Vision {
             ps: PubSub::new(),
 
             viewer_pos: HashMap::new(),
-            structure_pos: HashMap::new(),
-            terrain_chunk_pos: HashMap::new(),
 
             inv_ps: PubSub::new(),
             viewer_invs: HashMap::new(),
@@ -309,89 +305,6 @@ impl Vision {
     }
 
 
-    pub fn add_terrain_chunk<H>(&mut self,
-                                tcid: TerrainChunkId,
-                                plane: PlaneId,
-                                cpos: V2,
-                                h: &mut H)
-            where H: Hooks {
-        self.terrain_chunk_pos.insert(tcid, (plane, cpos));
-        self.ps.publish(ViewableId::TerrainChunk(tcid), (plane, cpos),
-                        |_, _, &cid| h.on_terrain_chunk_appear(cid, tcid));
-    }
-
-    pub fn remove_terrain_chunk<H>(&mut self,
-                                   tcid: TerrainChunkId,
-                                   h: &mut H)
-            where H: Hooks {
-        let loc = unwrap_or!(self.terrain_chunk_pos.remove(&tcid));
-        self.ps.unpublish(ViewableId::TerrainChunk(tcid), loc,
-                          |_, _, &cid| h.on_terrain_chunk_disappear(cid, tcid));
-    }
-
-    pub fn update_terrain_chunk<H>(&mut self,
-                                   tcid: TerrainChunkId,
-                                   h: &mut H)
-            where H: Hooks {
-        self.ps.message(&ViewableId::TerrainChunk(tcid),
-                        |_, &cid| h.on_terrain_chunk_update(cid, tcid));
-    }
-
-
-    pub fn add_structure<H>(&mut self,
-                            sid: StructureId,
-                            plane: PlaneId,
-                            area: SmallSet<V2>,
-                            h: &mut H)
-            where H: Hooks {
-        self.structure_pos.insert(sid, (PLANE_LIMBO, SmallSet::new()));
-        self.set_structure_area(sid, plane, area, h);
-    }
-
-    pub fn remove_structure<H>(&mut self,
-                               sid: StructureId,
-                               h: &mut H)
-            where H: Hooks {
-        self.set_structure_area(sid, PLANE_LIMBO, SmallSet::new(), h);
-        self.structure_pos.remove(&sid);
-    }
-
-    pub fn set_structure_area<H>(&mut self,
-                                 sid: StructureId,
-                                 new_plane: PlaneId,
-                                 new_area: SmallSet<V2>,
-                                 h: &mut H)
-            where H: Hooks {
-        let vid = ViewableId::Structure(sid);
-        let entry = unwrap_or!(self.structure_pos.get_mut(&sid));
-        {
-            let old_plane = entry.0;
-            let old_area = &entry.1;
-            let plane_change = new_plane != old_plane;
-
-            for &p in new_area.iter().filter(|&p| !old_area.contains(p) || plane_change) {
-                self.ps.publish(vid, (new_plane, p),
-                                |_, _, &cid| h.on_structure_appear(cid, sid));
-            }
-
-            for &p in old_area.iter().filter(|&p| !new_area.contains(p) || plane_change) {
-                self.ps.unpublish(vid, (old_plane, p),
-                                  |_, _, &cid| h.on_structure_disappear(cid, sid));
-            }
-        }
-
-        *entry = (new_plane, new_area);
-    }
-
-    pub fn change_structure_template<H>(&mut self,
-                                        sid: StructureId,
-                                        h: &mut H)
-            where H: Hooks {
-        self.ps.message(&ViewableId::Structure(sid),
-                        |_, &cid| h.on_structure_template_change(cid, sid));
-    }
-
-
     pub fn subscribe_inventory<H>(&mut self,
                                   cid: ClientId,
                                   iid: InventoryId,
@@ -454,15 +367,6 @@ gen_Fragment! {
     fn add_client(cid: ClientId, plane: PlaneId, view: Region<V2>);
     fn remove_client(cid: ClientId);
     fn set_client_area(cid: ClientId, plane: PlaneId, view: Region<V2>);
-
-    fn add_terrain_chunk(tcid: TerrainChunkId, plane: PlaneId, cpos: V2);
-    fn remove_terrain_chunk(tcid: TerrainChunkId);
-    fn update_terrain_chunk(tcid: TerrainChunkId);
-
-    fn add_structure(sid: StructureId, plane: PlaneId, area: SmallSet<V2>);
-    fn remove_structure(sid: StructureId);
-    fn set_structure_area(sid: StructureId, new_plane: PlaneId, new_area: SmallSet<V2>);
-    fn change_structure_template(sid: StructureId);
 
     fn subscribe_inventory(cid: ClientId, iid: InventoryId);
     fn unsubscribe_inventory(cid: ClientId, iid: InventoryId);
