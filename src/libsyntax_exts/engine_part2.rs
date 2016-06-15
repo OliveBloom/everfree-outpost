@@ -147,19 +147,7 @@ fn parse_engine_part2<'a>(table: &HashMap<&'static str, EngineParts>,
     Ok((is_pub, name, flags))
 }
 
-pub fn engine_part2(cx: &mut ExtCtxt,
-                    sp: Span,
-                    args: &[TokenTree]) -> Box<MacResult + 'static> {
-    let fm = build_flag_map();
-    let p = Parser::new(sp, args);
-    let (is_pub, name, flags) = match parse_engine_part2(&fm, p) {
-        Ok(x) => x,
-        Err(e) => {
-            cx.span_err(e.1, e.description());
-            return DummyResult::any(sp);
-        },
-    };
-
+fn gen_struct(name: &str, is_pub: bool, flags: EngineParts) -> String {
     let mut code = String::new();
 
     code.push_str(&format!("{} struct {}<'d> {{\n", if is_pub { "pub" } else { "" }, name));
@@ -181,13 +169,58 @@ pub fn engine_part2(cx: &mut ExtCtxt,
 
     code.push_str("}\n");
 
+    code
+}
+
+fn gen_coded_impl(name: &str, flags: EngineParts) -> String {
+    let mut code = String::new();
+
+    code.push_str(&format!("unsafe impl<'d> ::engine::split2::Coded for {}<'d> {{\n", name));
+
+    code.push_str("    type Code = ");
+    for i in 0 .. NUM_PARTS {
+        if flags.bits() & (1 << i) == 0 {
+            code.push_str("::engine::split2::Y<");
+        } else {
+            code.push_str("::engine::split2::N<");
+        }
+    }
+    code.push_str("::engine::split2::E");
+    for _ in 0 .. NUM_PARTS {
+        code.push_str(">");
+    }
+    code.push_str(";\n");
+
+    code.push_str("}\n");
+
+    code
+}
+
+pub fn engine_part2(cx: &mut ExtCtxt,
+                    sp: Span,
+                    args: &[TokenTree]) -> Box<MacResult + 'static> {
+    let fm = build_flag_map();
+    let p = Parser::new(sp, args);
+    let (is_pub, name, flags) = match parse_engine_part2(&fm, p) {
+        Ok(x) => x,
+        Err(e) => {
+            cx.span_err(e.1, e.description());
+            return DummyResult::any(sp);
+        },
+    };
+
 
     let mut items = SmallVector::zero();
 
     // TODO: error handling
     items.push(parse::parse_item_from_source_str(
             "<engine_part2!>".to_owned(),
-            code,
+            gen_struct(&name, is_pub, flags),
+            cx.cfg.clone(),
+            cx.parse_sess).unwrap());
+    items.push(parse::parse_item_from_source_str(
+            "<engine_part2!>".to_owned(),
+            gen_coded_impl(&name, flags),
             cx.cfg.clone(),
             cx.parse_sess).unwrap());
     items.push(parse::parse_item_from_source_str(

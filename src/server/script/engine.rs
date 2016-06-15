@@ -454,7 +454,7 @@ define_python_class! {
                                           eid: EntityId) -> PyResult<()> {
             // FIXME: actually-unsafe transmute
             let eng = unsafe { mem::transmute(eng) };
-            let ok = logic::entity::set_activity_(eng, eid, Activity::Move);
+            let ok = logic::entity::set_activity(eng, eid, Activity::Move);
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
@@ -467,7 +467,7 @@ define_python_class! {
             // FIXME: actually-unsafe transmute
             let eng = unsafe { mem::transmute(eng) };
             let act = Activity::Special(anim, interruptible);
-            let ok = logic::entity::set_activity_(eng, eid, act);
+            let ok = logic::entity::set_activity(eng, eid, act);
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())

@@ -1,4 +1,5 @@
 use types::*;
+use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use engine::Engine;
 use logic;
@@ -11,9 +12,70 @@ use world::fragment::DummyFragment;
 use world::object::*;
 
 
+engine_part2!(pub PartialEngine(world, physics, vision, messages));
+
+
+/// Handler to be called just after creating an entity.
+pub fn on_create(eng: &mut PartialEngine, eid: EntityId) {
+    let e = eng.world.entity(eid);
+
+    eng.physics.add_entity(eid);
+
+    let msg_appear = logic::vision::entity_appear_message(e);
+    let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now());
+    let plane = e.plane_id();
+    let cpos = e.pos(eng.now()).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    let messages = &mut eng.messages;
+    eng.vision.entity_add(eid, plane, cpos, |cid| {
+        messages.send_client(cid, msg_appear.clone());
+        messages.send_client(cid, msg_motion.clone());
+    });
+}
+
+/// Handler to be called just before destroying an entity.
+pub fn on_destroy(eng: &mut PartialEngine, eid: EntityId) {
+    let e = eng.world.entity(eid);
+
+    eng.physics.remove_entity(eid);
+
+    let msg_gone = logic::vision::entity_gone_message(e);
+    let plane = e.plane_id();
+    let cpos = e.pos(eng.now()).reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    let messages = &mut eng.messages;
+    eng.vision.entity_remove(eid, plane, cpos, |cid| {
+        messages.send_client(cid, msg_gone.clone());
+    });
+}
+
+/// Handler to be called when an entity crosses from one chunk to another.
+pub fn on_chunk_crossing(eng: &mut PartialEngine,
+                         eid: EntityId,
+                         old_plane: PlaneId,
+                         old_cpos: V2,
+                         new_plane: PlaneId,
+                         new_cpos: V2) {
+    if (old_plane, old_cpos) == (new_plane, new_cpos) {
+        return;
+    }
+
+    let e = eng.world.entity(eid);
+
+    let msg_appear = logic::vision::entity_appear_message(e);
+    let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now());
+    let msg_gone = logic::vision::entity_gone_message(e);
+    let messages = &mut eng.messages;
+    eng.vision.entity_add(eid, new_plane, new_cpos, |cid| {
+        messages.send_client(cid, msg_appear.clone());
+        messages.send_client(cid, msg_motion.clone());
+    });
+    eng.vision.entity_remove(eid, old_plane, old_cpos, |cid| {
+        messages.send_client(cid, msg_gone.clone());
+    });
+}
+
 
 /// Try to set an entity's appearance.  Returns `true` on success.
-pub fn set_appearance(eng: &mut Engine,
+pub fn set_appearance(eng: &mut PartialEngine,
                       eid: EntityId,
                       appearance: u32) -> bool {
     let mut wf = DummyFragment::new(&mut eng.world);
@@ -35,26 +97,12 @@ pub fn set_appearance(eng: &mut Engine,
 }
 
 
-pub fn set_activity_(eng: &mut Engine,
-                     eid: EntityId,
-                     activity: Activity) -> bool {
-    set_activity(&mut eng.world,
-                 &mut eng.physics,
-                 &mut eng.messages,
-                 &mut eng.vision,
-                 eng.now,
-                 eid,
-                 activity)
-}
-
-pub fn set_activity(world: &mut World,
-                    physics: &mut Physics,
-                    messages: &mut Messages,
-                    vision: &mut Vision,
-                    now: Time,
+pub fn set_activity(eng: &mut Engine,
                     eid: EntityId,
                     activity: Activity) -> bool {
-    let mut wf = DummyFragment::new(world);
+    let now = eng.now();
+
+    let mut wf = DummyFragment::new(&mut eng.world);
     let mut e = unwrap_or!(wf.get_entity_mut(eid), return false);
 
     info!("{:?}: set activity to {:?} at {}", eid, activity, now);
@@ -64,10 +112,10 @@ pub fn set_activity(world: &mut World,
     }
 
     e.set_activity(activity);
-    physics.force_update(eid);
+    eng.physics.force_update(eid);
 
     if let Some(c) = e.pawn_owner() {
-        messages.send_client(c.id(), ClientResponse::ActivityChange(activity));
+        eng.messages.send_client(c.id(), ClientResponse::ActivityChange(activity));
     }
 
     let send_msg = match activity {
@@ -86,7 +134,8 @@ pub fn set_activity(world: &mut World,
 
     if send_msg {
         let msg = logic::vision::entity_motion_message(e.borrow());
-        vision.entity_update(eid, |cid| {
+        let messages = &mut eng.messages;
+        eng.vision.entity_update(eid, |cid| {
             messages.send_client(cid, msg.clone());
         });
     }

@@ -17,6 +17,7 @@ use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use chunks;
 use engine::Engine;
+use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, SyncKind, Dialog};
 use world;
@@ -174,7 +175,7 @@ fn login_with_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart
     let pos = eng.world.entity(eid).pos(eng.now);
 
     // Run handler logic
-    logic::handle::entity_create(eng, eid);
+    logic::entity::on_create(eng.refine(), eid);
 
     Ok(LoginPart {
         cid: cid,
@@ -231,7 +232,7 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
                                                        DAY_NIGHT_CYCLE_MS));
 
     warn_on_err!(DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid)));
-    logic::handle::entity_create(eng, eid);
+    logic::entity::on_create(eng.refine(), eid);
 
     // Init scripts
     warn_on_err!(eng.script_hooks.call_client_login(eng.as_ref(), cid));
@@ -278,7 +279,7 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
 
     // Run handler logic
     exporter.iter_exports(|id| match id {
-        AnyId::Entity(eid) => logic::handle::entity_destroy(eng, eid),
+        AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
         _ => {},
     });
 

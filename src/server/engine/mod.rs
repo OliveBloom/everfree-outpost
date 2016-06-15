@@ -29,7 +29,7 @@ use self::split::EngineRef;
 
 
 #[macro_use] pub mod split;
-pub mod split2;
+#[macro_use] pub mod split2;
 pub mod glue;
 
 

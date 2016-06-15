@@ -63,7 +63,7 @@ macro_rules! engine_part2_impl {
             }
 
             pub fn open_static(&self) -> ::engine::split2::Static<'d> {
-                Static {
+                ::engine::split2::Static {
                     data: self._data,
                     storage: self._storage,
                     script_hooks: self._script_hooks,

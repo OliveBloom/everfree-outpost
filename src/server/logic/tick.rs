@@ -2,6 +2,7 @@ use types::*;
 use libphysics::{TILE_SIZE, CHUNK_SIZE};
 
 use engine::Engine;
+use engine::split2::Coded;
 use input::{Action, InputBits, INPUT_DIR_MASK};
 use logic;
 use messages::ClientResponse;
@@ -42,11 +43,7 @@ pub fn tick(eng: &mut Engine) {
 
         if let Some(eid) = opt_eid {
             if input & INPUT_DIR_MASK != InputBits::empty() {
-                logic::entity::set_activity(&mut eng.world,
-                                            &mut eng.physics,
-                                            &mut eng.messages,
-                                            &mut eng.vision,
-                                            eng.now,
+                logic::entity::set_activity(eng.refine(),
                                             eid,
                                             Activity::Move);
             }
@@ -65,13 +62,12 @@ pub fn tick(eng: &mut Engine) {
         let new_chunk = m.pos(next).reduce().div_floor(chunk_px);
 
         if new_chunk != old_chunk {
-            logic::vision::change_entity_chunk(&mut eng.vision,
-                                               &mut eng.messages,
-                                               &eng.world,
-                                               eid,
-                                               plane,
-                                               old_chunk,
-                                               new_chunk);
+            // TODO: on_chunk_crossing needs to take a variant of PartialEngine that doesn't
+            // include Physics.  Then we need to call eng.split() above to get a reduced engine +
+            // Physics.
+            logic::entity::on_chunk_crossing(eng2.refine(), eid,
+                                             plane, old_chunk,
+                                             plane, new_chunk);
 
             if let Some(cid) = eng.world.entity(eid).pawn_owner().map(|c| c.id()) {
                 logic::client::update_view(eng2, cid, plane, old_chunk, plane, new_chunk);
