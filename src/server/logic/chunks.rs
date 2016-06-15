@@ -6,12 +6,11 @@ use chunks;
 use engine::Engine;
 use engine::glue::*;
 use engine::split::EngineRef;
-use engine::split2::Coded;
 use logic;
 use terrain_gen::Fragment as TerrainGen_Fragment;
 use world;
 use world::Fragment as World_Fragment;
-use world::bundle::{self, AnyId};
+use world::bundle;
 use world::flags;
 use world::object::*;
 
@@ -45,13 +44,8 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
 
         {
             // FIXME
-            let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
-            importer.iter_imports(|id| match id {
-                AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
-                AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_create(eng.refine(), tcid),
-                AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
-                _ => {},
-            });
+            let eng = unsafe { mem::transmute_copy(self) };
+            logic::world::on_import(eng, &importer);
         }
 
         Ok(())
@@ -75,13 +69,8 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
 
         {
             // FIXME
-            let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
-            exporter.iter_exports(|id| match id {
-                AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
-                AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),
-                AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
-                _ => {},
-            });
+            let eng = unsafe { mem::transmute_copy(self) };
+            logic::world::on_export(eng, &exporter);
         }
 
         try!(world::Fragment::destroy_plane(&mut self.as_hidden_world_fragment(), pid));
@@ -100,14 +89,8 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
 
             {
                 // FIXME
-                let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
-                importer.iter_imports(|id| match id {
-                    AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
-                    AnyId::TerrainChunk(tcid) =>
-                        logic::terrain_chunk::on_create(eng.refine(), tcid),
-                    AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
-                    _ => {},
-                });
+                let eng = unsafe { mem::transmute_copy(self) };
+                logic::world::on_import(eng, &importer);
             }
         } else {
             trace!("Provider::load_terrain_chunk({:?}, {:?}): from terrain_gen", pid, cpos);
@@ -141,13 +124,8 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
 
         {
             // FIXME
-            let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
-            exporter.iter_exports(|id| match id {
-                AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
-                AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),
-                AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
-                _ => {},
-            });
+            let eng = unsafe { mem::transmute_copy(self) };
+            logic::world::on_export(eng, &exporter);
         }
 
         try!(world::Fragment::destroy_terrain_chunk(&mut self.as_hidden_world_fragment(), tcid));

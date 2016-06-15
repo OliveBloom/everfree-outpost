@@ -11,10 +11,12 @@ use data::StructureTemplate;
 use engine::Engine;
 use engine::glue::*;
 use engine::split::Open;
+use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, SyncKind};
 use world::{self, World, Structure};
 use world::Motion;
+use world::bundle::{Importer, Exporter, AnyId};
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
@@ -296,4 +298,27 @@ pub fn teleport_entity_stable_plane(wf: WorldFragment,
                                     stable_pid: Stable<PlaneId>,
                                     pos: V3) -> StrResult<()> {
     teleport_entity_internal(wf, eid, None, Some(stable_pid), pos)
+}
+
+
+engine_part2!(pub PartialEngine(world, physics, cache, vision, messages));
+
+/// Hook to be called after importing some new game objects.
+pub fn on_import(eng: &mut PartialEngine, importer: &Importer) {
+    importer.iter_imports(|id| match id {
+        AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
+        AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_create(eng.refine(), tcid),
+        AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
+        _ => {},
+    });
+}
+
+/// Hook to be called before deleting some exported game objects..
+pub fn on_export(eng: &mut PartialEngine, exporter: &Exporter) {
+    exporter.iter_exports(|id| match id {
+        AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
+        AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),
+        AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
+        _ => {},
+    });
 }
