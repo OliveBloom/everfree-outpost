@@ -25,7 +25,6 @@ const PLANE_DIR: &'static str = "planes";
 const SUMMARY_DIR: &'static str = "summary";
 const TERRAIN_CHUNK_DIR: &'static str = "terrain_chunks";
 const WORLD_FILE_NAME: &'static str = "world.dat";
-const AUTH_DB_FILE_NAME: &'static str = "auth.sqlite";
 const RESTART_FILE_NAME: &'static str = "restart.dat";
 
 pub struct Storage {
@@ -88,10 +87,6 @@ impl Storage {
 
     pub fn world_path(&self) -> PathBuf {
         self.base.join(SAVE_DIR).join(WORLD_FILE_NAME)
-    }
-
-    pub fn auth_db_path(&self) -> PathBuf {
-        self.base.join(SAVE_DIR).join(AUTH_DB_FILE_NAME)
     }
 
     pub fn client_path(&self, uid: u32) -> PathBuf {
