@@ -180,9 +180,9 @@ fn gen_coded_impl(name: &str, flags: EngineParts) -> String {
     code.push_str("    type Code = ");
     for i in 0 .. NUM_PARTS {
         if flags.bits() & (1 << i) == 0 {
-            code.push_str("::engine::split2::Y<");
-        } else {
             code.push_str("::engine::split2::N<");
+        } else {
+            code.push_str("::engine::split2::Y<");
         }
     }
     code.push_str("::engine::split2::E");
