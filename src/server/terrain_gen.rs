@@ -21,7 +21,9 @@ use types::*;
 use util::StrResult;
 
 use data::Data;
+use engine::Engine;
 use engine::split::EngineRef;
+use engine::split2::Coded;
 use logic;
 use storage::Storage;
 use world::Fragment as World_Fragment;
@@ -93,12 +95,21 @@ pub trait Fragment<'d>: Sized {
                 cpos: V2) -> StrResult<TerrainChunkId> {
         let stable_pid = self.with_world(|wf| wf.plane_mut(pid).stable_id());
         self.terrain_gen_mut().send.send(worker::Command::Generate(stable_pid, cpos)).unwrap();
-        self.with_world(move |wf| { wf.create_terrain_chunk(pid, cpos).map(|tc| tc.id()) })
+        let tcid = try!(self.with_world(move |wf| {
+            wf.create_terrain_chunk(pid, cpos).map(|tc| tc.id())
+        }));
+
+        // FIXME
+        let eng2: &mut Engine = unsafe { mem::transmute_copy(self) };
+        logic::terrain_chunk::on_create(eng2.refine(), tcid);
+
+        Ok(tcid)
     }
 
     fn process(&mut self, evt: TerrainGenEvent) {
         // FIXME
-        let eng2: &mut logic::structure::PartialEngine = unsafe { mem::transmute_copy(self) };
+        let eng2: &mut Engine = unsafe { mem::transmute_copy(self) };
+
         let (stable_pid, cpos, gc) = evt;
         self.with_world(move |wf| {
             let pid = unwrap_or!(wf.world().transient_plane_id(stable_pid));
@@ -122,7 +133,7 @@ pub trait Fragment<'d>: Sized {
                 tc.flags_mut().remove(flags::TC_GENERATION_PENDING);
                 tc.id()
             };
-            wf.with_hooks(|h| h.on_terrain_chunk_update(tcid));
+            logic::terrain_chunk::on_update(eng2.refine(), tcid);
 
             let base = cpos.extend(0) * scalar(CHUNK_SIZE);
             for gs in &gc.structures {
@@ -152,7 +163,7 @@ pub trait Fragment<'d>: Sized {
                 }
 
                 // FIXME: hack - shouldn't talk to logic from here
-                logic::structure::on_create(&mut *eng2, sid);
+                logic::structure::on_create(eng2.refine(), sid);
             }
         });
     }

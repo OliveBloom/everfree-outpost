@@ -1,6 +1,9 @@
+use std::mem;
+
 use libphysics::CHUNK_SIZE;
 use types::*;
 
+use logic;
 use world::{self, Hooks};
 use world::object::*;
 
@@ -16,7 +19,9 @@ pub fn set_block_interior<'d, F>(wf: &mut F,
                                     center + V3::new(2, 2, 1));
     for cpos in update_region.reduce().div_round_signed(CHUNK_SIZE).points() {
         let tcid = wf.world().plane(pid).terrain_chunk(cpos).id();
-        wf.with_hooks(|h| h.on_terrain_chunk_update(tcid));
+        // FIXME
+        let eng2 = unsafe { mem::transmute_copy(wf) };
+        logic::terrain_chunk::on_update(eng2, tcid);
     }
 
     Ok(())
@@ -42,7 +47,9 @@ pub fn clear_block_interior<'d, F>(wf: &mut F,
                                     center + V3::new(2, 2, 1));
     for cpos in update_region.reduce().div_round_signed(CHUNK_SIZE).points() {
         let tcid = wf.world().plane(pid).terrain_chunk(cpos).id();
-        wf.with_hooks(|h| h.on_terrain_chunk_update(tcid));
+        // FIXME
+        let eng2 = unsafe { mem::transmute_copy(wf) };
+        logic::terrain_chunk::on_update(eng2, tcid);
     }
 
     Ok(())
@@ -257,7 +264,9 @@ pub fn set_cave<'d, F>(wf: &mut F,
                                         center + V3::new(2, 2, 1));
         for cpos in update_region.reduce().div_round_signed(CHUNK_SIZE).points() {
             let tcid = unwrap_or!(wf.world().plane(pid).get_terrain_chunk(cpos), continue).id();
-            wf.with_hooks(|h| h.on_terrain_chunk_update(tcid));
+            // FIXME
+            let eng2 = unsafe { mem::transmute_copy(wf) };
+            logic::terrain_chunk::on_update(eng2, tcid);
         }
     }
     Ok(mined)

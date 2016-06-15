@@ -48,6 +48,7 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
             let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
             importer.iter_imports(|id| match id {
                 AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
+                AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_create(eng.refine(), tcid),
                 AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
                 _ => {},
             });
@@ -77,6 +78,7 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
             let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
             exporter.iter_exports(|id| match id {
                 AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
+                AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),
                 AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
                 _ => {},
             });
@@ -101,6 +103,8 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
                 let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
                 importer.iter_imports(|id| match id {
                     AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
+                    AnyId::TerrainChunk(tcid) =>
+                        logic::terrain_chunk::on_create(eng.refine(), tcid),
                     AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
                     _ => {},
                 });
@@ -140,6 +144,7 @@ impl<'a, 'd> chunks::Provider for ChunkProvider<'a, 'd> {
             let eng: &mut Engine = unsafe { mem::transmute_copy(self) };
             exporter.iter_exports(|id| match id {
                 AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
+                AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),
                 AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
                 _ => {},
             });

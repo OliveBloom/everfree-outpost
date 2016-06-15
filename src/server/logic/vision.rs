@@ -4,7 +4,7 @@ use types::*;
 
 use engine::glue::*;
 use messages::{Messages, ClientResponse};
-use world::{World, Entity, Structure, Motion};
+use world::{World, Entity, TerrainChunk, Structure, Motion};
 use world::object::*;
 use vision::{self, Vision};
 
@@ -160,6 +160,13 @@ pub fn entity_gone_message(e: ObjectRef<Entity>) -> ClientResponse {
 
 pub fn entity_gone_message2(eid: EntityId) -> ClientResponse {
     ClientResponse::EntityGone(eid, 0)
+}
+
+pub fn terrain_chunk_message(tc: ObjectRef<TerrainChunk>) -> ClientResponse {
+    use util::encode_rle16;
+    let cpos = tc.chunk_pos();
+    let data = encode_rle16(tc.blocks().iter().map(|&x| x));
+    ClientResponse::TerrainChunk(cpos, data)
 }
 
 pub fn structure_appear_message(s: ObjectRef<Structure>) -> ClientResponse {

@@ -38,36 +38,6 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     }
 
 
-    fn on_terrain_chunk_create(&mut self, tcid: TerrainChunkId) {
-        let (pid, cpos) = {
-            let tc = self.world().terrain_chunk(tcid);
-            (tc.plane_id(), tc.chunk_pos())
-        };
-        vision::Fragment::add_terrain_chunk(&mut self.$as_vision_fragment(), tcid, pid, cpos);
-
-        let Open { world, cache, .. } = (**self).open();
-        warn_on_err!(cache.add_chunk(world, pid, cpos));
-    }
-
-    fn on_terrain_chunk_destroy(&mut self, tcid: TerrainChunkId, pid: PlaneId, cpos: V2) {
-        vision::Fragment::remove_terrain_chunk(&mut self.$as_vision_fragment(), tcid);
-
-        self.cache_mut().remove_chunk(pid, cpos);
-    }
-
-    fn on_terrain_chunk_update(&mut self, tcid: TerrainChunkId) {
-        // TODO: need a system to avoid resending the entire chunk every time.
-        let (pid, bounds) = {
-            let tc = self.world().terrain_chunk(tcid);
-            (tc.plane_id(), tc.bounds())
-        };
-        vision::Fragment::update_terrain_chunk(&mut self.$as_vision_fragment(), tcid);
-
-        let Open { world, cache, .. } = (**self).open();
-        cache.update_region(world, pid, bounds);
-    }
-
-
     fn check_structure_placement(&self,
                                  template: &StructureTemplate,
                                  pid: PlaneId,

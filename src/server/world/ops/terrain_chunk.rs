@@ -29,7 +29,6 @@ pub fn create<'d, F>(f: &mut F,
     // unwrap() always succeeds because stable_id is NO_STABLE_ID.
     let tcid = f.world_mut().terrain_chunks.insert(tc).unwrap();
     post_init(f, tcid);
-    f.with_hooks(|h| h.on_terrain_chunk_create(tcid));
     Ok(tcid)
 }
 
@@ -79,6 +78,5 @@ pub fn destroy<'d, F>(f: &mut F,
         ops::structure::destroy(f, sid).unwrap();
     }
 
-    f.with_hooks(|h| h.on_terrain_chunk_destroy(tcid, tc.plane, tc.cpos));
     Ok(())
 }

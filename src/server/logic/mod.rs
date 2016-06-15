@@ -10,4 +10,5 @@ pub mod extra;
 pub mod tick;
 
 pub mod entity;
+pub mod terrain_chunk;
 pub mod structure;

@@ -309,12 +309,8 @@ impl<'d> Importer<'d> {
         for i in 0 .. b.planes.len() {
             f.with_hooks(|h| h.on_plane_create(self.plane_id_map[i]));
         }
-        for i in 0 .. b.terrain_chunks.len() {
-            f.with_hooks(|h| h.on_terrain_chunk_create(self.terrain_chunk_id_map[i]));
-        }
-        for i in 0 .. b.structures.len() {
-            f.with_hooks(|h| h.on_structure_create(self.structure_id_map[i]));
-        }
+        // terrain chunk hooks have been removed
+        // structure hooks have been removed
     }
 
 
