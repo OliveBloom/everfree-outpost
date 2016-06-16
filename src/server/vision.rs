@@ -208,40 +208,39 @@ impl Vision {
     }
 
 
-    pub fn subscribe_inventory<H>(&mut self,
+    pub fn subscribe_inventory<F>(&mut self,
                                   cid: ClientId,
                                   iid: InventoryId,
-                                  h: &mut H)
-            where H: Hooks {
+                                  mut f: F)
+            where F: FnMut() {
         let invs = unwrap_or!(self.viewer_invs.get_mut(&cid));
         invs.push(iid);
         self.inv_ps.subscribe_publisher(cid, iid,
-                                        |_, _| h.on_inventory_appear(cid, iid));
+                                        |_, _| f());
     }
 
-    pub fn unsubscribe_inventory<H>(&mut self,
+    pub fn unsubscribe_inventory<F>(&mut self,
                                     cid: ClientId,
                                     iid: InventoryId,
-                                    h: &mut H)
-            where H: Hooks {
+                                    mut f: F)
+            where F: FnMut() {
         let invs = unwrap_or!(self.viewer_invs.get_mut(&cid));
         for i in 0 .. invs.len() {
             if invs[i] == iid {
                 self.inv_ps.unsubscribe_publisher(cid, iid,
-                                                  |_, _| h.on_inventory_disappear(cid, iid));
+                                                  |_, _| f());
                 invs.swap_remove(i);
                 break;
             }
         }
     }
 
-    pub fn update_inventory<H>(&mut self,
+    pub fn update_inventory<F>(&mut self,
                                iid: InventoryId,
-                               slot_idx: u8,
-                               h: &mut H)
-            where H: Hooks {
+                               mut f: F)
+            where F: FnMut(ClientId) {
         self.inv_ps.message(&iid,
-                            |_, &cid| h.on_inventory_update(cid, iid, slot_idx));
+                            |_, &cid| f(cid));
     }
 
     pub fn init_inventory_subscriptions(&mut self, cid: ClientId) {
@@ -278,8 +277,4 @@ macro_rules! gen_Fragment {
 }
 
 gen_Fragment! {
-    fn subscribe_inventory(cid: ClientId, iid: InventoryId);
-    fn unsubscribe_inventory(cid: ClientId, iid: InventoryId);
-    fn update_inventory(iid: InventoryId,
-                        slot_idx: u8);
 }

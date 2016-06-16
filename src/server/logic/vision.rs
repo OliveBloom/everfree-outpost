@@ -4,33 +4,12 @@ use types::*;
 
 use engine::glue::*;
 use messages::{Messages, ClientResponse};
-use world::{World, Entity, TerrainChunk, Structure, Motion};
+use world::{World, Entity, Inventory, TerrainChunk, Structure, Motion};
 use world::object::*;
 use vision::{self, Vision};
 
 
 impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
-    fn on_inventory_appear(&mut self, cid: ClientId, iid: InventoryId) {
-        let i = self.world().inventory(iid);
-        let contents = i.contents().iter().map(|&x| x).collect();
-        self.messages().send_client(
-            cid, ClientResponse::InventoryAppear(iid, contents));
-    }
-
-    fn on_inventory_disappear(&mut self, cid: ClientId, iid: InventoryId) {
-        self.messages().send_client(
-            cid, ClientResponse::InventoryGone(iid));
-    }
-
-    fn on_inventory_update(&mut self,
-                           cid: ClientId,
-                           iid: InventoryId,
-                           slot_idx: u8) {
-        let i = self.world().inventory(iid);
-        let item = i.contents()[slot_idx as usize];
-        self.messages().send_client(
-            cid, ClientResponse::InventoryUpdate(iid, slot_idx, item));
-    }
 }
 
 
@@ -86,6 +65,21 @@ pub fn entity_gone_message(e: ObjectRef<Entity>) -> ClientResponse {
 
 pub fn entity_gone_message2(eid: EntityId) -> ClientResponse {
     ClientResponse::EntityGone(eid, 0)
+}
+
+
+pub fn inventory_appear_message(i: ObjectRef<Inventory>) -> ClientResponse {
+    let contents = i.contents().iter().map(|&x| x).collect();
+    ClientResponse::InventoryAppear(i.id(), contents)
+}
+
+pub fn inventory_gone_message(i: ObjectRef<Inventory>) -> ClientResponse {
+    ClientResponse::InventoryGone(i.id())
+}
+
+pub fn inventory_update_message(i: ObjectRef<Inventory>, slot_idx: u8) -> ClientResponse {
+    let item = i.contents()[slot_idx as usize];
+    ClientResponse::InventoryUpdate(i.id(), slot_idx, item)
 }
 
 

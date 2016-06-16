@@ -66,7 +66,8 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
     fn on_inventory_update(&mut self,
                            iid: InventoryId,
                            slot_idx: u8) {
-        vision::Fragment::update_inventory(&mut self.$as_vision_fragment(), iid, slot_idx);
+        logic::inventory::on_update(unsafe { mem::transmute_copy(self) },
+                                    iid, slot_idx);
     }
 }
 

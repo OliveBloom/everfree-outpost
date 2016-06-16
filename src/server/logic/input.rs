@@ -1,6 +1,8 @@
 use types::*;
 
 use engine::split::{EngineRef, Open};
+use engine::split2::Coded;
+use logic;
 use msg::ExtraArg;
 use vision;
 
@@ -23,7 +25,7 @@ pub fn open_inventory(_eng: EngineRef, cid: ClientId) {
 
 pub fn unsubscribe_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId) {
     // No need for cherks - unsubscribe_inventory does nothing if the arguments are invalid.
-    vision::Fragment::unsubscribe_inventory(&mut eng.as_vision_fragment(), cid, iid);
+    logic::inventory::unsubscribe(eng.borrow().unwrap().refine(), cid, iid);
 }
 
 pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
