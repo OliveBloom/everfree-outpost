@@ -314,6 +314,10 @@ pub fn update_view(eng: &mut Engine,
         on_chunk_appear(eng.refine(), cid, new_plane, cpos);
     }
 
+    if plane_change {
+        on_plane_change(eng.refine(), cid, new_plane);
+    }
+
     for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
         on_chunk_gone(eng.refine(), cid, old_plane, cpos);
         logic::chunks::unload_chunk(eng.as_ref(), old_plane, cpos);
@@ -370,4 +374,15 @@ fn on_chunk_gone(eng: &mut Engine_Vision,
             messages.send_client(cid, logic::vision::structure_gone_message(s));
         },
     });
+}
+
+fn on_plane_change(eng: &mut Engine_Vision,
+                   cid: ClientId,
+                   pid: PlaneId) {
+    // TODO: super hack.  add a flags field to the plane or something.
+    let is_dark = match eng.world.get_plane(pid) {
+        Some(p) => p.name() != "Everfree Forest",
+        None => true,
+    };
+    eng.messages.send_client(cid, ClientResponse::PlaneFlags(is_dark as u32));
 }
