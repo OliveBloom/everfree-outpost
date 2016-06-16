@@ -28,7 +28,6 @@ pub fn create<'d, F>(f: &mut F,
     };
 
     let cid = unwrap!(f.world_mut().clients.insert(c));
-    f.with_hooks(|h| h.on_client_create(cid));
     Ok(cid)
 }
 
@@ -62,7 +61,6 @@ pub fn destroy<'d, F>(f: &mut F,
         ops::inventory::destroy(f, iid).unwrap();
     }
 
-    f.with_hooks(|h| h.on_client_destroy(cid));
     Ok(())
 }
 
@@ -79,7 +77,6 @@ pub fn set_pawn<'d, F>(f: &mut F,
         old_eid = replace(&mut c.pawn, Some(eid));
     }
 
-    f.with_hooks(|h| h.on_client_change_pawn(cid, old_eid, Some(eid)));
     Ok(old_eid)
 }
 
@@ -93,6 +90,5 @@ pub fn clear_pawn<'d, F>(f: &mut F,
         old_eid = replace(&mut c.pawn, None);
     }
 
-    f.with_hooks(|h| h.on_client_change_pawn(cid, old_eid, None));
     Ok(old_eid)
 }

@@ -10,80 +10,6 @@ use vision::{self, Vision};
 
 
 impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
-    fn on_terrain_chunk_appear(&mut self,
-                               cid: ClientId,
-                               tcid: TerrainChunkId) {
-        self.on_terrain_chunk_update(cid, tcid);
-    }
-
-    fn on_terrain_chunk_update(&mut self,
-                               cid: ClientId,
-                               tcid: TerrainChunkId) {
-        use util::encode_rle16;
-        trace!("terrain chunk update: {:?}, {:?}", cid, tcid);
-        let tc = unwrap_or!(self.world().get_terrain_chunk(tcid),
-            { warn!("no terrain available for {:?}", tcid); return });
-        let cpos = tc.chunk_pos();
-        let data = encode_rle16(tc.blocks().iter().map(|&x| x));
-        self.messages().send_client(cid, ClientResponse::TerrainChunk(cpos, data));
-    }
-
-
-    fn on_entity_appear(&mut self, cid: ClientId, eid: EntityId) {
-        trace!("on_entity_appear({:?}, {:?})", cid, eid);
-        let now = self.now();
-        let e = self.world().entity(eid);
-        self.messages().send_client(cid, entity_appear_message(e));
-        self.messages().send_client(cid, entity_motion_message_adjusted(e, now));
-    }
-
-    fn on_entity_disappear(&mut self, cid: ClientId, eid: EntityId) {
-        trace!("on_entity_disappear({:?}, {:?})", cid, eid);
-        // TODO: figure out if it's actually useful to send the time here.  The client currently
-        // ignores it, so we don't
-        self.messages().send_client(cid, entity_gone_message2(eid));
-    }
-
-    fn on_entity_motion_update(&mut self, _cid: ClientId, _eid: EntityId) {
-        // New physics code never uses these callbacks.
-        unreachable!();
-    }
-
-    fn on_entity_appearance_update(&mut self, cid: ClientId, eid: EntityId) {
-        trace!("on_entity_appearance_update({:?}, {:?})", cid, eid);
-        self.on_entity_appear(cid, eid);
-    }
-
-
-    fn on_plane_change(&mut self,
-                       cid: ClientId,
-                       _: PlaneId,
-                       pid: PlaneId) {
-        // TODO: super hack.  add a flags field to the plane or something.
-        let is_dark = match self.world().get_plane(pid) {
-            Some(p) => p.name() != "Everfree Forest",
-            None => true,
-        };
-        self.messages().send_client(cid, ClientResponse::PlaneFlags(is_dark as u32));
-    }
-
-
-    fn on_structure_appear(&mut self, cid: ClientId, sid: StructureId) {
-        let s = self.world().structure(sid);
-        self.messages().send_client(cid, ClientResponse::StructureAppear(
-                sid, s.template_id(), s.pos()));
-    }
-
-    fn on_structure_disappear(&mut self, cid: ClientId, sid: StructureId) {
-        self.messages().send_client(cid, ClientResponse::StructureGone(sid));
-    }
-
-    fn on_structure_template_change(&mut self, cid: ClientId, sid: StructureId) {
-        let s = self.world().structure(sid);
-        self.messages().send_client(cid, ClientResponse::StructureReplace(sid, s.template_id()));
-    }
-
-
     fn on_inventory_appear(&mut self, cid: ClientId, iid: InventoryId) {
         let i = self.world().inventory(iid);
         let contents = i.contents().iter().map(|&x| x).collect();
@@ -162,12 +88,14 @@ pub fn entity_gone_message2(eid: EntityId) -> ClientResponse {
     ClientResponse::EntityGone(eid, 0)
 }
 
+
 pub fn terrain_chunk_message(tc: ObjectRef<TerrainChunk>) -> ClientResponse {
     use util::encode_rle16;
     let cpos = tc.chunk_pos();
     let data = encode_rle16(tc.blocks().iter().map(|&x| x));
     ClientResponse::TerrainChunk(cpos, data)
 }
+
 
 pub fn structure_appear_message(s: ObjectRef<Structure>) -> ClientResponse {
     ClientResponse::StructureAppear(s.id(), s.template_id(), s.pos())

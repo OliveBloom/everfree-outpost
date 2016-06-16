@@ -27,18 +27,6 @@ macro_rules! impl_world_Hooks {
     ($WorldHooks:ident, $as_vision_fragment:ident) => {
 
 impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
-    // We should never get client callbacks in the HiddenWorldHooks variant.
-
-    // No client lifecycle callbacks because they're handled in the logic::client code.
-
-    fn on_client_change_pawn(&mut self,
-                             _cid: ClientId,
-                             _old_pawn: Option<EntityId>,
-                             _new_pawn: Option<EntityId>) {
-        // Should never happen, now that clients are imported from a fully-initialized bundle.
-        unreachable!();
-    }
-
 
     fn check_structure_placement(&self,
                                  template: &StructureTemplate,

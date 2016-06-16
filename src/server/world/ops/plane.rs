@@ -22,7 +22,6 @@ pub fn create<'d, F>(f: &mut F, name: String) -> OpResult<PlaneId>
 
     let pid = unwrap!(f.world_mut().planes.insert(p));
     post_init(f, pid);
-    f.with_hooks(|h| h.on_plane_create(pid));
     Ok(pid)
 }
 
@@ -88,6 +87,5 @@ pub fn destroy<'d, F>(f: &mut F,
         ops::terrain_chunk::destroy(f, tcid).unwrap();
     }
 
-    f.with_hooks(|h| h.on_plane_destroy(pid));
     Ok(())
 }

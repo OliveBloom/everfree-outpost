@@ -65,30 +65,6 @@ pub struct Vision {
 /// Hooks for handling vision events.
 #[allow(unused_variables)]
 pub trait Hooks {
-    fn on_entity_appear(&mut self, cid: ClientId, eid: EntityId) {}
-    fn on_entity_disappear(&mut self, cid: ClientId, eid: EntityId) {}
-    fn on_entity_motion_update(&mut self, cid: ClientId, eid: EntityId) {}
-    fn on_entity_appearance_update(&mut self, cid: ClientId, eid: EntityId) {}
-
-    fn on_plane_change(&mut self,
-                       cid: ClientId,
-                       old_pid: PlaneId,
-                       new_pid: PlaneId) {}
-
-    fn on_terrain_chunk_appear(&mut self,
-                               cid: ClientId,
-                               tcid: TerrainChunkId) {}
-    fn on_terrain_chunk_disappear(&mut self,
-                                  cid: ClientId,
-                                  tcid: TerrainChunkId) {}
-    fn on_terrain_chunk_update(&mut self,
-                               cid: ClientId,
-                               tcid: TerrainChunkId) {}
-
-    fn on_structure_appear(&mut self, cid: ClientId, sid: StructureId) {}
-    fn on_structure_disappear(&mut self, cid: ClientId, sid: StructureId) {}
-    fn on_structure_template_change(&mut self, cid: ClientId, sid: StructureId) {}
-
     fn on_inventory_appear(&mut self, cid: ClientId, iid: InventoryId) {}
     fn on_inventory_disappear(&mut self, cid: ClientId, iid: InventoryId) {}
     fn on_inventory_update(&mut self,
@@ -99,27 +75,6 @@ pub trait Hooks {
 
 pub struct NoHooks;
 impl Hooks for NoHooks { }
-
-
-fn on_viewable_appear<H: Hooks>(cid: ClientId,
-                                vid: ViewableId,
-                                h: &mut H) {
-    match vid {
-        ViewableId::Entity(eid) => h.on_entity_appear(cid, eid),
-        ViewableId::TerrainChunk(eid) => h.on_terrain_chunk_appear(cid, eid),
-        ViewableId::Structure(eid) => h.on_structure_appear(cid, eid),
-    }
-}
-
-fn on_viewable_disappear<H: Hooks>(cid: ClientId,
-                                   vid: ViewableId,
-                                   h: &mut H) {
-    match vid {
-        ViewableId::Entity(eid) => h.on_entity_disappear(cid, eid),
-        ViewableId::TerrainChunk(eid) => h.on_terrain_chunk_disappear(cid, eid),
-        ViewableId::Structure(eid) => h.on_structure_disappear(cid, eid),
-    }
-}
 
 
 // Main implementation
