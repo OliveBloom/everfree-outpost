@@ -1,5 +1,6 @@
 use types::*;
 
+use engine::Engine;
 use engine::split::{EngineRef, Open};
 use engine::split2::Coded;
 use logic;
@@ -23,14 +24,9 @@ pub fn open_inventory(_eng: EngineRef, cid: ClientId) {
     error!("UNIMPLEMENTED: open_inventory - called by {:?}", cid);
 }
 
-pub fn unsubscribe_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId) {
-    // No need for cherks - unsubscribe_inventory does nothing if the arguments are invalid.
-    logic::inventory::unsubscribe(eng.borrow().unwrap().refine(), cid, iid);
-}
-
-pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
+pub fn chat(eng: &mut Engine, cid: ClientId, msg: String) {
     if msg.starts_with("/") && !msg.starts_with("/l ") {
-        warn_on_err!(eng.script_hooks().call_client_chat_command(eng, cid, &msg));
+        warn_on_err!(eng.script_hooks.call_client_chat_command(eng.as_ref(), cid, &msg));
         return;
     }
 
@@ -42,10 +38,10 @@ pub fn chat(mut eng: EngineRef, cid: ClientId, msg: String) {
         return;
     }
 
-    let Open { world, messages, chat, .. } = eng.open();
     if !local {
-        chat.send_global(world, messages, cid, msg);
+        // TODO: use an engine_part!()?
+        eng.chat.send_global(&eng.world, &mut eng.messages, cid, msg);
     } else {
-        chat.send_local(world, messages, cid, msg);
+        eng.chat.send_local(&eng.world, &mut eng.messages, cid, msg);
     }
 }

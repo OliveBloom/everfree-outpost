@@ -26,6 +26,7 @@ use vision::Vision;
 use world::World;
 
 use self::split::EngineRef;
+use self::split2::Coded;
 
 
 #[macro_use] pub mod split;
@@ -92,9 +93,9 @@ impl<'d> Engine<'d> {
 
     pub fn run(&mut self) {
         use self::HandlerResult::*;
-        logic::lifecycle::start_up(self.as_ref());
+        logic::lifecycle::start_up(self);
         if let Some(file) = self.storage.open_restart_file() {
-            logic::lifecycle::post_restart(self.as_ref(), file);
+            logic::lifecycle::post_restart(self, file);
             self.storage.remove_restart_file();
         }
 
@@ -130,7 +131,7 @@ impl<'d> Engine<'d> {
                         Continue => {},
                         Shutdown => break,
                         Restart => {
-                            logic::lifecycle::pre_restart(self.as_ref());
+                            logic::lifecycle::pre_restart(self);
                             break;
                         },
                     }
@@ -141,7 +142,7 @@ impl<'d> Engine<'d> {
             }
         }
 
-        logic::lifecycle::shut_down(self.as_ref());
+        logic::lifecycle::shut_down(self);
     }
 
 
@@ -228,11 +229,11 @@ impl<'d> Engine<'d> {
             },
 
             UnsubscribeInventory(iid) => {
-                logic::input::unsubscribe_inventory(self.as_ref(), cid, iid);
+                logic::inventory::unsubscribe(self.refine(), cid, iid);
             },
 
             MoveItem(from_iid, from_slot, to_iid, to_slot, count) => {
-                warn_on_err!(logic::items::move_items2(self.as_ref(),
+                warn_on_err!(logic::items::move_items2(self,
                                                        from_iid,
                                                        from_slot,
                                                        to_iid,
@@ -241,12 +242,12 @@ impl<'d> Engine<'d> {
             },
 
             CraftRecipe(station_sid, iid, recipe_id, count) => {
-                warn_on_err!(logic::items::craft_recipe(self.as_ref(),
+                warn_on_err!(logic::items::craft_recipe(self,
                                                         station_sid, iid, recipe_id, count));
             },
 
             Chat(msg) => {
-                logic::input::chat(self.as_ref(), cid, msg);
+                logic::input::chat(self, cid, msg);
             },
 
             Interact(_time, args) => {

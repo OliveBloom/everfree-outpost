@@ -3,6 +3,7 @@ use std::cmp;
 use types::*;
 use util::StrResult;
 
+use engine::Engine;
 use engine::split::EngineRef;
 use engine::split2::Coded;
 use logic;
@@ -77,31 +78,32 @@ pub fn set_main_inventories(mut eng: EngineRef,
 }
 
 
-pub fn move_items(mut eng: EngineRef,
+pub fn move_items(eng: &mut Engine,
                   from_iid: InventoryId,
                   to_iid: InventoryId,
                   item_id: ItemId,
                   count: u16) -> StrResult<u16> {
-    let avail = unwrap!(eng.world().get_inventory(from_iid)).count(item_id);
-    let space = unwrap!(eng.world().get_inventory(to_iid)).count_space(item_id);
+    let avail = unwrap!(eng.world.get_inventory(from_iid)).count(item_id);
+    let space = unwrap!(eng.world.get_inventory(to_iid)).count_space(item_id);
     let actual = cmp::min(cmp::min(avail, space), count);
 
     // OK: inventory IDs have already been checked.
-    world::Fragment::inventory_mut(&mut eng.as_world_fragment(), from_iid)
+    world::Fragment::inventory_mut(&mut eng.as_ref().as_world_fragment(), from_iid)
          .bulk_remove(item_id, actual);
-    world::Fragment::inventory_mut(&mut eng.as_world_fragment(), to_iid)
+    world::Fragment::inventory_mut(&mut eng.as_ref().as_world_fragment(), to_iid)
          .bulk_add(item_id, actual);
 
     Ok(actual)
 }
 
-pub fn move_items2(mut eng: EngineRef,
+pub fn move_items2(eng: &mut Engine,
                    from_iid: InventoryId,
                    from_slot: u8,
                    to_iid: InventoryId,
                    to_slot: u8,
                    count: u8) -> StrResult<u8> {
-    let mut wf = eng.as_world_fragment();
+    let mut eng_ref = eng.as_ref();
+    let mut wf = eng_ref.as_world_fragment();
 
     info!("move {} from {:?}.{} to {:?}.{}", count, from_iid, from_slot, to_iid, to_slot);
     let proposed = {
@@ -128,15 +130,16 @@ pub fn move_items2(mut eng: EngineRef,
 }
 
 
-pub fn craft_recipe(mut eng: EngineRef,
+pub fn craft_recipe(eng: &mut Engine,
                     station_sid: StructureId,
                     iid: InventoryId,
                     recipe_id: RecipeId,
                     count: u16) -> StrResult<()> {
-    let recipe = unwrap!(eng.world().data().recipes.get_recipe(recipe_id));
+    let recipe = unwrap!(eng.data.recipes.get_recipe(recipe_id));
 
     let _ = station_sid; // TODO
-    let mut wf = eng.as_world_fragment();
+    let mut eng_ref = eng.as_ref();
+    let mut wf = eng_ref.as_world_fragment();
     let mut i = unwrap!(world::Fragment::get_inventory_mut(&mut wf, iid));
 
     let real_count = {
@@ -146,6 +149,8 @@ pub fn craft_recipe(mut eng: EngineRef,
             count = cmp::min(count, i.count(item_id) / num_required as u16);
         }
 
+        // TODO: this calculation is wrong for multiple outputs
+        // It counts Item::Empty as 255 available space for *each* output
         for (&item_id, &num_produced) in recipe.outputs.iter() {
             count = cmp::min(count, i.count_space(item_id) / num_produced as u16);
         }
