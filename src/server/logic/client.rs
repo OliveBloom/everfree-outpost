@@ -27,7 +27,7 @@ use world::extra;
 use world::fragment::DummyFragment;
 use world::fragment::Fragment as World_Fragment;
 use world::object::*;
-use vision;
+use vision::{self, ViewableId};
 
 
 const DAY_NIGHT_CYCLE_TICKS: u32 = 24_000;
@@ -113,10 +113,9 @@ pub fn login(eng: &mut Engine,
     let region = vision::vision_region(pos);
     for cpos in region.points() {
         logic::chunks::load_chunk(eng.as_ref(), pid, cpos);
+        on_chunk_appear(eng.refine(), cid, pid, cpos);
     }
-    // TODO: figure out why add_client needs to happen after load_chunks
-    // (current guess is that load_chunk is using HiddenVisionFragment)
-    vision::Fragment::add_client(&mut eng.as_ref().as_vision_fragment(), cid, pid, region);
+    eng.vision.init_inventory_subscriptions(cid);
 
     if opt_eid.is_some() {
         // Init scripts
@@ -261,7 +260,13 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
     eng.chat.remove_client(cid, pid, cpos);
 
     // Shut down vision
-    vision::Fragment::remove_client(&mut eng.as_ref().as_vision_fragment(), cid);
+    let region = vision::vision_region(pos);
+    for cpos in region.points() {
+        on_chunk_gone(eng.refine(), cid, pid, cpos);
+        // Don't unload chunks yet.  We want to unsubscribe the client from `eng.vision` before
+        // unloading the Client and Entity, but we want to unload chunks afterward.
+    }
+    eng.vision.purge_inventory_subscriptions(cid);
 
     // Export the client bundle.
     let exporter = {
@@ -306,16 +311,63 @@ pub fn update_view(eng: &mut Engine,
 
     for cpos in new_region.points().filter(|&p| !old_region.contains(p) || plane_change) {
         logic::chunks::load_chunk(eng.as_ref(), new_plane, cpos);
+        on_chunk_appear(eng.refine(), cid, new_plane, cpos);
     }
 
-    vision::Fragment::set_client_area(&mut eng.as_ref().as_vision_fragment(),
-                                      cid, new_plane, new_region);
-
     for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
+        on_chunk_gone(eng.refine(), cid, old_plane, cpos);
         logic::chunks::unload_chunk(eng.as_ref(), old_plane, cpos);
     }
 
     eng.chat.set_client_location(cid, old_plane, old_cpos, new_plane, new_cpos);
 
     eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Ok));
+}
+
+
+engine_part2!(pub Engine_Vision(world, vision, messages));
+fn on_chunk_appear(eng: &mut Engine_Vision,
+                   cid: ClientId,
+                   plane: PlaneId,
+                   cpos: V2) {
+    let now = eng.now();
+    let world = &eng.world;
+    let messages = &mut eng.messages;
+    eng.vision.client_add(cid, plane, cpos, |id| match id {
+        ViewableId::Entity(eid) => {
+            let e = world.entity(eid);
+            messages.send_client(cid, logic::vision::entity_appear_message(e));
+            messages.send_client(cid, logic::vision::entity_motion_message_adjusted(e, now));
+        },
+        ViewableId::TerrainChunk(tcid) => {
+            let tc = world.terrain_chunk(tcid);
+            messages.send_client(cid, logic::vision::terrain_chunk_message(tc));
+        },
+        ViewableId::Structure(sid) => {
+            let s = world.structure(sid);
+            messages.send_client(cid, logic::vision::structure_appear_message(s));
+        },
+    });
+}
+
+fn on_chunk_gone(eng: &mut Engine_Vision,
+                 cid: ClientId,
+                 plane: PlaneId,
+                 cpos: V2) {
+    let now = eng.now();
+    let world = &eng.world;
+    let messages = &mut eng.messages;
+    eng.vision.client_remove(cid, plane, cpos, |id| match id {
+        ViewableId::Entity(eid) => {
+            let e = world.entity(eid);
+            messages.send_client(cid, logic::vision::entity_gone_message(e));
+        },
+        ViewableId::TerrainChunk(tcid) => {
+            // No "gone" message for terrainchunks
+        },
+        ViewableId::Structure(sid) => {
+            let s = world.structure(sid);
+            messages.send_client(cid, logic::vision::structure_gone_message(s));
+        },
+    });
 }

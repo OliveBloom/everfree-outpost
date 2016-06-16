@@ -41,7 +41,7 @@ type ViewerId = ClientId;
 type Location = (PlaneId, V2);
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-enum ViewableId {
+pub enum ViewableId {
     Entity(EntityId),
     TerrainChunk(TerrainChunkId),
     Structure(StructureId),
@@ -56,8 +56,6 @@ impl pubsub::Name for ViewableId {
 /// Vision subsystem state
 pub struct Vision {
     ps: PubSub<ViewableId, Location, ViewerId>,
-
-    viewer_pos: HashMap<ViewerId, (PlaneId, Region<V2>)>,
 
     inv_ps: PubSub<InventoryId, (), ViewerId>,
     viewer_invs: HashMap<ViewerId, Vec<InventoryId>>,
@@ -131,79 +129,9 @@ impl Vision {
         Vision {
             ps: PubSub::new(),
 
-            viewer_pos: HashMap::new(),
-
             inv_ps: PubSub::new(),
             viewer_invs: HashMap::new(),
         }
-    }
-
-
-    pub fn add_client<H>(&mut self,
-                         cid: ClientId,
-                         plane: PlaneId,
-                         area: Region<V2>,
-                         h: &mut H)
-            where H: Hooks {
-        trace!("{:?} created", cid);
-        self.viewer_pos.insert(cid, (PLANE_LIMBO, Region::empty()));
-        self.viewer_invs.insert(cid, Vec::new());
-        self.set_client_area(cid, plane, area, h);
-    }
-
-    pub fn remove_client<H>(&mut self,
-                            cid: ClientId,
-                            h: &mut H)
-            where H: Hooks {
-        trace!("{:?} destroyed", cid);
-        self.set_client_area(cid, PLANE_LIMBO, Region::empty(), h);
-
-        self.viewer_pos.remove(&cid);
-        for iid in self.viewer_invs.remove(&cid).unwrap() {
-            self.inv_ps.unsubscribe_publisher(cid, iid,
-                                              |_,_| h.on_inventory_disappear(cid, iid));
-        }
-    }
-
-    pub fn set_client_area<H>(&mut self,
-                              cid: ClientId,
-                              new_plane: PlaneId,
-                              new_area: Region<V2>,
-                              h: &mut H)
-            where H: Hooks {
-        let &(old_plane, old_area) = unwrap_or!(self.viewer_pos.get(&cid));
-        let plane_change = old_plane != new_plane;
-
-        // Send all "disappear" events first, then all "appear" events.  This prevents the client
-        // from seeing a mix of old and new structures in the same place.
-
-        for p in old_area.points().filter(|&p| !new_area.contains(p) || plane_change) {
-            if old_plane != PLANE_LIMBO {
-                self.ps.unsubscribe(cid, (old_plane, p),
-                                    |&vid, _, _| on_viewable_disappear(cid, vid, h));
-            }
-        }
-
-        if plane_change {
-            h.on_plane_change(cid, old_plane, new_plane);
-        }
-
-        for p in new_area.points().filter(|&p| !old_area.contains(p) || plane_change) {
-            if new_plane != PLANE_LIMBO {
-                self.ps.subscribe(cid, (new_plane, p),
-                                  |&vid, _, _| on_viewable_appear(cid, vid, h));
-            }
-        }
-
-        self.viewer_pos.insert(cid, (new_plane, new_area));
-    }
-
-    pub fn client_view_plane(&self, cid: ClientId) -> Option<PlaneId> {
-        self.viewer_pos.get(&cid).map(|x| x.0)
-    }
-
-    pub fn client_view_area(&self, cid: ClientId) -> Option<Region<V2>> {
-        self.viewer_pos.get(&cid).map(|x| x.1)
     }
 
 
@@ -217,6 +145,26 @@ impl Vision {
     //  - Both old and new are visible: Since old position is visible, refcount is positive, First
     //    loop increments, and second decrements.  No events are generated because the refcount is
     //    positive the whole way through.
+
+    pub fn client_add<F>(&mut self,
+                         cid: ClientId,
+                         plane: PlaneId,
+                         cpos: V2,
+                         mut f: F)
+            where F: FnMut(ViewableId) {
+        self.ps.subscribe(cid, (plane, cpos),
+                          |&id, _ ,_| f(id));
+    }
+
+    pub fn client_remove<F>(&mut self,
+                            cid: ClientId,
+                            plane: PlaneId,
+                            cpos: V2,
+                            mut f: F)
+            where F: FnMut(ViewableId) {
+        self.ps.unsubscribe(cid, (plane, cpos),
+                            |&id, _ ,_| f(id));
+    }
 
     pub fn entity_add<F>(&mut self,
                          eid: EntityId,
@@ -340,6 +288,17 @@ impl Vision {
         self.inv_ps.message(&iid,
                             |_, &cid| h.on_inventory_update(cid, iid, slot_idx));
     }
+
+    pub fn init_inventory_subscriptions(&mut self, cid: ClientId) {
+        self.viewer_invs.insert(cid, Vec::new());
+    }
+
+    pub fn purge_inventory_subscriptions(&mut self, cid: ClientId) {
+        for iid in self.viewer_invs.remove(&cid).unwrap() {
+            self.inv_ps.unsubscribe_publisher(cid, iid,
+                                              |_,_| {});
+        }
+    }
 }
 
 
@@ -364,10 +323,6 @@ macro_rules! gen_Fragment {
 }
 
 gen_Fragment! {
-    fn add_client(cid: ClientId, plane: PlaneId, view: Region<V2>);
-    fn remove_client(cid: ClientId);
-    fn set_client_area(cid: ClientId, plane: PlaneId, view: Region<V2>);
-
     fn subscribe_inventory(cid: ClientId, iid: InventoryId);
     fn unsubscribe_inventory(cid: ClientId, iid: InventoryId);
     fn update_inventory(iid: InventoryId,

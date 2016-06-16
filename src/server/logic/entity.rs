@@ -85,6 +85,7 @@ pub fn set_appearance(eng: &mut PartialEngine,
     // TODO: we shouldn't need to send both of these messages.  Just the appear should do.
     // But the client inserts a new, blank entity when it gets the appear message, so we probably
     // need a new "AppearanceChange" message of some sort.
+    // TODO: should fix this to use motion_message_adjusted, i think?
     let msg_appear = logic::vision::entity_appear_message(e.borrow());
     let msg_motion = logic::vision::entity_motion_message(e.borrow());
     let messages = &mut eng.messages;
