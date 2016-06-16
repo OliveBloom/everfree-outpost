@@ -9,10 +9,6 @@ use world::object::*;
 use vision::{self, Vision};
 
 
-impl<'a, 'd> vision::Hooks for VisionHooks<'a, 'd> {
-}
-
-
 pub fn entity_appear_message(e: ObjectRef<Entity>) -> ClientResponse {
     // TODO: hack.  Should have a separate "entity name" field somewhere.
     let name = if let Some(c) = e.pawn_owner() {

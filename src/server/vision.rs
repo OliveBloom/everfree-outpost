@@ -62,21 +62,6 @@ pub struct Vision {
 }
 
 
-/// Hooks for handling vision events.
-#[allow(unused_variables)]
-pub trait Hooks {
-    fn on_inventory_appear(&mut self, cid: ClientId, iid: InventoryId) {}
-    fn on_inventory_disappear(&mut self, cid: ClientId, iid: InventoryId) {}
-    fn on_inventory_update(&mut self,
-                           cid: ClientId,
-                           iid: InventoryId,
-                           slot_idx: u8) {}
-}
-
-pub struct NoHooks;
-impl Hooks for NoHooks { }
-
-
 // Main implementation
 
 impl Vision {
@@ -253,28 +238,4 @@ impl Vision {
                                               |_,_| {});
         }
     }
-}
-
-
-// Fragment
-
-macro_rules! gen_Fragment {
-    ($( fn $name:ident($($arg:ident: $arg_ty:ty),*); )*) => {
-        pub trait Fragment<'d> {
-            type H: Hooks;
-            fn with_hooks<F, R>(&mut self, f: F) -> R
-                where F: FnOnce(&mut Vision, &mut Self::H) -> R;
-
-            $(
-                fn $name(&mut self, $($arg: $arg_ty),*) {
-                    self.with_hooks(|sys, hooks| {
-                        sys.$name($($arg,)* hooks)
-                    })
-                }
-            )*
-        }
-    };
-}
-
-gen_Fragment! {
 }

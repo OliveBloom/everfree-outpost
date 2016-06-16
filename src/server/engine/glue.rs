@@ -45,15 +45,6 @@ impl<'a, 'd> world::Fragment<'d> for WorldFragment<'a, 'd> {
     }
 }
 
-impl<'a, 'd> vision::Fragment<'d> for VisionFragment<'a, 'd> {
-    type H = VisionHooks<'a, 'd>;
-    fn with_hooks<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Vision, &mut VisionHooks<'a, 'd>) -> R {
-        let (h, mut e) = unsafe { self.borrow().fiddle().to_part().split_off() };
-        f(e.vision_mut(), &mut Part::from_part(h))
-    }
-}
-
 impl_slice! {
     EngineRef::as_world_fragment -> WorldFragment;
     EngineRef::as_vision_fragment -> VisionFragment;
@@ -78,14 +69,6 @@ impl<'a, 'd> world::Fragment<'d> for HiddenWorldFragment<'a, 'd> {
             where F: FnOnce(&mut HiddenWorldHooks<'a, 'd>) -> R {
         let e = unsafe { self.borrow().fiddle().to_part().slice() };
         f(&mut Part::from_part(e))
-    }
-}
-
-impl<'a, 'd> vision::Fragment<'d> for HiddenVisionFragment<'a, 'd> {
-    type H = vision::NoHooks;
-    fn with_hooks<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Vision, &mut vision::NoHooks) -> R {
-        f(self.vision_mut(), &mut vision::NoHooks)
     }
 }
 
