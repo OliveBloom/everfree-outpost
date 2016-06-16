@@ -24,7 +24,6 @@ pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
     };
 
     let iid = unwrap!(f.world_mut().inventories.insert(i));
-    f.with_hooks(|h| h.on_inventory_create(iid));
     Ok(iid)
 }
 
@@ -65,7 +64,6 @@ pub fn destroy<'d, F>(f: &mut F,
         },
     }
 
-    f.with_hooks(|h| h.on_inventory_destroy(iid));
     Ok(())
 }
 

@@ -297,16 +297,6 @@ impl<'d> Importer<'d> {
                 }
             }
         }
-
-        // Only notify listeners once all imports are done, so they don't get an inconsistent view.
-        // client hooks have been removed
-        // entity hooks have been removed
-        for i in 0 .. b.inventories.len() {
-            f.with_hooks(|h| h.on_inventory_create(self.inventory_id_map[i]));
-        }
-        // plane hooks have been removed
-        // terrain chunk hooks have been removed
-        // structure hooks have been removed
     }
 
 

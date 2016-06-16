@@ -5,8 +5,6 @@ use data::StructureTemplate;
 
 #[allow(unused_variables)]
 pub trait Hooks {
-    fn on_inventory_create(&mut self, iid: InventoryId) {}
-    fn on_inventory_destroy(&mut self, iid: InventoryId) {}
     fn on_inventory_update(&mut self,
                            iid: InventoryId,
                            slot_idx: u8) {}
