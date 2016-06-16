@@ -2,6 +2,7 @@ import configparser
 import os
 import struct
 import sys
+import traceback
 
 import nacl.bindings
 import nacl.signing
