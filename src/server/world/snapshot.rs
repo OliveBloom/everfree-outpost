@@ -23,6 +23,7 @@
 use std::collections::HashMap;
 
 use types::*;
+use util::BitSlice;
 
 use super::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
 use super::Extra;
@@ -43,9 +44,23 @@ impl Snapshot {
     pub fn version(&self) -> u32 {
         self.version
     }
+
+    pub fn begin(&mut self) {
+        self.version += 1;
+        assert!(self.inner.is_none());
+        self.inner = Some(Box::new(Inner::new()));
+    }
+
+    pub fn active(&self) -> bool {
+        self.inner.is_some()
+    }
+
+    pub fn end(&mut self) {
+        self.inner = None;
+    }
 }
 
-pub struct Inner {
+struct Inner {
     extra: Option<Extra>,
 
     // Use HashMap instead of VecMap because we expect these maps to be sparse.
@@ -55,6 +70,35 @@ pub struct Inner {
     planes: HashMap<PlaneId, Plane>,
     terrain_chunks: HashMap<TerrainChunkId, TerrainChunk>,
     structures: HashMap<StructureId, Structure>,
+
+    client_filter: Vec<u8>,
+    entity_filter: Vec<u8>,
+    inventory_filter: Vec<u8>,
+    plane_filter: Vec<u8>,
+    terrain_chunk_filter: Vec<u8>,
+    structure_filter: Vec<u8>,
+}
+
+impl Inner {
+    pub fn new() -> Inner {
+        Inner {
+            extra: None,
+
+            clients: HashMap::new(),
+            entities: HashMap::new(),
+            inventories: HashMap::new(),
+            planes: HashMap::new(),
+            terrain_chunks: HashMap::new(),
+            structures: HashMap::new(),
+
+            client_filter: Vec::new(),
+            entity_filter: Vec::new(),
+            inventory_filter: Vec::new(),
+            plane_filter: Vec::new(),
+            terrain_chunk_filter: Vec::new(),
+            structure_filter: Vec::new(),
+        }
+    }
 }
 
 macro_rules! snapshot_impls {
@@ -62,6 +106,10 @@ macro_rules! snapshot_impls {
             object $Obj:ty {
                 id $ObjId:ty;
                 map $objs:ident;
+                get $get_obj:ident;
+                filter $obj_filter:ident,
+                    $set_obj_filter:ident,
+                    $forget_obj:ident;
                 record
                     $record_obj:ident,
                     $maybe_record_obj:ident;
@@ -83,13 +131,56 @@ macro_rules! snapshot_impls {
                         obj.version = self.version + 1;
                     }
                 }
+
+                pub fn $get_obj(&self, id: $ObjId) -> Option<&$Obj> {
+                    if let Some(ref inner) = self.inner {
+                        inner.$get_obj(id)
+                    } else {
+                        None
+                    }
+                }
+
+                pub fn $set_obj_filter(&mut self, filter: Vec<u8>) {
+                    self.inner.as_mut().unwrap().$set_obj_filter(filter);
+                }
+
+                pub fn $forget_obj(&mut self, id: $ObjId) {
+                    if let Some(ref mut inner) = self.inner {
+                        inner.$forget_obj(id);
+                    }
+                }
             )*
         }
 
         impl Inner {
             $(
                 pub fn $record_obj(&mut self, id: $ObjId, obj: &$Obj) {
-                    self.$objs.insert(id, obj.clone());
+                    let should_record = {
+                        let idx = id.unwrap() as usize;
+                        let bits = BitSlice::from_bytes(&self.$obj_filter);
+                        idx < bits.len() && bits.get(idx)
+                    };
+                    if should_record {
+                        self.$record_obj(id, obj);
+                    }
+                }
+
+                pub fn $get_obj(&self, id: $ObjId) -> Option<&$Obj> {
+                    self.$objs.get(&id)
+                }
+
+                pub fn $set_obj_filter(&mut self, filter: Vec<u8>) {
+                    self.$obj_filter = filter;
+                }
+
+                pub fn $forget_obj(&mut self, id: $ObjId) {
+                    self.$objs.remove(&id);
+
+                    let idx = id.unwrap() as usize;
+                    let bits = BitSlice::from_bytes_mut(&mut self.$obj_filter);
+                    if idx < bits.len() && bits.get(idx) {
+                        bits.set(idx, false);
+                    }
                 }
             )*
         }
@@ -100,6 +191,10 @@ snapshot_impls! {
     object Client {
         id ClientId;
         map clients;
+        get get_client;
+        filter client_filter,
+            set_client_filter,
+            forget_client;
         record
             record_client,
             maybe_record_client;
@@ -108,6 +203,10 @@ snapshot_impls! {
     object Entity {
         id EntityId;
         map entities;
+        get get_entity;
+        filter entity_filter,
+            set_entity_filter,
+            forget_entity;
         record
             record_entity,
             maybe_record_entity;
@@ -116,6 +215,10 @@ snapshot_impls! {
     object Inventory {
         id InventoryId;
         map inventories;
+        get get_inventory;
+        filter inventory_filter,
+            set_inventory_filter,
+            forget_inventory;
         record
             record_inventory,
             maybe_record_inventory;
@@ -124,6 +227,10 @@ snapshot_impls! {
     object Plane {
         id PlaneId;
         map planes;
+        get get_plane;
+        filter plane_filter,
+            set_plane_filter,
+            forget_plane;
         record
             record_plane,
             maybe_record_plane;
@@ -132,6 +239,10 @@ snapshot_impls! {
     object TerrainChunk {
         id TerrainChunkId;
         map terrain_chunks;
+        get get_terrain_chunk;
+        filter terrain_chunk_filter,
+            set_terrain_chunk_filter,
+            forget_terrain_chunk;
         record
             record_terrain_chunk,
             maybe_record_terrain_chunk;
@@ -140,6 +251,10 @@ snapshot_impls! {
     object Structure {
         id StructureId;
         map structures;
+        get get_structure;
+        filter structure_filter,
+            set_structure_filter,
+            forget_structure;
         record
             record_structure,
             maybe_record_structure;

@@ -41,7 +41,16 @@ impl<'d> super::World<'d> {
     }
 
     pub fn extra_mut(&mut self) -> &mut Extra {
+        // FIXME: record into snapshot
         &mut self.extra
+    }
+
+    pub fn snapshot(&self) -> &Snapshot {
+        &self.snapshot
+    }
+
+    pub fn snapshot_mut(&mut self) -> &mut Snapshot {
+        &mut self.snapshot
     }
 
 
