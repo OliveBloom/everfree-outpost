@@ -7,6 +7,7 @@ use util::stable_id_map::{self, StableIdMap};
 use world::extra::Extra;
 use world::types::*;
 use world::object::{Object, ObjectRef};
+use world::snapshot::Snapshot;
 
 
 impl<'d> super::World<'d> {
@@ -26,6 +27,8 @@ impl<'d> super::World<'d> {
             structures_by_chunk: HashMap::new(),
             entities_by_plane: HashMap::new(),
             limbo_entities: HashMap::new(),
+
+            snapshot: Snapshot::new(),
         }
     }
 

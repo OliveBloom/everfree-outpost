@@ -18,6 +18,8 @@ pub fn create<'d, F>(f: &mut F, name: String) -> OpResult<PlaneId>
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
+
+        version: f.world().snapshot.version() + 1,
     };
 
     let pid = unwrap!(f.world_mut().planes.insert(p));
@@ -27,7 +29,8 @@ pub fn create<'d, F>(f: &mut F, name: String) -> OpResult<PlaneId>
 
 pub fn create_unchecked<'d, F>(f: &mut F) -> PlaneId
         where F: Fragment<'d> {
-    let pid = f.world_mut().planes.insert(Plane {
+    let w = f.world_mut();
+    let pid = w.planes.insert(Plane {
         name: String::new(),
 
         loaded_chunks: HashMap::new(),
@@ -35,6 +38,8 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> PlaneId
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
+
+        version: w.snapshot.version() + 1,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     pid
 }
@@ -82,6 +87,7 @@ pub fn destroy<'d, F>(f: &mut F,
         where F: Fragment<'d> {
     pre_fini(f, pid);
     let p = unwrap!(f.world_mut().planes.remove(pid));
+    f.world_mut().snapshot.record_plane(pid, &p);
 
     for &tcid in p.loaded_chunks.values() {
         ops::terrain_chunk::destroy(f, tcid).unwrap();

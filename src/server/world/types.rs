@@ -260,3 +260,21 @@ impl super::Structure {
         &mut self.extra
     }
 }
+
+
+// Manual impl because BlockChunk (a.k.a. [u16; 4096]) is not Clone 
+impl Clone for super::TerrainChunk {
+    fn clone(&self) -> super::TerrainChunk {
+        super::TerrainChunk {
+            stable_plane: self.stable_plane,
+            plane: self.plane,
+            cpos: self.cpos,
+            blocks: Box::new(*self.blocks),
+            extra: self.extra.clone(),
+            stable_id: self.stable_id,
+            flags: self.flags,
+            child_structures: self.child_structures.clone(),
+            version: self.version,
+        }
+    }
+}

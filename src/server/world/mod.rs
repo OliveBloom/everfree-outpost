@@ -47,6 +47,7 @@ mod types;
 pub mod fragment;
 pub mod flags;
 pub mod bundle;
+mod snapshot;
 
 
 // Structs must be declared at top level so that the submodules can access their private fields.
@@ -71,9 +72,12 @@ pub struct World<'d> {
     /// Entities in PLANE_LIMBO, indexed by the stable ID of their containing plane.  When a plane
     /// is loaded, its entities will automatically be moved out of limbo.
     limbo_entities: HashMap<Stable<PlaneId>, HashSet<EntityId>>,
+
+    snapshot: snapshot::Snapshot,
 }
 
 
+#[derive(Clone)]
 pub struct Client {
     name: String,
     /// *Invariant*: If `pawn` is `Some(eid)`, then entity `eid` exists and is a child of this
@@ -85,9 +89,12 @@ pub struct Client {
     stable_id: StableId,
     child_entities: HashSet<EntityId>,
     child_inventories: HashSet<InventoryId>,
+
+    version: u32,
 }
 impl_IntrusiveStableId!(Client, stable_id);
 
+#[derive(Clone)]
 pub struct Entity {
     /// StableId of the Plane where the Entity is currently located.
     stable_plane: Stable<PlaneId>,
@@ -109,9 +116,12 @@ pub struct Entity {
     stable_id: StableId,
     attachment: EntityAttachment,
     child_inventories: HashSet<InventoryId>,
+
+    version: u32,
 }
 impl_IntrusiveStableId!(Entity, stable_id);
 
+#[derive(Clone)]
 pub struct Inventory {
     // Inventory size (number of slots) is capped at 255
     contents: Box<[Item]>,
@@ -119,9 +129,12 @@ pub struct Inventory {
     extra: Extra,
     stable_id: StableId,
     attachment: InventoryAttachment,
+
+    version: u32,
 }
 impl_IntrusiveStableId!(Inventory, stable_id);
 
+#[derive(Clone)]
 pub struct Plane {
     name: String,
 
@@ -132,6 +145,8 @@ pub struct Plane {
 
     extra: Extra,
     stable_id: StableId,
+
+    version: u32,
 }
 impl_IntrusiveStableId!(Plane, stable_id);
 
@@ -146,9 +161,12 @@ pub struct TerrainChunk {
     stable_id: StableId,
     flags: TerrainChunkFlags,
     child_structures: HashSet<StructureId>,
+
+    version: u32,
 }
 impl_IntrusiveStableId!(TerrainChunk, stable_id);
 
+#[derive(Clone)]
 pub struct Structure {
     stable_plane: Stable<PlaneId>,
     /// *Invariant*: `plane` always refers to a loaded plane.
@@ -161,6 +179,8 @@ pub struct Structure {
     flags: StructureFlags,
     attachment: StructureAttachment,
     child_inventories: HashSet<InventoryId>,
+
+    version: u32,
 }
 impl_IntrusiveStableId!(Structure, stable_id);
 

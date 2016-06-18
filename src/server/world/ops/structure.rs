@@ -38,6 +38,8 @@ pub fn create<'d, F>(f: &mut F,
         flags: StructureFlags::empty(),
         attachment: StructureAttachment::Plane,
         child_inventories: HashSet::new(),
+
+        version: f.world().snapshot.version() + 1,
     };
 
     let sid = unwrap!(f.world_mut().structures.insert(s));
@@ -47,7 +49,8 @@ pub fn create<'d, F>(f: &mut F,
 
 pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
         where F: Fragment<'d> {
-    let sid = f.world_mut().structures.insert(Structure {
+    let w = f.world_mut();
+    let sid = w.structures.insert(Structure {
         stable_plane: Stable::new(0),
         plane: PlaneId(0),
         pos: scalar(0),
@@ -58,6 +61,8 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
         flags: StructureFlags::empty(),
         attachment: StructureAttachment::Plane,
         child_inventories: HashSet::new(),
+
+        version: w.snapshot.version() + 1,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     sid
 }
@@ -93,6 +98,7 @@ pub fn destroy<'d, F>(f: &mut F,
         where F: Fragment<'d> {
     use world::StructureAttachment::*;
     let s = unwrap!(f.world_mut().structures.remove(sid));
+    f.world_mut().snapshot.record_structure(sid, &s);
 
     let t = f.world().data.structure_templates.template(s.template);
     let bounds = Region::new(s.pos, s.pos + t.size);

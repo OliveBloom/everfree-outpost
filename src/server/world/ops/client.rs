@@ -25,6 +25,8 @@ pub fn create<'d, F>(f: &mut F,
         stable_id: NO_STABLE_ID,
         child_entities: HashSet::new(),
         child_inventories: HashSet::new(),
+
+        version: f.world().snapshot.version() + 1,
     };
 
     let cid = unwrap!(f.world_mut().clients.insert(c));
@@ -33,7 +35,8 @@ pub fn create<'d, F>(f: &mut F,
 
 pub fn create_unchecked<'d, F>(f: &mut F) -> ClientId
         where F: Fragment<'d> {
-    let cid = f.world_mut().clients.insert(Client {
+    let w = f.world_mut();
+    let cid = w.clients.insert(Client {
         name: String::new(),
         pawn: None,
         current_input: InputBits::empty(),
@@ -42,6 +45,8 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> ClientId
         stable_id: NO_STABLE_ID,
         child_entities: HashSet::new(),
         child_inventories: HashSet::new(),
+
+        version: w.snapshot.version() + 1,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     cid
 }
@@ -51,6 +56,7 @@ pub fn destroy<'d, F>(f: &mut F,
         where F: Fragment<'d> {
     let c = unwrap!(f.world_mut().clients.remove(cid));
     // Further lookup failures indicate an invariant violation.
+    f.world_mut().snapshot.record_client(cid, &c);
 
     for &eid in c.child_entities.iter() {
         // TODO: do we really want .unwrap() here?

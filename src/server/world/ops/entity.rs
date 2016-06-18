@@ -32,6 +32,8 @@ pub fn create<'d, F>(f: &mut F,
         stable_id: NO_STABLE_ID,
         attachment: EntityAttachment::World,
         child_inventories: HashSet::new(),
+
+        version: f.world().snapshot.version() + 1,
     };
 
     let eid = unwrap!(f.world_mut().entities.insert(e));
@@ -41,7 +43,8 @@ pub fn create<'d, F>(f: &mut F,
 
 pub fn create_unchecked<'d, F>(f: &mut F) -> EntityId
         where F: Fragment<'d> {
-    let eid = f.world_mut().entities.insert(Entity {
+    let w = f.world_mut();
+    let eid = w.entities.insert(Entity {
         stable_plane: Stable::none(),
         plane: PLANE_LIMBO,
 
@@ -56,6 +59,8 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> EntityId
         stable_id: NO_STABLE_ID,
         attachment: EntityAttachment::World,
         child_inventories: HashSet::new(),
+
+        version: w.snapshot.version() + 1,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     eid
 }
@@ -95,6 +100,7 @@ pub fn destroy<'d, F>(f: &mut F,
     pre_fini(f, eid);
     let e = unwrap!(f.world_mut().entities.remove(eid));
     // Further lookup failures indicate an invariant violation.
+    f.world_mut().snapshot.record_entity(eid, &e);
 
     match e.attachment {
         World => {},

@@ -24,6 +24,8 @@ pub fn create<'d, F>(f: &mut F,
         stable_id: NO_STABLE_ID,
         flags: flags::TC_GENERATION_PENDING,
         child_structures: HashSet::new(),
+
+        version: f.world().snapshot.version() + 1,
     };
 
     // unwrap() always succeeds because stable_id is NO_STABLE_ID.
@@ -34,7 +36,8 @@ pub fn create<'d, F>(f: &mut F,
 
 pub fn create_unchecked<'d, F>(f: &mut F) -> TerrainChunkId
         where F: Fragment<'d> {
-    let tcid = f.world_mut().terrain_chunks.insert(TerrainChunk {
+    let w = f.world_mut();
+    let tcid = w.terrain_chunks.insert(TerrainChunk {
         stable_plane: Stable::new(0),
         plane: PlaneId(0),
         cpos: scalar(0),
@@ -44,6 +47,8 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> TerrainChunkId
         stable_id: NO_STABLE_ID,
         flags: TerrainChunkFlags::empty(),
         child_structures: HashSet::new(),
+
+        version: w.snapshot.version() + 1,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     tcid
 }
@@ -73,6 +78,7 @@ pub fn destroy<'d, F>(f: &mut F,
     trace!("destroy {:?}", tcid);
     pre_fini(f, tcid);
     let tc = unwrap!(f.world_mut().terrain_chunks.remove(tcid));
+    f.world_mut().snapshot.record_terrain_chunk(tcid, &tc);
 
     for &sid in tc.child_structures.iter() {
         ops::structure::destroy(f, sid).unwrap();

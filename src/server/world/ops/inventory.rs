@@ -21,6 +21,8 @@ pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         attachment: InventoryAttachment::World,
+
+        version: f.world().snapshot.version() + 1,
     };
 
     let iid = unwrap!(f.world_mut().inventories.insert(i));
@@ -29,12 +31,15 @@ pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
 
 pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
         where F: Fragment<'d> {
-    let iid = f.world_mut().inventories.insert(Inventory {
+    let w = f.world_mut();
+    let iid = w.inventories.insert(Inventory {
         contents: util::make_array(Item::Empty, 0),
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
         attachment: InventoryAttachment::World,
+
+        version: w.snapshot.version() + 1,
     }).unwrap();     // Shouldn't fail when stable_id == NO_STABLE_ID
     iid
 }
@@ -44,6 +49,7 @@ pub fn destroy<'d, F>(f: &mut F,
         where F: Fragment<'d> {
     use world::InventoryAttachment::*;
     let i = unwrap!(f.world_mut().inventories.remove(iid));
+    f.world_mut().snapshot.record_inventory(iid, &i);
 
     match i.attachment {
         World => {},

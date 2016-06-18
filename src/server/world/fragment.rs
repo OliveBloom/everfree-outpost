@@ -73,12 +73,15 @@ pub trait Fragment<'d>: Sized {
 
         let sid = ops::structure::create_unchecked(self);
         {
-            let s = &mut self.world_mut().structures[sid];
+            let w = self.world_mut();
+            let s = &mut w.structures[sid];
 
             s.plane = pid;
             s.stable_plane = stable_pid;
             s.pos = pos;
             s.template = tid;
+
+            s.version = w.snapshot.version() + 1;
         }
         ops::structure::post_init(self, sid);
         Ok(ObjectRefMut::new(self, sid))
