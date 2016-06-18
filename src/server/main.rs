@@ -104,6 +104,10 @@ fn main() {
     let args = env::args().collect::<Vec<_>>();
     let storage = storage::Storage::new(&args[1]);
 
+    if !storage.has_save_layer(storage::SaveLayer::Delta) {
+        storage.create_save_layer(storage::SaveLayer::Delta);
+    }
+
     let block_json = read_json(storage.open_block_data());
     let item_json = read_json(storage.open_item_data());
     let recipe_json = read_json(storage.open_recipe_data());

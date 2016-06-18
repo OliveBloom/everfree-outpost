@@ -125,8 +125,7 @@ impl<'d, K: Key, T: Summary> Cache<'d, K, T> {
             Ok(())
         } else {
             self.make_space(1);
-            let path = self.storage.summary_file_path(self.name, &key.to_path());
-            let file = try!(File::open(path));
+            let file = unwrap!(self.storage.open_summary_file(self.name, &key.to_path()));
             let summary = try!(T::read_from(file));
             self.cache.insert(key, CacheEntry::new(summary));
             Ok(())
