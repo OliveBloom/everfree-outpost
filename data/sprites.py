@@ -93,3 +93,19 @@ def init():
         for hat_type in ('witch', 'santa', 'party'):
             sheet = load1('equipment/%s-hat-%s.png' % (hat_type, sex))
             add_hat_layer('%s/hat/%s' % (sex, hat_type), sex, sheet)
+
+
+    # Activity sprites
+
+    activity = SPRITE.new('activity', (32, 32))
+    activity.add_anim('default', 1, 1)
+    activity.add_layer('default')
+    anim = Anim([load1('misc/activity.png')], 1)
+    activity.add_graphics('default', 'default', anim)
+
+    items = SPRITE.new('items', (512, 512))
+    items.add_anim('default', 1, 1)
+    items.add_layer('default')
+    anim = Anim([Image((512, 512)).modify(lambda i: i.paste((255, 0, 255, 255)))], 1)
+    items.add_graphics('default', 'default', anim)
+
