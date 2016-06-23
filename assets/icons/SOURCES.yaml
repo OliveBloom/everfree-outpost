@@ -51,3 +51,6 @@ socks.png: &socks
     author: Stuart Pernsteiner
 
 remove-socks.png: *socks
+
+activity-kick.png:
+    author: Stuart Pernsteiner

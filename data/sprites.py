@@ -105,12 +105,12 @@ def init():
 
 
     activity = SPRITE.new('activity', (512, 512))
-    activity.add_anim('default', 1, 1)
+    activity.add_layer('default')
 
     def add_activity_icon(name, img):
-        activity.add_layer(name)
+        activity.add_anim(name, 1, 1)
         anim = Anim([img], 1)
-        activity.add_graphics(name, 'default', anim)
+        activity.add_graphics('default', name, anim)
 
     icons = loader('icons', unit=16)
 
@@ -119,6 +119,6 @@ def init():
     add_activity_icon('item/pick', tools.extract((1, 0)))
     add_activity_icon('item/mallet', tools.extract((2, 0)))
     add_activity_icon('item/axe', tools.extract((3, 0)))
-    add_activity_icon('action/kick', Image((16, 16)))
+    add_activity_icon('activity/kick', icons('activity-kick.png'))
     
 
