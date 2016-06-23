@@ -293,8 +293,7 @@ class BinaryDefs:
 
         # XSpcGrfx - special graphics
         self.pack_array(b'XSpcGrfx', [
-            j['activity_graphics'],
-            j['item_sprite_graphics'],
+            j['activity_bubble_graphics'],
             ], '<H')
 
     def convert_day_night(self):
