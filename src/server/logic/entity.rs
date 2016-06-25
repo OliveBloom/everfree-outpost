@@ -119,26 +119,37 @@ pub fn set_activity(eng: &mut Engine,
         eng.messages.send_client(c.id(), ClientResponse::ActivityChange(activity));
     }
 
-    let send_msg = match activity {
-        Activity::Move => {
+    // FIXME: need to send "activity icon = none" when changing back to walk/emote
+    // Currently this is handled explicitly on the python side, which is very ugly.
+
+    let messages = &mut eng.messages;
+    match activity {
+        Activity::Walk => {
             // Let physics handle the message.  Otherwise we'll just send one made-up motion
             // followed by another correct one.
-            false
         },
-        Activity::Special(anim, _interruptible) => {
+        Activity::Emote(anim) => {
             let pos = e.pos(now);
             e.set_motion(Motion::stationary(pos, now));
             e.set_anim(anim);
-            true
-        },
-    };
 
-    if send_msg {
-        let msg = logic::vision::entity_motion_message(e.borrow());
-        let messages = &mut eng.messages;
-        eng.vision.entity_update(eid, |cid| {
-            messages.send_client(cid, msg.clone());
-        });
+            let msg = logic::vision::entity_motion_message(e.borrow());
+            eng.vision.entity_update(eid, |cid| {
+                messages.send_client(cid, msg.clone());
+            });
+        },
+        Activity::Work(anim, icon) => {
+            let pos = e.pos(now);
+            e.set_motion(Motion::stationary(pos, now));
+            e.set_anim(anim);
+
+            let msg_motion = logic::vision::entity_motion_message(e.borrow());
+            let msg_icon = logic::vision::entity_activity_icon_message(e.borrow(), icon);
+            eng.vision.entity_update(eid, |cid| {
+                messages.send_client(cid, msg_motion.clone());
+                messages.send_client(cid, msg_icon.clone());
+            });
+        },
     }
 
     true

@@ -42,10 +42,11 @@ pub fn tick(eng: &mut Engine) {
         };
 
         if let Some(eid) = opt_eid {
-            if input & INPUT_DIR_MASK != InputBits::empty() {
+            if input & INPUT_DIR_MASK != InputBits::empty() &&
+               eng.world.entity(eid).activity().interruptible() {
                 logic::entity::set_activity(eng.refine(),
                                             eid,
-                                            Activity::Move);
+                                            Activity::Walk);
             }
         }
     }

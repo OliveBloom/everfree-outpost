@@ -18,18 +18,22 @@ pub use libserver_world_types::{
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Activity {
-    /// Walking/running/standing/flying.  The motion and animation are determined by physics.
-    Move,
-    /// Playing the indicated animation, and otherwise stationary.  The boolean flag indicates
-    /// whether the activity is interruptible by user input.
-    Special(AnimId, bool),
+    /// Walking.  The motion and animation are determined by physics.
+    Walk,
+    /// Playing the indicated animation, and otherwise stationary.  Can be interrupted by user
+    /// input.
+    Emote(AnimId),
+    /// Playing the indicated animation, with the indicated activity bubble, and otherwise
+    /// stationary.  Not interruptible.
+    Work(AnimId, AnimId),
 }
 
 impl Activity {
     pub fn interruptible(&self) -> bool {
         match *self {
-            Activity::Move => true,
-            Activity::Special(_, interrupt) => interrupt,
+            Activity::Walk |
+            Activity::Emote(_) => true,
+            Activity::Work(_, _) => false,
         }
     }
 }

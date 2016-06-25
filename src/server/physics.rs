@@ -98,8 +98,9 @@ impl<'a, 'd, F: World_Fragment<'d>> EntityWrapper<'a, 'd, F> {
 impl<'a, 'd, F: World_Fragment<'d>> movement::Entity for EntityWrapper<'a, 'd, F> {
     fn activity(&self) -> movement::Activity {
         match self.entity.activity() {
-            Activity::Move => movement::Activity::Walk,
-            Activity::Special(_, _) => movement::Activity::Busy,
+            Activity::Walk => movement::Activity::Walk,
+            Activity::Emote(_) |
+            Activity::Work(_, _) => movement::Activity::Busy,
         }
     }
 
