@@ -450,24 +450,34 @@ define_python_class! {
             Ok(())
         }
 
-        fn world_entity_set_activity_move(eng: glue::WorldFragment,
+        fn world_entity_set_activity_walk(eng: glue::WorldFragment,
                                           eid: EntityId) -> PyResult<()> {
             // FIXME: actually-unsafe transmute
             let eng = unsafe { mem::transmute(eng) };
-            let ok = logic::entity::set_activity(eng, eid, Activity::Move);
+            let ok = logic::entity::set_activity(eng, eid, Activity::Walk);
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
-        fn world_entity_set_activity_special(eng: glue::WorldFragment,
-                                             eid: EntityId,
-                                             anim: AnimId,
-                                             interruptible: bool) -> PyResult<()> {
+        fn world_entity_set_activity_emote(eng: glue::WorldFragment,
+                                           eid: EntityId,
+                                           anim: AnimId) -> PyResult<()> {
             // FIXME: actually-unsafe transmute
             let eng = unsafe { mem::transmute(eng) };
-            let act = Activity::Special(anim, interruptible);
-            let ok = logic::entity::set_activity(eng, eid, act);
+            let ok = logic::entity::set_activity(eng, eid, Activity::Emote(anim));
+            // Bad eid is currently the only possible failure mode
+            pyassert!(ok, runtime_error, "no entity with that ID");
+            Ok(())
+        }
+
+        fn world_entity_set_activity_work(eng: glue::WorldFragment,
+                                          eid: EntityId,
+                                          anim: AnimId,
+                                          icon: AnimId) -> PyResult<()> {
+            // FIXME: actually-unsafe transmute
+            let eng = unsafe { mem::transmute(eng) };
+            let ok = logic::entity::set_activity(eng, eid, Activity::Work(anim, icon));
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())

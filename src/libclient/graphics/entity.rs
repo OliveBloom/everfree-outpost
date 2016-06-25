@@ -130,8 +130,8 @@ impl<'a> GeomGen<'a> {
                 continue;
             }
 
-            let num_quads = count_layers(e.appearance) + name_len(&e.name);
-            count += 6 * num_quads;
+            let is_pawn = Some(id) == self.pawn_id;
+            count += 6 * count_quads_one(e, is_pawn);
         }
         count
     }
@@ -160,7 +160,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 continue;
             }
 
-            let num_quads = count_layers(e.appearance) + name_len(&e.name);
+            let num_quads = count_quads_one(e, is_pawn);
             if idx + 6 * num_quads >= buf.len() {
                 return (idx, true);
             }
@@ -257,11 +257,92 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                     }
                 }
             }
+
+            if let Some(activity_anim_id) = e.activity_anim {
+                let g = self.data.sprite_graphics_item(self.data.activity_bubble_graphics());
+
+                // Adjust top-left of 96x96 sprite to get top-left of 32x32 bubble
+                let dest_x = dest_x + 32;
+                let dest_y = dest_y - 10;
+                // TODO: adjust X for left/right facing
+
+                for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
+                    assert!(g.mirror == 0);
+                    let dest_pos =
+                        (dest_x + g.dest_offset.0 + cx * g.size.0,
+                         dest_y + g.dest_offset.1 + cy * g.size.1);
+
+                    buf[idx] = Vertex {
+                        dest_pos: dest_pos,
+                        src_pos: (g.src_offset.0 + cx * g.size.0,
+                                  g.src_offset.1 + cy * g.size.1),
+                        sheet: g.sheet,
+                        color: (255, 255, 255),
+
+                        ref_pos: (pos.x as u16,
+                                  // TODO: hardcoded size
+                                  // TODO: arbitrary adjustment
+                                  pos.y as u16 + HACKY_ADJUSTMENT,
+                                  pos.z as u16),
+                        // TODO: hardcoded size
+                        ref_size_z: 64,
+
+                        anim_length: 1,
+                        anim_rate: 1,
+                        anim_start: (e.motion.start_time % 55440) as u16,
+                        anim_step: 0,
+                    };
+                    idx += 1;
+                }
+
+
+                let a = self.data.animation(activity_anim_id);
+                let l = self.data.activity_layer();
+                let g = self.data.sprite_graphics_item(l.gfx_start + a.local_id);
+                let dest_x = dest_x + 8;
+                let dest_y = dest_y + 8;
+
+                for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
+                    assert!(g.mirror == 0);
+                    let dest_pos =
+                        (dest_x + g.dest_offset.0 + cx * g.size.0,
+                         dest_y + g.dest_offset.1 + cy * g.size.1);
+
+                    buf[idx] = Vertex {
+                        dest_pos: dest_pos,
+                        src_pos: (g.src_offset.0 + cx * g.size.0,
+                                  g.src_offset.1 + cy * g.size.1),
+                        sheet: g.sheet,
+                        color: (255, 255, 255),
+
+                        ref_pos: (pos.x as u16,
+                                  // TODO: hardcoded size
+                                  // TODO: arbitrary adjustment
+                                  pos.y as u16 + HACKY_ADJUSTMENT,
+                                  pos.z as u16),
+                        // TODO: hardcoded size
+                        ref_size_z: 64,
+
+                        anim_length: 1,
+                        anim_rate: 1,
+                        anim_start: (e.motion.start_time % 55440) as u16,
+                        anim_step: 0,
+                    };
+                    idx += 1;
+                }
+            }
         }
 
         // Ran out of entites - we're done.
         (idx, false)
     }
+}
+
+
+fn count_quads_one(e: &Entity, is_pawn: bool) -> usize {
+    count_layers(e.appearance) +
+    if !is_pawn { name_len(&e.name) } else { 0 } +
+    if e.activity_anim.is_some() { 2 } else { 0 }
 }
 
 
@@ -292,7 +373,7 @@ fn count_layers(appearance: u32) -> usize {
 
 fn name_len(name: &Option<String>) -> usize {
     if let Some(ref name) = *name {
-        name.len()
+        fonts::NAME.iter_str(name).filter(|&(ref idx, _)| idx.is_some()).count()
     } else {
         0
     }

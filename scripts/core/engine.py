@@ -1,3 +1,4 @@
+from collections import namedtuple
 from outpost_server.core.data import DATA, BlockProxy, TemplateProxy
 from outpost_server.core.extra import ExtraHashProxy
 from outpost_server.core.types import *
@@ -109,6 +110,9 @@ class ObjectProxy(object):
             self._engine = EngineProxy(self._eng)
         return self._engine
 
+    def refresh(self, eng):
+        return type(self)(eng._eng, self.id)
+
 
 class ClientProxy(ObjectProxy):
     ID_TYPE = ClientId
@@ -156,6 +160,10 @@ class ClientProxy(ObjectProxy):
     create_inv = _create_inv
 
 
+Walk = namedtuple('Walk', ())
+Emote = namedtuple('Emote', ('anim',))
+Work = namedtuple('Work', ('anim', 'icon'))
+
 class EntityProxy(ObjectProxy):
     ID_TYPE = EntityId
 
@@ -191,13 +199,13 @@ class EntityProxy(ObjectProxy):
         check_type(stable_pid, StablePlaneId)
         self._eng.world_entity_teleport_stable_plane(self.id, stable_pid, pos)
 
-    def set_anim(self, anim_id):
-        # NB: uninterruptible activities are not fully supported yet.  The
-        # client doesn't get notified that inputs are disabled, and misbehaves.
-        self._eng.world_entity_set_activity_special(self.id, anim_id, True)
-
-    def clear_anim(self, anim_id):
-        self._eng.world_entity_set_activity_move(self.id)
+    def set_activity(self, activity):
+        if isinstance(activity, Walk):
+            self._eng.world_entity_set_activity_walk(self.id)
+        elif isinstance(activity, Emote):
+            self._eng.world_entity_set_activity_emote(self.id, activity.anim)
+        elif isinstance(activity, Work):
+            self._eng.world_entity_set_activity_work(self.id, activity.anim, activity.icon)
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))

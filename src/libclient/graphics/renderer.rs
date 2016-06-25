@@ -440,9 +440,12 @@ impl<GL: Context> Renderer<GL> {
         {
             let mut gen = entity::GeomGen::new(entities, predictor, data, self.render_names,
                                                bounds, now, future, pawn_id);
-            self.entity_buffer.alloc(gen.count_verts() * mem::size_of::<entity::Vertex>());
+            let expected = gen.count_verts();
+            self.entity_buffer.alloc(expected * mem::size_of::<entity::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-            load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);
+            let actual = load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);
+            assert!(actual == expected,
+                    "entity::GeomGen::count_verts counted wrong: {} != {}", actual, expected);
         }
 
         {
@@ -849,9 +852,10 @@ impl<GL: Context, K: Eq> GeomCache<GL, K> {
 fn load_buffer<GL, G>(buf: &mut GL::Buffer,
                       gen: &mut G,
                       tmp: &mut [G::Vertex],
-                      offset: &mut usize)
+                      offset: &mut usize) -> usize
         where GL: Context, G: GeometryGenerator {
     let mut keep_going = true;
+    let mut total = 0;
     while keep_going {
         let (len, more) = gen.generate(tmp);
         keep_going = more;
@@ -862,7 +866,10 @@ fn load_buffer<GL, G>(buf: &mut GL::Buffer,
         };
         buf.load(*offset, bytes);
         *offset += byte_len;
+
+        total += len;
     }
+    total
 }
 
 

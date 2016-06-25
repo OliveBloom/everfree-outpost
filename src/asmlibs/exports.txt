@@ -18,6 +18,7 @@ entity_appear
 entity_gone
 entity_motion_start
 entity_motion_end
+entity_activity_icon
 set_pawn_id
 set_default_camera_pos
 inventory_appear

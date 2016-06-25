@@ -22,11 +22,20 @@ def startup(eng):
 
 
 def client_login(eng, cid):
-    from outpost_server.core.engine import ClientProxy
+    from outpost_server.core.data import DATA
+    from outpost_server.core.engine import ClientProxy, Walk
+
     c = ClientProxy(eng, cid)
     e = c.pawn()
 
     c.set_main_inventories(e.inv('main'), e.inv('ability'))
+
+    if 'work_timer' in e.extra():
+        del e.extra()['work_timer']
+        e.set_activity(Work(
+            DATA.animation_id('pony//stand-0'),
+            DATA.animation_id('activity//none')))
+        e.set_activity(Walk())
 
 # TODO: get rid of all these hacks
 

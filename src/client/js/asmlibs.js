@@ -492,6 +492,10 @@ DynAsm.prototype.entityMotionEnd = function(id, time) {
     this._raw['entity_motion_end'](this.client, id, time);
 };
 
+DynAsm.prototype.entityActivityIcon = function(id, anim) {
+    this._raw['entity_activity_icon'](this.client, id, anim);
+};
+
 DynAsm.prototype.setPawnId = function(entity_id) {
     this._raw['set_pawn_id'](this.client, entity_id);
 };

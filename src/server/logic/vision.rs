@@ -63,6 +63,10 @@ pub fn entity_gone_message2(eid: EntityId) -> ClientResponse {
     ClientResponse::EntityGone(eid, 0)
 }
 
+pub fn entity_activity_icon_message(e: ObjectRef<Entity>, icon: AnimId) -> ClientResponse {
+    ClientResponse::EntityActivityIcon(e.id(), icon)
+}
+
 
 pub fn inventory_appear_message(i: ObjectRef<Inventory>) -> ClientResponse {
     let contents = i.contents().iter().map(|&x| x).collect();

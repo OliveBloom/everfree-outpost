@@ -97,15 +97,28 @@ def init():
 
     # Activity sprites
 
-    activity = SPRITE.new('activity', (32, 32))
-    activity.add_anim('default', 1, 1)
-    activity.add_layer('default')
+    bubble = SPRITE.new('activity_bubble', (32, 32))
+    bubble.add_anim('default', 1, 1)
+    bubble.add_layer('default')
     anim = Anim([load1('misc/activity.png')], 1)
-    activity.add_graphics('default', 'default', anim)
+    bubble.add_graphics('default', 'default', anim)
 
-    items = SPRITE.new('items', (512, 512))
-    items.add_anim('default', 1, 1)
-    items.add_layer('default')
-    anim = Anim([Image((512, 512)).modify(lambda i: i.paste((255, 0, 255, 255)))], 1)
-    items.add_graphics('default', 'default', anim)
+
+    activity = SPRITE.new('activity', (512, 512))
+    activity.add_layer('default')
+
+    def add_activity_icon(name, img):
+        activity.add_anim(name, 1, 1)
+        anim = Anim([img], 1)
+        activity.add_graphics('default', name, anim)
+
+    icons = loader('icons', unit=16)
+
+    tools = icons('tools.png')
+    add_activity_icon('none', Image((16, 16)))
+    add_activity_icon('item/shovel', tools.extract((0, 0)))
+    add_activity_icon('item/pick', tools.extract((1, 0)))
+    add_activity_icon('item/mallet', tools.extract((2, 0)))
+    add_activity_icon('item/axe', tools.extract((3, 0)))
+    add_activity_icon('activity/kick', icons('activity-kick.png'))
 

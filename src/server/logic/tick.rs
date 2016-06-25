@@ -20,6 +20,15 @@ pub fn tick(eng: &mut Engine) {
     eng.timer.schedule(next, |eng| tick(eng.unwrap()));
 
     for (cid, (act, args)) in eng.input.actions() {
+        if let Some(e) = eng.world.client(cid).pawn() {
+            if !e.activity().interruptible() {
+                continue;
+            }
+        } else {
+            // No pawn
+            continue;
+        }
+
         match act {
             Action::Interact =>
                 logic::input::interact(eng.as_ref(), cid, args),
@@ -42,10 +51,11 @@ pub fn tick(eng: &mut Engine) {
         };
 
         if let Some(eid) = opt_eid {
-            if input & INPUT_DIR_MASK != InputBits::empty() {
+            if input & INPUT_DIR_MASK != InputBits::empty() &&
+               eng.world.entity(eid).activity().interruptible() {
                 logic::entity::set_activity(eng.refine(),
                                             eid,
-                                            Activity::Move);
+                                            Activity::Walk);
             }
         }
     }

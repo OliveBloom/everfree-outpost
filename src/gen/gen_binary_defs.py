@@ -289,12 +289,17 @@ class BinaryDefs:
         self.pack_array(b'XSpcAnim', [
             j['default_anim'],
             j['editor_anim'],
+            j['activity_none_anim'],
             ], '<H')
+
+        # XSpcLayr - special layers
+        self.pack_array(b'XSpcLayr', [
+            j['activity_layer'],
+            ], '<B')
 
         # XSpcGrfx - special graphics
         self.pack_array(b'XSpcGrfx', [
-            j['activity_graphics'],
-            j['item_sprite_graphics'],
+            j['activity_bubble_graphics'],
             ], '<H')
 
     def convert_day_night(self):

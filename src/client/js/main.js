@@ -197,6 +197,7 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     conn.onActivityChange = handleActivityChange;
     conn.onInitNoPawn = handleInitNoPawn;
     conn.onOpenPonyEdit = handleOpenPonyEdit;
+    conn.onEntityActivityIcon = handleEntityActivityIcon;
 
     conn.onSyncStatus = function(new_synced) {
         // The first time the status becomes SYNC_OK, swap out the canvas and
@@ -677,6 +678,10 @@ function handleOpenPonyEdit(name) {
     editor.onsubmit = send_register;
     editor.oncancel = function() { handleOpenPonyEdit(name); };
     dialog.show(editor);
+}
+
+function handleEntityActivityIcon(id, anim) {
+    asm_client.entityActivityIcon(id, anim);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.

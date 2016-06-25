@@ -103,6 +103,7 @@ mod op {
         AuthResult = 0x8022,        // For auth verifier only
         InitNoPawn = 0x8023,
         OpenPonyEdit = 0x8024,
+        EntityActivityIcon = 0x8025,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -286,6 +287,7 @@ pub enum Response {
     ActivityChange(u8),
     InitNoPawn((u16, u16, u16), LocalTime, u32, u32),
     OpenPonyEdit(String),
+    EntityActivityIcon(EntityId, AnimId),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -358,6 +360,8 @@ impl Response {
                 ww.write_msg(id, (op::InitNoPawn, pos, now, cycle_base, cycle_ms)),
             OpenPonyEdit(ref name) =>
                 ww.write_msg(id, (op::OpenPonyEdit, name)),
+            EntityActivityIcon(eid, anim) =>
+                ww.write_msg(id, (op::EntityActivityIcon, eid, anim)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

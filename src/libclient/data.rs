@@ -180,6 +180,8 @@ gen_data! {
     physics_anim_table (b"XPhysAnm"): [u16; 8],
     anim_dir_table (b"XAnimDir"): u8,
     special_anims (b"XSpcAnim"): u16,
+    special_layers (b"XSpcLayr"): u8,
+    special_graphics (b"XSpcGrfx"): u16,
 }
 
 impl Data {
@@ -254,5 +256,21 @@ impl Data {
 
     pub fn editor_anim(&self) -> u16 {
         self.special_anims()[1]
+    }
+
+    pub fn activity_bubble_graphics(&self) -> u16 {
+        self.special_graphics()[0]
+    }
+
+    pub fn activity_layer_id(&self) -> u8 {
+        self.special_layers()[0]
+    }
+
+    pub fn activity_layer(&self) -> &SpriteLayer {
+        self.sprite_layer(self.activity_layer_id())
+    }
+
+    pub fn activity_none_anim(&self) -> u16 {
+        self.special_anims()[2]
     }
 }

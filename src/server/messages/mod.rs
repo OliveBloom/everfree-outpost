@@ -94,6 +94,7 @@ pub enum ClientResponse {
     EntityMotionStartEnd(EntityId, V3, Time, V3, AnimId, Time),
     EntityMotionEnd(EntityId, Time),
     EntityGone(EntityId, Time),
+    EntityActivityIcon(EntityId, AnimId),
     ActivityChange(Activity),
 
     StructureAppear(StructureId, TemplateId, V3),
@@ -433,12 +434,16 @@ impl Messages {
                 self.send_raw(wire_id, Response::EntityGone(eid, time));
             },
 
+            ClientResponse::EntityActivityIcon(eid, anim_id) => {
+                self.send_raw(wire_id, Response::EntityActivityIcon(eid, anim_id));
+            },
+
             ClientResponse::ActivityChange(activity) => {
                 let code = match activity {
-                    Activity::Move => 0,
+                    Activity::Walk => 0,
                     // fly => 1
-                    Activity::Special(_, true) => 2,    // interruptible
-                    Activity::Special(_, false) => 3,   // uninterruptible
+                    Activity::Emote(_) => 2,    // interruptible
+                    Activity::Work(_, _) => 3,   // uninterruptible
                 };
                 self.send_raw(wire_id, Response::ActivityChange(code));
             },

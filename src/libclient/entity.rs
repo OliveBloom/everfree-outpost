@@ -77,6 +77,7 @@ pub struct Entity {
     pub motion: Motion,
     pub appearance: u32,
     pub name: Option<String>,
+    pub activity_anim: Option<u16>,
 
     z_next: *mut Entity,
 }
@@ -146,6 +147,7 @@ impl Entities {
                     motion: Motion::new(),
                     appearance: appearance,
                     name: name,
+                    activity_anim: None,
                     z_next: ptr::null_mut(),
                 });
             },
@@ -199,6 +201,14 @@ impl Entities {
         }
 
         // NB: We assume that get_mut never moves elements
+    }
+
+    pub fn set_activity_anim(&mut self,
+                             id: EntityId,
+                             anim: Option<u16>) {
+        if let Some(e) = self.map.get_mut(&id) {
+            e.activity_anim = anim;
+        }
     }
 
     pub fn ponyedit_hack(&mut self, id: EntityId, anim: u16, pos: V3) {
