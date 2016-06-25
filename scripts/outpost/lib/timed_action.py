@@ -21,6 +21,8 @@ def timed_action(delay, icon, check=None):
         def g(e, *args):
             if check is not None and not check(e, *args):
                 return
+            if 'work_timer' in e.extra():
+                return
 
             anim = DATA.animation_id('pony//stand-%d' % facing_to_dir(e.facing()))
             e.set_activity(Work(anim, icon))

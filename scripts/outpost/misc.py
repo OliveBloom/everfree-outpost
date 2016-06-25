@@ -52,12 +52,14 @@ def use_tree(e, s, args):
     e.inv().bulk_add(WOOD, 2)
 
 @tool.axe(TREE)
+@timed_action(1000, 'activity//item/axe')
 def axe_tree(e, s, args):
     ward.check(e, s.pos())
     s.replace(STUMP)
     e.inv().bulk_add(WOOD, 40)
 
 @tool.axe(STUMP)
+@timed_action(1000, 'activity//item/axe')
 def axe_stump(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
@@ -69,10 +71,12 @@ STONE = DATA.item('stone')
 CRYSTAL = DATA.item('crystal')
 
 @use.structure(ROCK)
+@timed_action(1000, 'activity//activity/kick')
 def use_rock(e, s, args):
     e.inv().bulk_add(STONE, 2)
 
 @tool.pickaxe(ROCK)
+@timed_action(1000, 'activity//item/pick')
 def pickaxe_rock(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
