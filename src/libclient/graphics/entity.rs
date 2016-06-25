@@ -130,10 +130,8 @@ impl<'a> GeomGen<'a> {
                 continue;
             }
 
-            let num_quads = count_layers(e.appearance) + name_len(&e.name);
-            count += 6 * num_quads;
-
-            count += 6; // activity bubble
+            let is_pawn = Some(id) == self.pawn_id;
+            count += 6 * count_quads_one(e, is_pawn);
         }
         count
     }
@@ -162,7 +160,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 continue;
             }
 
-            let num_quads = count_layers(e.appearance) + name_len(&e.name);
+            let num_quads = count_quads_one(e, is_pawn);
             if idx + 6 * num_quads >= buf.len() {
                 return (idx, true);
             }
@@ -341,6 +339,13 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 }
 
 
+fn count_quads_one(e: &Entity, is_pawn: bool) -> usize {
+    count_layers(e.appearance) +
+    if !is_pawn { name_len(&e.name) } else { 0 } +
+    if e.activity_anim.is_some() { 2 } else { 0 }
+}
+
+
 // TODO: find a better place for these
 pub const WINGS: u32 = 1 << 6;
 pub const HORN: u32 = 1 << 7;
@@ -368,7 +373,7 @@ fn count_layers(appearance: u32) -> usize {
 
 fn name_len(name: &Option<String>) -> usize {
     if let Some(ref name) = *name {
-        name.len()
+        fonts::NAME.iter_str(name).filter(|&(ref idx, _)| idx.is_some()).count()
     } else {
         0
     }
