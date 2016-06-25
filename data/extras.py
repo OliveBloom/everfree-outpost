@@ -14,6 +14,12 @@ def gen_editor_anim(maps):
 def gen_activity_bubble_graphics(maps):
     return maps.sprites['activity_bubble'].get_graphics('default', 'default').id
 
+def gen_activity_layer(maps):
+    return maps.sprites['activity'].get_layer('default').id
+
+def gen_activity_none_anim(maps):
+    return maps.sprites['activity'].get_anim('none').id
+
 def gen_physics_anim_table(maps):
     SPEED_NAMES = ('stand', 'walk', None, 'run')
     table = []
@@ -95,6 +101,8 @@ def init():
     EXTRA.new('default_anim').func(gen_default_anim)
     EXTRA.new('editor_anim').func(gen_editor_anim)
     EXTRA.new('activity_bubble_graphics').func(gen_activity_bubble_graphics)
+    EXTRA.new('activity_layer').func(gen_activity_layer)
+    EXTRA.new('activity_none_anim').func(gen_activity_none_anim)
     EXTRA.new('physics_anim_table').func(gen_physics_anim_table)
     EXTRA.new('anim_dir_table').func(gen_anim_dir_table)
     EXTRA.new('pony_layer_table').func(gen_pony_layer_table)

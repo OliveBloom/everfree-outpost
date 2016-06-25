@@ -171,6 +171,13 @@ pub unsafe extern fn entity_motion_end(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn entity_activity_icon(client: &mut Client,
+                                          id: u32,
+                                          anim_id: u16) {
+    client.entity_activity_icon(id, anim_id);
+}
+
+#[no_mangle]
 pub unsafe extern fn set_pawn_id(client: &mut Client,
                                  pawn_id: u32) {
     if pawn_id == -1_i32 as u32 {

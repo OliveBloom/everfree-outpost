@@ -277,6 +277,16 @@ impl<'d, P: Platform> Client<'d, P> {
         }
     }
 
+    pub fn entity_activity_icon(&mut self,
+                                id: EntityId,
+                                anim_id: u16) {
+        if anim_id == self.data.activity_none_anim() {
+            self.entities.set_activity_anim(id, None);
+        } else {
+            self.entities.set_activity_anim(id, Some(anim_id));
+        }
+    }
+
     pub fn set_pawn_id(&mut self,
                        id: EntityId) {
         self.pawn_id = Some(id);

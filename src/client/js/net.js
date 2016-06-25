@@ -61,6 +61,7 @@ var OP_ACTIVITY_CHANGE =        0x8020;
 // AUTH ONLY                    0x8022;
 var OP_INIT_NO_PAWN =           0x8023;
 var OP_OPEN_PONYEDIT =          0x8024;
+var OP_ENTITY_ACTIVITY_ICON =   0x8025;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -127,6 +128,7 @@ function Connection(x) {
     this.onActivityChange = null;
     this.onInitNoPawn = null;
     this.onOpenPonyEdit = null;
+    this.onEntityActivityIcon = null;
 }
 exports.Connection = Connection;
 
@@ -516,6 +518,14 @@ Connection.prototype._handleMessage = function(evt) {
                 var name = getString();
                 console.log('ponyedit', name);
                 this.onOpenPonyEdit(name);
+            };
+            break;
+
+        case OP_ENTITY_ACTIVITY_ICON:
+            if (this.onEntityActivityIcon != null) {
+                var id = get32();
+                var anim = get16();
+                this.onEntityActivityIcon(id, anim);
             };
             break;
 

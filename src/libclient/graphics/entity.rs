@@ -260,7 +260,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 }
             }
 
-            {
+            if let Some(activity_anim_id) = e.activity_anim {
                 let g = self.data.sprite_graphics_item(self.data.activity_bubble_graphics());
 
                 // Adjust top-left of 96x96 sprite to get top-left of 32x32 bubble
@@ -298,7 +298,9 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 }
 
 
-                let g = self.data.sprite_graphics_item(3);
+                let a = self.data.animation(activity_anim_id);
+                let l = self.data.activity_layer();
+                let g = self.data.sprite_graphics_item(l.gfx_start + a.local_id);
                 let dest_x = dest_x + 8;
                 let dest_y = dest_y + 8;
 

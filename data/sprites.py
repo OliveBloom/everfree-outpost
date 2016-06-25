@@ -115,6 +115,7 @@ def init():
     icons = loader('icons', unit=16)
 
     tools = icons('tools.png')
+    add_activity_icon('none', Image((16, 16)))
     add_activity_icon('item/shovel', tools.extract((0, 0)))
     add_activity_icon('item/pick', tools.extract((1, 0)))
     add_activity_icon('item/mallet', tools.extract((2, 0)))

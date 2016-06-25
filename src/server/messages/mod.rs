@@ -94,6 +94,7 @@ pub enum ClientResponse {
     EntityMotionStartEnd(EntityId, V3, Time, V3, AnimId, Time),
     EntityMotionEnd(EntityId, Time),
     EntityGone(EntityId, Time),
+    EntityActivityIcon(EntityId, AnimId),
     ActivityChange(Activity),
 
     StructureAppear(StructureId, TemplateId, V3),
@@ -431,6 +432,10 @@ impl Messages {
             ClientResponse::EntityGone(eid, time) => {
                 let time = time.to_local();
                 self.send_raw(wire_id, Response::EntityGone(eid, time));
+            },
+
+            ClientResponse::EntityActivityIcon(eid, anim_id) => {
+                self.send_raw(wire_id, Response::EntityActivityIcon(eid, anim_id));
             },
 
             ClientResponse::ActivityChange(activity) => {
