@@ -110,6 +110,7 @@ pub fn login(eng: &mut Engine,
     eng.extra.uid_client.insert(uid, cid);
 
     // Init vision
+    on_plane_change(eng.refine(), cid, pid);
     let region = vision::vision_region(pos);
     for cpos in region.points() {
         logic::chunks::load_chunk(eng.as_ref(), pid, cpos);
