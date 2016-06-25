@@ -38,11 +38,11 @@ pub fn on_destroy(eng: &mut PartialEngine, sid: StructureId) {
     let plane = s.plane_id();
     eng.cache.update_region(&eng.world, plane, s.bounds());
 
-    let msg_appear = logic::vision::structure_appear_message(s);
+    let msg_gone = logic::vision::structure_gone_message(s);
     let messages = &mut eng.messages;
     for cpos in s.bounds().reduce().div_round_signed(CHUNK_SIZE).points() {
         eng.vision.structure_remove(sid, plane, cpos, |cid| {
-            messages.send_client(cid, msg_appear.clone());
+            messages.send_client(cid, msg_gone.clone());
         });
     }
 }
