@@ -38,6 +38,7 @@ extern crate python3_sys;
 
 extern crate common_movement as libcommon_movement;
 extern crate physics as libphysics;
+#[macro_use] extern crate python as libpython;
 extern crate terrain_gen as libterrain_gen;
 extern crate server_config as libserver_config;
 extern crate server_bundle as libserver_bundle;
@@ -53,7 +54,7 @@ use rustc_serialize::json;
 
 #[macro_use] mod util;
 #[macro_use] mod engine;
-#[macro_use] mod python;
+mod python;
 
 mod msg;
 mod wire;
