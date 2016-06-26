@@ -2,8 +2,8 @@ use types::*;
 
 use engine::split;
 use msg::ExtraArg;
-use python as py;
-use python::{PyBox, PyRef, PyResult};
+use python::api as py;
+use python::api::{PyBox, PyRef, PyResult};
 use world;
 
 use super::{Pack, Unpack};

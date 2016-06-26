@@ -3,8 +3,8 @@ use std::ops::{Deref, DerefMut};
 use libc::c_void;
 use python3_sys::*;
 
-use python as py;
-use python::{PyBox, PyRef};
+use python::api as py;
+use python::api::{PyBox, PyRef};
 
 
 /// Python object wrapping a Rust reference.  This allows for passing a Rust reference to a Python
@@ -163,9 +163,9 @@ macro_rules! rust_ref_func {
                 $body
             }
 
-            fn wrap(slf: $crate::python::PyRef,
-                    args: $crate::python::PyRef)
-                    -> $crate::python::PyResult<$crate::python::PyBox> {
+            fn wrap(slf: $crate::python::ptr::PyRef,
+                    args: $crate::python::ptr::PyRef)
+                    -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
                 use $crate::script::rust_ref;
                 use $crate::script::{Pack, Unpack};
                 let guard = unsafe { rust_ref::unpack_rust_ref::<$ty>(slf) };
@@ -174,11 +174,11 @@ macro_rules! rust_ref_func {
             }
 
             {
-                use $crate::python as py;
-                use $crate::python::PyRef;
+                use $crate::python::exc::return_result;
+                use $crate::python::ptr::PyRef;
                 let slf = PyRef::new_non_null(slf);
                 let args = PyRef::new_non_null(args);
-                py::return_result(wrap(slf, args))
+                return_result(wrap(slf, args))
             }
         }
     };
@@ -191,9 +191,9 @@ macro_rules! rust_ref_func {
                 $body
             }
 
-            fn wrap(slf: $crate::python::PyRef,
-                    args: $crate::python::PyRef)
-                    -> $crate::python::PyResult<$crate::python::PyBox> {
+            fn wrap(slf: $crate::python::ptr::PyRef,
+                    args: $crate::python::ptr::PyRef)
+                    -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
                 use $crate::script::rust_ref;
                 use $crate::script::{Pack, Unpack};
                 let mut guard = unsafe { rust_ref::unpack_rust_ref_mut::<$ty>(slf) };
@@ -202,11 +202,11 @@ macro_rules! rust_ref_func {
             }
 
             {
-                use $crate::python as py;
-                use $crate::python::PyRef;
+                use $crate::python::exc::return_result;
+                use $crate::python::ptr::PyRef;
                 let slf = PyRef::new_non_null(slf);
                 let args = PyRef::new_non_null(args);
-                py::return_result(wrap(slf, args))
+                return_result(wrap(slf, args))
             }
         }
     };

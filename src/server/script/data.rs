@@ -1,7 +1,7 @@
 use types::*;
 
 use data::Data;
-use python::{PyBox, PyResult};
+use python::api::{PyBox, PyResult};
 
 use super::Pack;
 use super::rust_ref::{RustRef, RustRefType};

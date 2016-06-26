@@ -1,7 +1,7 @@
 use storage::Storage;
 
-use python as py;
-use python::{PyBox, PyResult};
+use python::api as py;
+use python::api::{PyBox, PyResult};
 use super::rust_ref::{RustRef, RustRefType};
 
 macro_rules! storage_ref_func {

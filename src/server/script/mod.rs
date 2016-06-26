@@ -3,8 +3,9 @@ use python3_sys::*;
 use python3_sys::structmember::PyMemberDef;
 
 use engine::split::Part;
-use python as py;
-use python::{PyRef, PyResult};
+use python;
+use python::api as py;
+use python::api::{PyRef, PyResult};
 
 pub use self::hooks::ScriptHooks;
 pub use self::pack::{Pack, Unpack};
@@ -82,7 +83,7 @@ pub fn ffi_module_preinit() {
 }
 
 pub fn ffi_module_postinit() {
-    py::import(&MOD_NAME[.. MOD_NAME.len() - 1]).unwrap();
+    python::util::import(&MOD_NAME[.. MOD_NAME.len() - 1]).unwrap();
 }
 
 static mut FFI_MODULE: *mut PyObject = 0 as *mut _;
@@ -111,7 +112,7 @@ fn ffi_module() -> PyRef<'static> {
 }
 
 pub fn call_init(data: PyRef, storage: PyRef, hooks: PyRef) -> PyResult<()> {
-    let module = try!(py::import("outpost_server.core.init"));
+    let module = try!(python::util::import("outpost_server.core.init"));
     let func = try!(py::object::get_attr_str(module.borrow(), "init"));
     let args = try!(py::tuple::pack3(data.to_box(), storage.to_box(), hooks.to_box()));
     try!(py::object::call(func.borrow(), args.borrow(), None));

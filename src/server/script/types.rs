@@ -1,6 +1,6 @@
 use types::*;
 
-use python::{PyBox, PyRef, PyResult};
+use python::api::{PyBox, PyRef, PyResult};
 use script::{Pack, Unpack};
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 
@@ -15,12 +15,13 @@ macro_rules! define_namedtuple {
     }) => {
         static mut $TYPE_OBJ: *mut ::python3_sys::PyObject = 0 as *mut _;
 
-        pub fn $init(module: $crate::python::PyRef) {
-            use $crate::python as py;
+        pub fn $init(module: $crate::python::ptr::PyRef) {
+            use $crate::python::api as py;
+            use $crate::python::util;
 
             assert!(py::is_initialized());
 
-            let collections = py::import("collections").unwrap();
+            let collections = util::import("collections").unwrap();
             let namedtuple = py::object::get_attr_str(collections.borrow(),
                                                       "namedtuple").unwrap();
 
@@ -38,24 +39,24 @@ macro_rules! define_namedtuple {
             }
         }
 
-        pub fn $get_type() -> $crate::python::PyRef<'static> {
+        pub fn $get_type() -> $crate::python::ptr::PyRef<'static> {
             unsafe {
-                $crate::python::PyRef::new_non_null($TYPE_OBJ)
+                $crate::python::ptr::PyRef::new_non_null($TYPE_OBJ)
             }
         }
 
         impl $crate::script::Pack for $T {
-            fn pack(self) -> $crate::python::PyResult<$crate::python::PyBox> {
+            fn pack(self) -> $crate::python::exc::PyResult<$crate::python::api::PyBox> {
                 let vals = $pack(self);
                 let args = try!($crate::script::Pack::pack(vals));
-                $crate::python::object::call($get_type(), args.borrow(), None)
+                $crate::python::api::object::call($get_type(), args.borrow(), None)
             }
         }
 
         impl<'a> $crate::script::Unpack<'a> for $T {
-            fn unpack(obj: $crate::python::PyRef<'a>) -> $crate::python::PyResult<$T> {
+            fn unpack(obj: $crate::python::ptr::PyRef<'a>) -> $crate::python::exc::PyResult<$T> {
                 let vals = try!($crate::script::Unpack::unpack(obj));
-                pyassert!($crate::python::object::is_instance(obj, $get_type()),
+                pyassert!($crate::python::api::object::is_instance(obj, $get_type()),
                           type_error, concat!("expected ", stringify!($name)));
                 Ok($unpack(vals))
             }

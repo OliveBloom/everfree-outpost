@@ -21,7 +21,7 @@ macro_rules! define_python_class_impl {
         static mut $type_obj: *mut ::python3_sys::PyObject = 0 as *mut _;
 
         #[allow(non_snake_case)]
-        pub fn $init_name(module: $crate::python::PyRef) {
+        pub fn $init_name(module: $crate::python::ptr::PyRef) {
             $( $smacro!($sname, $sargs, $sret, $sbody); )*
             $( $fmacro!($fname, $fargs, $fret, $fbody); )*
 
@@ -31,7 +31,7 @@ macro_rules! define_python_class_impl {
                 unused_mut,
                 unused_variables,
                 )]
-            unsafe fn _impl(module: $crate::python::PyRef) {
+            unsafe fn _impl(module: $crate::python::ptr::PyRef) {
                 use std::mem;
                 use std::ptr;
                 use libc::{c_char, c_int, c_uint};
@@ -44,7 +44,7 @@ macro_rules! define_python_class_impl {
                 use $crate::script::{BLANK_TYPE_SPEC, BLANK_TYPE_SLOT};
                 use $crate::script::{BLANK_METHOD_DEF, BLANK_MEMBER_DEF};
                 use $crate::script::class::{decay, get_ptr_type_code};
-                use $crate::python as py;
+                use $crate::python::api as py;
 
                 assert!(py::is_initialized());
 
@@ -134,9 +134,9 @@ macro_rules! define_python_class_impl {
             unsafe { _impl(module) };
         }
 
-        pub fn $acc_name() -> $crate::python::PyRef<'static> {
+        pub fn $acc_name() -> $crate::python::ptr::PyRef<'static> {
             unsafe {
-                $crate::python::PyRef::new_non_null($type_obj)
+                $crate::python::ptr::PyRef::new_non_null($type_obj)
             }
         }
     };
@@ -235,19 +235,19 @@ macro_rules! method_imp2 {
 macro_rules! call_wrapper {
     ( $wrap:ident, $slf:ident, $args:ident ) => {
         {
-            use $crate::python as py;
-            use $crate::python::PyRef;
+            use $crate::python::exc::return_result;
+            use $crate::python::ptr::PyRef;
             let slf = PyRef::new_non_null($slf);
             let args = PyRef::new_non_null($args);
-            py::return_result($wrap(slf, args))
+            return_result($wrap(slf, args))
         }
     };
 }
 
 macro_rules! wrapper0 {
     ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(args: $crate::python::PyRef)
-                 -> $crate::python::PyResult<$crate::python::PyBox> {
+        fn $wrap(args: $crate::python::ptr::PyRef)
+                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
             use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(args)));
             Pack::pack(result)
@@ -257,9 +257,9 @@ macro_rules! wrapper0 {
 
 macro_rules! wrapper1 {
     ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(arg1: $crate::python::PyRef,
-                 args: $crate::python::PyRef)
-                 -> $crate::python::PyResult<$crate::python::PyBox> {
+        fn $wrap(arg1: $crate::python::ptr::PyRef,
+                 args: $crate::python::ptr::PyRef)
+                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
             use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(arg1)),
                               try!(Unpack::unpack(args)));
@@ -270,10 +270,10 @@ macro_rules! wrapper1 {
 
 macro_rules! wrapper2 {
     ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(arg1: $crate::python::PyRef,
-                 arg2: $crate::python::PyRef,
-                 args: $crate::python::PyRef)
-                 -> $crate::python::PyResult<$crate::python::PyBox> {
+        fn $wrap(arg1: $crate::python::ptr::PyRef,
+                 arg2: $crate::python::ptr::PyRef,
+                 args: $crate::python::ptr::PyRef)
+                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
             use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(arg1)),
                               try!(Unpack::unpack(arg2)),
@@ -285,9 +285,9 @@ macro_rules! wrapper2 {
 
 macro_rules! default_wrapper {
     ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(slf: $crate::python::PyRef,
-                 args: $crate::python::PyRef)
-                 -> $crate::python::PyResult<$crate::python::PyBox> {
+        fn $wrap(slf: $crate::python::ptr::PyRef,
+                 args: $crate::python::ptr::PyRef)
+                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
             use $crate::script::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(slf)),
                               try!(Unpack::unpack(args)));

@@ -5,8 +5,8 @@ use libphysics::TILE_SIZE;
 
 use types::*;
 
-use python as py;
-use python::{PyBox, PyRef, PyResult};
+use python::api as py;
+use python::api::{PyBox, PyRef, PyResult};
 use script::{Pack, Unpack};
 
 pub struct RustVal<T: RustValType> {
@@ -47,18 +47,18 @@ macro_rules! rust_val_repr_slot {
                                     -> *mut ::python3_sys::PyObject {
             method_imp1!(imp, $args, $ret_ty, $body);
 
-            fn wrap(slf: $crate::python::PyRef)
-                    -> $crate::python::PyResult<$crate::python::PyBox> {
+            fn wrap(slf: $crate::python::ptr::PyRef)
+                    -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
                 use $crate::script::{Pack, Unpack};
                 let result = imp(try!(Unpack::unpack(slf)), ());
                 Pack::pack(result)
             }
 
             {
-                use $crate::python as py;
-                use $crate::python::PyRef;
+                use $crate::python::exc::return_result;
+                use $crate::python::ptr::PyRef;
                 let slf = PyRef::new_non_null(slf);
-                py::return_result(wrap(slf))
+                return_result(wrap(slf))
             }
         }
     };
@@ -74,7 +74,7 @@ macro_rules! rust_val_init_slot {
             method_imp0!(imp, $args, $ret_ty, $body);
 
             {
-                use $crate::python::PyRef;
+                use $crate::python::ptr::PyRef;
                 use $crate::script::Unpack;
 
                 let args = PyRef::new_non_null(args);
@@ -133,9 +133,9 @@ macro_rules! v3_binop_slot {
                                     -> *mut ::python3_sys::PyObject {
             method_imp2!(imp, $args, $ret_ty, $body);
 
-            fn wrap(obj1: $crate::python::PyRef,
-                    obj2: $crate::python::PyRef)
-                    -> $crate::python::PyResult<$crate::python::PyBox> {
+            fn wrap(obj1: $crate::python::ptr::PyRef,
+                    obj2: $crate::python::ptr::PyRef)
+                    -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
                 use $crate::script::Pack;
 
                 let a = unwrap_or!(try!(unpack_v3_or_scalar(obj1)),
@@ -148,11 +148,11 @@ macro_rules! v3_binop_slot {
             }
 
             {
-                use $crate::python as py;
-                use $crate::python::PyRef;
+                use $crate::python::exc::return_result;
+                use $crate::python::ptr::PyRef;
                 let obj1 = PyRef::new_non_null(obj1);
                 let obj2 = PyRef::new_non_null(obj2);
-                py::return_result(wrap(obj1, obj2))
+                return_result(wrap(obj1, obj2))
             }
         }
     };

@@ -125,11 +125,11 @@ fn main() {
                                      loot_table_json).unwrap();
 
     script::ffi_module_preinit();
-    python::initialize();
+    python::api::initialize();
     script::ffi_module_postinit();
     // Python init failures turn into panics, since they are likely to leave the Python context in
     // an invalid state.
-    python::run_file(&storage.script_dir().join("boot.py")).unwrap();
+    python::util::run_file(&storage.script_dir().join("boot.py")).unwrap();
 
 
     // Start background threads.

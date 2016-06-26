@@ -11,8 +11,8 @@ use engine::glue;
 use engine::split::{EngineRef, Part, PartFlags};
 use logic;
 use msg::ExtraArg;
-use python as py;
-use python::{PyBox, PyRef, PyResult};
+use python::api as py;
+use python::api::{PyBox, PyRef, PyResult};
 use timer;
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 use world::Activity;
@@ -92,11 +92,11 @@ struct PyEngineRef {
 macro_rules! engine_ref_func_wrapper {
     ( $wrap:ident, $engty:ty,
       $slf:ident, $args:ident, $engname:ident, $call:expr) => {
-        fn $wrap(slf: $crate::python::PyRef,
-                 args: $crate::python::PyRef)
-                 -> $crate::python::PyResult<$crate::python::PyBox> {
+        fn $wrap(slf: $crate::python::ptr::PyRef,
+                 args: $crate::python::ptr::PyRef)
+                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
             use $crate::engine::split::{Part, PartFlags};
-            use $crate::python as py;
+            use $crate::python::api as py;
             use $crate::script::{Pack, Unpack};
 
             pyassert!(py::object::is_instance(slf, get_engine_type()),
@@ -874,9 +874,9 @@ impl NestedRefType for ExtraHashRef {
 
 macro_rules! nested_ref_wrapper {
     ( $T:ty, $wrap:ident, $slf:ident, $slf_ref:ident, $args:ident; $call:expr ) => {
-        fn $wrap($slf_ref: $crate::python::PyRef,
-                 args: $crate::python::PyRef)
-                 -> $crate::python::PyResult<$crate::python::PyBox> {
+        fn $wrap($slf_ref: $crate::python::ptr::PyRef,
+                 args: $crate::python::ptr::PyRef)
+                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
             use $crate::script::{Pack, Unpack};
 
             pyassert!(py::object::is_instance($slf_ref, <$T as NestedRefType>::get_type()),
