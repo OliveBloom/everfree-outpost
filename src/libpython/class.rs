@@ -1,12 +1,45 @@
 use libc;
 use python3_sys;
 
+use python3_sys::{PyType_Spec, PyType_Slot, PyMethodDef};
+use python3_sys::structmember::PyMemberDef;
 
+
+pub const BLANK_TYPE_SPEC: PyType_Spec = PyType_Spec {
+    name: 0 as *const _,
+    basicsize: 0,
+    itemsize: 0,
+    flags: 0,
+    slots: 0 as *mut _,
+};
+
+pub const BLANK_TYPE_SLOT: PyType_Slot = PyType_Slot {
+    slot: 0,
+    pfunc: 0 as *mut _,
+};
+
+pub const BLANK_MEMBER_DEF: PyMemberDef = PyMemberDef {
+    name: 0 as *mut _,
+    type_code: 0,
+    offset: 0,
+    flags: 0,
+    doc: 0 as *mut _,
+};
+
+pub const BLANK_METHOD_DEF: PyMethodDef = PyMethodDef {
+    ml_name: 0 as *const _,
+    ml_meth: None,
+    ml_flags: 0,
+    ml_doc: 0 as *const _,
+};
+
+#[macro_export]
 macro_rules! one {
     ( $any:tt ) => { 1 };
 }
 
 /// Backend implementation for `define_python_class!` from `libsyntax_exts`.
+#[macro_export]
 macro_rules! define_python_class_impl {
     (
         $name:ident, $ty:ty,
@@ -21,7 +54,7 @@ macro_rules! define_python_class_impl {
         static mut $type_obj: *mut ::python3_sys::PyObject = 0 as *mut _;
 
         #[allow(non_snake_case)]
-        pub fn $init_name(module: $crate::python::ptr::PyRef) {
+        pub fn $init_name(module: $crate::ptr::PyRef) {
             $( $smacro!($sname, $sargs, $sret, $sbody); )*
             $( $fmacro!($fname, $fargs, $fret, $fbody); )*
 
@@ -31,7 +64,7 @@ macro_rules! define_python_class_impl {
                 unused_mut,
                 unused_variables,
                 )]
-            unsafe fn _impl(module: $crate::python::ptr::PyRef) {
+            unsafe fn _impl(module: $crate::ptr::PyRef) {
                 use std::mem;
                 use std::ptr;
                 use libc::{c_char, c_int, c_uint};
@@ -41,10 +74,10 @@ macro_rules! define_python_class_impl {
                 use python3_sys::{METH_VARARGS, Py_TPFLAGS_DEFAULT};
                 use python3_sys::structmember::{PyMemberDef, READONLY};
 
-                use $crate::script::{BLANK_TYPE_SPEC, BLANK_TYPE_SLOT};
-                use $crate::script::{BLANK_METHOD_DEF, BLANK_MEMBER_DEF};
-                use $crate::script::class::{decay, get_ptr_type_code};
-                use $crate::python::api as py;
+                use $crate::class::{BLANK_TYPE_SPEC, BLANK_TYPE_SLOT};
+                use $crate::class::{BLANK_METHOD_DEF, BLANK_MEMBER_DEF};
+                use $crate::class::{decay, get_ptr_type_code};
+                use $crate::api as py;
 
                 assert!(py::is_initialized());
 
@@ -134,9 +167,9 @@ macro_rules! define_python_class_impl {
             unsafe { _impl(module) };
         }
 
-        pub fn $acc_name() -> $crate::python::ptr::PyRef<'static> {
+        pub fn $acc_name() -> $crate::ptr::PyRef<'static> {
             unsafe {
-                $crate::python::ptr::PyRef::new_non_null($type_obj)
+                $crate::ptr::PyRef::new_non_null($type_obj)
             }
         }
     };
@@ -184,6 +217,7 @@ pub fn get_ptr_type_code<T: MemberType>(_: *mut T) -> libc::c_int {
 }
 
 
+#[macro_export]
 macro_rules! method_imp0 {
     ( $imp:ident,
       ( $( $aname:ident : $aty:ty, )*),
@@ -198,6 +232,7 @@ macro_rules! method_imp0 {
     };
 }
 
+#[macro_export]
 macro_rules! method_imp1 {
     ( $imp:ident,
       ( $aname1:ident : $aty1:ty,
@@ -214,6 +249,7 @@ macro_rules! method_imp1 {
     };
 }
 
+#[macro_export]
 macro_rules! method_imp2 {
     ( $imp:ident,
       ( $aname1:ident : $aty1:ty,
@@ -232,11 +268,12 @@ macro_rules! method_imp2 {
     };
 }
 
+#[macro_export]
 macro_rules! call_wrapper {
     ( $wrap:ident, $slf:ident, $args:ident ) => {
         {
-            use $crate::python::exc::return_result;
-            use $crate::python::ptr::PyRef;
+            use $crate::exc::return_result;
+            use $crate::ptr::PyRef;
             let slf = PyRef::new_non_null($slf);
             let args = PyRef::new_non_null($args);
             return_result($wrap(slf, args))
@@ -244,51 +281,13 @@ macro_rules! call_wrapper {
     };
 }
 
-macro_rules! wrapper0 {
-    ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(args: $crate::python::ptr::PyRef)
-                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-            use $crate::script::{Pack, Unpack};
-            let result = $imp(try!(Unpack::unpack(args)));
-            Pack::pack(result)
-        }
-    };
-}
-
-macro_rules! wrapper1 {
-    ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(arg1: $crate::python::ptr::PyRef,
-                 args: $crate::python::ptr::PyRef)
-                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-            use $crate::script::{Pack, Unpack};
-            let result = $imp(try!(Unpack::unpack(arg1)),
-                              try!(Unpack::unpack(args)));
-            Pack::pack(result)
-        }
-    };
-}
-
-macro_rules! wrapper2 {
-    ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(arg1: $crate::python::ptr::PyRef,
-                 arg2: $crate::python::ptr::PyRef,
-                 args: $crate::python::ptr::PyRef)
-                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-            use $crate::script::{Pack, Unpack};
-            let result = $imp(try!(Unpack::unpack(arg1)),
-                              try!(Unpack::unpack(arg2)),
-                              try!(Unpack::unpack(args)));
-            Pack::pack(result)
-        }
-    };
-}
-
+#[macro_export]
 macro_rules! default_wrapper {
     ( $wrap:ident, $imp:ident ) => {
-        fn $wrap(slf: $crate::python::ptr::PyRef,
-                 args: $crate::python::ptr::PyRef)
-                 -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-            use $crate::script::{Pack, Unpack};
+        fn $wrap(slf: $crate::ptr::PyRef,
+                 args: $crate::ptr::PyRef)
+                 -> $crate::exc::PyResult<$crate::ptr::PyBox> {
+            use $crate::conv::{Pack, Unpack};
             let result = $imp(try!(Unpack::unpack(slf)),
                               try!(Unpack::unpack(args)));
             Pack::pack(result)
@@ -296,6 +295,7 @@ macro_rules! default_wrapper {
     };
 }
 
+#[macro_export]
 macro_rules! raw_func {
     ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
@@ -308,6 +308,7 @@ macro_rules! raw_func {
     };
 }
 
+#[macro_export]
 macro_rules! default_method {
     ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,

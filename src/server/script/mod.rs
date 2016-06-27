@@ -8,20 +8,13 @@ use python::api as py;
 use python::api::{PyRef, PyResult};
 
 pub use self::hooks::ScriptHooks;
-pub use self::pack::{Pack, Unpack};
-pub use self::rust_ref::{with_ref, with_ref_mut};
+pub use python::conv::{Pack, Unpack};
+pub use python::rust_ref::{with_ref, with_ref_mut};
 
-#[macro_use] mod class;
-#[macro_use] mod rust_ref;
-mod pack;
 mod util;
 
-mod v3;
 mod engine;
-mod data;
 mod hooks;
-mod storage;
-mod types;
 mod extra_arg;
 
 
@@ -95,12 +88,9 @@ extern "C" fn ffi_module_init() -> *mut PyObject {
 
         let module = py::module::create(&mut FFI_MOD_DEF).unwrap();
 
-        data::init(module.borrow());
+        python::init_builtin_types(module.borrow());
         hooks::init(module.borrow());
-        storage::init(module.borrow());
         engine::init(module.borrow());
-        v3::init(module.borrow());
-        types::init(module.borrow());
 
         FFI_MODULE = module.clone().unwrap();
         module.unwrap()

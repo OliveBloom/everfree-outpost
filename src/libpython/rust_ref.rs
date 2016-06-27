@@ -3,14 +3,15 @@ use std::ops::{Deref, DerefMut};
 use libc::c_void;
 use python3_sys::*;
 
-use python::api as py;
-use python::api::{PyBox, PyRef};
+use api as py;
+use api::{PyBox, PyRef};
 
 
 /// Python object wrapping a Rust reference.  This allows for passing a Rust reference to a Python
 /// function, with the guarantee that other Python code cannot use the reference after that
 /// function returns.
 pub struct RustRef {
+    #[allow(dead_code)]
     base: PyObject,
     ptr: *mut c_void,
     mutable: bool,
@@ -154,6 +155,7 @@ pub fn with_ref_mut<T, F, R>(val: &mut T, f: F) -> R
 
 
 /// Macro for use as the `method_macro` of `define_python_class!`.
+#[macro_export]
 macro_rules! rust_ref_func {
     ( $ty:ty, $fname:ident, ( &$this:ident $(, $aname:ident : $aty:ty )* ), $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
@@ -163,19 +165,19 @@ macro_rules! rust_ref_func {
                 $body
             }
 
-            fn wrap(slf: $crate::python::ptr::PyRef,
-                    args: $crate::python::ptr::PyRef)
-                    -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-                use $crate::script::rust_ref;
-                use $crate::script::{Pack, Unpack};
+            fn wrap(slf: $crate::ptr::PyRef,
+                    args: $crate::ptr::PyRef)
+                    -> $crate::exc::PyResult<$crate::ptr::PyBox> {
+                use $crate::rust_ref;
+                use $crate::conv::{Pack, Unpack};
                 let guard = unsafe { rust_ref::unpack_rust_ref::<$ty>(slf) };
                 let result = imp(&*guard, try!(Unpack::unpack(args)));
                 Pack::pack(result)
             }
 
             {
-                use $crate::python::exc::return_result;
-                use $crate::python::ptr::PyRef;
+                use $crate::exc::return_result;
+                use $crate::ptr::PyRef;
                 let slf = PyRef::new_non_null(slf);
                 let args = PyRef::new_non_null(args);
                 return_result(wrap(slf, args))
@@ -191,19 +193,19 @@ macro_rules! rust_ref_func {
                 $body
             }
 
-            fn wrap(slf: $crate::python::ptr::PyRef,
-                    args: $crate::python::ptr::PyRef)
-                    -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-                use $crate::script::rust_ref;
-                use $crate::script::{Pack, Unpack};
+            fn wrap(slf: $crate::ptr::PyRef,
+                    args: $crate::ptr::PyRef)
+                    -> $crate::exc::PyResult<$crate::ptr::PyBox> {
+                use $crate::rust_ref;
+                use $crate::conv::{Pack, Unpack};
                 let mut guard = unsafe { rust_ref::unpack_rust_ref_mut::<$ty>(slf) };
                 let result = imp(&mut *guard, try!(Unpack::unpack(args)));
                 Pack::pack(result)
             }
 
             {
-                use $crate::python::exc::return_result;
-                use $crate::python::ptr::PyRef;
+                use $crate::exc::return_result;
+                use $crate::ptr::PyRef;
                 let slf = PyRef::new_non_null(slf);
                 let args = PyRef::new_non_null(args);
                 return_result(wrap(slf, args))

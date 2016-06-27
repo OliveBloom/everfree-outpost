@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use python::api as py;
-use python::api::{PyBox, PyRef, PyResult};
+use api as py;
+use api::{PyBox, PyRef, PyResult};
 
 
 /// Types that can be converted from Python objects.
