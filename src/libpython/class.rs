@@ -33,6 +33,7 @@ pub const BLANK_METHOD_DEF: PyMethodDef = PyMethodDef {
     ml_doc: 0 as *const _,
 };
 
+#[macro_export]
 macro_rules! one {
     ( $any:tt ) => { 1 };
 }
