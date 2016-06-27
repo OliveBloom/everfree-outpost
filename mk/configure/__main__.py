@@ -164,7 +164,7 @@ if __name__ == '__main__':
         native.rust('server_util', 'lib', ('server_types',)),
         native.rust('server_world_types', 'lib', ('server_types',)),
         native.rust('python', 'lib',
-            ('physics', 'server_types',
+            ('physics', 'server_types', 'server_config',
                 'server_extra', 'server_util', 'server_world_types'),
             dyn_deps=('syntax_exts',)),
         native.rust('server_bundle', 'lib',

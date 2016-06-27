@@ -1,8 +1,8 @@
-use storage::Storage;
+use server_config::Storage;
 
-use python::api as py;
-use python::api::{PyBox, PyResult};
-use super::rust_ref::{RustRef, RustRefType};
+use api as py;
+use api::{PyBox, PyResult};
+use rust_ref::{RustRef, RustRefType};
 
 macro_rules! storage_ref_func {
     ( $($all:tt)* ) => ( rust_ref_func!(Storage, $($all)*); );

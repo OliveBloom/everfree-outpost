@@ -15,6 +15,7 @@ extern crate libc;
 extern crate python3_sys;
 
 extern crate physics;
+extern crate server_config;
 extern crate server_extra;
 extern crate server_types;
 #[macro_use] extern crate server_util;
