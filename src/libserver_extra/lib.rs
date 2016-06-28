@@ -237,6 +237,32 @@ impl<'a> ArrayViewMut<'a> {
         }
     }
 
+    pub fn get_or_set_array(self, idx: usize) -> ArrayViewMut<'a> {
+        let is_array = if let Repr::Array(_) = self.v[idx] { true } else { false };
+        if is_array {
+            self.get_mut(idx).unwrap_array()
+        } else {
+            self.set_array(idx)
+        }
+
+        /* TODO: the obvious implementation seems to trigger a borrow checker bug (?)
+        if let Some(&mut Repr::Array(ref mut v)) = top.get_mut(idx) {
+            return ArrayViewMut::new(v);
+        }
+        // Otherwise...
+        ArrayViewMut::new(top).set_array(idx)
+        */
+    }
+
+    pub fn get_or_set_hash(self, idx: usize) -> HashViewMut<'a> {
+        let is_hash = if let Repr::Hash(_) = self.v[idx] { true } else { false };
+        if is_hash {
+            self.get_mut(idx).unwrap_hash()
+        } else {
+            self.set_hash(idx)
+        }
+    }
+
     pub fn push(self) {
         self.v.push(Repr::Null);
     }
@@ -364,6 +390,24 @@ impl<'a> HashViewMut<'a> {
         }
     }
 
+    pub fn get_or_set_array(self, key: &str) -> ArrayViewMut<'a> {
+        let is_array = if let Some(&Repr::Array(_)) = self.h.get(key) { true } else { false };
+        if is_array {
+            self.get_mut(key).unwrap().unwrap_array()
+        } else {
+            self.set_array(key)
+        }
+    }
+
+    pub fn get_or_set_hash(self, key: &str) -> HashViewMut<'a> {
+        let is_hash = if let Some(&Repr::Hash(_)) = self.h.get(key) { true } else { false };
+        if is_hash {
+            self.get_mut(key).unwrap().unwrap_hash()
+        } else {
+            self.set_hash(key)
+        }
+    }
+
     pub fn remove(self, key: &str) {
         self.h.remove(key);
     }
@@ -473,6 +517,14 @@ impl Extra {
 
     pub fn set_hash(&mut self, key: &str) -> HashViewMut {
         self.view_mut().set_hash(key)
+    }
+
+    pub fn get_or_set_array(&mut self, key: &str) -> ArrayViewMut {
+        self.view_mut().get_or_set_array(key)
+    }
+
+    pub fn get_or_set_hash(&mut self, key: &str) -> HashViewMut {
+        self.view_mut().get_or_set_hash(key)
     }
 
     pub fn remove(&mut self, key: &str) {

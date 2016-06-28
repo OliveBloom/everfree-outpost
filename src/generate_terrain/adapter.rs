@@ -51,11 +51,9 @@ pub fn gen_chunk_to_bundle(data: &Data,
                                     let count: u8 = FromStr::from_str(&colon_count[1..]).unwrap();
                                     i.item(slot as u8, name, count);
                                 }
-                            }).extra(|e| {
-                                if !e.contains("inv") {
-                                    e.set_hash("inv");
-                                }
-                                e.get_mut("inv").unwrap().unwrap_hash()
+                            });
+                            s.extra(|e| {
+                                e.get_or_set_hash("inv")
                                  .set("main", Value::InventoryId(iid.unwrap()));
                             });
 
