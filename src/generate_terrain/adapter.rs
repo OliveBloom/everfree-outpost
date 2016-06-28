@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use physics::CHUNK_SIZE;
-use server_bundle::builder::Builder;
+use server_bundle::builder::{Builder, StructureBuilder};
 use server_bundle::types::Bundle;
 use server_config::Data;
 use server_extra::Value;
@@ -36,26 +36,9 @@ pub fn gen_chunk_to_bundle(data: &Data,
 
             for (k, v) in &gs.extra {
                 match k as &str {
-                    "loot" => {
-                        let iid = {
-                            let mut i = s.inventory_();
-                            i.size(30);
-                            for (slot, part) in v.split(',').enumerate() {
-                                if part == "" {
-                                    continue;
-                                }
-
-                                let idx = part.find(':').unwrap();
-                                let (name, colon_count) = part.split_at(idx);
-                                let count: u8 = FromStr::from_str(&colon_count[1..]).unwrap();
-                                i.item(slot as u8, name, count);
-                            }
-                            i.id()
-                        };
-                        s.extra_()
-                         .get_or_set_hash("inv")
-                         .set("main", Value::InventoryId(iid));
-                    },
+                    "loot" => apply_loot(&mut s, v),
+                    "gem_puzzle_slot" => apply_gem_puzzle_slot(&mut s, v),
+                    "gem_puzzle_door" => apply_gem_puzzle_door(&mut s, v),
 
                     _ => panic!("unrecognized GenStructure extras: {:?}", k),
                 }
@@ -64,4 +47,45 @@ pub fn gen_chunk_to_bundle(data: &Data,
     }
 
     b.finish()
+}
+
+fn apply_loot(s: &mut StructureBuilder, v: &str) {
+    let iid = {
+        let mut i = s.inventory_();
+        i.size(30);
+        for (slot, part) in v.split(',').enumerate() {
+            if part == "" {
+                continue;
+            }
+
+            let idx = part.find(':').unwrap();
+            let (name, colon_count) = part.split_at(idx);
+            let count: u8 = FromStr::from_str(&colon_count[1..]).unwrap();
+            i.item(slot as u8, name, count);
+        }
+        i.id()
+    };
+    s.extra_()
+     .get_or_set_hash("inv")
+     .set("main", Value::InventoryId(iid));
+}
+
+fn apply_gem_puzzle_slot(s: &mut StructureBuilder, v: &str) {
+    let mut iter = v.split(',');
+    let puzzle_id = iter.next().unwrap();
+    let slot = FromStr::from_str(iter.next().unwrap()).unwrap();
+    let init = iter.next().unwrap();
+
+    let mut e = s.extra_();
+    e.set("puzzle_id", Value::Str(puzzle_id.to_owned()));
+    e.set("puzzle_slot", Value::Int(slot));
+    e.set("puzzle_init", Value::Str(init.to_owned()));
+}
+
+fn apply_gem_puzzle_door(s: &mut StructureBuilder, v: &str) {
+    let mut iter = v.split(',');
+    let puzzle_id = iter.next().unwrap();
+
+    let mut e = s.extra_();
+    e.set("puzzle_id", Value::Str(puzzle_id.to_owned()));
 }
