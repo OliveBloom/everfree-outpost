@@ -29,40 +29,37 @@ pub fn gen_chunk_to_bundle(data: &Data,
           .blocks(blocks);
 
         for gs in gc.structures {
-            tc.structure(|s| {
-                s.stable_plane(pid)
-                 .pos(cpos.extend(0) * scalar(CHUNK_SIZE) + gs.pos)
-                 .template_id(gs.template);
+            let mut s = tc.structure_();
+            s.stable_plane(pid)
+             .pos(cpos.extend(0) * scalar(CHUNK_SIZE) + gs.pos)
+             .template_id(gs.template);
 
-                for (k, v) in &gs.extra {
-                    match k as &str {
-                        "loot" => {
-                            let mut iid = None;
-                            s.inventory(|i| {
-                                iid = Some(i.id());
-                                i.size(30);
-                                for (slot, part) in v.split(',').enumerate() {
-                                    if part == "" {
-                                        continue;
-                                    }
-
-                                    let idx = part.find(':').unwrap();
-                                    let (name, colon_count) = part.split_at(idx);
-                                    let count: u8 = FromStr::from_str(&colon_count[1..]).unwrap();
-                                    i.item(slot as u8, name, count);
+            for (k, v) in &gs.extra {
+                match k as &str {
+                    "loot" => {
+                        let iid = {
+                            let mut i = s.inventory_();
+                            i.size(30);
+                            for (slot, part) in v.split(',').enumerate() {
+                                if part == "" {
+                                    continue;
                                 }
-                            });
-                            s.extra(|e| {
-                                e.get_or_set_hash("inv")
-                                 .set("main", Value::InventoryId(iid.unwrap()));
-                            });
 
-                        },
+                                let idx = part.find(':').unwrap();
+                                let (name, colon_count) = part.split_at(idx);
+                                let count: u8 = FromStr::from_str(&colon_count[1..]).unwrap();
+                                i.item(slot as u8, name, count);
+                            }
+                            i.id()
+                        };
+                        s.extra_()
+                         .get_or_set_hash("inv")
+                         .set("main", Value::InventoryId(iid));
+                    },
 
-                        _ => panic!("unrecognized GenStructure extras: {:?}", k),
-                    }
+                    _ => panic!("unrecognized GenStructure extras: {:?}", k),
                 }
-            });
+            }
         }
     }
 

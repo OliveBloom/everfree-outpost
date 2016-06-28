@@ -146,6 +146,7 @@ impl<'d> Builder<'d> {
         }
     }
 
+
     pub fn client<'a>(&'a mut self) -> ClientBuilder<'a, 'd> {
         let idx = self.clients.len();
         self.clients.push(ClientBits::new());
@@ -163,6 +164,7 @@ impl<'d> Builder<'d> {
             idx: idx,
         }
     }
+
 
     pub fn entity<'a>(&'a mut self) -> EntityBuilder<'a, 'd> {
         let idx = self.entities.len();
@@ -182,6 +184,11 @@ impl<'d> Builder<'d> {
         }
     }
 
+    fn next_entity_id(&self) -> EntityId {
+        EntityId(self.entities.len() as u32)
+    }
+
+
     pub fn inventory<'a>(&'a mut self) -> InventoryBuilder<'a, 'd> {
         let idx = self.inventories.len();
         self.inventories.push(InventoryBits::new());
@@ -199,6 +206,11 @@ impl<'d> Builder<'d> {
             idx: idx,
         }
     }
+
+    fn next_inventory_id(&self) -> InventoryId {
+        InventoryId(self.inventories.len() as u32)
+    }
+
 
     pub fn plane<'a>(&'a mut self) -> PlaneBuilder<'a, 'd> {
         let idx = self.planes.len();
@@ -218,6 +230,7 @@ impl<'d> Builder<'d> {
         }
     }
 
+
     pub fn terrain_chunk<'a>(&'a mut self) -> TerrainChunkBuilder<'a, 'd> {
         let idx = self.terrain_chunks.len();
         self.terrain_chunks.push(TerrainChunkBits::new());
@@ -236,6 +249,7 @@ impl<'d> Builder<'d> {
         }
     }
 
+
     pub fn structure<'a>(&'a mut self) -> StructureBuilder<'a, 'd> {
         let idx = self.structures.len();
         self.structures.push(StructureBits::new());
@@ -252,6 +266,10 @@ impl<'d> Builder<'d> {
             owner: self,
             idx: idx,
         }
+    }
+
+    fn next_structure_id(&self) -> StructureId {
+        StructureId(self.structures.len() as u32)
     }
 
 
@@ -394,6 +412,11 @@ impl<'a, 'd> WorldBuilder<'a, 'd> {
         self
     }
 
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
+    }
+
+
     pub fn entity<F: FnOnce(&mut EntityBuilder)>(&mut self, f: F) -> &mut Self {
         let eid = {
             let mut e = self.owner.entity();
@@ -405,6 +428,17 @@ impl<'a, 'd> WorldBuilder<'a, 'd> {
         self
     }
 
+    pub fn entity_<'b>(&'b mut self) -> EntityBuilder<'b, 'd> {
+        let eid = self.owner.next_entity_id();
+        self.get().child_entities.push(eid);
+
+        let mut e = self.owner.entity();
+        assert!(e.id() == eid);
+        e.get().attachment = EntityAttachment::World;
+
+        e
+    }
+
     pub fn child_entity(&mut self, eid: EntityId) -> &mut Self {
         {
             let mut e = self.owner.get_entity(eid);
@@ -413,6 +447,7 @@ impl<'a, 'd> WorldBuilder<'a, 'd> {
         self.get().child_entities.push(eid);
         self
     }
+
 
     pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
         let iid = {
@@ -423,6 +458,17 @@ impl<'a, 'd> WorldBuilder<'a, 'd> {
         };
         self.get().child_inventories.push(iid);
         self
+    }
+
+    pub fn inventory_<'b>(&'b mut self) -> InventoryBuilder<'b, 'd> {
+        let iid = self.owner.next_inventory_id();
+        self.get().child_inventories.push(iid);
+
+        let mut i = self.owner.inventory();
+        assert!(i.id() == iid);
+        i.get().attachment = InventoryAttachment::World;
+
+        i
     }
 
     pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
@@ -508,6 +554,19 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         self
     }
 
+    pub fn pawn_<'b>(&'b mut self) -> EntityBuilder<'b, 'd> {
+        let cid = self.id();
+        let eid = self.owner.next_entity_id();
+        self.get().child_entities.push(eid);
+        self.get().pawn = Some(eid);
+
+        let mut e = self.owner.entity();
+        assert!(e.id() == eid);
+        e.get().attachment = EntityAttachment::Client(cid);
+
+        e
+    }
+
     pub fn pawn_id(&mut self, eid: EntityId) -> &mut Self {
         self.get().pawn = Some(eid);
         self
@@ -523,6 +582,11 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         self
     }
 
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
+    }
+
+
     pub fn entity<F: FnOnce(&mut EntityBuilder)>(&mut self, f: F) -> &mut Self {
         let cid = self.id();
         let eid = {
@@ -533,6 +597,18 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         };
         self.get().child_entities.push(eid);
         self
+    }
+
+    pub fn entity_<'b>(&'b mut self) -> EntityBuilder<'b, 'd> {
+        let cid = self.id();
+        let eid = self.owner.next_entity_id();
+        self.get().child_entities.push(eid);
+
+        let mut e = self.owner.entity();
+        assert!(e.id() == eid);
+        e.get().attachment = EntityAttachment::Client(cid);
+
+        e
     }
 
     pub fn child_entity(&mut self, eid: EntityId) -> &mut Self {
@@ -546,6 +622,7 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         self
     }
 
+
     pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
         let cid = self.id();
         let iid = {
@@ -556,6 +633,18 @@ impl<'a, 'd> ClientBuilder<'a, 'd> {
         };
         self.get().child_inventories.push(iid);
         self
+    }
+
+    pub fn inventory_<'b>(&'b mut self) -> InventoryBuilder<'b, 'd> {
+        let cid = self.id();
+        let iid = self.owner.next_inventory_id();
+        self.get().child_inventories.push(iid);
+
+        let mut i = self.owner.inventory();
+        assert!(i.id() == iid);
+        i.get().attachment = InventoryAttachment::Client(cid);
+
+        i
     }
 
     pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
@@ -682,6 +771,11 @@ impl<'a, 'd> EntityBuilder<'a, 'd> {
         self
     }
 
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
+    }
+
+
     pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
         let eid = self.id();
         let iid = {
@@ -692,6 +786,18 @@ impl<'a, 'd> EntityBuilder<'a, 'd> {
         };
         self.get().child_inventories.push(iid);
         self
+    }
+
+    pub fn inventory_<'b>(&'b mut self) -> InventoryBuilder<'b, 'd> {
+        let eid = self.id();
+        let iid = self.owner.next_inventory_id();
+        self.get().child_inventories.push(iid);
+
+        let mut i = self.owner.inventory();
+        assert!(i.id() == iid);
+        i.get().attachment = InventoryAttachment::Entity(eid);
+
+        i
     }
 
     pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
@@ -781,6 +887,10 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
         f(&mut self.get().extra);
         self
     }
+
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
+    }
 }
 
 
@@ -853,6 +963,10 @@ impl<'a, 'd> PlaneBuilder<'a, 'd> {
     pub fn extra<F: FnOnce(&mut Extra)>(&mut self, f: F) -> &mut Self {
         f(&mut self.get().extra);
         self
+    }
+
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
     }
 }
 
@@ -955,10 +1069,15 @@ impl<'a, 'd> TerrainChunkBuilder<'a, 'd> {
         self
     }
 
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
+    }
+
     pub fn flags(&mut self, flags: TerrainChunkFlags) -> &mut Self {
         self.get().flags = flags;
         self
     }
+
 
     pub fn structure<F: FnOnce(&mut StructureBuilder)>(&mut self, f: F) -> &mut Self {
         let sid = {
@@ -969,6 +1088,17 @@ impl<'a, 'd> TerrainChunkBuilder<'a, 'd> {
         };
         self.get().child_structures.push(sid);
         self
+    }
+
+    pub fn structure_<'b>(&'b mut self) -> StructureBuilder<'b, 'd> {
+        let sid = self.owner.next_structure_id();
+        self.get().child_structures.push(sid);
+
+        let mut s = self.owner.structure();
+        assert!(s.id() == sid);
+        s.get().attachment = StructureAttachment::Chunk;
+
+        s
     }
 
     pub fn child_structure(&mut self, sid: StructureId) -> &mut Self {
@@ -1080,6 +1210,11 @@ impl<'a, 'd> StructureBuilder<'a, 'd> {
         self
     }
 
+    pub fn extra_(&mut self) -> &mut Extra {
+        &mut self.get().extra
+    }
+
+
     pub fn inventory<F: FnOnce(&mut InventoryBuilder)>(&mut self, f: F) -> &mut Self {
         let sid = self.id();
         let iid = {
@@ -1090,6 +1225,18 @@ impl<'a, 'd> StructureBuilder<'a, 'd> {
         };
         self.get().child_inventories.push(iid);
         self
+    }
+
+    pub fn inventory_<'b>(&'b mut self) -> InventoryBuilder<'b, 'd> {
+        let sid = self.id();
+        let iid = self.owner.next_inventory_id();
+        self.get().child_inventories.push(iid);
+
+        let mut i = self.owner.inventory();
+        assert!(i.id() == iid);
+        i.get().attachment = InventoryAttachment::Structure(sid);
+
+        i
     }
 
     pub fn child_inventory(&mut self, iid: InventoryId) -> &mut Self {
