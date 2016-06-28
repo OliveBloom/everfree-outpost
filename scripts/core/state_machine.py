@@ -1,4 +1,4 @@
-from outpost_server.core import timer
+from outpost_server.core import import_hooks, timer
 from outpost_server.core.data import DATA
 from outpost_server.core.engine import StructureProxy
 
@@ -63,9 +63,9 @@ class StateMachine:
                 'msg': msg,
                 }
 
-        # TODO: hack
+        # TODO: support other obj types
         if isinstance(self.obj, StructureProxy):
-            self.obj._eng.world_structure_set_has_import_hook(self.obj.id, True)
+            self.obj.set_has_import_hook(True)
 
     def schedule(self, delay, msg):
         self.schedule_at(self.obj.engine.now() + delay, msg)
@@ -75,9 +75,9 @@ class StateMachine:
             timer.cancel(self.obj.engine, self.timer['cookie'])
             del self.timer
 
-        # TODO: hack
+        # TODO: support other obj types
         if isinstance(self.obj, StructureProxy):
-            self.obj._eng.world_structure_set_has_import_hook(self.obj.id, False)
+            self.obj.set_has_import_hook(False)
 
 _TEMPLATE_SM = {}
 
@@ -116,21 +116,17 @@ def callback(eng, id, when):
     msg = timer['msg']
     del obj.extra()[KEY]['timer']
 
-    # TODO: hack
+    # TODO: support other obj types
     if isinstance(obj, StructureProxy):
-        obj._eng.world_structure_set_has_import_hook(obj.id, False)
+        obj.set_has_import_hook(False)
 
     cls(obj).process(msg)
 
 
-def structure_import_hook(eng, sid):
-    s = StructureProxy(eng, sid)
-    t = s.extra().get('sm', {}).get('timer')
-    if t is not None:
-        when = t['when']
-        cookie = timer.schedule(s.engine, when, 
-                lambda eng: callback(eng, sid, when))
-        s.extra()['sm']['timer']['cookie'] = cookie
-
-def init(hooks):
-    hooks.structure_import_hook(structure_import_hook)
+@import_hooks.structure('sm.timer')
+def resume_timer(obj, t):
+    when = t['when']
+    obj_id = obj.id
+    cookie = timer.schedule(obj.engine, when, 
+            lambda eng: callback(eng, obj_id, when))
+    obj.extra()['sm']['timer']['cookie'] = cookie

@@ -307,6 +307,9 @@ class StructureProxy(ObjectProxy):
         id = self._eng.world_structure_template_id(self.id)
         return TemplateProxy.by_id(id)
 
+    def set_has_import_hook(self, flag):
+        self._eng.world_structure_set_has_import_hook(self.id, flag)
+
     def extra(self):
         return ExtraHashProxy(self._eng.world_structure_extra(self.id))
 
