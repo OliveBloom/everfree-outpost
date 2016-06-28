@@ -1,0 +1,122 @@
+#![crate_name = "generate_terrain"]
+
+extern crate env_logger;
+#[macro_use] extern crate log;
+extern crate rand;
+extern crate rustc_serialize;
+
+extern crate server_bundle;
+extern crate server_config;
+extern crate server_extra;
+extern crate server_types;
+extern crate server_util;
+extern crate terrain_gen;
+
+use server_bundle::types::Bundle;
+use server_bundle::flat::Flat;
+use server_config::{Data, Storage};
+use server_types::*;
+use terrain_gen::forest::Provider as ForestProvider;
+use terrain_gen::dungeon::Provider as DungeonProvider;
+
+
+use std::env;
+use std::fs::File;
+use std::io::{self, Read};
+use std::path::Path;
+use std::u32;
+use rand::{XorShiftRng, Rng};
+use rustc_serialize::json;
+
+use server_util::bytes::{ReadBytes, WriteBytes};
+
+
+struct Context<'d> {
+    forest: ForestProvider<'d>,
+    dungeon: DungeonProvider<'d>,
+}
+
+impl<'d> Context<'d> {
+    fn generate(&mut self, pid: Stable<PlaneId>, cpos: V2) -> Bundle {
+        //let start = now();
+
+        let gc =
+            if pid == STABLE_PLANE_FOREST {
+                self.forest.generate(pid, cpos)
+            } else {
+                self.dungeon.generate(pid, cpos)
+            };
+
+        let b = unsafe { ::std::mem::zeroed() };
+
+        //let end = now();
+        //info!("generated {} {:?} in {} ms", pid.unwrap(), cpos, end - start);
+
+        b
+    }
+}
+
+fn io_main(ctx: &mut Context) -> io::Result<()> {
+    let mut stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    loop {
+        let (plane, cpos) = try!(stdin.read_bytes());
+        let b = ctx.generate(plane, cpos);
+
+        let mut f = Flat::new();
+        f.flatten_bundle(&b);
+        let size = f.calc_size();
+        assert!(size <= u32::MAX as usize);
+        try!(stdout.write_bytes(size as u32));
+        try!(f.write(&mut stdout));
+    }
+}
+
+
+fn read_json(mut file: File) -> json::Json {
+    let mut content = String::new();
+    file.read_to_string(&mut content).unwrap();
+    json::Json::from_str(&content).unwrap()
+}
+
+fn load_config(path: &Path) -> (Data, Storage) {
+    let storage = Storage::new(&path.to_owned());
+
+    let block_json = read_json(storage.open_block_data());
+    let item_json = read_json(storage.open_item_data());
+    let recipe_json = read_json(storage.open_recipe_data());
+    let template_json = read_json(storage.open_template_data());
+    let animation_json = read_json(storage.open_animation_data());
+    let sprite_layer_json = read_json(storage.open_sprite_layer_data());
+    let loot_table_json = read_json(storage.open_loot_table_data());
+    let data = Data::from_json(block_json,
+                               item_json,
+                               recipe_json,
+                               template_json,
+                               animation_json,
+                               sprite_layer_json,
+                               loot_table_json).unwrap();
+
+    (data, storage)
+}
+
+fn main() {
+    env_logger::init().unwrap();
+
+
+    let args = env::args().collect::<Vec<_>>();
+    let (data, storage) = load_config(Path::new(&args[1]));
+
+
+    let mut rng: XorShiftRng = rand::random();
+    let mut ctx = Context {
+        forest: ForestProvider::new(&data, &storage, rng.gen()),
+        dungeon: DungeonProvider::new(&data, &storage, rng.gen()),
+    };
+
+    match io_main(&mut ctx) {
+        Ok(()) => {},
+        Err(e) => error!("io error: {:?}", e),
+    }
+}

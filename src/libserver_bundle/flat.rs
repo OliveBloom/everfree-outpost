@@ -372,6 +372,12 @@ macro_rules! flat {
                 offset
             }
 
+            pub fn calc_size(&mut self) -> usize {
+                // build_headers computes a bunch of section offsets, and reports the offset of the
+                // end of the last section.
+                self.build_headers()
+            }
+
             pub fn write<W: io::Write>(&mut self, w: &mut W) -> io::Result<()> {
                 self.build_headers();
 
