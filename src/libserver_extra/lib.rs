@@ -103,6 +103,27 @@ impl<'a> View<'a> {
             ref val => View::Value(Value::from_repr(val.clone()).unwrap()),
         }
     }
+
+    pub fn unwrap_value(self) -> Value {
+        match self {
+            View::Value(x) => x,
+            _ => panic!("not a Value"),
+        }
+    }
+
+    pub fn unwrap_array(self) -> ArrayView<'a> {
+        match self {
+            View::Array(x) => x,
+            _ => panic!("not an Array"),
+        }
+    }
+
+    pub fn unwrap_hash(self) -> HashView<'a> {
+        match self {
+            View::Hash(x) => x,
+            _ => panic!("not a Hash"),
+        }
+    }
 }
 
 pub enum ViewMut<'a> {
@@ -117,6 +138,27 @@ impl<'a> ViewMut<'a> {
             Repr::Array(ref mut v) => ViewMut::Array(ArrayViewMut::new(v)),
             Repr::Hash(ref mut h) => ViewMut::Hash(HashViewMut::new(h)),
             ref val => ViewMut::Value(Value::from_repr(val.clone()).unwrap()),
+        }
+    }
+
+    pub fn unwrap_value(self) -> Value {
+        match self {
+            ViewMut::Value(x) => x,
+            _ => panic!("not a Value"),
+        }
+    }
+
+    pub fn unwrap_array(self) -> ArrayViewMut<'a> {
+        match self {
+            ViewMut::Array(x) => x,
+            _ => panic!("not an Array"),
+        }
+    }
+
+    pub fn unwrap_hash(self) -> HashViewMut<'a> {
+        match self {
+            ViewMut::Hash(x) => x,
+            _ => panic!("not a Hash"),
         }
     }
 }

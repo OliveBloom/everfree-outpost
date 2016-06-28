@@ -5,6 +5,7 @@ extern crate env_logger;
 extern crate rand;
 extern crate rustc_serialize;
 
+extern crate physics;
 extern crate server_bundle;
 extern crate server_config;
 extern crate server_extra;
@@ -31,7 +32,11 @@ use rustc_serialize::json;
 use server_util::bytes::{ReadBytes, WriteBytes};
 
 
+mod adapter;
+
+
 struct Context<'d> {
+    data: &'d Data,
     forest: ForestProvider<'d>,
     dungeon: DungeonProvider<'d>,
 }
@@ -47,7 +52,7 @@ impl<'d> Context<'d> {
                 self.dungeon.generate(pid, cpos)
             };
 
-        let b = unsafe { ::std::mem::zeroed() };
+        let b = adapter::gen_chunk_to_bundle(self.data, gc, pid, cpos);
 
         //let end = now();
         //info!("generated {} {:?} in {} ms", pid.unwrap(), cpos, end - start);
@@ -111,6 +116,7 @@ fn main() {
 
     let mut rng: XorShiftRng = rand::random();
     let mut ctx = Context {
+        data: &data,
         forest: ForestProvider::new(&data, &storage, rng.gen()),
         dungeon: DungeonProvider::new(&data, &storage, rng.gen()),
     };

@@ -188,7 +188,8 @@ if __name__ == '__main__':
             dyn_deps=('syntax_exts',),
             src_file='$root/src/server/main.rs'),
         native.rust('generate_terrain', 'bin',
-            ('server_bundle', 'server_extra', 'server_util', 'terrain_gen',)),
+            ('physics', 'terrain_gen',
+                'server_bundle', 'server_config', 'server_extra', 'server_types', 'server_util')),
         '',
 
         '# Server - wrapper',
