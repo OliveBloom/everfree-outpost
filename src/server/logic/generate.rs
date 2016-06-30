@@ -31,20 +31,7 @@ pub fn process(eng: &mut Engine, resp: Response) {
                 bundle::import_bundle(&mut wf, &bundle)
             };
 
-            let orig_tcid = tcid;
-            importer.iter_imports(|id| match id {
-                AnyId::Client(_cid) =>
-                    panic!("shouldn't be clients in TerrainChunk bundle"),
-                AnyId::Entity(_eid) =>
-                    panic!("shouldn't be entities in TerrainChunk bundle"),
-                AnyId::Inventory(_iid) => {},    // nothing to do
-                AnyId::Plane(_pid) =>
-                    panic!("shouldn't be planes in TerrainChunk bundle"),
-                AnyId::TerrainChunk(tcid) =>
-                    logic::terrain_chunk::on_create(eng.refine(), tcid),
-                AnyId::Structure(sid) =>
-                    logic::structure::on_create(eng.refine(), sid),
-            });
+            logic::world::on_import(eng.refine(), &importer);
         },
     }
 }
