@@ -142,11 +142,9 @@ pub unsafe trait Coded: Sized {
         unsafe { mem::transmute(self) }
     }
 
-    fn split<'a,
-             Target: Coded,
-             Rest: Coded<Code=<Self::Code as RefineTo<Target::Code>>::Remnant>
-            >(&'a mut self) -> (&'a mut Target, &'a mut Rest)
-            where Self::Code: RefineTo<Target::Code> {
+    fn split<'a, Target: Coded, Rest: Coded>(&'a mut self) -> (&'a mut Target, &'a mut Rest)
+            where Self::Code: RefineTo<Target::Code>,
+                  <Self::Code as RefineTo<Target::Code>>::Remnant: RefineTo<Rest::Code> {
         let ptr = self as *mut Self;
         unsafe { (mem::transmute(ptr), mem::transmute(ptr)) }
     }

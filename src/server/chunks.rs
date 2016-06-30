@@ -33,95 +33,49 @@ impl<'d> Chunks<'d> {
             plane_ref_count: HashMap::new(),
         }
     }
-}
 
-pub trait Provider {
-    type E: Error;
-
-    fn load_plane(&mut self, stable_pid: Stable<PlaneId>) -> Result<(), Self::E>;
-    fn unload_plane(&mut self, pid: PlaneId) -> Result<(), Self::E>;
-
-    fn load_terrain_chunk(&mut self, pid: PlaneId, cpos: V2) -> Result<(), Self::E>;
-    fn unload_terrain_chunk(&mut self, pid: PlaneId, cpos: V2) -> Result<(), Self::E>;
-}
-
-// TODO: error handling in here is pretty bad (lots of warn_on_err)
-pub trait Fragment<'d> {
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Chunks<'d>, &World<'d>) -> R;
-
-    type P: Provider;
-    fn with_provider<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Chunks<'d>, &mut Self::P) -> R;
-
-    fn get_plane_id(&mut self, stable_pid: Stable<PlaneId>) -> PlaneId {
-        if let Some(pid) = self.with_world(|_, w| w.transient_plane_id(stable_pid)) {
-            trace!("get_plane_id({:?}) = {:?} (hit)", stable_pid, pid);
-            return pid;
-        }
-
-        self.with_provider(|_sys, provider| {
-            warn_on_err!(provider.load_plane(stable_pid))
-        });
-        // Correctly implemented provider should create or load a Plane with the given StableId.
-        let pid = self.with_world(|_, w| w.transient_plane_id(stable_pid)).unwrap();
-        trace!("get_plane_id({:?}) = {:?} (miss)", stable_pid, pid);
-        pid
-    }
-
-    fn unload_plane(&mut self, pid: PlaneId) {
-        self.with_provider(|sys, provider| {
-            if let Some(&ref_count) = sys.plane_ref_count.get(&pid) {
-                if ref_count > 0 {
-                    warn!("unloading {:?} despite nonzero ref count", pid);
-                }
-            }
-
-            warn_on_err!(provider.unload_plane(pid));
-        });
+    pub fn plane_ref_count(&self, pid: PlaneId) -> u32 {
+        self.plane_ref_count.get(&pid).map_or(0, |&x| x)
     }
 
     /// Returns `true` iff the chunk was actually loaded as a result of this call (as opposed to
     /// simply having its refcount incremented).
-    fn load(&mut self, pid: PlaneId, cpos: V2) -> bool {
+    pub fn load<F: FnMut(PlaneId, V2)>(&mut self,
+                                       pid: PlaneId,
+                                       cpos: V2,
+                                       mut f: F) -> bool {
         trace!("load({:?}, {:?})", pid, cpos);
-        self.with_provider(|sys, provider| {
-            let first = sys.lifecycle.retain(pid, cpos, |pid, cpos| {
-                warn_on_err!(provider.load_terrain_chunk(pid, cpos))
-            });
-            if first {
-                // No need to load anything, since the Plane must already be loaded to have a
-                // PlaneId.
-                match sys.plane_ref_count.entry(pid) {
-                    Vacant(e) => { e.insert(1); },
-                    Occupied(e) => { *e.into_mut() += 1; },
-                }
+        let first = self.lifecycle.retain(pid, cpos, |pid, cpos| f(pid, cpos));
+        if first {
+            // This was the first "retain" for this particular chunk.
+            match self.plane_ref_count.entry(pid) {
+                Vacant(e) => { e.insert(1); },
+                Occupied(e) => { *e.into_mut() += 1; },
             }
-            first
-        })
+        }
+        first
     }
 
     /// Returns `true` iff the chunk was actually unloaded as a result of this call.
-    fn unload(&mut self, pid: PlaneId, cpos: V2) -> bool {
+    pub fn unload<F: FnMut(PlaneId, V2)>(&mut self,
+                                         pid: PlaneId,
+                                         cpos: V2,
+                                         mut f: F) -> bool {
         trace!("unload({:?}, {:?})", pid, cpos);
-        self.with_provider(|sys, provider| {
-            let last = sys.lifecycle.release(pid, cpos, |pid, cpos| {
-                warn_on_err!(provider.unload_terrain_chunk(pid, cpos))
-            });
-            if last {
-                if let Occupied(mut e) = sys.plane_ref_count.entry(pid) {
-                    *e.get_mut() -= 1;
-                    if *e.get() == 0 {
-                        e.remove();
-                        warn_on_err!(provider.unload_plane(pid));
-                    }
-                } else {
-                    panic!("tried to release plane {:?}, but its ref_count is already 0",
-                           pid);
+        let last = self.lifecycle.release(pid, cpos, |pid, cpos| f(pid, cpos));
+        if last {
+            // This was the last "release" for this particular chunk.
+            if let Occupied(mut e) = self.plane_ref_count.entry(pid) {
+                *e.get_mut() -= 1;
+                if *e.get() == 0 {
+                    e.remove();
                 }
+            } else {
+                panic!("tried to release plane {:?}, but its ref_count is already 0",
+                       pid);
             }
-            last
-        })
+        }
+        last
     }
 }
 

@@ -113,7 +113,7 @@ pub fn login(eng: &mut Engine,
     on_plane_change(eng.refine(), cid, pid);
     let region = vision::vision_region(pos);
     for cpos in region.points() {
-        logic::chunks::load_chunk(eng.as_ref(), pid, cpos);
+        logic::chunks::load_chunk(eng, pid, cpos);
         on_chunk_appear(eng.refine(), cid, pid, cpos);
     }
     eng.vision.init_inventory_subscriptions(cid);
@@ -142,8 +142,7 @@ fn login_no_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart> 
     let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
     let cid = importer.import(&ClientId(0));
 
-    let pid = chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(),
-                                             STABLE_PLANE_FOREST);
+    let pid = logic::chunks::get_plane_id(eng, STABLE_PLANE_FOREST);
 
     Ok(LoginPart {
         cid: cid,
@@ -164,8 +163,7 @@ fn login_with_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart
 
 
     // Import the bundle, but first import the plane so that entity import will succeed.
-    let pid = chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(),
-                                             e.stable_plane);
+    let pid = logic::chunks::get_plane_id(eng, e.stable_plane);
 
     let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
     let cid = importer.import(&ClientId(0));
@@ -293,7 +291,7 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
     // the Plane).
     let region = vision::vision_region(pos);
     for cpos in region.points() {
-        logic::chunks::unload_chunk(eng.as_ref(), pid, cpos);
+        logic::chunks::unload_chunk(eng, pid, cpos);
     }
 
     Ok(())
@@ -311,7 +309,7 @@ pub fn update_view(eng: &mut Engine,
     let plane_change = new_plane != old_plane;
 
     for cpos in new_region.points().filter(|&p| !old_region.contains(p) || plane_change) {
-        logic::chunks::load_chunk(eng.as_ref(), new_plane, cpos);
+        logic::chunks::load_chunk(eng, new_plane, cpos);
         on_chunk_appear(eng.refine(), cid, new_plane, cpos);
     }
 
@@ -321,7 +319,7 @@ pub fn update_view(eng: &mut Engine,
 
     for cpos in old_region.points().filter(|&p| !new_region.contains(p) || plane_change) {
         on_chunk_gone(eng.refine(), cid, old_plane, cpos);
-        logic::chunks::unload_chunk(eng.as_ref(), old_plane, cpos);
+        logic::chunks::unload_chunk(eng, old_plane, cpos);
     }
 
     eng.chat.set_client_location(cid, old_plane, old_cpos, new_plane, new_cpos);

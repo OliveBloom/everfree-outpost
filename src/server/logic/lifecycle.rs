@@ -58,11 +58,11 @@ pub fn shut_down(eng: &mut Engine) {
 
     while let Some((pid, cpos)) = eng.world.terrain_chunks().next()
                               .map(|tc| (tc.plane_id(), tc.chunk_pos())) {
-        logic::chunks::unload_chunk(eng.as_ref(), pid, cpos);
+        logic::chunks::unload_chunk(eng, pid, cpos);
     }
 
     while let Some(pid) = eng.world.planes().next().map(|p| p.id()) {
-        logic::chunks::unload_plane(eng.as_ref(), pid);
+        logic::chunks::unload_plane(eng, pid);
     }
 
     warn_on_err!(eng.script_hooks.call_server_shutdown(eng.as_ref()));

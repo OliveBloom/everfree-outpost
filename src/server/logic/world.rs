@@ -215,7 +215,7 @@ fn teleport_entity_internal(wf: WorldFragment,
     let new_plane =
         if let Some(stable_pid) = stable_pid {
             // Load the plane, if it's not already.
-            chunks::Fragment::get_plane_id(&mut eng.as_ref().as_chunks_fragment(), stable_pid)
+            logic::chunks::get_plane_id(eng, stable_pid)
         } else if let Some(pid) = pid {
             unwrap!(eng.world.get_plane(pid));
             pid
