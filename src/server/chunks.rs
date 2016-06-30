@@ -33,28 +33,9 @@ impl<'d> Chunks<'d> {
             plane_ref_count: HashMap::new(),
         }
     }
-}
 
-pub trait Provider {
-    type E: Error;
-
-    fn load_plane(&mut self, stable_pid: Stable<PlaneId>) -> Result<(), Self::E>;
-    fn unload_plane(&mut self, pid: PlaneId) -> Result<(), Self::E>;
-
-    fn load_terrain_chunk(&mut self, pid: PlaneId, cpos: V2) -> Result<(), Self::E>;
-    fn unload_terrain_chunk(&mut self, pid: PlaneId, cpos: V2) -> Result<(), Self::E>;
-}
-
-// TODO: error handling in here is pretty bad (lots of warn_on_err)
-pub trait Fragment<'d> {
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Chunks<'d>, &World<'d>) -> R;
-
-    type P: Provider;
-    fn with_provider<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Chunks<'d>, &mut Self::P) -> R;
-
-    fn get_plane_id(&mut self, stable_pid: Stable<PlaneId>) -> PlaneId {
+    /*
+    pub fn get_plane_id(&mut self, stable_pid: Stable<PlaneId>) -> PlaneId {
         if let Some(pid) = self.with_world(|_, w| w.transient_plane_id(stable_pid)) {
             trace!("get_plane_id({:?}) = {:?} (hit)", stable_pid, pid);
             return pid;
@@ -123,6 +104,7 @@ pub trait Fragment<'d> {
             last
         })
     }
+    */
 }
 
 

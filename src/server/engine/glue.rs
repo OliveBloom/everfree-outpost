@@ -97,27 +97,3 @@ impl<'a, 'd> terrain_gen::Fragment<'d> for TerrainGenFragment<'a, 'd> {
 impl_slice! {
     EngineRef::as_terrain_gen_fragment -> TerrainGenFragment;
 }
-
-
-parts!(ChunksFragment, ChunkProvider);
-
-impl<'a, 'd> chunks::Fragment<'d> for ChunksFragment<'a, 'd> {
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Chunks<'d>, &World<'d>) -> R {
-        let Open { chunks, world, .. } = self.open();
-        f(chunks, world)
-    }
-
-    type P = ChunkProvider<'a, 'd>;
-    fn with_provider<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Chunks<'d>, &mut ChunkProvider<'a, 'd>) -> R {
-        let (provider, mut e) = unsafe { self.borrow().fiddle().to_part().split_off() };
-        f(e.chunks_mut(), &mut Part::from_part(provider))
-    }
-}
-
-impl_slice! {
-    EngineRef::as_chunks_fragment -> ChunksFragment;
-    ChunkProvider::as_hidden_world_fragment -> HiddenWorldFragment;
-    ChunkProvider::as_terrain_gen_fragment -> TerrainGenFragment;
-}
