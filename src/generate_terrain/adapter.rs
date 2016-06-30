@@ -6,6 +6,7 @@ use server_bundle::types::Bundle;
 use server_config::Data;
 use server_extra::Value;
 use server_types::*;
+use server_world_types::flags::S_HAS_IMPORT_HOOK;
 use terrain_gen::GenChunk;
 
 
@@ -76,6 +77,7 @@ fn apply_gem_puzzle_slot(s: &mut StructureBuilder, v: &str) {
     let slot = FromStr::from_str(iter.next().unwrap()).unwrap();
     let init = iter.next().unwrap();
 
+    s.flags(S_HAS_IMPORT_HOOK);
     let mut e = s.extra_();
     e.set("puzzle_id", Value::Str(puzzle_id.to_owned()));
     e.set("puzzle_slot", Value::Int(slot));
@@ -86,6 +88,8 @@ fn apply_gem_puzzle_door(s: &mut StructureBuilder, v: &str) {
     let mut iter = v.split(',');
     let puzzle_id = iter.next().unwrap();
 
+    s.flags(S_HAS_IMPORT_HOOK);
     let mut e = s.extra_();
     e.set("puzzle_id", Value::Str(puzzle_id.to_owned()));
+    e.set("puzzle_init", Value::Bool(true));
 }

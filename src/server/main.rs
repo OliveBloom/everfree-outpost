@@ -71,6 +71,7 @@ mod messages;
 mod physics;
 mod chunks;
 mod terrain_gen;
+mod terrain_gen2;
 mod vision;
 mod logic;
 mod cache;

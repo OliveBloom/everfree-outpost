@@ -397,6 +397,26 @@ macro_rules! flat {
 
                 Ok(())
             }
+
+            pub fn to_bytes(&mut self) -> Vec<u8> {
+                let len = self.build_headers();
+                let mut bytes = Vec::with_capacity(len);
+
+                // NB: relies on file_header and section_headers being first in declaration order.
+                $(
+                    {
+                        let r = <$ty as Section>::borrow(&self.$name);
+                        let buf = unsafe { <$ty as Section>::as_bytes(r) };
+                        assert!(buf.len() == <$ty as Section>::byte_len(&self.$name));
+                        bytes.extend_from_slice(buf);
+                        while bytes.len() % ALIGNMENT != 0 {
+                            bytes.push(0);
+                        }
+                    }
+                )*
+
+                bytes
+            }
         }
 
         impl<'a> FlatView<'a> {

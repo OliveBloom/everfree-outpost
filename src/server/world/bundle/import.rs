@@ -187,15 +187,12 @@ impl<'d> Importer<'d> {
         w.terrain_chunks.set_stable_id(id, b.stable_id).unwrap();
         let tc = &mut w.terrain_chunks[id];
 
-        let mut blocks = Box::new([0; CHUNK_TOTAL]);
-        for (i, &b) in b.blocks.iter().enumerate() {
-            blocks[i] = self.import_block_id(b);
-        }
-
         tc.stable_plane = b.stable_plane;
         tc.plane = w.planes.get_id(b.stable_plane).unwrap();
         tc.cpos = b.cpos;
-        tc.blocks = blocks;
+        for (i, &b) in b.blocks.iter().enumerate() {
+            tc.blocks[i] = self.import_block_id(b);
+        }
 
         tc.extra = self.import(&b.extra);
         tc.stable_id = b.stable_id;

@@ -1,5 +1,6 @@
 
 server/bin/backend$_exe: $b_native/backend$_exe
+server/bin/generate_terrain$_exe: $b_native/generate_terrain$_exe
 server/bin/auth.py: $root/src/auth/verifier/verifier.py
 server/bin/wrapper$_exe: $b_native/wrapper$_exe
 server/bin/run_server.sh: $root/util/run_server.sh

@@ -11,6 +11,7 @@ extern crate server_config;
 extern crate server_extra;
 extern crate server_types;
 extern crate server_util;
+extern crate server_world_types;
 extern crate terrain_gen;
 
 use server_bundle::types::Bundle;
@@ -23,7 +24,7 @@ use terrain_gen::dungeon::Provider as DungeonProvider;
 
 use std::env;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::Path;
 use std::u32;
 use rand::{XorShiftRng, Rng};
@@ -61,20 +62,39 @@ impl<'d> Context<'d> {
     }
 }
 
+const OP_INIT_PLANE: u32 =      0;
+const OP_FORGET_PLANE: u32 =    1;
+const OP_GEN_PLANE: u32 =       2;
+const OP_GEN_CHUNK: u32 =       3;
+
+const OP_NEW_PLANE: u32 =       0;
+const OP_NEW_CHUNK: u32 =       1;
+
 fn io_main(ctx: &mut Context) -> io::Result<()> {
     let mut stdin = io::stdin();
     let mut stdout = io::stdout();
 
     loop {
-        let (plane, cpos) = try!(stdin.read_bytes());
-        let b = ctx.generate(plane, cpos);
+        let opcode: u32 = try!(stdin.read_bytes());
+        match opcode {
+            OP_INIT_PLANE => unimplemented!(),
+            OP_FORGET_PLANE => unimplemented!(),
+            OP_GEN_PLANE => unimplemented!(),
+            OP_GEN_CHUNK => {
+                let (pid, cpos) = try!(stdin.read_bytes());
+                let b = ctx.generate(pid, cpos);
 
-        let mut f = Flat::new();
-        f.flatten_bundle(&b);
-        let size = f.calc_size();
-        assert!(size <= u32::MAX as usize);
-        try!(stdout.write_bytes(size as u32));
-        try!(f.write(&mut stdout));
+                let mut f = Flat::new();
+                f.flatten_bundle(&b);
+                let bytes = f.to_bytes();
+                let len = bytes.len();
+                assert!(len <= u32::MAX as usize);
+
+                try!(stdout.write_bytes((OP_NEW_CHUNK, pid, cpos, len as u32)));
+                try!(stdout.write_all(&bytes));
+            },
+            _ => panic!("unrecognized opcode: {}", opcode),
+        }
     }
 }
 

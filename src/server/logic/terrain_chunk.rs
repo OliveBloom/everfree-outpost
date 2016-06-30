@@ -15,7 +15,7 @@ use world::object::*;
 engine_part2!(pub PartialEngine(world, cache, vision, messages));
 
 
-/// Handler to be called just after creating an entity.
+/// Handler to be called just after creating a terrain chunk.
 pub fn on_create(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     let tc = eng.world.terrain_chunk(tcid);
 
@@ -30,7 +30,7 @@ pub fn on_create(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     });
 }
 
-/// Handler to be called just before destroying an entity.
+/// Handler to be called just before destroying a terrain chunk.
 pub fn on_destroy(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     let tc = eng.world.terrain_chunk(tcid);
 
@@ -43,7 +43,7 @@ pub fn on_destroy(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     });
 }
 
-/// Handler to be called just before destroying an entity.
+/// Handler to be called just after modifying a terrain chunk.
 pub fn on_update(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     let tc = eng.world.terrain_chunk(tcid);
 
