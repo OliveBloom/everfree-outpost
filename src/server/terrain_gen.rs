@@ -1,17 +1,19 @@
-//! Terrain generation.  This system is actually an interface to `libterrain_gen`, which contains
-//! the real terrain generation logic.
+//! Terrain generation.  This system wraps interaction with the `generate_terrain` binary, which
+//! contains the real terrain generation logic.
 //!
-//! Terrain generation can be slow (>30ms), so it always happens in the background on a worker
-//! thread.  When a caller requests that a chunk be generated, this system sends a request to the
-//! worker thread and returns immediately with a blank `TerrainChunk`.  When the worker thread
-//! finishes generating that chunk, the system replaces the blank `TerrainChunk` with the final
-//! version.
+//! Terrain generation can be slow (>30ms), so it always happens in the background, with a worker
+//! thread waiting for the replies.  When a caller requests that a chunk be generated, this system
+//! sends a request to the worker thread and returns immediately with a blank `TerrainChunk`.  When
+//! the worker thread finishes generating that chunk, the system replaces the blank `TerrainChunk`
+//! with the final version.
 //!
-//! In the overall architecture, the `TerrainGen` system is used to implement part of the
-//! `chunks::Provider`, which is responsible for loading or generating new chunks.  It also
-//! interfaces with the main `Enigne` loop so that "terrain gen finished" messages can be handled
-//! immediately.
+//! In the overall architecture, the `TerrainGen` system is used to implement the part of
+//! `logic::chunks` that's responsible for loading or generating new chunks.  The response messages
+//! are dispatched by the main `Engine` loop to `logic::terrain_gen`, which imports the newly
+//! generated chunk into the `World`.
+use std::io::{self, Read};
 use std::mem;
+use std::process::{Command, Child, Stdio, ChildStdin, ChildStdout};
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread::{self, JoinHandle};
 
@@ -19,6 +21,7 @@ use libphysics::CHUNK_SIZE;
 use libterrain_gen::worker;
 use types::*;
 use util::StrResult;
+use util::bytes::{ReadBytes, WriteBytes};
 
 use data::Data;
 use engine::Engine;
@@ -29,143 +32,152 @@ use storage::Storage;
 use world::Fragment as World_Fragment;
 use world::Hooks;
 use world::StructureAttachment;
+use world::bundle::Bundle;
+use world::bundle::flat::FlatView;
 use world::flags;
 use world::object::*;
 
-pub type TerrainGenEvent = worker::Response;
+
+enum Request {
+    InitPlane(Stable<PlaneId>, u32),
+    ForgetPlane(Stable<PlaneId>),
+    GenPlane(Stable<PlaneId>),
+    GenChunk(Stable<PlaneId>, V2),
+}
+
+const OP_INIT_PLANE: u32 =      0;
+const OP_FORGET_PLANE: u32 =    1;
+const OP_GEN_PLANE: u32 =       2;
+const OP_GEN_CHUNK: u32 =       3;
+
+pub enum Response {
+    NewPlane(Stable<PlaneId>, Box<Bundle>),
+    NewChunk(Stable<PlaneId>, V2, Box<Bundle>),
+}
+
+pub type TerrainGenEvent = Response;
+
 
 pub struct TerrainGen {
-    send: Sender<worker::Command>,
-    recv: Receiver<worker::Response>,
-    thread: JoinHandle<()>,
+    send: Sender<Request>,
+    recv: Receiver<Response>,
+    io_thread: JoinHandle<()>,
+    subprocess: Child,
 }
 
 impl Drop for TerrainGen {
     fn drop(&mut self) {
-        // Drop the command sender so the worker thread will shut down.
+        // Kill the child process
+        warn_on_err!(self.subprocess.kill());
+
+        // Drop the command/response channels so the worker thread will shut down.
         unsafe {
             mem::replace(&mut self.send, mem::dropped());
+            mem::replace(&mut self.recv, mem::dropped());
         }
 
-        let thread = unsafe { mem::replace(&mut self.thread, mem::dropped()) };
-        match thread.join() {
+        let io_thread = unsafe { mem::replace(&mut self.io_thread, mem::dropped()) };
+        // Note: can't use warn_on_err! because the error may not actually implement Error.
+        match io_thread.join() {
             Ok(()) => {},
-            Err(_) => {
-                error!("failed to join terrain_gen thread on shutdown");
-            },
+            Err(_) => { error!("failed to join terrain_gen thread on shutdown"); },
         }
     }
 }
 
 impl TerrainGen {
-    #[allow(deprecated)]    // for thread::scoped
     pub fn new(data: &Data, storage: &Storage) -> TerrainGen {
-        let (send_cmd, recv_cmd) = mpsc::channel();
-        let (send_result, recv_result) = mpsc::channel();
+        let (send_req, recv_req) = mpsc::channel();
+        let (send_resp, recv_resp) = mpsc::channel();
 
+        // TODO: make this smarter about finding the binary and the storage dir
+        let mut child = Command::new("bin/generate_terrain").arg(".")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .unwrap_or_else(|e| panic!("failed to spawn generate_terrain: {}", e));
+
+        let to_child = child.stdin.take().unwrap();
+        let from_child = child.stdout.take().unwrap();
+                
         let thread = unsafe {
             let ctx = mem::transmute((data, storage));
             thread::spawn(move || {
                 let (data, storage) = ctx;
-                worker::run(data, storage, recv_cmd, send_result);
+                io_worker(data, storage, recv_req, send_resp, to_child, from_child)
+                    .unwrap_or_else(|e| panic!("io_worker failed: {}", e));
             })
         };
 
         TerrainGen {
-            send: send_cmd,
-            recv: recv_result,
-            thread: thread,
+            send: send_req,
+            recv: recv_resp,
+            io_thread: thread,
+            subprocess: child,
         }
     }
 
-    pub fn receiver(&self) -> &Receiver<TerrainGenEvent> {
+    pub fn generate_chunk(&mut self, stable_pid: Stable<PlaneId>, cpos: V2) {
+        self.send.send(Request::GenChunk(stable_pid, cpos))
+            .expect("error sending to terrain_gen worker");
+    }
+
+    pub fn receiver(&self) -> &Receiver<Response> {
         &self.recv
     }
 }
 
-pub trait Fragment<'d>: Sized {
-    fn terrain_gen_mut(&mut self) -> &mut TerrainGen;
 
-    type WF: World_Fragment<'d>;
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut Self::WF) -> R;
+fn io_worker(data: &Data,
+             storage: &Storage,
+             recv: Receiver<Request>,
+             send: Sender<Response>,
+             mut to_child: ChildStdin,
+             mut from_child: ChildStdout) -> io::Result<()> {
+    for cmd in recv.iter() {
+        match cmd {
+            Request::InitPlane(pid, flags) => {
+                try!(to_child.write_bytes(OP_INIT_PLANE));
+                try!(to_child.write_bytes((pid, flags)));
+                // No response expected
+            },
+            Request::ForgetPlane(pid) => {
+                try!(to_child.write_bytes(OP_FORGET_PLANE));
+                try!(to_child.write_bytes(pid));
+                // No response expected
+            },
 
-    fn generate(&mut self,
-                pid: PlaneId,
-                cpos: V2) -> StrResult<TerrainChunkId> {
-        let stable_pid = self.with_world(|wf| wf.plane_mut(pid).stable_id());
-        self.terrain_gen_mut().send.send(worker::Command::Generate(stable_pid, cpos)).unwrap();
-        let tcid = try!(self.with_world(move |wf| {
-            wf.create_terrain_chunk(pid, cpos).map(|tc| tc.id())
-        }));
+            Request::GenPlane(pid) => {
+                try!(to_child.write_bytes(OP_GEN_PLANE));
+                try!(to_child.write_bytes(pid));
+                // No response expected
+                let b = try!(read_bundle(&mut from_child));
+                send.send(Response::NewPlane(pid, b));
+            },
 
-        // FIXME
-        let eng2: &mut Engine = unsafe { mem::transmute_copy(self) };
-        logic::terrain_chunk::on_create(eng2.refine(), tcid);
+            Request::GenChunk(pid, cpos) => {
+                try!(to_child.write_bytes(OP_GEN_CHUNK));
+                try!(to_child.write_bytes((pid, cpos)));
+                let b = try!(read_bundle(&mut from_child));
+                send.send(Response::NewChunk(pid, cpos, b));
+            },
+        }
+    }
+    Ok(())
+}
 
-        Ok(tcid)
+fn read_bundle<R: Read>(r: &mut R) -> io::Result<Box<Bundle>> {
+    let len = try!(r.read_bytes::<u32>()) as usize;
+
+    let mut buf = Vec::with_capacity(len);
+    unsafe {
+        assert!(buf.capacity() >= len);
+        buf.set_len(len);
+        try!(r.read_exact(&mut buf));
     }
 
-    fn process(&mut self, evt: TerrainGenEvent) {
-        // FIXME
-        let eng2: &mut Engine = unsafe { mem::transmute_copy(self) };
-
-        let (stable_pid, cpos, gc) = evt;
-        self.with_world(move |wf| {
-            let pid = unwrap_or!(wf.world().transient_plane_id(stable_pid));
-
-            let tcid = {
-                let mut p = wf.plane_mut(pid);
-                let mut tc = unwrap_or!(p.get_terrain_chunk_mut(cpos));
- 
-                if !tc.flags().contains(flags::TC_GENERATION_PENDING) {
-                    // Prevent this:
-                    //  1) Load chunk, start generating
-                    //  2) Unload chunk (but keep generating from #1)
-                    //  3) Load chunk, start generating (queued, #1 is still going)
-                    //  4) Generation #1 finishes; chunk is loaded so set its contents
-                    //  5) Player modifies chunk
-                    //  6) Generation #3 finishes; RESET chunk contents (erasing modifications)
-                    return;
-                }
-
-                *tc.blocks_mut() = *gc.blocks;
-                tc.flags_mut().remove(flags::TC_GENERATION_PENDING);
-                tc.id()
-            };
-            logic::terrain_chunk::on_update(eng2.refine(), tcid);
-
-            let base = cpos.extend(0) * scalar(CHUNK_SIZE);
-            for gs in &gc.structures {
-                let sid = match wf.create_structure_unchecked(pid,
-                                                              base + gs.pos,
-                                                              gs.template) {
-                    Ok(mut s) => {
-                        warn_on_err!(s.set_attachment(StructureAttachment::Chunk));
-                        s.id()
-                    },
-                    Err(e) => {
-                        warn!("error placing generated structure: {}",
-                              ::std::error::Error::description(&e));
-                        continue;
-                    },
-                };
-                unsafe {
-                    use std::ptr;
-                    // TODO: SUPER UNSAFE!!!
-                    let ptr = wf as *mut Self::WF as *mut EngineRef;
-                    let mut eng = ptr::read(ptr);
-
-                    let sh = eng.script_hooks();
-                    for (k, v) in &gs.extra {
-                        warn_on_err!(sh.call_hack_apply_structure_extras(eng.borrow(), sid, k, v));
-                    }
-                }
-
-                // FIXME: hack - shouldn't talk to logic from here
-                logic::structure::on_create(eng2.refine(), sid);
-            }
-        });
-    }
-
+    let f = try!(FlatView::from_bytes(&buf));
+    let b = Box::new(f.unflatten_bundle());
+    Ok(b)
 }

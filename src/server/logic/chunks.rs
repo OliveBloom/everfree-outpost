@@ -8,7 +8,6 @@ use engine::glue::*;
 use engine::split::EngineRef;
 use engine::split2::Coded;
 use logic;
-use terrain_gen::Fragment as TerrainGen_Fragment;
 use world;
 use world::fragment::{Fragment as World_Fragment, DummyFragment};
 use world::bundle;
@@ -16,7 +15,7 @@ use world::flags;
 use world::object::*;
 
 
-use logic::world::PartialEngine;
+engine_part2!(pub PartialEngine(world, physics, cache, vision, messages, terrain_gen));
 engine_part2!(OnlyChunks(chunks));
 
 
@@ -110,12 +109,15 @@ fn import_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
         // TODO: do something intelligent if loading fails, so the whole server doesn't crash
         let b = try!(bundle::read_bundle(&mut file));
         let importer = bundle::import_bundle(&mut DummyFragment::new(&mut eng.world), &b);
-        logic::world::on_import(eng, &importer);
+        logic::world::on_import(eng.refine(), &importer);
     } else {
         trace!("load chunk from terrain_gen: ({:?}, {:?})", pid, cpos);
-        // FIXME: hacky transmute
-        let eng2: &mut Engine = unsafe { mem::transmute(eng) };
-        try!(eng2.as_ref().as_terrain_gen_fragment().generate(pid, cpos));
+
+        let stable_pid = DummyFragment::new(&mut eng.world).plane_mut(pid).stable_id();
+        eng.terrain_gen.generate_chunk(stable_pid, cpos);
+
+        let tcid = try!(DummyFragment::new(&mut eng.world).create_terrain_chunk(pid, cpos)).id();
+        logic::terrain_chunk::on_create(eng.refine(), tcid);
     }
     Ok(())
 }
@@ -143,7 +145,7 @@ fn export_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
         (tc.id(), exporter)
     };
 
-    logic::world::on_export(eng, &exporter);
+    logic::world::on_export(eng.refine(), &exporter);
     try!(DummyFragment::new(&mut eng.world).destroy_terrain_chunk(tcid));
     Ok(())
 }

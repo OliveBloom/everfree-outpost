@@ -19,7 +19,6 @@ use physics::Physics;
 use script::ScriptHooks;
 use storage::Storage;
 use terrain_gen::{TerrainGen, TerrainGenEvent};
-use terrain_gen::Fragment as TerrainGen_Fragment;
 use timer::{Timer, TimerEvent};
 use timing::*;
 use vision::Vision;
@@ -137,7 +136,7 @@ impl<'d> Engine<'d> {
                     }
                 },
                 Event::FromTerrainGen(evt) => {
-                    self.as_ref().as_terrain_gen_fragment().process(evt);
+                    logic::terrain_gen::process(self, evt);
                 },
             }
         }

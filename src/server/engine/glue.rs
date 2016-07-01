@@ -77,23 +77,3 @@ impl_slice! {
     EngineRef::as_hidden_vision_fragment -> HiddenVisionFragment;
     HiddenWorldHooks::as_hidden_vision_fragment -> HiddenVisionFragment;
 }
-
-
-parts!(TerrainGenFragment);
-
-impl<'a, 'd> terrain_gen::Fragment<'d> for TerrainGenFragment<'a, 'd> {
-    fn terrain_gen_mut(&mut self) -> &mut terrain_gen::TerrainGen {
-        (**self).terrain_gen_mut()
-    }
-
-    type WF = WorldFragment<'a, 'd>;
-    fn with_world<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut WorldFragment<'a, 'd>) -> R {
-        let e = unsafe { self.borrow().fiddle().to_part().slice() };
-        f(&mut Part::from_part(e))
-    }
-}
-
-impl_slice! {
-    EngineRef::as_terrain_gen_fragment -> TerrainGenFragment;
-}

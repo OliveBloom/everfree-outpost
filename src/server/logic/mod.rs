@@ -8,7 +8,7 @@ pub mod world;
 pub mod misc;
 pub mod extra;
 pub mod tick;
-pub mod generate;
+pub mod terrain_gen;
 
 pub mod entity;
 pub mod inventory;

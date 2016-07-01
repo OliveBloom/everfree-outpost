@@ -67,9 +67,6 @@ const OP_FORGET_PLANE: u32 =    1;
 const OP_GEN_PLANE: u32 =       2;
 const OP_GEN_CHUNK: u32 =       3;
 
-const OP_NEW_PLANE: u32 =       0;
-const OP_NEW_CHUNK: u32 =       1;
-
 fn io_main(ctx: &mut Context) -> io::Result<()> {
     let mut stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -90,7 +87,7 @@ fn io_main(ctx: &mut Context) -> io::Result<()> {
                 let len = bytes.len();
                 assert!(len <= u32::MAX as usize);
 
-                try!(stdout.write_bytes((OP_NEW_CHUNK, pid, cpos, len as u32)));
+                try!(stdout.write_bytes(len as u32));
                 try!(stdout.write_all(&bytes));
             },
             _ => panic!("unrecognized opcode: {}", opcode),
