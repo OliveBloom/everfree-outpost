@@ -66,6 +66,7 @@ const OP_INIT_PLANE: u32 =      0;
 const OP_FORGET_PLANE: u32 =    1;
 const OP_GEN_PLANE: u32 =       2;
 const OP_GEN_CHUNK: u32 =       3;
+const OP_SHUTDOWN: u32 =        4;
 
 fn io_main(ctx: &mut Context) -> io::Result<()> {
     let mut stdin = io::stdin();
@@ -90,9 +91,15 @@ fn io_main(ctx: &mut Context) -> io::Result<()> {
                 try!(stdout.write_bytes(len as u32));
                 try!(stdout.write_all(&bytes));
             },
+            OP_SHUTDOWN => {
+                info!("clean shutdown");
+                break;
+            },
             _ => panic!("unrecognized opcode: {}", opcode),
         }
     }
+
+    Ok(())
 }
 
 

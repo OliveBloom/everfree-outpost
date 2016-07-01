@@ -43,12 +43,14 @@ enum Request {
     ForgetPlane(Stable<PlaneId>),
     GenPlane(Stable<PlaneId>),
     GenChunk(Stable<PlaneId>, V2),
+    Shutdown,
 }
 
 const OP_INIT_PLANE: u32 =      0;
 const OP_FORGET_PLANE: u32 =    1;
 const OP_GEN_PLANE: u32 =       2;
 const OP_GEN_CHUNK: u32 =       3;
+const OP_SHUTDOWN: u32 =        4;
 
 pub enum Response {
     NewPlane(Stable<PlaneId>, Box<Bundle>),
@@ -67,21 +69,21 @@ pub struct TerrainGen {
 
 impl Drop for TerrainGen {
     fn drop(&mut self) {
+        info!("shutting down terrain gen backend");
+        let _ = self.send.send(Request::Shutdown);
+
         // Kill the child process
-        warn_on_err!(self.subprocess.kill());
+        info!("waiting for subprocess");
+        warn_on_err!(self.subprocess.wait());
 
-        // Drop the command/response channels so the worker thread will shut down.
-        unsafe {
-            mem::replace(&mut self.send, mem::dropped());
-            mem::replace(&mut self.recv, mem::dropped());
-        }
-
+        info!("waiting for io_thread");
         let io_thread = unsafe { mem::replace(&mut self.io_thread, mem::dropped()) };
         // Note: can't use warn_on_err! because the error may not actually implement Error.
         match io_thread.join() {
             Ok(()) => {},
             Err(_) => { error!("failed to join terrain_gen thread on shutdown"); },
         }
+        info!("terrain gen has shut down");
     }
 }
 
@@ -161,6 +163,12 @@ fn io_worker(data: &Data,
                 try!(to_child.write_bytes((pid, cpos)));
                 let b = try!(read_bundle(&mut from_child));
                 send.send(Response::NewChunk(pid, cpos, b));
+            },
+
+            Request::Shutdown => {
+                info!("sending Shutdown...");
+                try!(to_child.write_bytes(OP_SHUTDOWN));
+                break;
             },
         }
     }
