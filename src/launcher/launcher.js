@@ -566,6 +566,11 @@ LauncherUI.prototype.initCanvas = function() {
     this.renderFrame();
 };
 
+LauncherUI.prototype.stop = function() {
+    this.ctx = null;
+    // renderFrame will now cancel its loop
+};
+
 function calcBannerPos() {
     var w = window.innerWidth;
     var h = window.innerHeight;
@@ -686,6 +691,7 @@ function launch(url) {
     l.onload = function() {
         delete window['L'];
         window['C'] = l.client;
+        ui.stop();
         l.client.handoff(ui.canvas, l.conn);
     };
 
