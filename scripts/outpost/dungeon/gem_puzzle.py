@@ -100,5 +100,8 @@ def init_puzzle_object(s, puzzle_init):
             slots.append(None)
         slots[slot] = COLOR_IDX[color]
 
+    # Only init the first time.
+    del s.extra()['puzzle_init']
+
 for c in COLORS:
     register_color(c)
