@@ -1,4 +1,4 @@
-from outpost_server.core import use, util
+from outpost_server.core import import_hooks, use, util
 from outpost_server.core.data import DATA
 from outpost_server.core.engine import StructureProxy
 
@@ -81,20 +81,24 @@ def check_slots(slots):
                 return False
     return True
 
-def init_slot(s, puzzle_id, slot, color):
-    s.extra()['puzzle_id'] = puzzle_id
-    s.extra()['puzzle_slot'] = slot
+@import_hooks.structure('puzzle_init')
+def init_puzzle_object(s, puzzle_init):
+    puzzle_id = s.extra()['puzzle_id']
+    s.plane().extra().setdefault('puzzles', {}).setdefault(puzzle_id, {})
 
-    puzzle = s.plane().extra().setdefault('puzzles', {}).setdefault(puzzle_id, {})
-    slots = puzzle.setdefault('slots', [])
-    while len(slots) <= slot:
-        slots.append(None)
-    slots[slot] = COLOR_IDX[color]
+    if puzzle_init == True:
+        # It's a door.
+        door_id = s.stable_id()
+        s.plane().extra()['puzzles'][puzzle_id]['door'] = door_id
+    else:
+        # It's a gem slot
+        slot = s.extra()['puzzle_slot']
+        color = puzzle_init
 
-def init_door(s, puzzle_id):
-    door_id = s.stable_id()
-    puzzle = s.plane().extra().setdefault('puzzles', {}).setdefault(puzzle_id, {})
-    puzzle['door'] = door_id
+        slots = s.plane().extra()['puzzles'][puzzle_id].setdefault('slots', [])
+        while len(slots) <= slot:
+            slots.append(None)
+        slots[slot] = COLOR_IDX[color]
 
 for c in COLORS:
     register_color(c)

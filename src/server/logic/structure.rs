@@ -1,12 +1,16 @@
+use std::mem;
+
 use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use engine::Engine;
+use engine::glue::WorldFragment;
 use logic;
 use messages::{Messages, ClientResponse};
 use physics::Physics;
 use vision::Vision;
 use world::{Activity, Motion, World};
+use world::flags::*;
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
@@ -89,3 +93,13 @@ pub fn on_replace(eng: &mut PartialEngine,
     });
 }
 
+
+/// Handler to be called just after importing an entity.
+pub fn on_import(eng: &mut PartialEngine, sid: StructureId) {
+    if eng.world.structure(sid).flags().contains(S_HAS_IMPORT_HOOK) {
+        let hooks = eng.script_hooks();
+        // FIXME bad transmute
+        let wf: WorldFragment = unsafe { mem::transmute(eng) };
+        hooks.call_structure_import_hook(wf, sid);
+    }
+}

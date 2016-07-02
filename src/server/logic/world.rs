@@ -297,7 +297,10 @@ pub fn on_import(eng: &mut PartialEngine, importer: &Importer) {
     importer.iter_imports(|id| match id {
         AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
         AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_create(eng.refine(), tcid),
-        AnyId::Structure(sid) => logic::structure::on_create(eng.refine(), sid),
+        AnyId::Structure(sid) => {
+            logic::structure::on_create(eng.refine(), sid);
+            logic::structure::on_import(eng.refine(), sid);
+        },
         _ => {},
     });
 }

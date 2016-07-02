@@ -24,6 +24,7 @@ def dispatch(obj, hooks):
     for (k, f) in hooks:
         e = multi_lookup(obj.extra(), k)
         if e is not None:
+            print('dispatch import hook %s for %s' % (k, obj))
             f(obj, e)
 
 
