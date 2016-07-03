@@ -186,6 +186,9 @@ def do_login(name, password):
         return error(LOGIN_ERROR)
     uid, name, old_hash = result
 
+    if len(password) > 256:
+        return error(LOGIN_ERROR)
+
     pass_hash = bcrypt.hashpw(password.encode('utf-8'), old_hash.encode('ascii')).decode('ascii')
     # According to the python bcrypt devs, this non-timing-safe comparison is
     # actually okay...
@@ -215,6 +218,8 @@ def do_register(name, password, email):
 
     if len(password) < 8:
         return error('Password must be at least 8 characters long')
+    if len(password) > 256:
+        return error('Password may be at most 256 characters long')
 
     if name in cfg['reserved_names']:
         if request.remote_addr != cfg['reserved_names'][name]:
