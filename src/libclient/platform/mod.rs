@@ -92,6 +92,7 @@ pub enum ConfigKey {
     HotbarActiveItem,
     HotbarActiveAbility,
     RenderNames,
+    ScaleUI,
     ScaleWorld,
 }
 
@@ -105,6 +106,7 @@ impl ConfigKey {
             HotbarActiveItem => "hotbar.active_item".into(),
             HotbarActiveAbility => "hotbar.active_ability".into(),
             RenderNames => "render_names".into(),
+            ScaleUI => "scale_ui".into(),
             ScaleWorld => "scale_world".into(),
         }
     }

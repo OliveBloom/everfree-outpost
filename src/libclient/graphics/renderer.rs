@@ -651,7 +651,7 @@ impl<GL: Context> Renderer<GL> {
         // Main UI rendering
         DrawArgs::<GL>::new()
             .uniforms(&[
-                scene.camera_size(),
+                scene.ui_camera_size(),
                 UniformValue::V2(&size_float(&self.textures.ui_items)),
                 UniformValue::V2(&size_float(&self.textures.ui_parts)),
                 UniformValue::V2(&size_float(&self.textures.ui_fonts)),
@@ -680,7 +680,7 @@ impl<GL: Context> Renderer<GL> {
 
                     DrawArgs::<GL>::new()
                         .uniforms(&[
-                            scene.camera_size(),
+                            scene.ui_camera_size(),
                             UniformValue::V2(&v2_float(rect.min)),
                             UniformValue::V2(&v2_float(rect.size())),
                             UniformValue::Float(cur as f32),
@@ -744,6 +744,7 @@ pub struct Scene {
 
     pub f_camera_pos: [f32; 2],
     pub f_camera_size: [f32; 2],
+    pub f_ui_camera_size: [f32; 2],
     pub f_slice_center: [f32; 2],
     pub f_slice_z: f32,
     pub f_cursor_pos: [f32; 2],
@@ -753,6 +754,7 @@ impl Scene {
     pub fn new(now: Time,
                window_size: (u16, u16),
                view_size: (u16, u16),
+               ui_scale: u16,
                center: V3,
                ambient_light: (u8, u8, u8, u8),
                cursor_pos: Option<V2>) -> Scene {
@@ -776,6 +778,8 @@ impl Scene {
                            camera_pos.y as f32],
             f_camera_size: [camera_size.x as f32,
                             camera_size.y as f32],
+            f_ui_camera_size: [camera_size.x as f32 / ui_scale as f32,
+                               camera_size.y as f32 / ui_scale as f32],
             f_slice_center: [slice_center.x as f32,
                              slice_center.y as f32],
             f_slice_z: slice_center.z as f32,
@@ -794,6 +798,10 @@ impl Scene {
 
     fn camera_size(&self) -> UniformValue {
         UniformValue::V2(&self.f_camera_size)
+    }
+
+    fn ui_camera_size(&self) -> UniformValue {
+        UniformValue::V2(&self.f_ui_camera_size)
     }
 
     fn slice_center(&self) -> UniformValue {

@@ -56,6 +56,7 @@ pub struct Client<'d, P: Platform> {
     default_camera_pos: V3,
     window_size: (u16, u16),
     view_size: (u16, u16),
+    ui_scale: u16,
 
     last_cursor: Cursor,
 }
@@ -89,6 +90,7 @@ impl<'d, P: Platform> Client<'d, P> {
             default_camera_pos: V3::new(4096, 4096, 0),
             window_size: (640, 480),
             view_size: (640, 480),
+            ui_scale: 1,
 
             last_cursor: Cursor::Normal,
         };
@@ -343,7 +345,11 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     fn with_ui_dyn<F: FnOnce(&mut UI, Dyn) -> R, R>(&mut self, f: F) -> R {
-        let dyn = Dyn::new(self.view_size,
+        let c = self.ui_scale;
+        let sx = (self.view_size.0 + c - 1) / c;
+        let sy = (self.view_size.1 + c - 1) / c;
+
+        let dyn = Dyn::new((sx, sy),
                            &self.inventories,
                            &self.misc.hotbar,
                            &self.debug);
@@ -535,6 +541,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let scene = Scene::new(now,
                                self.window_size,
                                self.view_size,
+                               self.ui_scale,
                                pos,
                                ambient_light,
                                cursor_pos);
@@ -598,6 +605,11 @@ impl<'d, P: Platform> Client<'d, P> {
 
         self.window_size = size;
         self.view_size = view_size;
+
+        self.ui_scale = match self.platform.config().get_int(ConfigKey::ScaleUI) {
+            0 => 1,
+            x => x as u16,
+        };
     }
 
     pub fn ponyedit_render(&mut self, appearance: u32) {
@@ -610,6 +622,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let scene = Scene::new(0,
                                self.window_size,
                                self.view_size,
+                               1,   // UI scale
                                self.default_camera_pos + V3::new(16, 16, 0),
                                (255, 255, 255, 255),
                                None);
