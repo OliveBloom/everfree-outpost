@@ -124,23 +124,6 @@ ItemGrid.prototype.selectItem = function(item_id) {
     }
 };
 
-ItemGrid.prototype.registerDragSource = function(dnd, callback) {
-    for (var i = 0; i < this.slots.length; ++i) {
-        dnd.registerSource(this.slots[i]);
-    }
-    this.ondragfinish = function(source_slot, target_slot, data) {
-        callback(source_slot.owner, source_slot.idx,
-                 target_slot.owner, target_slot.idx,
-                 data.count);
-    };
-};
-
-ItemGrid.prototype.registerDragTarget = function(dnd) {
-    for (var i = 0; i < this.slots.length; ++i) {
-        dnd.registerTarget(this.slots[i]);
-    }
-};
-
 
 /** @constructor */
 function ItemSlot(owner, idx, info) {

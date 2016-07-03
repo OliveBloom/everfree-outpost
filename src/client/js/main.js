@@ -5,11 +5,7 @@ var loader = require('loader');
 var Vec = require('util/vec').Vec;
 var Config = require('config').Config;
 
-var AnimCanvas = require('canvas').AnimCanvas;
-var OffscreenContext = require('canvas').OffscreenContext;
 var handleResize = require('resize').handleResize;
-
-var Motion = require('entity').Motion;
 
 var InventoryTracker = require('inventory').InventoryTracker;
 
@@ -29,7 +25,6 @@ var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
 var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
-var DNDState = require('ui/dnd').DNDState;
 
 var Input = require('input').Input;
 
@@ -44,8 +39,6 @@ var AsmClientInput = require('asmlibs').AsmClientInput;
 var net = require('net');
 var Timing = require('time').Timing;
 
-var buildArray = require('util/misc').buildArray;
-var checkBrowser = require('util/browser').checkBrowser;
 var util = require('util/misc');
 
 
@@ -62,7 +55,6 @@ var ui_div;
 var dialog;
 var banner;
 var keyboard;
-var dnd;
 var chat;
 var error_list;
 var inv_update_list;
@@ -99,7 +91,6 @@ OutpostClient.prototype._init = function() {
     ui_div = util.element('div', ['ui-container']);
     banner = new Banner();
     keyboard = new Keyboard(asm_client);
-    dnd = new DNDState(keyboard);
     dialog = new Dialog(keyboard);
     chat = new ChatWindow();
     inv_update_list = new InventoryUpdateList();
@@ -697,7 +688,7 @@ function resetAll() {
 
 // Rendering
 
-function frame() {
+function frame(fine_now) {
     window.requestAnimationFrame(frame);
 
     if (synced != net.SYNC_OK) {
