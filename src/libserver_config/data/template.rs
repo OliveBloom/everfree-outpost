@@ -4,11 +4,12 @@ use rustc_serialize::json::Json;
 use libserver_types::*;
 
 use super::ParseError;
+use data::block::BlockFlags;
 
 pub struct StructureTemplate {
     pub name: String,
     pub size: V3,
-    pub shape: Vec<Shape>,
+    pub shape: Vec<BlockFlags>,
     pub layer: u8,
 }
 
@@ -59,7 +60,7 @@ impl StructureTemplates {
                 let shape_enum = expect!(Shape::from_primitive(shape_disr as usize),
                                          "invalid shape {} at templates[{}].shape[{}] ({})",
                                          shape_disr, i, j, name);
-                shape.push(shape_enum);
+                shape.push(BlockFlags::from_shape(shape_enum));
             }
 
             info!("parsed template: {}", name);

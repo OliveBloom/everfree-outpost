@@ -1,5 +1,6 @@
 #![crate_name = "server_config"]
 
+#[macro_use] extern crate bitflags;
 #[macro_use] extern crate log;
 extern crate rand;
 

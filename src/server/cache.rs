@@ -55,7 +55,7 @@ impl TerrainCache {
             let chunk_bounds = Region::sized(scalar(CHUNK_SIZE)) + base;
             for p in chunk_bounds.intersect(bounds).points() {
                 let offset = p - base;
-                let shape = template.shape[bounds.index(p)];
+                let shape = template.shape[bounds.index(p)].shape();
                 entry.set(offset, template.layer as i8, shape);
             }
         }
