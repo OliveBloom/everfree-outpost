@@ -56,7 +56,9 @@ impl TerrainCache {
             for p in chunk_bounds.intersect(bounds).points() {
                 let offset = p - base;
                 let flags = template.shape[bounds.index(p)];
-                entry.set(offset, template.layer as i8, flags);
+                if flags.occupied() {
+                    entry.set(offset, template.layer as i8, flags);
+                }
             }
         }
     }
@@ -72,7 +74,10 @@ impl TerrainCache {
             let chunk_bounds = Region::sized(scalar(CHUNK_SIZE)) + base;
             for p in chunk_bounds.intersect(bounds).points() {
                 let offset = p - base;
-                entry.set(offset, template.layer as i8, BlockFlags::empty());
+                let flags = template.shape[bounds.index(p)];
+                if flags.occupied() {
+                    entry.set(offset, template.layer as i8, BlockFlags::empty());
+                }
             }
         }
     }

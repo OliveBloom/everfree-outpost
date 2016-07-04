@@ -65,6 +65,10 @@ impl BlockFlags {
             Shape::Empty
         }
     }
+
+    pub fn occupied(&self) -> bool {
+        self.contains(B_OCCUPIED)
+    }
 }
 
 
