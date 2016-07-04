@@ -22,10 +22,6 @@ pub fn create<'d, F>(f: &mut F,
         fail!("structure placement blocked by map bounds");
     }
 
-    if !f.with_hooks(|h| h.check_structure_placement(t, pid, pos)) {
-        fail!("structure placement blocked by terrain or other structure");
-    }
-
     let stable_pid = f.world_mut().planes.pin(pid);
     let s = Structure {
         stable_plane: stable_pid,

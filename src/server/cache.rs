@@ -89,7 +89,7 @@ impl TerrainCache {
 
 
 pub struct CacheEntry {
-    cells: HashMap<u16, CellShape>,
+    cells: HashMap<u16, CacheCell>,
 }
 
 impl CacheEntry {
@@ -103,7 +103,7 @@ impl CacheEntry {
         for (i, &block) in chunk.iter().enumerate() {
             let flags = data.block_data.block(block).flags;
             if !flags.is_empty() {
-                let mut cell = CellShape::new();
+                let mut cell = CacheCell::new();
                 cell.set_layer(-1, flags);
                 self.cells.insert(i as u16, cell);
             }
@@ -135,7 +135,7 @@ impl CacheEntry {
         match self.cells.entry(get_key(pos)) {
             Entry::Vacant(e) => {
                 if !flags.is_empty() {
-                    let cell = e.insert(CellShape::new());
+                    let cell = e.insert(CacheCell::new());
                     cell.set_layer(layer, flags);
                 }
             },
@@ -148,22 +148,21 @@ impl CacheEntry {
         }
     }
 
-    pub fn find_layer_with_flags(&self, pos: V3, flags: BlockFlags) -> Option<i8> {
-        let cell = unwrap_or!(self.cells.get(&get_key(pos)), return None);
-        cell.find_layer_with_flags(flags)
+    pub fn get_cell(&self, pos: V3) -> Option<&CacheCell> {
+        self.cells.get(&get_key(pos))
     }
 }
 
 
-struct CellShape {
-    base: BlockFlags,
-    layers: [BlockFlags; 3],
-    computed: BlockFlags,
+pub struct CacheCell {
+    pub base: BlockFlags,
+    pub layers: [BlockFlags; 3],
+    pub computed: BlockFlags,
 }
 
-impl CellShape {
-    fn new() -> CellShape {
-        CellShape {
+impl CacheCell {
+    fn new() -> CacheCell {
+        CacheCell {
             base: BlockFlags::empty(),
             layers: [BlockFlags::empty(); 3],
             computed: BlockFlags::empty(),
@@ -189,7 +188,7 @@ impl CellShape {
         self.computed = cur;
     }
 
-    fn find_layer_with_flags(&self, flags: BlockFlags) -> Option<i8> {
+    pub fn find_layer_with_flags(&self, flags: BlockFlags) -> Option<i8> {
         for i in (0 .. 3).rev() {
             if self.layers[i].contains(flags) {
                 return Some(i as i8);

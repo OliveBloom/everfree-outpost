@@ -69,6 +69,10 @@ impl BlockFlags {
     pub fn occupied(&self) -> bool {
         self.contains(B_OCCUPIED)
     }
+
+    pub fn parts(&self) -> BlockFlags {
+        *self & B_PART_MASK
+    }
 }
 
 
