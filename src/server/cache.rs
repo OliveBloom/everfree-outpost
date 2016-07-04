@@ -27,21 +27,25 @@ impl TerrainCache {
     }
 
     pub fn add_chunk(&mut self, data: &Data, pid: PlaneId, cpos: V2, blocks: &BlockChunk) {
+        trace!("add chunk {:?} {:?}", pid, cpos);
         let mut entry = CacheEntry::new();
         entry.fill(data, blocks);
         self.cache.insert((pid, cpos), entry);
     }
 
     pub fn remove_chunk(&mut self, pid: PlaneId, cpos: V2) {
+        trace!("remove chunk {:?} {:?}", pid, cpos);
         self.cache.remove(&(pid, cpos));
     }
 
     pub fn update_chunk(&mut self, data: &Data, pid: PlaneId, cpos: V2, blocks: &BlockChunk) {
+        trace!("update chunk {:?} {:?}", pid, cpos);
         let entry = unwrap_or!(self.cache.get_mut(&(pid, cpos)));
-        //entry.refill(data, blocks);
+        entry.refill(data, blocks);
     }
 
     pub fn add_structure(&mut self, pid: PlaneId, pos: V3, template: &StructureTemplate) {
+        trace!("add structure {} at {:?} {:?}", template.name, pid, pos);
         let bounds = Region::sized(template.size) + pos;
         let bounds_chunk = bounds.reduce().div_round_signed(CHUNK_SIZE);
 
@@ -58,6 +62,7 @@ impl TerrainCache {
     }
 
     pub fn remove_structure(&mut self, pid: PlaneId, pos: V3, template: &StructureTemplate) {
+        trace!("remove structure {} at {:?} {:?}", template.name, pid, pos);
         let bounds = Region::sized(template.size) + pos;
         let bounds_chunk = bounds.reduce().div_round_signed(CHUNK_SIZE);
 
@@ -96,6 +101,18 @@ impl CacheEntry {
                 let mut cell = CellShape::new();
                 cell.set_layer(-1, shape);
                 self.cells.insert(i as u16, cell);
+            }
+        }
+    }
+
+    fn refill(&mut self, data: &Data, chunk: &BlockChunk) {
+        let bounds = Region::sized(scalar(CHUNK_SIZE));
+        for pos in bounds.points() {
+            let old_shape = self.cells.get(&get_key(pos)).map_or(Shape::Empty, |c| c.base);
+            let block = chunk[bounds.index(pos)];
+            let new_shape = data.block_data.shape(block);
+            if old_shape != new_shape {
+                self.set(pos, -1, new_shape);
             }
         }
     }
@@ -155,7 +172,7 @@ impl CellShape {
     fn recompute(&mut self) {
         let mut cur = self.base;
         for &s in &self.layers {
-            if shape_overrides(s, cur) {
+            if shape_overrides(cur, s) {
                 cur = s;
             }
         }
