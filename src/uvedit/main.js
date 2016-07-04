@@ -431,9 +431,16 @@ document.addEventListener('keydown', function(evt) {
     var handled = true;
     switch (evt.keyCode) {
         case 'A'.charCodeAt(0): MAIN.asm.set_mode(0); break;
-        case 'O'.charCodeAt(0): MAIN.asm.set_mode(1); break;
-        case 'E'.charCodeAt(0): MAIN.asm.set_mode(2); break;
-        case 'U'.charCodeAt(0): MAIN.asm.set_mode(3); break;
+
+        case 'O'.charCodeAt(0):
+        case 'S'.charCodeAt(0): MAIN.asm.set_mode(1); break;
+
+        case 'E'.charCodeAt(0):
+        case 'D'.charCodeAt(0): MAIN.asm.set_mode(2); break;
+
+        case 'U'.charCodeAt(0):
+        case 'F'.charCodeAt(0): MAIN.asm.set_mode(3); break;
+
         default: handled = false; break;
     }
     if (handled) {
@@ -477,3 +484,34 @@ function export_data() {
     return JSON.stringify(result);
 }
 
+$('btn-import').onclick = function() {
+    var input = document.createElement('input');
+    input.setAttribute('type', 'file');
+
+    input.onchange = function(evt) {
+        if (input.files.length != 1) {
+            return;
+        }
+        var f = input.files[0];
+        var reader = new FileReader();
+        reader.onloadend = function(evt) {
+            import_data(reader.result);
+            location.replace(location);
+        };
+        reader.readAsText(f);
+    };
+
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+};
+
+function import_data(s) {
+    var j = JSON.parse(s);
+    localStorage.clear();
+    var keys = Object.getOwnPropertyNames(j);
+    for (var i = 0; i < keys.length; ++i) {
+        var k = keys[i];
+        localStorage.setItem(k, j[k]);
+    }
+}
