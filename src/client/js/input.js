@@ -61,9 +61,8 @@ function MouseEvent(evt, x, y) {
     this.button = evt.button;
     this.shift = evt.shiftKey;
 
-    var scale = +document.body.dataset['worldScale'];
-    this.x = (evt.pageX / scale)|0;
-    this.y = (evt.pageY / scale)|0;
+    this.x = evt.pageX|0;
+    this.y = evt.pageY|0;
 }
 MouseEvent.prototype = Object.create(InputEvent.prototype);
 MouseEvent.prototype.constructor = MouseEvent;

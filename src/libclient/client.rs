@@ -368,17 +368,26 @@ impl<'d, P: Platform> Client<'d, P> {
         self.process_event_status(status)
     }
 
+    fn convert_mouse_pos(&self, pos: V2) -> V2 {
+        let x = pos.x * self.view_size.0 as i32 / self.window_size.0 as i32;
+        let y = pos.y * self.view_size.1 as i32 / self.window_size.1 as i32;
+        V2::new(x, y) / scalar(self.ui_scale as i32)
+    }
+
     pub fn input_mouse_move(&mut self, pos: V2) -> bool {
+        let pos = self.convert_mouse_pos(pos);
         let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_move(pos, dyn));
         self.process_event_status(status)
     }
 
     pub fn input_mouse_down(&mut self, pos: V2) -> bool {
+        let pos = self.convert_mouse_pos(pos);
         let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_down(pos, dyn));
         self.process_event_status(status)
     }
 
     pub fn input_mouse_up(&mut self, pos: V2) -> bool {
+        let pos = self.convert_mouse_pos(pos);
         let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_up(pos, dyn));
         self.process_event_status(status)
     }
