@@ -25,3 +25,25 @@ register_container('barrel', 'barrel', 30)
 register_container('cabinets', 'cabinets', 30)
 structure_items.register_attachment('cabinets', 'wall/horiz')
 
+
+def register_celestial_container(item, template):
+    item = DATA.item(item)
+    template = DATA.template(template)
+
+    @use.item(item)
+    def use_item(e, args):
+        structure_items.place(e, item, template)
+
+    @use.structure(template)
+    def use_structure(e, s, args):
+        ward.check(e, s.pos())
+        inv = e.inv('celestial')
+        if inv is None:
+            inv = e.create_inv('celestial', 30)
+        e.controller().open_container(e.inv(), inv)
+
+    @tool.axe(template)
+    def axe_structure(e, s, args):
+        structure_items.take(e, s, item)
+
+register_celestial_container('chest/celestial', 'chest/celestial')

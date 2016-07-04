@@ -147,3 +147,7 @@ gem-puzzle-parts.png:
         Stone block is the base from the LPC cup.  Gems are based on the
         crystals and coins from the roguelike tiles by David E. Gervais.
     derived-from: lpc-base-tiles, gervais-roguelike-tiles
+
+chest-celestial.png:
+    author: Stuart Pernsteiner
+    derived-from: lpc-base-tiles

@@ -48,6 +48,24 @@ station: anvil
 input: 20 wood
 
 
+[structure chest/celestial]
+image: "structures/chest-celestial.png"
+mesh: `meshes.front(1, 1, 1)`
+shape: solid(1, 1, 1)
+layer: 1
+
+[item chest/celestial]
+from_structure: chest/celestial
+display_name: "Chest"
+
+[recipe chest/celestial]
+from_item: chest/celestial
+station: anvil
+input: 20 wood
+input: 10 bar/copper
+input: 200 crystal
+
+
 [structure barrel]
 image: "structures/barrel.png"
 mesh: `meshes.solid(1, 1, 1)`
