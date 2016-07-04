@@ -5,7 +5,7 @@ use types::*;
 use util::{multimap_insert, multimap_remove};
 
 use world::{Structure, StructureAttachment, StructureFlags};
-use world::{Fragment, Hooks};
+use world::Fragment;
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 
@@ -20,10 +20,6 @@ pub fn create<'d, F>(f: &mut F,
 
     if bounds.min.z < 0 || bounds.max.z > CHUNK_SIZE {
         fail!("structure placement blocked by map bounds");
-    }
-
-    if !f.with_hooks(|h| h.check_structure_placement(t, pid, pos)) {
-        fail!("structure placement blocked by terrain or other structure");
     }
 
     let stable_pid = f.world_mut().planes.pin(pid);
@@ -195,10 +191,6 @@ pub fn replace<'d, F>(f: &mut F,
         // If the templates aren't identical, we need to do some extra checks.
         if new_bounds.min.z < 0 || new_bounds.max.z > CHUNK_SIZE {
             fail!("structure replacement blocked by map bounds");
-        }
-
-        if !f.with_hooks(|h| h.check_structure_replacement(sid, new_t, pid, pos)) {
-            fail!("structure replacement blocked by terrain or other structure");
         }
     }
 

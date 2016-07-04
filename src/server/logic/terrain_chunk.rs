@@ -19,9 +19,10 @@ engine_part2!(pub PartialEngine(world, cache, vision, messages));
 pub fn on_create(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     let tc = eng.world.terrain_chunk(tcid);
 
+    let data = eng.data();
     let plane = tc.plane_id();
     let cpos = tc.chunk_pos();
-    eng.cache.add_chunk(&eng.world, plane, cpos);
+    eng.cache.add_chunk(data, plane, cpos, tc.blocks());
 
     let msg = logic::vision::terrain_chunk_message(tc);
     let messages = &mut eng.messages;
@@ -47,8 +48,10 @@ pub fn on_destroy(eng: &mut PartialEngine, tcid: TerrainChunkId) {
 pub fn on_update(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     let tc = eng.world.terrain_chunk(tcid);
 
+    let data = eng.data();
     let plane = tc.plane_id();
-    eng.cache.update_region(&eng.world, plane, tc.bounds());
+    let cpos = tc.chunk_pos();
+    eng.cache.update_chunk(data, plane, cpos, tc.blocks());
 
     let msg = logic::vision::terrain_chunk_message(tc);
     let messages = &mut eng.messages;
