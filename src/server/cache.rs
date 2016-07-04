@@ -9,7 +9,7 @@ use types::*;
 use util::StrResult;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE};
 
-use data::Data;
+use data::{Data, StructureTemplate};
 use world::World;
 use world::object::*;
 
@@ -26,38 +26,50 @@ impl TerrainCache {
         }
     }
 
-    pub fn add_chunk(&mut self, w: &World, pid: PlaneId, cpos: V2) -> StrResult<()> {
+    pub fn add_chunk(&mut self, data: &Data, pid: PlaneId, cpos: V2, blocks: &BlockChunk) {
         let mut entry = CacheEntry::new();
-
-        let data = w.data();
-        let plane = unwrap!(w.get_plane(pid));
-        let chunk = unwrap!(plane.get_terrain_chunk(cpos));
-        entry.fill(data, chunk.blocks());
-
+        entry.fill(data, blocks);
         self.cache.insert((pid, cpos), entry);
-        Ok(())
     }
 
     pub fn remove_chunk(&mut self, pid: PlaneId, cpos: V2) {
         self.cache.remove(&(pid, cpos));
     }
 
-    pub fn update_region(&mut self, w: &World, pid: PlaneId, bounds: Region) {
-        // FIXME
-        /*
-        for cpos in bounds.reduce().div_round_signed(CHUNK_SIZE).points() {
-            if let Some(entry) = self.cache.get_mut(&(pid, cpos)) {
-                // NB: Surprisingly, this can fail.  Chunk unloading proceeds in this order:
-                //  1) Remove terrain chunk
-                //  2) Remove structures
-                //  3) Run structure hooks
-                //  4) Run terrain chunk hooks
-                // During (3), the hook tries to update the cache.  The cache entry still exists
-                // (because (4) hasn't happened yet), but the chunk is gone.
-                let _ = compute_shape(w, pid, cpos, bounds, entry);
+    pub fn update_chunk(&mut self, data: &Data, pid: PlaneId, cpos: V2, blocks: &BlockChunk) {
+        let entry = unwrap_or!(self.cache.get_mut(&(pid, cpos)));
+        //entry.refill(data, blocks);
+    }
+
+    pub fn add_structure(&mut self, pid: PlaneId, pos: V3, template: &StructureTemplate) {
+        let bounds = Region::sized(template.size) + pos;
+        let bounds_chunk = bounds.reduce().div_round_signed(CHUNK_SIZE);
+
+        for cpos in bounds_chunk.points() {
+            let entry = unwrap_or!(self.cache.get_mut(&(pid, cpos)), continue);
+            let base = (cpos * scalar(CHUNK_SIZE)).extend(0);
+            let chunk_bounds = Region::sized(scalar(CHUNK_SIZE)) + base;
+            for p in chunk_bounds.intersect(bounds).points() {
+                let offset = p - base;
+                let shape = template.shape[bounds.index(p)];
+                entry.set(offset, template.layer as i8, shape);
             }
         }
-        */
+    }
+
+    pub fn remove_structure(&mut self, pid: PlaneId, pos: V3, template: &StructureTemplate) {
+        let bounds = Region::sized(template.size) + pos;
+        let bounds_chunk = bounds.reduce().div_round_signed(CHUNK_SIZE);
+
+        for cpos in bounds_chunk.points() {
+            let entry = unwrap_or!(self.cache.get_mut(&(pid, cpos)), continue);
+            let base = (cpos * scalar(CHUNK_SIZE)).extend(0);
+            let chunk_bounds = Region::sized(scalar(CHUNK_SIZE)) + base;
+            for p in chunk_bounds.intersect(bounds).points() {
+                let offset = p - base;
+                entry.set(offset, template.layer as i8, Shape::Empty);
+            }
+        }
     }
 
     pub fn get(&self, pid: PlaneId, cpos: V2) -> Option<&CacheEntry> {

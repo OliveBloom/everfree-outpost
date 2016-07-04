@@ -19,12 +19,12 @@ use world::object::*;
 engine_part2!(pub PartialEngine(world, cache, vision, messages));
 
 
-/// Handler to be called just after creating an entity.
+/// Handler to be called just after creating a structure.
 pub fn on_create(eng: &mut PartialEngine, sid: StructureId) {
     let s = eng.world.structure(sid);
 
     let plane = s.plane_id();
-    eng.cache.update_region(&eng.world, plane, s.bounds());
+    eng.cache.add_structure(plane, s.pos(), s.template());
 
     let msg_appear = logic::vision::structure_appear_message(s);
     let messages = &mut eng.messages;
@@ -35,12 +35,12 @@ pub fn on_create(eng: &mut PartialEngine, sid: StructureId) {
     }
 }
 
-/// Handler to be called just before destroying an entity.
+/// Handler to be called just before destroying a structure.
 pub fn on_destroy(eng: &mut PartialEngine, sid: StructureId) {
     let s = eng.world.structure(sid);
 
     let plane = s.plane_id();
-    eng.cache.update_region(&eng.world, plane, s.bounds());
+    eng.cache.remove_structure(plane, s.pos(), s.template());
 
     let msg_gone = logic::vision::structure_gone_message(s);
     let messages = &mut eng.messages;
@@ -51,20 +51,21 @@ pub fn on_destroy(eng: &mut PartialEngine, sid: StructureId) {
     }
 }
 
-/// Handler to be called just before destroying an entity.
+/// Handler to be called just after changing a structure's template.
 pub fn on_replace(eng: &mut PartialEngine,
                   sid: StructureId,
                   old_template_id: TemplateId) {
     let s = eng.world.structure(sid);
 
     // Update cache
-    let old_size = eng.data().structure_templates.template(old_template_id).size;
-    let old_bounds = Region::sized(old_size) + s.pos();
+    let old_template = eng.data().structure_templates.template(old_template_id);
+    let old_bounds = Region::sized(old_template.size) + s.pos();
 
     let new_bounds = s.bounds();
 
     let plane = s.plane_id();
-    eng.cache.update_region(&eng.world, plane, old_bounds.join(new_bounds));
+    eng.cache.remove_structure(plane, s.pos(), old_template);
+    eng.cache.add_structure(plane, s.pos(), s.template());
 
     // Notify clients
     let msg_appear = logic::vision::structure_appear_message(s);
