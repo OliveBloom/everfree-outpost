@@ -36,7 +36,7 @@ var MODE_LOCAL =    1;
 
 
 /** @constructor */
-function Launcher(server_url) {
+function Launcher(server_url, redir) {
     this.current = 0;
     this.xhr = null;
     this.error = null;
@@ -50,6 +50,7 @@ function Launcher(server_url) {
 
     // 0 - connect to server
     this.server_url = new URL(server_url);
+    this.redir = redir;
     this.server_info = null;
     this.base_url = null;
     this.version_info = null;
@@ -212,13 +213,27 @@ Launcher.prototype._getVersionInfo = function() {
     this._xhr(new URL('manifest.json', this.base_url).href, 'json', {
         load: function(evt) {
             this_.version_info = evt.target.response;
-            this_._connectWebsocket();
+            if (this_.redir == null) {
+                this_._connectWebsocket();
+            } else {
+                this_._redirect();
+            }
         },
         error: function(evt) {
             this_._error((evt.target.statusText || 'Connection error') +
                     ' (while getting version info)');
         },
     });
+};
+
+Launcher.prototype._redirect = function() {
+    var redirs = this.version_info['redirects'] || {};
+    var path = redirs[this.redir];
+    if (path == null) {
+        this._error(this.redir + ' is not available in version ' + this.server_info['version']);
+        return;
+    }
+    location.replace(new URL(path, this.base_url));
 };
 
 Launcher.prototype._connectWebsocket = function() {
@@ -682,8 +697,8 @@ LauncherUI.prototype.renderFrame = function() {
 
 
 
-function launch(url) {
-    var l = new Launcher(url);
+function launch(url, redir) {
+    var l = new Launcher(url, redir);
     var ui = new LauncherUI(l);
 
     ui.init();
@@ -699,9 +714,36 @@ function launch(url) {
     window['L'] = l;
 }
 
-// TODO: read #s=... part of URL to find the server
-if (!location.hash.startsWith('#s=')) {
-    location.replace('serverlist.html');
+function parseHash(h) {
+    var dct = {};
+    if (h.startsWith('#')) {
+        h = h.substring(1);
+    }
+    var parts = h.split(';');
+    console.log('split', h, 'as', parts);
+
+    for (var i = 0; i < parts.length; ++i) {
+        var p = parts[i];
+        var idx = p.indexOf('=');
+        var k = p.substring(0, idx);
+        var v = decodeURIComponent(p.substring(idx + 1));
+        console.log('parsed', parts[i], 'as', k, v);
+        dct[k] = v;
+    }
+
+    return dct;
 }
 
-launch(location.hash.substr(3));
+function main() {
+    var ARGS = parseHash(location.hash);
+
+    var server = ARGS['s'];
+    if (server == null) {
+        location.replace('serverlist.html');
+    }
+
+    var redir = ARGS['r'];
+
+    launch(server, redir);
+}
+document.addEventListener('DOMContentLoaded', main);
