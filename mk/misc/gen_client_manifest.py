@@ -75,6 +75,9 @@ def main(args):
         json.dump({
             'files': [rel for (_, rel) in all_files],
             'total_size': total_size,
+            'redirects': {
+                'configedit': 'configedit.html',
+                },
             }, f)
 
     with open(ns.output + '.d', 'w') as f:
