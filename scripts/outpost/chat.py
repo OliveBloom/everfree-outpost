@@ -59,6 +59,12 @@ def ignore(client, args):
 def unignore(client, args):
     raise RuntimeError('/unignore should be handled client-side')
 
+# Special: /l is handled in Rust code
+
+@chat.command('/l <message>: Send a chat message to nearby players only')
+def l(client, args):
+    raise RuntimeError('/l should be handled in rust')
+
 
 # Superuser commands
 
