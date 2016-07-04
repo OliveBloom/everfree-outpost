@@ -213,7 +213,7 @@ impl<'a> ShapeSource for ChunksSource<'a> {
         let cpos = (pos >> CHUNK_BITS).reduce();
 
         if let Some(entry) = self.cache.get(self.plane, cpos) {
-            entry.get(offset)
+            entry.get(offset).shape()
         } else {
             Shape::Empty
         }

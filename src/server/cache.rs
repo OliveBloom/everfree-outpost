@@ -9,7 +9,7 @@ use types::*;
 use util::StrResult;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE};
 
-use data::{Data, StructureTemplate};
+use data::{Data, StructureTemplate, BlockFlags};
 use world::World;
 use world::object::*;
 
@@ -55,8 +55,8 @@ impl TerrainCache {
             let chunk_bounds = Region::sized(scalar(CHUNK_SIZE)) + base;
             for p in chunk_bounds.intersect(bounds).points() {
                 let offset = p - base;
-                let shape = template.shape[bounds.index(p)].shape();
-                entry.set(offset, template.layer as i8, shape);
+                let flags = template.shape[bounds.index(p)];
+                entry.set(offset, template.layer as i8, flags);
             }
         }
     }
@@ -72,7 +72,7 @@ impl TerrainCache {
             let chunk_bounds = Region::sized(scalar(CHUNK_SIZE)) + base;
             for p in chunk_bounds.intersect(bounds).points() {
                 let offset = p - base;
-                entry.set(offset, template.layer as i8, Shape::Empty);
+                entry.set(offset, template.layer as i8, BlockFlags::empty());
             }
         }
     }
@@ -96,10 +96,10 @@ impl CacheEntry {
 
     fn fill(&mut self, data: &Data, chunk: &BlockChunk) {
         for (i, &block) in chunk.iter().enumerate() {
-            let shape = data.block_data.shape(block);
-            if shape != Shape::Empty {
+            let flags = data.block_data.block(block).flags;
+            if !flags.is_empty() {
                 let mut cell = CellShape::new();
-                cell.set_layer(-1, shape);
+                cell.set_layer(-1, flags);
                 self.cells.insert(i as u16, cell);
             }
         }
@@ -108,63 +108,68 @@ impl CacheEntry {
     fn refill(&mut self, data: &Data, chunk: &BlockChunk) {
         let bounds = Region::sized(scalar(CHUNK_SIZE));
         for pos in bounds.points() {
-            let old_shape = self.cells.get(&get_key(pos)).map_or(Shape::Empty, |c| c.base);
-            let block = chunk[bounds.index(pos)];
-            let new_shape = data.block_data.shape(block);
-            if old_shape != new_shape {
-                self.set(pos, -1, new_shape);
+            let old_flags = self.cells.get(&get_key(pos)).map_or(BlockFlags::empty(), |c| c.base);
+            let block_id = chunk[bounds.index(pos)];
+            let new_flags = data.block_data.block(block_id).flags;
+            if old_flags != new_flags {
+                self.set(pos, -1, new_flags);
             }
         }
     }
 
-    pub fn get(&self, pos: V3) -> Shape {
+    pub fn get(&self, pos: V3) -> BlockFlags {
         if let Some(cell) = self.cells.get(&get_key(pos)) {
             cell.computed
         } else {
-            Shape::Empty
+            BlockFlags::empty()
         }
     }
 
-    fn set(&mut self, pos: V3, layer: i8, shape: Shape) {
+    fn set(&mut self, pos: V3, layer: i8, flags: BlockFlags) {
         use std::collections::hash_map::Entry;
         match self.cells.entry(get_key(pos)) {
             Entry::Vacant(e) => {
-                if shape != Shape::Empty {
+                if !flags.is_empty() {
                     let cell = e.insert(CellShape::new());
-                    cell.set_layer(layer, shape);
+                    cell.set_layer(layer, flags);
                 }
             },
             Entry::Occupied(mut e) => {
-                e.get_mut().set_layer(layer, shape);
-                if e.get().computed == Shape::Empty {
+                e.get_mut().set_layer(layer, flags);
+                if e.get().computed.is_empty() {
                     e.remove();
                 }
             },
         }
     }
+
+    pub fn find_layer_with_flags(&self, pos: V3, flags: BlockFlags) -> Option<i8> {
+        let cell = unwrap_or!(self.cells.get(&get_key(pos)), return None);
+        cell.find_layer_with_flags(flags)
+    }
 }
 
 
 struct CellShape {
-    base: Shape,
-    layers: [Shape; 3],
-    computed: Shape,
+    base: BlockFlags,
+    layers: [BlockFlags; 3],
+    computed: BlockFlags,
 }
 
 impl CellShape {
     fn new() -> CellShape {
         CellShape {
-            base: Shape::Empty,
-            layers: [Shape::Empty; 3],
-            computed: Shape::Empty,
+            base: BlockFlags::empty(),
+            layers: [BlockFlags::empty(); 3],
+            computed: BlockFlags::empty(),
         }
     }
 
-    fn set_layer(&mut self, layer: i8, shape: Shape) {
+    fn set_layer(&mut self, layer: i8, flags: BlockFlags) {
         if layer == -1 {
-            self.base = shape;
+            self.base = flags;
         } else {
-            self.layers[layer as usize] = shape;
+            self.layers[layer as usize] = flags;
         }
         self.recompute();
     }
@@ -172,11 +177,23 @@ impl CellShape {
     fn recompute(&mut self) {
         let mut cur = self.base;
         for &s in &self.layers {
-            if shape_overrides(cur, s) {
-                cur = s;
-            }
+            // Note: this will break if multiple layers have a shape set under `B_SHAPE_MASK`.
+            // So... don't do that.
+            cur = cur | s;
         }
         self.computed = cur;
+    }
+
+    fn find_layer_with_flags(&self, flags: BlockFlags) -> Option<i8> {
+        for i in (0 .. 3).rev() {
+            if self.layers[i].contains(flags) {
+                return Some(i as i8);
+            }
+        }
+        if self.base.contains(flags) {
+            return Some(-1);
+        }
+        None
     }
 }
 
@@ -186,17 +203,4 @@ fn get_key(pos: V3) -> u16 {
     ((pos.x as u16) << (0 * CHUNK_BITS)) |
     ((pos.y as u16) << (1 * CHUNK_BITS)) |
     ((pos.z as u16) << (2 * CHUNK_BITS))
-}
-
-fn shape_overrides(old: Shape, new: Shape) -> bool {
-    match (old, new) {
-        (Shape::Empty, _) => true,
-
-        (Shape::Floor, Shape::Empty) => false,
-        (Shape::Floor, _) => true,
-
-        (Shape::Solid, _) => false,
-
-        _ => false,
-    }
 }

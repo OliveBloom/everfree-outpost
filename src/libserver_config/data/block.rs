@@ -32,6 +32,9 @@ bitflags! {
         const B_SPEED_ADJUST =  0x0010,
         /// Makes the block "count" for purposes of player interaction hit-tests, and for
         /// determining whether two structures overlap in the same layer.
+        ///
+        /// Note that if `B_OCCUPIED` is unset for a structure block, then the remaining flags will
+        /// have no effect.
         const B_OCCUPIED =      0x0020,
         /// The block can have addons attached to it.
         const B_ADDON_TARGET =  0x0040,
