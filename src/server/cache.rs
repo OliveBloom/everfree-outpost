@@ -9,6 +9,7 @@ use types::*;
 use util::StrResult;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE};
 
+use data::Data;
 use world::World;
 use world::object::*;
 
@@ -17,10 +18,6 @@ pub struct TerrainCache {
     cache: HashMap<(PlaneId, V2), CacheEntry>,
 }
 
-pub struct CacheEntry {
-    pub shape: [Shape; 1 << (3 * CHUNK_BITS)],
-    pub layer_mask: [u8; 1 << (3 * CHUNK_BITS)],
-}
 
 impl TerrainCache {
     pub fn new() -> TerrainCache {
@@ -32,9 +29,10 @@ impl TerrainCache {
     pub fn add_chunk(&mut self, w: &World, pid: PlaneId, cpos: V2) -> StrResult<()> {
         let mut entry = CacheEntry::new();
 
-        let base = cpos.extend(0) * scalar(CHUNK_SIZE);
-        let bounds = Region::new(base, base + scalar(CHUNK_SIZE));
-        try!(compute_shape(w, pid, cpos, bounds, &mut entry));
+        let data = w.data();
+        let plane = unwrap!(w.get_plane(pid));
+        let chunk = unwrap!(plane.get_terrain_chunk(cpos));
+        entry.fill(data, chunk.blocks());
 
         self.cache.insert((pid, cpos), entry);
         Ok(())
@@ -45,6 +43,8 @@ impl TerrainCache {
     }
 
     pub fn update_region(&mut self, w: &World, pid: PlaneId, bounds: Region) {
+        // FIXME
+        /*
         for cpos in bounds.reduce().div_round_signed(CHUNK_SIZE).points() {
             if let Some(entry) = self.cache.get_mut(&(pid, cpos)) {
                 // NB: Surprisingly, this can fail.  Chunk unloading proceeds in this order:
@@ -57,6 +57,7 @@ impl TerrainCache {
                 let _ = compute_shape(w, pid, cpos, bounds, entry);
             }
         }
+        */
     }
 
     pub fn get(&self, pid: PlaneId, cpos: V2) -> Option<&CacheEntry> {
@@ -64,46 +65,98 @@ impl TerrainCache {
     }
 }
 
+
+pub struct CacheEntry {
+    cells: HashMap<u16, CellShape>,
+}
+
 impl CacheEntry {
     pub fn new() -> CacheEntry {
         CacheEntry {
-            shape: [Shape::Empty; 1 << (3 * CHUNK_BITS)],
-            layer_mask: [0; 1 << (3 * CHUNK_BITS)],
+            cells: HashMap::new(),
+        }
+    }
+
+    fn fill(&mut self, data: &Data, chunk: &BlockChunk) {
+        for (i, &block) in chunk.iter().enumerate() {
+            let shape = data.block_data.shape(block);
+            if shape != Shape::Empty {
+                let mut cell = CellShape::new();
+                cell.set_layer(-1, shape);
+                self.cells.insert(i as u16, cell);
+            }
+        }
+    }
+
+    pub fn get(&self, pos: V3) -> Shape {
+        if let Some(cell) = self.cells.get(&get_key(pos)) {
+            cell.computed
+        } else {
+            Shape::Empty
+        }
+    }
+
+    fn set(&mut self, pos: V3, layer: i8, shape: Shape) {
+        use std::collections::hash_map::Entry;
+        match self.cells.entry(get_key(pos)) {
+            Entry::Vacant(e) => {
+                if shape != Shape::Empty {
+                    let cell = e.insert(CellShape::new());
+                    cell.set_layer(layer, shape);
+                }
+            },
+            Entry::Occupied(mut e) => {
+                e.get_mut().set_layer(layer, shape);
+                if e.get().computed == Shape::Empty {
+                    e.remove();
+                }
+            },
         }
     }
 }
 
 
-fn compute_shape(w: &World,
-                 pid: PlaneId,
-                 cpos: V2,
-                 bounds: Region,
-                 entry: &mut CacheEntry) -> StrResult<()> {
-    trace!("compute_shape({:?}, {:?})", pid, cpos);
-    let data = w.data();
-    let p = unwrap!(w.get_plane(pid));
-    let chunk = unwrap!(p.get_terrain_chunk(cpos));
-    let bounds = bounds.intersect(chunk.bounds());
+struct CellShape {
+    base: Shape,
+    layers: [Shape; 3],
+    computed: Shape,
+}
 
-    for p in bounds.points() {
-        let idx = chunk.bounds().index(p);
-        entry.shape[idx] = data.block_data.shape(chunk.block(idx));
-        entry.layer_mask[idx] = 0;
-    }
-
-    for s in w.chunk_structures(pid, cpos) {
-        for p in s.bounds().intersect(bounds).points() {
-            let template = s.template();
-            let s_idx = s.bounds().index(p);
-            let c_idx = chunk.bounds().index(p);
-            if shape_overrides(entry.shape[c_idx], template.shape[s_idx]) {
-                entry.shape[c_idx] = template.shape[s_idx];
-            }
-            entry.layer_mask[c_idx] |= 1 << (template.layer as usize);
+impl CellShape {
+    fn new() -> CellShape {
+        CellShape {
+            base: Shape::Empty,
+            layers: [Shape::Empty; 3],
+            computed: Shape::Empty,
         }
     }
 
-    Ok(())
+    fn set_layer(&mut self, layer: i8, shape: Shape) {
+        if layer == -1 {
+            self.base = shape;
+        } else {
+            self.layers[layer as usize] = shape;
+        }
+        self.recompute();
+    }
+
+    fn recompute(&mut self) {
+        let mut cur = self.base;
+        for &s in &self.layers {
+            if shape_overrides(s, cur) {
+                cur = s;
+            }
+        }
+        self.computed = cur;
+    }
+}
+
+
+// Note that `fill` does its own key computation, instead of calling `get_key`.
+fn get_key(pos: V3) -> u16 {
+    ((pos.x as u16) << (0 * CHUNK_BITS)) |
+    ((pos.y as u16) << (1 * CHUNK_BITS)) |
+    ((pos.z as u16) << (2 * CHUNK_BITS))
 }
 
 fn shape_overrides(old: Shape, new: Shape) -> bool {

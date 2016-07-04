@@ -32,6 +32,8 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
                                  template: &StructureTemplate,
                                  pid: PlaneId,
                                  pos: V3) -> bool {
+        true    // FIXME
+            /*
         let cache = self.cache();
         let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE));
         check_structure_placement(self.world(), template, pid, pos, |pos| {
@@ -41,6 +43,7 @@ impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
             let mask = entry.layer_mask[cur_chunk_bounds.index(pos)];
             Some(mask)
         })
+        */
     }
 
     fn check_structure_replacement(&self,
