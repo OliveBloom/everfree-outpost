@@ -9,6 +9,7 @@ use types::*;
 use engine::Engine;
 use engine::glue;
 use engine::split::{EngineRef, Part, PartFlags};
+use engine::split2::Coded;
 use logic;
 use msg::ExtraArg;
 use python::api as py;
@@ -589,8 +590,9 @@ define_python_class! {
                                   template_id: TemplateId) -> PyResult<StructureId> {
             let mut eng = eng;
             // FIXME hacky transmute
-            let eng2 = unsafe { mem::transmute_copy(&eng) };
-            let mut s = try!(eng.create_structure(pid, pos, template_id));
+            let eng2: &mut logic::structure::PartialEngine = unsafe { mem::transmute_copy(&eng) };
+            let sid = try!(logic::structure::checked_create(eng2.refine(), pid, pos, template_id));
+            let mut s = eng.structure_mut(sid);
             try!(s.set_attachment(StructureAttachment::Chunk));
             logic::structure::on_create(eng2, s.id());
             Ok(s.id())
@@ -609,13 +611,14 @@ define_python_class! {
         fn world_structure_replace(eng: glue::WorldFragment,
                                    sid: StructureId,
                                    template_id: TemplateId) -> PyResult<()> {
-            let mut eng = eng;
             // FIXME hacky transmute
-            let eng2 = unsafe { mem::transmute_copy(&eng) };
-            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+            let eng2: &mut logic::structure::PartialEngine = unsafe { mem::transmute_copy(&eng) };
+            let old_template_id = {
+                let s = pyunwrap!(eng2.world.get_structure(sid),
                                   runtime_error, "no structure with that ID");
-            let old_template_id = s.template_id();
-            try!(s.set_template_id(template_id));
+                s.template_id()
+            };
+            try!(logic::structure::checked_replace(eng2.refine(), sid, template_id));
             logic::structure::on_replace(eng2, sid, old_template_id);
             Ok(())
         }
