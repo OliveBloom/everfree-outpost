@@ -110,10 +110,14 @@ impl BlockData {
                 _ => return fail!("invalid shape \"{}\" for block {} ({})",
                                   shape_str, i, name),
             };
+            let flags = match shape {
+                Shape::Floor => B_SUBFLOOR,
+                _ => BlockFlags::from_shape(shape),
+            };
 
             block_defs.push(BlockDef {
                 name: name.to_owned(),
-                flags: BlockFlags::from_shape(shape),
+                flags: flags,
                 speed_adjust: 100,
             });
             name_to_id.insert(name.to_owned(), i as BlockId);
