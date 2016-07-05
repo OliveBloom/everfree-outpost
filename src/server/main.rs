@@ -74,6 +74,7 @@ mod terrain_gen;
 mod vision;
 mod logic;
 mod cache;
+mod dialogs;
 
 mod script;
 

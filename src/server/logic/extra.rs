@@ -2,8 +2,6 @@ use std::collections::HashMap;
 
 use types::*;
 
-use timer;
-
 
 pub struct Extra {
     /// Info about wires (connections) that have not yet indicated readiness.  The Client object is
