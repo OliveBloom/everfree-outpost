@@ -56,7 +56,7 @@ layer: 1
 
 [item chest/celestial]
 from_structure: chest/celestial
-display_name: "Chest"
+display_name: "Celestial Chest"
 
 [recipe chest/celestial]
 from_item: chest/celestial
