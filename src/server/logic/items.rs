@@ -58,6 +58,9 @@ pub fn open_crafting(mut eng: EngineRef,
     };
 
     logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid);
+    eng.borrow().unwrap().dialogs.set_dialog(cid,
+                                             DialogType::Crafting(sid, iid),
+                                             |_,_| ());
     let dialog = Dialog::Crafting(template_id, sid, iid);
     eng.messages_mut().send_client(cid, ClientResponse::OpenDialog(dialog));
 

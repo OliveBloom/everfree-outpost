@@ -527,7 +527,7 @@ function handleOpenCrafting(station_type, station_id, inventory_id) {
 
     ui.oncancel = function() {
         dialog.hide();
-        inv.unsubscribe();
+        conn.sendCloseDialog();
     };
 }
 

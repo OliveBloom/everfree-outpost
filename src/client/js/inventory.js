@@ -85,7 +85,8 @@ InventoryTracker.prototype._release = function(inventory_id, obj) {
 };
 
 InventoryTracker.prototype.unsubscribe = function(inventory_id) {
-    this.conn.sendUnsubscribeInventory(inventory_id);
+    // Now a no-op.  Use conn.sendCloseDialog instead.
+    // TODO: remove this function
     // Don't do anything else until we get the InventoryGone message.
 };
 
