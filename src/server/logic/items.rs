@@ -3,7 +3,7 @@ use std::cmp;
 use types::*;
 use util::StrResult;
 
-use dialogs::DialogType;
+use dialogs::{DialogType, TargetId};
 use engine::Engine;
 use engine::split::EngineRef;
 use engine::split2::Coded;
@@ -25,44 +25,61 @@ pub fn open_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId) -> St
     Ok(())
 }
 
-pub fn open_container(mut eng: EngineRef,
+pub fn open_container(eng: &mut Engine,
                       cid: ClientId,
                       iid1: InventoryId,
                       iid2: InventoryId) -> StrResult<()> {
-    // Check that IDs are valid.
-    unwrap!(eng.world().get_client(cid));
-    unwrap!(eng.world().get_inventory(iid1));
-    unwrap!(eng.world().get_inventory(iid1));
+    use logic::dialogs::OnlyDialogs;
 
-    logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid1);
-    logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid2);
-    eng.borrow().unwrap().dialogs.set_dialog(cid,
-                                             DialogType::Container(StructureId(0), iid1, iid2),
-                                             |_,_| ());
-    eng.messages_mut().send_client(cid, ClientResponse::OpenDialog(Dialog::Container(iid1, iid2)));
+    // Check that IDs are valid.
+    unwrap!(eng.world.get_client(cid));
+    unwrap!(eng.world.get_inventory(iid1));
+    unwrap!(eng.world.get_inventory(iid1));
+
+    let (eng, only_dialogs) = eng.split();
+    let &mut OnlyDialogs { ref mut dialogs, .. } = only_dialogs;
+
+    dialogs.set_dialog(cid, DialogType::Container(iid1, iid2), |target, added| {
+        match target {
+            TargetId::Inventory(iid) =>
+                if added { logic::inventory::subscribe(eng, cid, iid) }
+                else { logic::inventory::unsubscribe(eng, cid, iid) },
+            TargetId::Structure(_) => {},
+        }
+    });
+    eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::Container(iid1, iid2)));
 
     Ok(())
 }
 
-pub fn open_crafting(mut eng: EngineRef,
+pub fn open_crafting(eng: &mut Engine,
                      cid: ClientId,
                      sid: StructureId,
                      iid: InventoryId) -> StrResult<()> {
+    use logic::dialogs::OnlyDialogs;
+
     // Check that IDs are valid.
-    unwrap!(eng.world().get_client(cid));
-    unwrap!(eng.world().get_inventory(iid));
+    unwrap!(eng.world.get_client(cid));
+    unwrap!(eng.world.get_inventory(iid));
 
     let template_id = {
-        let s = unwrap!(eng.world().get_structure(sid));
+        let s = unwrap!(eng.world.get_structure(sid));
         s.template_id()
     };
 
-    logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid);
-    eng.borrow().unwrap().dialogs.set_dialog(cid,
-                                             DialogType::Crafting(sid, iid),
-                                             |_,_| ());
+    let (eng, only_dialogs) = eng.split();
+    let &mut OnlyDialogs { ref mut dialogs, .. } = only_dialogs;
+
+    dialogs.set_dialog(cid, DialogType::Crafting(sid, iid), |target, added| {
+        match target {
+            TargetId::Inventory(iid) =>
+                if added { logic::inventory::subscribe(eng, cid, iid) }
+                else { logic::inventory::unsubscribe(eng, cid, iid) },
+            TargetId::Structure(_) => {},
+        }
+    });
     let dialog = Dialog::Crafting(template_id, sid, iid);
-    eng.messages_mut().send_client(cid, ClientResponse::OpenDialog(dialog));
+    eng.messages.send_client(cid, ClientResponse::OpenDialog(dialog));
 
     Ok(())
 }

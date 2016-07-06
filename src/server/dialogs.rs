@@ -75,7 +75,7 @@ impl Dialogs {
 pub enum DialogType {
     Inventory(InventoryId),
     Abilities(InventoryId),
-    Container(StructureId, InventoryId, InventoryId),
+    Container(InventoryId, InventoryId),
     Crafting(StructureId, InventoryId),
 }
 
@@ -89,8 +89,7 @@ impl DialogType {
             Abilities(iid) => {
                 f(TargetId::Inventory(iid));
             },
-            Container(sid, iid1, iid2) => {
-                f(TargetId::Structure(sid));
+            Container(iid1, iid2) => {
                 f(TargetId::Inventory(iid1));
                 f(TargetId::Inventory(iid2));
             },

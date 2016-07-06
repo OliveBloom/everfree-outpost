@@ -265,14 +265,14 @@ define_python_class! {
                                 cid: ClientId,
                                 iid1: InventoryId,
                                 iid2: InventoryId) {
-            warn_on_err!(logic::items::open_container(eng, cid, iid1, iid2));
+            warn_on_err!(logic::items::open_container(eng.unwrap(), cid, iid1, iid2));
         }
 
         fn logic_open_crafting(eng: EngineRef,
                                cid: ClientId,
                                sid: StructureId,
                                iid: InventoryId) {
-            warn_on_err!(logic::items::open_crafting(eng, cid, sid, iid));
+            warn_on_err!(logic::items::open_crafting(eng.unwrap(), cid, sid, iid));
         }
 
         fn logic_set_cave(eng: glue::WorldFragment,

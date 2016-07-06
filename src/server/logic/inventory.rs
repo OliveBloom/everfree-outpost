@@ -15,6 +15,7 @@ use world::object::*;
 engine_part2!(pub PartialEngine(world, vision, messages));
 
 pub fn subscribe(eng: &mut PartialEngine, cid: ClientId, iid: InventoryId) {
+    info!("subscribe {:?} to {:?}", cid, iid);
     let world = &mut eng.world;
     let messages = &mut eng.messages;
     eng.vision.subscribe_inventory(cid, iid, || {

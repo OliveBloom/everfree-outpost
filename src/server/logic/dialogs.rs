@@ -13,7 +13,7 @@ use world::Activity;
 use world::object::*;
 
 
-engine_part2!(OnlyDialogs(dialogs));
+engine_part2!(pub OnlyDialogs(dialogs));
 
 pub fn close_dialog(eng: &mut Engine, cid: ClientId) {
     let (eng, only_dialogs) = eng.split();
