@@ -7,6 +7,7 @@ use cache::TerrainCache;
 use chat::Chat;
 use chunks::Chunks;
 use data::Data;
+use dialogs::Dialogs;
 use input::{Input, Action};
 use logic;
 use logic::extra::Extra;
@@ -50,7 +51,7 @@ pub struct Engine<'d> {
     pub cache: TerrainCache,
     pub terrain_gen: TerrainGen,
     pub chat: Chat,
-
+    pub dialogs: Dialogs,
     pub input: Input,
 }
 
@@ -85,7 +86,7 @@ impl<'d> Engine<'d> {
             cache: TerrainCache::new(),
             terrain_gen: TerrainGen::new(data, storage),
             chat: Chat::new(),
-
+            dialogs: Dialogs::new(),
             input: Input::new(),
         }
     }

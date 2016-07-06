@@ -52,7 +52,8 @@ mod parts {
             (Ca  7) CACHE =         ::cache::TerrainCache;
             (Tg  8) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
             (Ct  9) CHAT =          ::chat::Chat;
-            (In 10) INPUT =         ::input::Input;
+            (Di 10) DIALOGS =       ::dialogs::Dialogs;
+            (In 11) INPUT =         ::input::Input;
     }
 }
 
@@ -85,6 +86,7 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         cache = CACHE;
         terrain_gen = TERRAIN_GEN;
         chat = CHAT;
+        dialogs = DIALOGS;
         input = INPUT;
 
         all = EngineParts::all();
