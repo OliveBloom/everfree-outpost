@@ -128,10 +128,8 @@ impl Container {
     }
 
     pub fn on_close(self) -> EventStatus {
-        let iids = self.inv_id;
         EventStatus::Action(box move |c: &mut ClientObj| {
-            c.platform().send_unsubscribe_inventory(iids[0]);
-            c.platform().send_unsubscribe_inventory(iids[1]);
+            c.platform().send_close_dialog();
         })
     }
 }

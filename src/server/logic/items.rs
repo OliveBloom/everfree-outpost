@@ -3,6 +3,7 @@ use std::cmp;
 use types::*;
 use util::StrResult;
 
+use dialogs::DialogType;
 use engine::Engine;
 use engine::split::EngineRef;
 use engine::split2::Coded;
@@ -35,6 +36,9 @@ pub fn open_container(mut eng: EngineRef,
 
     logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid1);
     logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid2);
+    eng.borrow().unwrap().dialogs.set_dialog(cid,
+                                             DialogType::Container(StructureId(0), iid1, iid2),
+                                             |_,_| ());
     eng.messages_mut().send_client(cid, ClientResponse::OpenDialog(Dialog::Container(iid1, iid2)));
 
     Ok(())

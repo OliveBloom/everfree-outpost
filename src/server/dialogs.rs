@@ -35,6 +35,7 @@ impl Dialogs {
         dialog.iter_targets(|t| {
             self.ps.unsubscribe_publisher(cid, t, |&tt,_| f(tt));
         });
+        info!("cleared dialog for {:?}", cid);
     }
 
     pub fn set_dialog<F>(&mut self, cid: ClientId, dialog: DialogType, mut f: F)
@@ -43,6 +44,7 @@ impl Dialogs {
         dialog.iter_targets(|t| {
             self.ps.subscribe_publisher(cid, t, |&tt,_| f(tt, true));
         });
+        info!("set dialog for {:?} to {:?}", cid, dialog);
         self.map.insert(cid, dialog);
     }
 
@@ -69,6 +71,7 @@ impl Dialogs {
 }
 
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum DialogType {
     Inventory(InventoryId),
     Abilities(InventoryId),
