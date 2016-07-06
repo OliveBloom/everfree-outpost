@@ -9,6 +9,7 @@ pub mod misc;
 pub mod extra;
 pub mod tick;
 pub mod terrain_gen;
+pub mod dialogs;
 
 pub mod entity;
 pub mod inventory;

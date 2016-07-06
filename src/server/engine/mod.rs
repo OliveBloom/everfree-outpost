@@ -232,6 +232,10 @@ impl<'d> Engine<'d> {
                 logic::inventory::unsubscribe(self.refine(), cid, iid);
             },
 
+            CloseDialog => {
+                logic::dialogs::close_dialog(self, cid);
+            },
+
             MoveItem(from_iid, from_slot, to_iid, to_slot, count) => {
                 warn_on_err!(logic::items::move_items2(self,
                                                        from_iid,
