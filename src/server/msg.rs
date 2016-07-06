@@ -47,7 +47,6 @@ mod op {
         // Requests
         Ping = 0x0003,
         Input = 0x0004,
-        UnsubscribeInventory = 0x0007,
         CraftRecipe = 0x0009,
         Chat = 0x000a,
         Interact = 0x000c,
@@ -67,6 +66,7 @@ mod op {
         UpdateMotion = 0x0002,
         Login = 0x0005,
         Action = 0x0006,
+        UnsubscribeInventory = 0x0007,
         old_MoveItem = 0x0008,
         Register = 0x000b,
         OpenInventory = 0x000f,
@@ -135,7 +135,6 @@ pub enum Request {
     // Ordinary requests
     Ping(u16),
     Input(LocalTime, u16),
-    UnsubscribeInventory(InventoryId),
     CraftRecipe(StructureId, InventoryId, RecipeId, u16),
     Chat(String),
     Interact(LocalTime),
@@ -170,10 +169,6 @@ impl Request {
             op::Input => {
                 let (a, b): (LocalTime, u16) = try!(wr.read());
                 Input(a, b)
-            },
-            op::UnsubscribeInventory => {
-                let a = try!(wr.read());
-                UnsubscribeInventory(a)
             },
             op::CraftRecipe => {
                 let (a, b, c, d) = try!(wr.read());

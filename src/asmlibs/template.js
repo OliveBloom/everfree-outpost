@@ -78,7 +78,6 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _ap_config_clear = env.ap_config_clear;
     var _ap_set_cursor = env.ap_set_cursor;
     var _ap_send_move_item = env.ap_send_move_item;
-    var _ap_send_unsubscribe_inventory = env.ap_send_unsubscribe_inventory;
     var _ap_send_close_dialog = env.ap_send_close_dialog;
 
     var tempRet0 = 0;

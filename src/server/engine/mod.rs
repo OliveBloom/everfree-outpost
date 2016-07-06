@@ -228,10 +228,6 @@ impl<'d> Engine<'d> {
                 self.input.schedule_input(cid, input);
             },
 
-            UnsubscribeInventory(iid) => {
-                logic::inventory::unsubscribe(self.refine(), cid, iid);
-            },
-
             CloseDialog => {
                 logic::dialogs::close_dialog(self, cid);
             },

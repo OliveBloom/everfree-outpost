@@ -8,7 +8,7 @@ var OP_PING =                   0x0003;
 var OP_INPUT =                  0x0004;
 // DEPRECATED                   0x0005;
 // DEPRECATED                   0x0006;
-var OP_UNSUBSCRIBE_INVENTORY =  0x0007;
+// DEPRECATED                   0x0007;
 // DEPRECATED                   0x0008;
 var OP_CRAFT_RECIPE =           0x0009;
 var OP_CHAT =                   0x000a;
@@ -628,13 +628,6 @@ Connection.prototype.sendInput = function(time, input) {
     msg.put16(OP_INPUT);
     msg.put16(time);
     msg.put16(input);
-    this._send(msg.done());
-};
-
-Connection.prototype.sendUnsubscribeInventory = function(inventory_id) {
-    var msg = MESSAGE_BUILDER.reset();
-    msg.put16(OP_UNSUBSCRIBE_INVENTORY);
-    msg.put32(inventory_id);
     this._send(msg.done());
 };
 

@@ -47,7 +47,6 @@ pub enum WireEvent {
 
 pub enum ClientEvent {
     Input(Time, InputBits),
-    UnsubscribeInventory(InventoryId),
     CloseDialog,
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
     CraftRecipe(StructureId, InventoryId, RecipeId, u16),
@@ -296,9 +295,6 @@ impl Messages {
                 let input = unwrap!(InputBits::from_bits(input));
                 Ok(Some(ClientEvent::Input(time, input)))
             },
-
-            Request::UnsubscribeInventory(iid) =>
-                Ok(Some(ClientEvent::UnsubscribeInventory(iid))),
 
             Request::CloseDialog =>
                 Ok(Some(ClientEvent::CloseDialog)),
