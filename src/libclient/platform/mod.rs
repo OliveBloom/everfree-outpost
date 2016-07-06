@@ -23,6 +23,7 @@ pub trait Platform {
                       amount: u8);
     fn send_unsubscribe_inventory(&mut self,
                                   iid: InventoryId);
+    fn send_close_dialog(&mut self);
 }
 
 
@@ -53,6 +54,7 @@ pub trait PlatformObj {
                       amount: u8);
     fn send_unsubscribe_inventory(&mut self,
                                   iid: InventoryId);
+    fn send_close_dialog(&mut self);
 }
 
 impl<P: Platform> PlatformObj for P {
@@ -81,6 +83,10 @@ impl<P: Platform> PlatformObj for P {
     fn send_unsubscribe_inventory(&mut self,
                                   iid: InventoryId) {
         Platform::send_unsubscribe_inventory(self, iid);
+    }
+
+    fn send_close_dialog(&mut self) {
+        Platform::send_close_dialog(self);
     }
 }
 

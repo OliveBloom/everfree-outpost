@@ -60,6 +60,7 @@ mod op {
         AuthResponse = 0x0014,      // For auth verifier only
         CreateCharacter = 0x0015,
         Ready = 0x0016,
+        CloseDialog = 0x0017,
 
         // Deprecated requests
         GetTerrain = 0x0001,
@@ -146,6 +147,7 @@ pub enum Request {
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
     CreateCharacter(u32),
     Ready,
+    CloseDialog,
 
     // Control messages
     AddClient(WireId, u32, String),
@@ -215,6 +217,9 @@ impl Request {
             },
             op::Ready => {
                 Ready
+            },
+            op::CloseDialog => {
+                CloseDialog
             },
 
             op::AddClient => {

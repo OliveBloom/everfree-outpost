@@ -266,6 +266,10 @@ var module_env = function(asm) {
             asm.conn.sendUnsubscribeInventory(iid);
         },
 
+        'ap_send_close_dialog': function() {
+            asm.conn.sendCloseDialog();
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,

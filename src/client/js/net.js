@@ -24,6 +24,7 @@ var OP_MOVE_ITEM =              0x0013;
 // AUTH ONLY                    0x0014;
 var OP_CREATE_CHARACTER =       0x0015;
 var OP_READY =                  0x0016;
+var OP_CLOSE_DIALOG =           0x0017;
 
 var OP_TERRAIN_CHUNK =          0x8001;
 // DEPRECATED                   0x8002;
@@ -725,5 +726,11 @@ Connection.prototype.sendCreateCharacter = function(appearance) {
 Connection.prototype.sendReady = function() {
     var msg = MESSAGE_BUILDER.reset();
     msg.put16(OP_READY);
+    this._send(msg.done());
+};
+
+Connection.prototype.sendCloseDialog = function() {
+    var msg = MESSAGE_BUILDER.reset();
+    msg.put16(OP_CLOSE_DIALOG);
     this._send(msg.done());
 };

@@ -29,6 +29,7 @@ mod ffi {
                                  dest_slot: usize,
                                  amount: u8);
         pub fn ap_send_unsubscribe_inventory(iid: u32);
+        pub fn ap_send_close_dialog();
     }
 }
 
@@ -75,6 +76,12 @@ impl platform::Platform for Platform {
                                   iid: InventoryId) {
         unsafe {
             ffi::ap_send_unsubscribe_inventory(iid);
+        }
+    }
+
+    fn send_close_dialog(&mut self) {
+        unsafe {
+            ffi::ap_send_close_dialog();
         }
     }
 }
