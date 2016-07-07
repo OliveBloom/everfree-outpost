@@ -36,19 +36,8 @@ pub fn open_container(eng: &mut Engine,
     unwrap!(eng.world.get_inventory(iid1));
     unwrap!(eng.world.get_inventory(iid1));
 
-    let (eng, only_dialogs) = eng.split();
-    let &mut OnlyDialogs { ref mut dialogs, .. } = only_dialogs;
-
-    dialogs.set_dialog(cid, DialogType::Container(iid1, iid2), |target, added| {
-        match target {
-            TargetId::Inventory(iid) =>
-                if added { logic::inventory::subscribe(eng, cid, iid) }
-                else { logic::inventory::unsubscribe(eng, cid, iid) },
-            TargetId::Structure(_) => {},
-        }
-    });
+    logic::dialogs::open_dialog(eng.refine(), cid, DialogType::Container(iid1, iid2));
     eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::Container(iid1, iid2)));
-
     Ok(())
 }
 

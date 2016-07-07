@@ -57,7 +57,7 @@ mod parts {
     }
 }
 
-const NUM_PARTS: usize = 11;
+const NUM_PARTS: usize = 12;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]

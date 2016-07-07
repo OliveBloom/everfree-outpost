@@ -590,7 +590,7 @@ define_python_class! {
                                   template_id: TemplateId) -> PyResult<StructureId> {
             let mut eng = eng;
             // FIXME hacky transmute
-            let eng2: &mut logic::structure::PartialEngine = unsafe { mem::transmute_copy(&eng) };
+            let eng2: &mut logic::structure::EngineLifecycle = unsafe { mem::transmute_copy(&eng) };
             let sid = try!(logic::structure::checked_create(eng2.refine(), pid, pos, template_id));
             let mut s = eng.structure_mut(sid);
             try!(s.set_attachment(StructureAttachment::Chunk));
@@ -603,7 +603,7 @@ define_python_class! {
             let mut eng = eng;
             // FIXME hacky transmute
             let eng2 = unsafe { mem::transmute_copy(&eng) };
-            logic::structure::on_destroy(eng2, sid);
+            logic::structure::on_destroy_recursive(eng2, sid);
             try!(eng.destroy_structure(sid));
             Ok(())
         }
@@ -612,7 +612,7 @@ define_python_class! {
                                    sid: StructureId,
                                    template_id: TemplateId) -> PyResult<()> {
             // FIXME hacky transmute
-            let eng2: &mut logic::structure::PartialEngine = unsafe { mem::transmute_copy(&eng) };
+            let eng2: &mut logic::structure::EngineLifecycle = unsafe { mem::transmute_copy(&eng) };
             let old_template_id = {
                 let s = pyunwrap!(eng2.world.get_structure(sid),
                                   runtime_error, "no structure with that ID");

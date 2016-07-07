@@ -229,7 +229,7 @@ impl<'d> Engine<'d> {
             },
 
             CloseDialog => {
-                logic::dialogs::close_dialog(self, cid);
+                logic::dialogs::close_dialog(self.refine(), cid);
             },
 
             MoveItem(from_iid, from_slot, to_iid, to_slot, count) => {

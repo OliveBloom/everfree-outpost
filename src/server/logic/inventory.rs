@@ -2,6 +2,7 @@ use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use engine::Engine;
+use engine::split2::Coded;
 use logic;
 use messages::{Messages, ClientResponse};
 use physics::Physics;
@@ -12,9 +13,20 @@ use world::fragment::DummyFragment;
 use world::object::*;
 
 
-engine_part2!(pub PartialEngine(world, vision, messages));
+engine_part2!(pub EngineLifecycle(world, vision, messages, dialogs));
 
-pub fn subscribe(eng: &mut PartialEngine, cid: ClientId, iid: InventoryId) {
+pub fn on_destroy(eng: &mut EngineLifecycle, iid: InventoryId) {
+    logic::dialogs::clear_inventory_users(eng.refine(), iid);
+}
+
+pub fn on_destroy_recursive(eng: &mut logic::world::EngineLifecycle, iid: InventoryId) {
+    on_destroy(eng.refine(), iid);
+}
+
+
+engine_part2!(pub EngineSubscribe(world, vision, messages));
+
+pub fn subscribe(eng: &mut EngineSubscribe, cid: ClientId, iid: InventoryId) {
     info!("subscribe {:?} to {:?}", cid, iid);
     let world = &mut eng.world;
     let messages = &mut eng.messages;
@@ -25,7 +37,7 @@ pub fn subscribe(eng: &mut PartialEngine, cid: ClientId, iid: InventoryId) {
     });
 }
 
-pub fn unsubscribe(eng: &mut PartialEngine, cid: ClientId, iid: InventoryId) {
+pub fn unsubscribe(eng: &mut EngineSubscribe, cid: ClientId, iid: InventoryId) {
     info!("unsubscribe {:?} from {:?}", cid, iid);
     let world = &mut eng.world;
     let messages = &mut eng.messages;
@@ -36,7 +48,7 @@ pub fn unsubscribe(eng: &mut PartialEngine, cid: ClientId, iid: InventoryId) {
     });
 }
 
-pub fn on_update(eng: &mut PartialEngine, iid: InventoryId, slot_idx: u8) {
+pub fn on_update(eng: &mut EngineSubscribe, iid: InventoryId, slot_idx: u8) {
     let i = eng.world.inventory(iid);
     let msg = logic::vision::inventory_update_message(i, slot_idx);
 

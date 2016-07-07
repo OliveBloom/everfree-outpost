@@ -15,7 +15,7 @@ use world::flags;
 use world::object::*;
 
 
-engine_part2!(pub PartialEngine(world, physics, cache, vision, messages, terrain_gen));
+engine_part2!(pub PartialEngine(world, physics, cache, vision, messages, terrain_gen, dialogs));
 engine_part2!(OnlyChunks(chunks));
 
 

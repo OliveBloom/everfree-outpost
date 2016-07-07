@@ -146,10 +146,10 @@ pub fn teleport_entity_stable_plane(wf: WorldFragment,
 }
 
 
-engine_part2!(pub PartialEngine(world, physics, cache, vision, messages));
+engine_part2!(pub EngineLifecycle(world, physics, cache, vision, messages, dialogs));
 
 /// Hook to be called after importing some new game objects.
-pub fn on_import(eng: &mut PartialEngine, importer: &Importer) {
+pub fn on_import(eng: &mut EngineLifecycle, importer: &Importer) {
     importer.iter_imports(|id| match id {
         AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
         AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_create(eng.refine(), tcid),
@@ -162,7 +162,7 @@ pub fn on_import(eng: &mut PartialEngine, importer: &Importer) {
 }
 
 /// Hook to be called before deleting some exported game objects..
-pub fn on_export(eng: &mut PartialEngine, exporter: &Exporter) {
+pub fn on_export(eng: &mut EngineLifecycle, exporter: &Exporter) {
     exporter.iter_exports(|id| match id {
         AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
         AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),

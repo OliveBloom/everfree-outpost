@@ -2,11 +2,13 @@ use std::mem;
 
 use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
+use util::SmallVec;
 
 use cache::TerrainCache;
 use data::StructureTemplate;
 use engine::Engine;
 use engine::glue::WorldFragment;
+use engine::split2::Coded;
 use logic;
 use messages::{Messages, ClientResponse};
 use physics::Physics;
@@ -19,11 +21,10 @@ use world::object::*;
 use world::OpResult;
 
 
-engine_part2!(pub PartialEngine(world, cache, vision, messages));
-
+engine_part2!(pub EngineLifecycle(world, cache, vision, messages, dialogs));
 
 /// Handler to be called just after creating a structure.
-pub fn on_create(eng: &mut PartialEngine, sid: StructureId) {
+pub fn on_create(eng: &mut EngineLifecycle, sid: StructureId) {
     let s = eng.world.structure(sid);
 
     let plane = s.plane_id();
@@ -39,7 +40,9 @@ pub fn on_create(eng: &mut PartialEngine, sid: StructureId) {
 }
 
 /// Handler to be called just before destroying a structure.
-pub fn on_destroy(eng: &mut PartialEngine, sid: StructureId) {
+pub fn on_destroy(eng: &mut EngineLifecycle, sid: StructureId) {
+    logic::dialogs::clear_structure_users(eng.refine(), sid);
+
     let s = eng.world.structure(sid);
 
     let plane = s.plane_id();
@@ -54,8 +57,20 @@ pub fn on_destroy(eng: &mut PartialEngine, sid: StructureId) {
     }
 }
 
+/// Similar to `on_destroy`, but also invokes `on_destroy` for all child objects.
+pub fn on_destroy_recursive(eng: &mut logic::world::EngineLifecycle, sid: StructureId) {
+    on_destroy(eng.refine(), sid);
+    let mut v = SmallVec::new();
+    for i in eng.world.structure(sid).child_inventories() {
+        v.push(i.id());
+    }
+    for &iid in v.iter() {
+        logic::inventory::on_destroy_recursive(eng, iid);
+    }
+}
+
 /// Handler to be called just after changing a structure's template.
-pub fn on_replace(eng: &mut PartialEngine,
+pub fn on_replace(eng: &mut EngineLifecycle,
                   sid: StructureId,
                   old_template_id: TemplateId) {
     let s = eng.world.structure(sid);
@@ -99,7 +114,7 @@ pub fn on_replace(eng: &mut PartialEngine,
 
 
 /// Handler to be called just after importing an entity.
-pub fn on_import(eng: &mut PartialEngine, sid: StructureId) {
+pub fn on_import(eng: &mut EngineLifecycle, sid: StructureId) {
     if eng.world.structure(sid).flags().contains(S_HAS_IMPORT_HOOK) {
         let hooks = eng.script_hooks();
         // FIXME bad transmute
@@ -110,9 +125,9 @@ pub fn on_import(eng: &mut PartialEngine, sid: StructureId) {
 
 
 
-engine_part2!(pub CheckEngine(world, cache));
+engine_part2!(pub EngineCheck(world, cache));
 
-pub fn checked_create(eng: &mut CheckEngine,
+pub fn checked_create(eng: &mut EngineCheck,
                       pid: PlaneId,
                       pos: V3,
                       template_id: TemplateId) -> OpResult<StructureId> {
@@ -123,7 +138,7 @@ pub fn checked_create(eng: &mut CheckEngine,
     Ok(s.id())
 }
 
-pub fn checked_replace(eng: &mut CheckEngine,
+pub fn checked_replace(eng: &mut EngineCheck,
                        sid: StructureId,
                        template_id: TemplateId) -> OpResult<()> {
     let data = eng.data();
