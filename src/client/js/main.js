@@ -189,6 +189,7 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     conn.onInitNoPawn = handleInitNoPawn;
     conn.onOpenPonyEdit = handleOpenPonyEdit;
     conn.onEntityActivityIcon = handleEntityActivityIcon;
+    conn.onCancelDialog = handleCancelDialog;
 
     conn.onSyncStatus = function(new_synced) {
         // The first time the status becomes SYNC_OK, swap out the canvas and
@@ -529,6 +530,10 @@ function handleOpenCrafting(station_type, station_id, inventory_id) {
         dialog.hide();
         conn.sendCloseDialog();
     };
+}
+
+function handleCancelDialog() {
+    asm_client.closeDialog();
 }
 
 function handleChatUpdate(msg) {

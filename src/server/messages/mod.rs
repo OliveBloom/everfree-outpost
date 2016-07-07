@@ -113,6 +113,7 @@ pub enum ClientResponse {
     GetUseAbilityArgs(ItemId, u32, ExtraArg),
 
     OpenDialog(Dialog),
+    CancelDialog,
     MainInventory(InventoryId),
     AbilityInventory(InventoryId),
     ProcessedInputs(Time, u16),
@@ -516,6 +517,9 @@ impl Messages {
                         self.send_raw(wire_id, Response::OpenPonyEdit(name)),
                 }
             },
+
+            ClientResponse::CancelDialog =>
+                self.send_raw(wire_id, Response::CancelDialog),
 
             ClientResponse::MainInventory(iid) =>
                 self.send_raw(wire_id, Response::MainInventory(iid)),

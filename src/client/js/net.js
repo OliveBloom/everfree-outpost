@@ -63,6 +63,7 @@ var OP_ACTIVITY_CHANGE =        0x8020;
 var OP_INIT_NO_PAWN =           0x8023;
 var OP_OPEN_PONYEDIT =          0x8024;
 var OP_ENTITY_ACTIVITY_ICON =   0x8025;
+var OP_CANCEL_DIALOG =          0x8026;
 
 exports.SYNC_LOADING = 0;
 exports.SYNC_OK = 1;
@@ -130,6 +131,7 @@ function Connection(x) {
     this.onInitNoPawn = null;
     this.onOpenPonyEdit = null;
     this.onEntityActivityIcon = null;
+    this.onCancelDialog = null;
 }
 exports.Connection = Connection;
 
@@ -527,6 +529,12 @@ Connection.prototype._handleMessage = function(evt) {
                 var id = get32();
                 var anim = get16();
                 this.onEntityActivityIcon(id, anim);
+            };
+            break;
+
+        case OP_CANCEL_DIALOG:
+            if (this.onCancelDialog != null) {
+                this.onCancelDialog();
             };
             break;
 

@@ -281,6 +281,11 @@ pub unsafe extern fn open_container_dialog(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn close_dialog(client: &mut Client) {
+    client.close_dialog();
+}
+
+#[no_mangle]
 pub unsafe extern fn get_active_item(client: &mut Client) -> u16 {
     client.get_active_item()
 }

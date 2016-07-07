@@ -49,23 +49,24 @@ impl Dialogs {
     }
 
     pub fn clear_inventory_users<F>(&mut self, iid: InventoryId, mut f: F)
-            where F: FnMut(ClientId, TargetId) {
+            where F: FnMut(ClientId, Option<TargetId>) {
         self.clear_users(TargetId::Inventory(iid), f);
     }
 
     pub fn clear_structure_users<F>(&mut self, sid: StructureId, mut f: F)
-            where F: FnMut(ClientId, TargetId) {
+            where F: FnMut(ClientId, Option<TargetId>) {
         self.clear_users(TargetId::Structure(sid), f);
     }
 
     pub fn clear_users<F>(&mut self, t: TargetId, mut f: F)
-            where F: FnMut(ClientId, TargetId) {
+            where F: FnMut(ClientId, Option<TargetId>) {
         let mut cids = Vec::new();
         self.ps.message(&t, |_,&cid| {
             cids.push(cid);
         });
         for cid in cids {
-            self.clear_dialog(cid, |tt| f(cid, tt));
+            f(cid, None);
+            self.clear_dialog(cid, |tt| f(cid, Some(tt)));
         }
     }
 }

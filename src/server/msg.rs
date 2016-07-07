@@ -105,6 +105,7 @@ mod op {
         InitNoPawn = 0x8023,
         OpenPonyEdit = 0x8024,
         EntityActivityIcon = 0x8025,
+        CancelDialog = 0x8026,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -288,6 +289,7 @@ pub enum Response {
     InitNoPawn((u16, u16, u16), LocalTime, u32, u32),
     OpenPonyEdit(String),
     EntityActivityIcon(EntityId, AnimId),
+    CancelDialog,
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -362,6 +364,8 @@ impl Response {
                 ww.write_msg(id, (op::OpenPonyEdit, name)),
             EntityActivityIcon(eid, anim) =>
                 ww.write_msg(id, (op::EntityActivityIcon, eid, anim)),
+            CancelDialog =>
+                ww.write_msg(id, op::CancelDialog),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

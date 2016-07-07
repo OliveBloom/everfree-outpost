@@ -407,6 +407,11 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::container(inv0, inv1);
     }
 
+    pub fn close_dialog(&mut self) {
+        use ui::dialogs::AnyDialog;
+        self.ui.root.dialog.inner = AnyDialog::none();
+    }
+
     pub fn get_active_item(&self) -> u16 {
         self.misc.hotbar.active_item().unwrap_or(0)
     }

@@ -33,6 +33,7 @@ input_mouse_up
 open_inventory_dialog
 open_ability_dialog
 open_container_dialog
+close_dialog
 get_active_item
 get_active_ability
 load_terrain_chunk
