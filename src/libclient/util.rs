@@ -26,3 +26,11 @@ pub fn contains_wrapped(bounds: Region<V2>, pos: V2, mask: V2) -> bool {
 pub fn wrap_base(pos: V3, base: V3) -> V3 {
     ((pos - base) & scalar::<V3>(4095)) + base
 }
+
+pub fn sqrt(x: f64) -> f64 {
+    unsafe { intrinsics::sqrtf64(x) }
+}
+
+pub fn round(x: f64) -> f64 {
+    unsafe { intrinsics::roundf64(x) }
+}

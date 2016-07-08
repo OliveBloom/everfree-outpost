@@ -41,6 +41,7 @@ pub mod inventory;
 mod misc;
 mod predict;
 mod debug;
+mod timing;
 
 pub mod graphics;
 pub mod ui;
