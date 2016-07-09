@@ -44,6 +44,7 @@ render_frame
 debug_record
 init_day_night
 set_plane_flags
+init_timing
 toggle_cursor
 calc_scale
 resize_window

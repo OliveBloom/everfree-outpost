@@ -33,13 +33,10 @@ pub struct TimingRecv {
     /// Index of the next `wheel` slot to be written.  This slot is considered empty/zero for
     /// purposes of computing `self.mean()`.
     index: usize,
-    /// Accumulator for deltas in `wheel`, used for computing mean and stddev.
-    sum_acc: Delta,
-    /// Accumulator for squares of deltas in `wheel`, used for computing stddev.
-    ///
-    /// This actually stores the sum divided by `WHEEL_SIZE * 4`, since deltas may range up to 2^16
-    /// and we need to avoid having the sum overflow 2^31.
-    sum2_acc: Delta,
+    /// Accumulator for computing the mean.  Stores `mean * WHEEL_SIZE` (the sum of `wheel`).
+    mean_acc: Delta,
+    /// Accumulator for computing the variance.  Stores `variance * WHEEL_SIZE * WHEEL_SIZE`.
+    var_acc: Delta,
 
     /// Server timestamp of the tick currently being processed.
     tick: ServerTime,
@@ -49,24 +46,13 @@ pub struct TimingRecv {
     last: ClientTime,
 }
 
-/// Carefully compute `x * x / WHEEL_SIZE / 4` to avoid overflow.
-fn smart_square(x: Delta) -> Delta {
-    // Compute `x/2 * x/2`, with one division rounding down and the other rounding up.  This
-    // provides good precision.
-    let a = (x + 0) / 2;
-    let b = (x + 1) / 2;
-
-    let d = WHEEL_SIZE as Delta;
-    (a * b + (d / 2)) / d
-}
-
 impl TimingRecv {
-    fn new() -> TimingRecv {
+    pub fn new() -> TimingRecv {
         TimingRecv {
             wheel: [0; WHEEL_SIZE],
             index: 0,
-            sum_acc: 0,
-            sum2_acc: 0,
+            mean_acc: 0,
+            var_acc: 0,
 
             tick: 0,
             first: 0,
@@ -75,30 +61,12 @@ impl TimingRecv {
     }
 
 
-    fn cur_delta(&self) -> Delta {
-        // Assume messages are generally sent about 1/4 of the way through the tick.  This
-        // adjustment somewhat reduces the bias due to number of messages sent in the tick.
-        let dur = self.last - self.first;
-        let extra = TICK_MS - dur;
-        self.last + extra * 3 / 4
-    }
-
-    fn cur_sum(&self) -> Delta {
-        self.sum_acc + self.cur_delta()
-    }
-
-    fn cur_sum2(&self) -> Delta {
-        self.sum2_acc + smart_square(self.cur_delta())
-    }
-
     fn mean(&self) -> Delta {
-        self.cur_sum() / (WHEEL_SIZE as Delta)
+        self.mean_acc / WHEEL_SIZE as Delta
     }
 
     fn variance(&self) -> Delta {
-        let a = self.cur_sum2();
-        let b = smart_square(self.cur_sum());
-        (a - b) * 4
+        self.var_acc / (WHEEL_SIZE * WHEEL_SIZE) as Delta
     }
 
     fn stddev(&self) -> Delta {
@@ -116,22 +84,33 @@ impl TimingRecv {
     }
 
     pub fn convert_confidence(&self, client: ClientTime, devs: i32) -> ServerTime {
+        println!("est. delta: {}, stddev: {}", self.mean(), self.stddev());
         client + self.mean() + self.stddev() * devs / 100
     }
 
 
-    fn init(&mut self, client: Time, server: u16) {
+    pub fn init(&mut self, client: Time, server: u16) {
         self.tick = (server as Time) & !TICK_MASK;
         self.first = client;
         self.last = client;
+
+        let delta = self.calc_delta();
+        for slot in self.wheel.iter_mut() {
+            *slot = delta;
+        }
+        self.mean_acc = delta * WHEEL_SIZE as Delta;
+        self.var_acc = 0;
     }
 
-    fn record(&mut self, client: Time, server: u16) {
+    pub fn record(&mut self, client: Time, server: u16) {
+        let msg = server;
         let server = self.decode(client, server);
+        println!(" - recording: msg = {}, client = {}, server = {}, delta = {}",
+                 msg, client, server, server - client);
 
         let tick = server & !TICK_MASK;
         if tick != self.tick {
-            self.commit_tick();
+            self.index = (self.index + 1) % WHEEL_SIZE;
             self.tick = tick;
             self.first = client;
             self.last = client;
@@ -139,16 +118,38 @@ impl TimingRecv {
             self.first = cmp::min(self.first, client);
             self.last = cmp::max(self.last, client);
         }
+        self.update_acc();
     }
 
-    fn commit_tick(&mut self) {
-        let old = self.wheel[(self.index + 1) % WHEEL_SIZE];
-        let new = self.cur_delta();
+    /// Replace the current slot in `wheel` with the result of `calc_delta()`, and update
+    /// accumulators.
+    fn update_acc(&mut self) {
+        let old = self.wheel[self.index];
+        let new = self.calc_delta();
 
-        self.sum_acc += new - old;
-        self.sum2_acc += smart_square(new) - smart_square(old);
+        let old_mean = self.mean_acc;
+        let new_mean = self.mean_acc + new - old;
+
+        const N: Delta = WHEEL_SIZE as Delta;
+        let old_var = self.var_acc;
+        let adj = (new - old) * (N * new - new_mean + N * old - old_mean);
+        let new_var = self.var_acc + adj;
 
         self.wheel[self.index] = new;
-        self.index = (self.index + 1) % WHEEL_SIZE;
+        self.mean_acc = new_mean;
+        self.var_acc = new_var;
+    }
+
+    /// Calculate the delta for the tick currently being measured.
+    fn calc_delta(&self) -> Delta {
+        // Assume messages are generally sent about 1/4 of the way through the tick.  This
+        // adjustment somewhat reduces the bias due to number of messages sent in the tick.
+        let dur = self.last - self.first;
+        let extra = TICK_MS - dur;
+        // Client timestamp corresponding to the start of the tick.
+        let client = self.first - extra * 1 / 4;
+        self.tick - client
     }
 }
+
+pub type Timing = TimingRecv;

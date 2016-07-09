@@ -31,6 +31,7 @@ use predict::{Predictor, Activity};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
+use timing::Timing;
 use ui::{UI, Dyn};
 use ui::input::{KeyAction, Modifiers, KeyEvent, EventStatus};
 
@@ -47,6 +48,7 @@ pub struct Client<'d, P: Platform> {
     predictor: Predictor,
     misc: Misc,
     debug: Debug,
+    timing: Timing,
 
     ui: UI,
 
@@ -81,6 +83,7 @@ impl<'d, P: Platform> Client<'d, P> {
             predictor: Predictor::new(),
             misc: Misc::new(),
             debug: Debug::new(),
+            timing: Timing::new(),
 
             ui: UI::new(),
 
@@ -177,15 +180,15 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn structure_appear(&mut self,
                             id: u32,
                             pixel_pos: V3,
-                            template_id: u32,
-                            oneshot_start: Time) {
+                            template_id: u32) {
         // Update self.structures
         const MASK: i32 = LOCAL_SIZE * CHUNK_SIZE - 1;
         let tile_pos = pixel_pos.div_floor(scalar(TILE_SIZE)) & scalar(MASK);
         let pos = (tile_pos.x as u8,
                    tile_pos.y as u8,
                    tile_pos.z as u8);
-        let oneshot_start = (oneshot_start % ONESHOT_MODULUS) as u16;
+        // TODO: get a timestamp from the server, instead of guessing server_now()
+        let oneshot_start = (self.server_now() % ONESHOT_MODULUS) as u16;
         self.structures.insert(id, pos, template_id, oneshot_start);
 
         // Update self.terrain_cache
@@ -217,8 +220,7 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn structure_replace(&mut self,
                              id: u32,
-                             template_id: u32,
-                             oneshot_start: i32) {
+                             template_id: u32) {
         let (pos, old_t) = {
             let s = &self.structures[id];
             (s.pos,
@@ -227,7 +229,8 @@ impl<'d, P: Platform> Client<'d, P> {
         let new_t = self.data.template(template_id);
 
         // Update self.structures
-        let oneshot_start = (oneshot_start % ONESHOT_MODULUS) as u16;
+        // TODO: get a timestamp from the server, instead of guessing server_now()
+        let oneshot_start = (self.server_now() % ONESHOT_MODULUS) as u16;
         self.structures.replace(id, template_id, oneshot_start);
 
         // Update self.terrain_cache
@@ -251,16 +254,23 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn entity_gone(&mut self,
-                       id: EntityId) {
+                       id: EntityId,
+                       time: u16) {
+        self.record_time(time);
+        // TODO: use the time
         self.entities.remove(id);
     }
 
     pub fn entity_motion_start(&mut self,
                                id: EntityId,
-                               start_time: Time,
+                               start_time: u16,
                                start_pos: V3,
                                velocity: V3,
                                anim: u16) {
+        self.record_time(start_time);
+        let start_time = self.decode_time(start_time);
+        println!("motion starts at {}, now = {}, delta = {}",
+                 start_time, self.server_now(), start_time - self.server_now());
         self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
 
         if Some(id) == self.pawn_id {
@@ -271,7 +281,9 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn entity_motion_end(&mut self,
                              id: EntityId,
-                             end_time: Time) {
+                             end_time: u16) {
+        self.record_time(end_time);
+        let end_time = self.decode_time(end_time);
         self.entities.schedule_motion_end(id, end_time);
 
         if Some(id) == self.pawn_id {
@@ -427,7 +439,9 @@ impl<'d, P: Platform> Client<'d, P> {
         self.predictor.input(time, InputBits::from_bits(bits).expect("invalid input bits"));
     }
 
-    pub fn processed_inputs(&mut self, time: Time, count: u16) {
+    pub fn processed_inputs(&mut self, time: u16, count: u16) {
+        self.record_time(time);
+        let time = self.decode_time(time);
         self.predictor.processed_inputs(time, count as usize);
     }
 
@@ -524,7 +538,12 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.load_cavern_map(&*grid);
     }
 
-    pub fn render_frame(&mut self, now: Time, future: Time) {
+    pub fn render_frame(&mut self, ping: Time) {
+        let client_now = self.platform.get_time();
+        // Only render ticks that are very likely to lie fully in the past.
+        let now = self.timing.convert_confidence(client_now, -200);
+        let future = now + ping;
+
         self.debug.record_interval(now);
         let day_time = self.misc.day_night.time_of_day(now);
         self.debug.day_time = day_time;
@@ -569,17 +588,40 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Misc
 
+    fn server_now(&self) -> Time {
+        let client_now = self.platform.get_time();
+        self.server_time(client_now)
+    }
+
+    fn server_time(&self, client: Time) -> Time {
+        self.timing.convert_confidence(client, 0)
+    }
+
+    fn decode_time(&self, time: u16) -> Time {
+        self.timing.decode(self.platform.get_time(), time)
+    }
+
+    fn record_time(&mut self, time: u16) {
+        self.timing.record(self.platform.get_time(), time);
+    }
+
     pub fn debug_record(&mut self, frame_time: Time, ping: u32) {
         self.debug.record_frame_time(frame_time);
         self.debug.ping = ping;
     }
 
-    pub fn init_day_night(&mut self, base_time: Time, cycle_ms: Time) {
+    pub fn init_day_night(&mut self, now: u16, base_offset: Time, cycle_ms: Time) {
+        // Compute the server time when the day/night cycle began
+        let base_time = self.decode_time(now) - base_offset;
         self.misc.day_night.init(base_time, cycle_ms);
     }
 
     pub fn set_plane_flags(&mut self, flags: u32) {
         self.misc.plane_is_dark = flags != 0;
+    }
+
+    pub fn init_timing(&mut self, server_now: u16) {
+        self.timing.init(self.platform.get_time(), server_now);
     }
 
     pub fn toggle_cursor(&mut self) {

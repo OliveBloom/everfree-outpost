@@ -1,5 +1,6 @@
 use std::prelude::v1::*;
 
+use Time;
 use inventory::InventoryId;
 
 #[macro_use] pub mod gl;
@@ -22,6 +23,8 @@ pub trait Platform {
                       dest_slot: usize,
                       amount: u8);
     fn send_close_dialog(&mut self);
+
+    fn get_time(&self) -> Time;
 }
 
 
@@ -51,6 +54,8 @@ pub trait PlatformObj {
                       dest_slot: usize,
                       amount: u8);
     fn send_close_dialog(&mut self);
+
+    fn get_time(&self) -> Time;
 }
 
 impl<P: Platform> PlatformObj for P {
@@ -78,6 +83,10 @@ impl<P: Platform> PlatformObj for P {
 
     fn send_close_dialog(&mut self) {
         Platform::send_close_dialog(self);
+    }
+
+    fn get_time(&self) -> Time {
+        Platform::get_time(self)
     }
 }
 
