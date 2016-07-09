@@ -216,6 +216,20 @@ def tribe(client, args):
     except Exception as e:
         client.send_message('Error: %r' % e)
 
+@chat.su_command('/kick <name> <msg>: Kick a player from the server')
+def kick(client, args):
+    try:
+        args = shlex.split(args)
+        name = args[0]
+        msg = ' '.join(args[1:]) or 'Kicked'
+        c = client.engine.client_by_name(name)
+        assert c is not None, 'no such client: %r' % name
+        c.kick(msg)
+
+    except Exception as e:
+        client.send_message('Error: %r' % e)
+
+
 class FunctionObject:
     def __init__(self, obj, f):
         self.obj = obj

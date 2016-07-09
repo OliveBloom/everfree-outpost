@@ -210,6 +210,11 @@ define_python_class! {
         }
 
 
+        fn engine_client_kick(eng: EngineRef, cid: ClientId, msg: String) {
+            eng.unwrap().kick_client(cid, &msg as &str);
+        }
+
+
         fn messages_clients_len(eng: OnlyMessages,) -> usize {
             eng.messages().clients_len()
         }

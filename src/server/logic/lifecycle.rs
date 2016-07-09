@@ -82,7 +82,7 @@ pub fn shut_down(eng: &mut Engine) {
 
 pub fn pre_restart(eng: &mut Engine) {
     // TODO: call into eng.chat instead
-    let msg = ClientResponse::ChatUpdate("***\tServer restarting...".to_owned());
+    let msg = ClientResponse::ChatUpdate("&s\t***\tServer restarting...".to_owned());
     eng.messages.broadcast_clients(msg);
     eng.messages.broadcast_clients(ClientResponse::SyncStatus(SyncKind::Reset));
 
@@ -120,6 +120,6 @@ pub fn post_restart(eng: &mut Engine, file: File) {
     }
 
     // TODO: call into eng.chat instead
-    let msg = ClientResponse::ChatUpdate("***\tServer restarted".to_owned());
+    let msg = ClientResponse::ChatUpdate("&s\t***\tServer restarted".to_owned());
     eng.messages.broadcast_clients(msg);
 }

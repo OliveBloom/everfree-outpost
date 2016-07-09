@@ -159,6 +159,9 @@ class ClientProxy(ObjectProxy):
     inv = _inv
     create_inv = _create_inv
 
+    def kick(self, msg):
+        self._eng.engine_client_kick(self.id, msg)
+
 
 Walk = namedtuple('Walk', ())
 Emote = namedtuple('Emote', ('anim',))
