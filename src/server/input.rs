@@ -1,5 +1,7 @@
+use std::cmp;
 use std::collections::hash_map::{self, HashMap};
 use std::mem;
+use std::ptr;
 use types::*;
 
 use msg::ExtraArg;
@@ -24,22 +26,32 @@ pub enum Action {
 }
 
 
+const QUEUE_SIZE: usize = 4;
+
 /// Track the latest input from each client.
 pub struct Input {
-    pending_input: HashMap<ClientId, (InputBits, u16)>,
+    pending_input_maps: [HashMap<ClientId, (InputBits, u16)>; QUEUE_SIZE],
+    input_index: i32,
     pending_action: HashMap<ClientId, (Action, Option<ExtraArg>)>,
 }
 
 impl Input {
     pub fn new() -> Input {
+        let mut maps = unsafe { mem::dropped() };
+        for map in &mut maps {
+            unsafe { ptr::write(map as *mut _, HashMap::new()) };
+        }
+
         Input {
-            pending_input: HashMap::new(),
+            pending_input_maps: maps,
+            input_index: 0,
             pending_action: HashMap::new(),
         }
     }
 
-    pub fn schedule_input(&mut self, cid: ClientId, input: InputBits) {
-        let mut i = self.pending_input.entry(cid).or_insert((input, 0));
+    pub fn schedule_input(&mut self, cid: ClientId, offset: i32, input: InputBits) {
+        let slot = cmp::max(0, cmp::min(self.input_index + offset, QUEUE_SIZE as i32 - 1));
+        let mut i = self.pending_input_maps[slot as usize].entry(cid).or_insert((input, 0));
         i.0 = input;
         // If this ever wraps, the client will get very confused, but that's their own fault for
         // spamming 65,000 inputs in a single tick.
@@ -51,7 +63,10 @@ impl Input {
     }
 
     pub fn inputs(&mut self) -> hash_map::IntoIter<ClientId, (InputBits, u16)> {
-        mem::replace(&mut self.pending_input, HashMap::new()).into_iter()
+        let map = &mut self.pending_input_maps[self.input_index as usize];
+        let iter = mem::replace(map, HashMap::new()).into_iter();
+        self.input_index = (self.input_index + 1) % QUEUE_SIZE as i32;
+        iter
     }
 
     pub fn actions(&mut self) -> hash_map::IntoIter<ClientId, (Action, Option<ExtraArg>)> {

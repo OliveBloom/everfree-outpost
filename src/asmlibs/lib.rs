@@ -376,8 +376,9 @@ pub unsafe extern fn handle_pong(client: &mut Client,
 }
 
 #[no_mangle]
-pub unsafe extern fn predict_arrival(client: &mut Client) -> i32 {
-    client.predict_arrival()
+pub unsafe extern fn predict_arrival(client: &mut Client,
+                                     extra_delay: i32) -> i32 {
+    client.predict_arrival(extra_delay)
 }
 
 #[no_mangle]

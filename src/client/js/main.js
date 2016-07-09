@@ -361,7 +361,7 @@ function setupKeyHandler() {
             return true;
         } else if (down) {
             // TODO: actions don't get predicted, so time shouldn't matter
-            var time = timing.encodeSend(asm_client.predictArrival());
+            var time = timing.encodeSend(asm_client.predictArrival(0));
 
             switch (binding) {
                 // UI actions
@@ -453,7 +453,7 @@ function setupKeyHandler() {
             target_velocity = target_velocity.mulScalar(50);
         }
 
-        var arrival = asm_client.predictArrival() + Config.input_delay.get();
+        var arrival = asm_client.predictArrival(Config.input_delay.get());
         conn.sendInput(timing.encodeSend(arrival), bits);
 
         asm_client.feedInput(arrival, bits);
@@ -610,7 +610,7 @@ function handleGenericGetArgs(dialog_id, parts, cb) {
     var d = new (DIALOG_TYPES[dialog_id])(parts);
     d.onsubmit = function(args) {
         dialog.hide();
-        var time = timing.encodeSend(asm_client.predictArrival());
+        var time = timing.encodeSend(asm_client.predictArrival(0));
         cb(time, args);
     };
     dialog.show(d);

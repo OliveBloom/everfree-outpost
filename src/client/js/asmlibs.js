@@ -674,8 +674,8 @@ DynAsm.prototype.handlePong = function(client_send, client_recv, server_now) {
     this._raw['handle_pong'](this.client, client_send, client_recv, server_now);
 };
 
-DynAsm.prototype.predictArrival = function() {
-    return this._raw['predict_arrival'](this.client);
+DynAsm.prototype.predictArrival = function(extra_delay) {
+    return this._raw['predict_arrival'](this.client, extra_delay);
 };
 
 DynAsm.prototype.toggleCursor = function() {

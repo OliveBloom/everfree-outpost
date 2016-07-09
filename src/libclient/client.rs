@@ -619,10 +619,10 @@ impl<'d, P: Platform> Client<'d, P> {
         self.timing.record_ping(client_send, client_recv, server);
     }
 
-    pub fn predict_arrival(&mut self) -> Time {
+    pub fn predict_arrival(&mut self, extra_delay: Time) -> Time {
         let client = self.platform.get_time();
         let server = self.timing.predict_confidence(client, 200);
-        (server + TICK_MS - 1) & !TICK_MS
+        (server + extra_delay + TICK_MS - 1) & !(TICK_MS - 1)
     }
 
     pub fn toggle_cursor(&mut self) {
