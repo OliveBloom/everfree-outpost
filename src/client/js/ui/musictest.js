@@ -59,7 +59,7 @@ function MusicTest() {
         var name = TRACKS[i];
 
         var option = util.element('option', [
-                'value=music/' + name,
+                'value=/music/' + name,
                 'text=' + name], select);
     }
 
