@@ -365,7 +365,9 @@ Launcher.prototype._loadData = function() {
 
     this.cur_progress = 0;
     this.completed_progress = 0;
-    this._xhr(new URL('outpost.pack', this.server_url).href, 'blob', {
+
+    var pack_url = new URL(this.server_info['pack'], this.server_url).href;
+    this._xhr(new URL(pack_url, this.server_url).href, 'blob', {
         progress: function(evt) {
             this_.cur_progress = evt.loaded;
             // Assume the pack is no more than a megabyte
