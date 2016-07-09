@@ -19,9 +19,9 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _flush_str = env.flushStr;
     var _flush_str_warn = env.flushStrWarn;
     var _flush_str_err = env.flushStrErr;
+    var _llvm_floor_f64 = global.Math.floor;
     var Math_imul = global.Math.imul;
     var Math_sqrt = global.Math.sqrt;
-    var _llvm_round_f64 = global.Math.round;
     var nan = global.NaN;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 

@@ -31,6 +31,10 @@ pub fn sqrt(x: f64) -> f64 {
     unsafe { intrinsics::sqrtf64(x) }
 }
 
+pub fn floor(x: f64) -> f64 {
+    unsafe { intrinsics::floorf64(x) }
+}
+
 pub fn round(x: f64) -> f64 {
-    unsafe { intrinsics::roundf64(x) }
+    floor(x + 0.5)
 }
