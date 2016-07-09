@@ -19,136 +19,162 @@ use Time;
 use util::{sqrt, round};
 
 
-const WHEEL_SIZE: usize = 64;
-const TICK_MS: Time = 32;
+pub const TICK_MS: Time = 32;
 const TICK_MASK: Time = TICK_MS - 1;
 
 type ClientTime = Time;
 type ServerTime = Time;
 type Delta = Time;
 
-pub struct TimingRecv {
+
+const WHEEL_SIZE: usize = 64;
+
+struct Wheel {
     /// List of client-server time deltas computed so far.
-    wheel: [Delta; WHEEL_SIZE],
+    wheel: [Time; WHEEL_SIZE],
     /// Index of the next `wheel` slot to be written.  This slot is considered empty/zero for
     /// purposes of computing `self.mean()`.
     index: usize,
-    /// Accumulator for deltas in `wheel`, used for computing mean and stddev.
-    sum_acc: Delta,
-    /// Accumulator for squares of deltas in `wheel`, used for computing stddev.
-    ///
-    /// This actually stores the sum divided by `WHEEL_SIZE * 4`, since deltas may range up to 2^16
-    /// and we need to avoid having the sum overflow 2^31.
-    sum2_acc: Delta,
-
-    /// Server timestamp of the tick currently being processed.
-    tick: ServerTime,
-    /// Client timestamp of the first packet received for this tick.
-    first: ClientTime,
-    /// Client timestamp of the last packet received for this tick.
-    last: ClientTime,
+    /// Accumulator for computing the mean.  Stores `mean * WHEEL_SIZE` (the sum of `wheel`).
+    mean_acc: Time,
+    /// Accumulator for computing the variance.  Stores `variance * WHEEL_SIZE * WHEEL_SIZE`.
+    var_acc: Time,
 }
 
-/// Carefully compute `x * x / WHEEL_SIZE / 4` to avoid overflow.
-fn smart_square(x: Delta) -> Delta {
-    // Compute `x/2 * x/2`, with one division rounding down and the other rounding up.  This
-    // provides good precision.
-    let a = (x + 0) / 2;
-    let b = (x + 1) / 2;
-
-    let d = WHEEL_SIZE as Delta;
-    (a * b + (d / 2)) / d
-}
-
-impl TimingRecv {
-    fn new() -> TimingRecv {
-        TimingRecv {
-            wheel: [0; WHEEL_SIZE],
+impl Wheel {
+    pub fn new(value: Time) -> Wheel {
+        Wheel {
+            wheel: [value; WHEEL_SIZE],
             index: 0,
-            sum_acc: 0,
-            sum2_acc: 0,
-
-            tick: 0,
-            first: 0,
-            last: 0,
+            mean_acc: value * WHEEL_SIZE as Time,
+            var_acc: 0,
         }
     }
 
+    pub fn set(&mut self, val: Time) {
+        let old = self.wheel[self.index];
+        let new = val;
 
-    fn cur_delta(&self) -> Delta {
-        // Assume messages are generally sent about 1/4 of the way through the tick.  This
-        // adjustment somewhat reduces the bias due to number of messages sent in the tick.
-        let dur = self.last - self.first;
-        let extra = TICK_MS - dur;
-        self.last + extra * 3 / 4
+        let old_mean = self.mean_acc;
+        let new_mean = self.mean_acc + new - old;
+
+        const N: Delta = WHEEL_SIZE as Delta;
+        let old_var = self.var_acc;
+        let adj = (new - old) * (N * new - new_mean + N * old - old_mean);
+        let new_var = self.var_acc + adj;
+
+        self.wheel[self.index] = new;
+        self.mean_acc = new_mean;
+        self.var_acc = new_var;
     }
 
-    fn cur_sum(&self) -> Delta {
-        self.sum_acc + self.cur_delta()
+    pub fn advance(&mut self) {
+        self.index = (self.index + 1) % WHEEL_SIZE;
     }
 
-    fn cur_sum2(&self) -> Delta {
-        self.sum2_acc + smart_square(self.cur_delta())
+    pub fn set_advance(&mut self, val: Time) {
+        self.set(val);
+        self.advance();
     }
 
-    fn mean(&self) -> Delta {
-        self.cur_sum() / (WHEEL_SIZE as Delta)
+    pub fn mean(&self) -> Time {
+        self.mean_acc / WHEEL_SIZE as Time
     }
 
-    fn variance(&self) -> Delta {
-        let a = self.cur_sum2();
-        let b = smart_square(self.cur_sum());
-        (a - b) * 4
+    pub fn variance(&self) -> Time {
+        self.var_acc / (WHEEL_SIZE * WHEEL_SIZE) as Time
     }
 
-    fn stddev(&self) -> Delta {
-        round(sqrt(self.variance() as f64)) as Delta
+    pub fn stddev(&self) -> Time {
+        round(sqrt(self.variance() as f64)) as Time
+    }
+}
+
+
+
+pub struct Timing {
+    delta: Wheel,
+    ping: Wheel,
+    ping_inited: bool,
+}
+
+impl Timing {
+    pub fn new() -> Timing {
+        Timing {
+            delta: Wheel::new(0),
+            ping: Wheel::new(0),
+            ping_inited: false,
+        }
     }
 
+    pub fn init(&mut self, client: ClientTime, server: u16) {
+        let server = server as Time;
+        let delta = server - client;
+
+        self.delta = Wheel::new(delta);
+    }
+
+    pub fn record_ping(&mut self, client_send: ClientTime, client_recv: ClientTime, server: u16) {
+        let server = self.decode(client_recv, server);
+        let delta = server - client_recv;
+        let ping = client_recv - client_send;
+
+        self.delta.set_advance(delta);
+
+        if self.ping_inited {
+            self.ping.set_advance(ping);
+        } else {
+            self.ping = Wheel::new(ping);
+            self.ping_inited = true;
+        }
+    }
+
+    pub fn record_delta(&mut self, client_recv: ClientTime, server: u16) {
+        let server = self.decode(client_recv, server);
+        let delta = server - client_recv;
+
+        self.delta.set_advance(delta);
+    }
+
+
+    /// Decode a message time into a complete server time.
     pub fn decode(&self, client: ClientTime, server: u16) -> ServerTime {
-        let server_now = client + self.mean();
-        let offset = server.wrapping_sub(server_now as u16);
-        server_now + offset as i16 as ServerTime
+        // Interpret `server` relative to a sliding window centered on our current approximation of
+        // server time.
+        let center: ServerTime = client + self.delta.mean();
+        let offset = server.wrapping_sub(center as u16);
+        center + offset as i16 as ServerTime
     }
 
+    /// Get the server time corresponding to a given client time.
     pub fn convert(&self, client: ClientTime) -> ServerTime {
-        client + self.mean()
+        client + self.delta.mean()
     }
 
     pub fn convert_confidence(&self, client: ClientTime, devs: i32) -> ServerTime {
-        client + self.mean() + self.stddev() * devs / 100
+        //println!("est. delta: {}, stddev: {}", self.delta.mean(), self.delta.stddev());
+        client + self.delta.mean() + self.delta.stddev() * devs / 100
     }
 
-
-    fn init(&mut self, client: Time, server: u16) {
-        self.tick = (server as Time) & !TICK_MASK;
-        self.first = client;
-        self.last = client;
+    /// Predict the server time when a message will arrive, if sent at a given client time.
+    pub fn predict(&self, client: ClientTime) -> ServerTime {
+        self.convert(client) + self.ping.mean()
     }
 
-    fn record(&mut self, client: Time, server: u16) {
-        let server = self.decode(client, server);
-
-        let tick = server & !TICK_MASK;
-        if tick != self.tick {
-            self.commit_tick();
-            self.tick = tick;
-            self.first = client;
-            self.last = client;
-        } else {
-            self.first = cmp::min(self.first, client);
-            self.last = cmp::max(self.last, client);
-        }
+    pub fn predict_confidence(&self, client: ClientTime, devs: i32) -> ServerTime {
+        let ping = self.ping.mean() + self.ping.stddev() * devs / 100;
+        self.convert_confidence(client, devs) + ping
     }
 
-    fn commit_tick(&mut self) {
-        let old = self.wheel[(self.index + 1) % WHEEL_SIZE];
-        let new = self.cur_delta();
+    pub fn get_ping(&self) -> Delta {
+        self.ping.mean()
+    }
 
-        self.sum_acc += new - old;
-        self.sum2_acc += smart_square(new) - smart_square(old);
+    pub fn get_ping_dev(&self) -> Delta {
+        self.ping.stddev()
+    }
 
-        self.wheel[self.index] = new;
-        self.index = (self.index + 1) % WHEEL_SIZE;
+    pub fn get_delta_dev(&self) -> Delta {
+        self.delta.stddev()
     }
 }

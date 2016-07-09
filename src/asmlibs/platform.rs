@@ -29,6 +29,8 @@ mod ffi {
                                  dest_slot: usize,
                                  amount: u8);
         pub fn ap_send_close_dialog();
+
+        pub fn ap_get_time() -> i32;
     }
 }
 
@@ -74,6 +76,12 @@ impl platform::Platform for Platform {
     fn send_close_dialog(&mut self) {
         unsafe {
             ffi::ap_send_close_dialog();
+        }
+    }
+
+    fn get_time(&self) -> i32 {
+        unsafe {
+            ffi::ap_get_time()
         }
     }
 }

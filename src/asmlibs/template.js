@@ -19,8 +19,9 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _flush_str = env.flushStr;
     var _flush_str_warn = env.flushStrWarn;
     var _flush_str_err = env.flushStrErr;
-    var _now = env.now;
     var Math_imul = global.Math.imul;
+    var Math_sqrt = global.Math.sqrt;
+    var _llvm_round_f64 = global.Math.round;
     var nan = global.NaN;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 
@@ -79,6 +80,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var _ap_set_cursor = env.ap_set_cursor;
     var _ap_send_move_item = env.ap_send_move_item;
     var _ap_send_close_dialog = env.ap_send_close_dialog;
+    var _ap_get_time = env.ap_get_time;
 
     var tempRet0 = 0;
 

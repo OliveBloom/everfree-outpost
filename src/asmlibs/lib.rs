@@ -99,12 +99,10 @@ pub unsafe extern fn structure_appear(client: &mut Client,
                                       pos_x: i32,
                                       pos_y: i32,
                                       pos_z: i32,
-                                      template_id: u32,
-                                      oneshot_start: i32) {
+                                      template_id: u32) {
     client.structure_appear(id,
                             V3::new(pos_x, pos_y, pos_z),
-                            template_id,
-                            oneshot_start);
+                            template_id);
 }
 
 #[no_mangle]
@@ -116,9 +114,8 @@ pub unsafe extern fn structure_gone(client: &mut Client,
 #[no_mangle]
 pub unsafe extern fn structure_replace(client: &mut Client,
                                        id: u32,
-                                       template_id: u32,
-                                       oneshot_start: i32) {
-    client.structure_replace(id, template_id, oneshot_start);
+                                       template_id: u32) {
+    client.structure_replace(id, template_id);
 }
 
 // Entities
@@ -141,14 +138,15 @@ pub unsafe extern fn entity_appear(client: &mut Client,
 
 #[no_mangle]
 pub unsafe extern fn entity_gone(client: &mut Client,
-                                 id: u32) {
-    client.entity_gone(id);
+                                 id: u32,
+                                 time: u16) {
+    client.entity_gone(id, time);
 }
 
 #[no_mangle]
 pub unsafe extern fn entity_motion_start(client: &mut Client,
                                          id: u32,
-                                         start_time: i32,
+                                         start_time: u16,
                                          pos_x: i32,
                                          pos_y: i32,
                                          pos_z: i32,
@@ -166,7 +164,7 @@ pub unsafe extern fn entity_motion_start(client: &mut Client,
 #[no_mangle]
 pub unsafe extern fn entity_motion_end(client: &mut Client,
                                        id: u32,
-                                       end_time: i32) {
+                                       end_time: u16) {
     client.entity_motion_end(id, end_time);
 }
 
@@ -308,7 +306,7 @@ pub extern fn feed_input(client: &mut Client,
 
 #[no_mangle]
 pub extern fn processed_inputs(client: &mut Client,
-                               time: i32,
+                               time: u16,
                                count: u16) {
     client.processed_inputs(time, count);
 }
@@ -337,32 +335,50 @@ unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
 
 
 #[no_mangle]
-pub unsafe extern fn render_frame(client: &mut Client,
-                                  now: i32,
-                                  future: i32) {
-    client.render_frame(now, future);
+pub unsafe extern fn render_frame(client: &mut Client) {
+    client.render_frame();
 }
 
 // Misc
 
 #[no_mangle]
 pub unsafe extern fn debug_record(client: &mut Client,
-                                  frame_time: i32,
-                                  ping: u32) {
-    client.debug_record(frame_time, ping);
+                                  frame_time: i32) {
+    client.debug_record(frame_time);
 }
 
 #[no_mangle]
 pub unsafe extern fn init_day_night(client: &mut Client,
-                                    base_time: i32,
+                                    time: u16,
+                                    base_offset: i32,
                                     cycle_ms: i32) {
-    client.init_day_night(base_time, cycle_ms);
+    client.init_day_night(time, base_offset, cycle_ms);
 }
 
 #[no_mangle]
 pub unsafe extern fn set_plane_flags(client: &mut Client,
                                      flags: u32) {
     client.set_plane_flags(flags);
+}
+
+#[no_mangle]
+pub unsafe extern fn init_timing(client: &mut Client,
+                                 time: u16) {
+    client.init_timing(time);
+}
+
+#[no_mangle]
+pub unsafe extern fn handle_pong(client: &mut Client,
+                                 client_send: i32,
+                                 client_recv: i32,
+                                 server: u16) {
+    client.handle_pong(client_send, client_recv, server);
+}
+
+#[no_mangle]
+pub unsafe extern fn predict_arrival(client: &mut Client,
+                                     extra_delay: i32) -> i32 {
+    client.predict_arrival(extra_delay)
 }
 
 #[no_mangle]
@@ -392,14 +408,14 @@ pub unsafe extern fn ponyedit_render(client: &mut Client,
 
 
 #[no_mangle]
-pub unsafe extern fn client_bench(client: &mut Client) -> u32 {
+pub unsafe extern fn client_bench(client: &mut Client) -> i32 {
     extern "C" {
-        fn now() -> u32;
+        fn ap_get_time() -> i32;
     }
 
-    let start = now();
+    let start = ap_get_time();
     client.bench();
-    let end = now();
+    let end = ap_get_time();
 
     end - start
 }

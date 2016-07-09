@@ -205,12 +205,14 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
         handleSyncStatus(new_synced);
     };
 
-    conn.sendReady();
-
-    timing = new Timing(conn);
-    timing.scheduleUpdates(5, 30);
+    // NB: create Timing (which sends a Ping) before sendReady().  This ensures
+    // the slight delay of loading chunks won't impact the initial ping time.
+    timing = new Timing(asm_client, conn);
+    timing.scheduleUpdates(2, 5);
     inv_tracker = new InventoryTracker(conn, asm_client);
     asm_client.conn = conn;
+
+    conn.sendReady();
 
     console.log('handoff complete');
 
@@ -358,7 +360,8 @@ function setupKeyHandler() {
             updateWalkDir();
             return true;
         } else if (down) {
-            var time = timing.encodeSend(timing.nextArrival());
+            // TODO: actions don't get predicted, so time shouldn't matter
+            var time = timing.encodeSend(asm_client.predictArrival(0));
 
             switch (binding) {
                 // UI actions
@@ -450,7 +453,7 @@ function setupKeyHandler() {
             target_velocity = target_velocity.mulScalar(50);
         }
 
-        var arrival = timing.nextArrival() + Config.input_delay.get();
+        var arrival = asm_client.predictArrival(Config.input_delay.get());
         conn.sendInput(timing.encodeSend(arrival), bits);
 
         asm_client.feedInput(arrival, bits);
@@ -488,14 +491,14 @@ function handleClose(evt, reason) {
 
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
     asm_client.setPawnId(entity_id);
-    var pst_now = timing.decodeRecv(now);
-    asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
+    asm_client.initTiming(now);
+    asm_client.initDayNight(now, cycle_base, cycle_ms);
 }
 
 function handleInitNoPawn(x, y, z, now, cycle_base, cycle_ms) {
     asm_client.setDefaultCameraPos(x, y, z);
-    var pst_now = timing.decodeRecv(now);
-    asm_client.initDayNight(pst_now - cycle_base, cycle_ms);
+    asm_client.initTiming(now);
+    asm_client.initDayNight(now, cycle_base, cycle_ms);
 }
 
 function handleTerrainChunk(i, data) {
@@ -545,23 +548,19 @@ function handleEntityAppear(id, appearance_bits, name) {
 }
 
 function handleEntityGone(id, time) {
-    // TODO: actually delay until the specified time
-    asm_client.entityGone(id);
+    asm_client.entityGone(id, time);
 }
 
 function handleStructureAppear(id, template_id, x, y, z) {
-    var now = timing.visibleNow();
-    asm_client.structureAppear(id, x, y, z, template_id, now);
+    asm_client.structureAppear(id, x, y, z, template_id);
 }
 
 function handleStructureGone(id, time) {
-    // TODO: pay attention to the time
-    asm_client.structureGone(id);
+    asm_client.structureGone(id, time);
 }
 
 function handleStructureReplace(id, template_id) {
-    var now = timing.visibleNow();
-    asm_client.structureReplace(id, template_id, now);
+    asm_client.structureReplace(id, template_id);
 }
 
 function handleMainInventory(iid) {
@@ -611,7 +610,7 @@ function handleGenericGetArgs(dialog_id, parts, cb) {
     var d = new (DIALOG_TYPES[dialog_id])(parts);
     d.onsubmit = function(args) {
         dialog.hide();
-        var time = timing.encodeSend(timing.nextArrival());
+        var time = timing.encodeSend(asm_client.predictArrival(0));
         cb(time, args);
     };
     dialog.show(d);
@@ -635,12 +634,11 @@ function handleSyncStatus(new_synced) {
 }
 
 function handleEntityMotionStart(id, m, anim) {
-    var start_time = timing.decodeRecv(m.start_time);
-    asm_client.entityMotionStart(id, start_time, m.start_pos, m.velocity, anim);
+    asm_client.entityMotionStart(id, m.start_time, m.start_pos, m.velocity, anim);
 }
 
 function handleEntityMotionEnd(id, end_time) {
-    asm_client.entityMotionEnd(id, timing.decodeRecv(end_time));
+    asm_client.entityMotionEnd(id, end_time);
 }
 
 function handleEntityMotionStartEnd(id, m, anim) {
@@ -649,7 +647,7 @@ function handleEntityMotionStartEnd(id, m, anim) {
 }
 
 function handleProcessedInputs(time, count) {
-    asm_client.processedInputs(timing.decodeRecv(time), count);
+    asm_client.processedInputs(time, count);
 }
 
 function handleActivityChange(activity) {
@@ -700,10 +698,9 @@ function frame(fine_now) {
         return;
     }
 
-    var now = timing.visibleNow();
-    var future = now + timing.ping;
-    asm_client.renderFrame(now, future);
+    var start_time = Date.now();
+    asm_client.renderFrame();
+    var end_time = Date.now();
 
-    var frame_time = timing.visibleNow() - now;
-    asm_client.debugRecord(frame_time, timing.ping);
+    asm_client.debugRecord(end_time - start_time);
 }

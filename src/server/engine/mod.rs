@@ -223,9 +223,9 @@ impl<'d> Engine<'d> {
                      evt: ClientEvent) -> HandlerResult {
         use messages::ClientEvent::*;
         match evt {
-            Input(_time, input) => {
-                // TODO: actually respect the requested delay
-                self.input.schedule_input(cid, input);
+            Input(time, input) => {
+                let tick = (time - next_tick(self.now)) / TICK_MS;
+                self.input.schedule_input(cid, tick as i32, input);
             },
 
             CloseDialog => {

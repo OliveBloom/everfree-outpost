@@ -60,9 +60,6 @@ var module_env = function(asm) {
             msg_buffer = '';
         },
 
-        'now': function() {
-            return Date.now() & 0xffffffff;
-        },
 
 
         'asmgl_has_extension': function(name_ptr, name_len) {
@@ -266,6 +263,10 @@ var module_env = function(asm) {
             asm.conn.sendCloseDialog();
         },
 
+        'ap_get_time': function() {
+            return (Date.now() - asm._time_base) & 0x7fffffff;
+        },
+
 
         'STACK_START': STACK_START,
         'STACK_END': STACK_END,
@@ -312,6 +313,8 @@ var HEAP_PADDING = 256 * 1024;
 function DynAsm() {
     this.asmgl = new AsmGl();
     this.conn = null;   // Will be set later, in main.js
+    this._time_base = Date.now();
+
 
     this.buffer = new ArrayBuffer(next_heap_size(INIT_HEAP_SIZE));
     this._memcpy(STATIC_START, static_data);
@@ -451,17 +454,16 @@ DynAsm.prototype.resetClient = function() {
     this._raw['client_reset'](this.client);
 };
 
-DynAsm.prototype.structureAppear = function(id, x, y, z, template_id, oneshot_start) {
-    this._raw['structure_appear'](this.client,
-            id, x, y, z, template_id, oneshot_start);
+DynAsm.prototype.structureAppear = function(id, x, y, z, template_id) {
+    this._raw['structure_appear'](this.client, id, x, y, z, template_id);
 };
 
 DynAsm.prototype.structureGone = function(id) {
     this._raw['structure_gone'](this.client, id);
 };
 
-DynAsm.prototype.structureReplace = function(id, template_id, oneshot_start) {
-    this._raw['structure_replace'](this.client, id, template_id, oneshot_start);
+DynAsm.prototype.structureReplace = function(id, template_id) {
+    this._raw['structure_replace'](this.client, id, template_id);
 };
 
 DynAsm.prototype.entityAppear = function(id, appearance, name) {
@@ -477,8 +479,8 @@ DynAsm.prototype.entityAppear = function(id, appearance, name) {
     this._raw['entity_appear'](this.client, id, appearance, name_ptr, name_len);
 };
 
-DynAsm.prototype.entityGone = function(id) {
-    this._raw['entity_gone'](this.client, id);
+DynAsm.prototype.entityGone = function(id, time) {
+    this._raw['entity_gone'](this.client, id, time);
 };
 
 DynAsm.prototype.entityMotionStart = function(id, time, pos, velocity, anim) {
@@ -646,20 +648,34 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.renderFrame = function(now, future) {
-    this._raw['render_frame'](this.client, now, future);
+DynAsm.prototype.renderFrame = function() {
+    this._raw['render_frame'](this.client);
 };
 
 DynAsm.prototype.debugRecord = function(frame_time, ping) {
     this._raw['debug_record'](this.client, frame_time, ping);
 };
 
-DynAsm.prototype.initDayNight = function(base_time, cycle_ms) {
-    this._raw['init_day_night'](this.client, base_time, cycle_ms);
+DynAsm.prototype.initDayNight = function(time, base_offset, cycle_ms) {
+    this._raw['init_day_night'](this.client, time, base_offset, cycle_ms);
 };
 
 DynAsm.prototype.setPlaneFlags = function(flags) {
     this._raw['set_plane_flags'](this.client, flags);
+};
+
+DynAsm.prototype.initTiming = function(server_now) {
+    this._raw['init_timing'](this.client, server_now);
+};
+
+DynAsm.prototype.handlePong = function(client_send, client_recv, server_now) {
+    client_send -= this._time_base;
+    client_recv -= this._time_base;
+    this._raw['handle_pong'](this.client, client_send, client_recv, server_now);
+};
+
+DynAsm.prototype.predictArrival = function(extra_delay) {
+    return this._raw['predict_arrival'](this.client, extra_delay);
 };
 
 DynAsm.prototype.toggleCursor = function() {

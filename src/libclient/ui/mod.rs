@@ -87,7 +87,6 @@ impl UI {
         let rect = Region::sized(root.size());
 
         self.context.mouse_pos = pos;
-        println!("ui: mouse move: {:?}", pos);
         root.on_mouse_move(&mut self.context, rect)
     }
 
