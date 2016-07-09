@@ -126,7 +126,7 @@ fn export_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
     // TODO(plane): use pid + cpos for filename
     trace!("unload chunk: ({:?}, {:?})", pid, cpos);
     let stable_tcid = DummyFragment::new(&mut eng.world).plane_mut(pid).save_terrain_chunk(cpos);
-    let (tcid, exporter) = {
+    let (tcid, opt_exporter) = {
         let p = eng.world.plane(pid);
         let tc = p.terrain_chunk(cpos);
 
@@ -140,12 +140,18 @@ fn export_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
 
             let mut file = eng.storage().create_terrain_chunk_file(stable_tcid);
             try!(bundle::write_bundle(&mut file, &b));
-        }
 
-        (tc.id(), exporter)
+            (tc.id(), Some(exporter))
+        } else {
+            (tc.id(), None)
+        }
     };
 
-    logic::world::on_export(eng.refine(), &exporter);
+    if let Some(exporter) = opt_exporter {
+        logic::world::on_export(eng.refine(), &exporter);
+    } else {
+        logic::terrain_chunk::on_destroy_recursive(eng.refine(), tcid);
+    }
     try!(DummyFragment::new(&mut eng.world).destroy_terrain_chunk(tcid));
     Ok(())
 }

@@ -1,7 +1,9 @@
 use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
+use util::SmallVec;
 
 use engine::Engine;
+use engine::split2::Coded;
 use logic;
 use messages::{Messages, ClientResponse};
 use physics::Physics;
@@ -42,6 +44,18 @@ pub fn on_destroy(eng: &mut PartialEngine, tcid: TerrainChunkId) {
     // No message on chunk destroy
     eng.vision.terrain_chunk_remove(tcid, plane, cpos, |_| {
     });
+}
+
+/// Similar to `on_destroy`, but also invokes `on_destroy` for all child objects.
+pub fn on_destroy_recursive(eng: &mut logic::world::EngineLifecycle, tcid: TerrainChunkId) {
+    on_destroy(eng.refine(), tcid);
+    let mut v = SmallVec::new();
+    for s in eng.world.terrain_chunk(tcid).child_structures() {
+        v.push(s.id());
+    }
+    for &sid in v.iter() {
+        logic::structure::on_destroy_recursive(eng, sid);
+    }
 }
 
 /// Handler to be called just after modifying a terrain chunk.
