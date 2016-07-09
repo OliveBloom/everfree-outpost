@@ -34,7 +34,11 @@ ChatWindow.prototype.addMessage = function(msg) {
     var channel = parts[0];
     var name = parts[1];
     var text = parts[2];
-    if (Config.ignores.get()[name]) {
+
+    var match_name = name.substring(1, name.length - 1);
+    if (Config.ignores.get()[match_name]) {
+        return;
+    } else if (match_name.startsWith('Anon:') && Config.ignores.get()['Anon:*']) {
         return;
     }
 
@@ -78,13 +82,13 @@ ChatWindow.prototype.addMessage = function(msg) {
 
 ChatWindow.prototype.addIgnore = function(name) {
     var ignores = Config.ignores.get();
-    ignores['<' + name + '>'] = true;
+    ignores[name] = true;
     Config.ignores.save();
 };
 
 ChatWindow.prototype.removeIgnore = function(name) {
     var ignores = Config.ignores.get();
-    delete ignores['<' + name + '>'];
+    delete ignores[name];
     Config.ignores.save();
 };
 
