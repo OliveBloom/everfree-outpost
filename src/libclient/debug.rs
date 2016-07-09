@@ -17,6 +17,9 @@ pub struct Debug {
     pub last_time: Time,
 
     pub ping: u32,
+    pub ping_dev: u32,
+    pub delta_dev: u32,
+
     pub pos: V3,
     pub day_time: u16,
     pub day_phase: u8,
@@ -33,6 +36,9 @@ impl Debug {
             last_time: 0,
 
             ping: 0,
+            ping_dev: 0,
+            delta_dev: 0,
+
             pos: scalar(0),
             day_time: 0,
             day_phase: 0,

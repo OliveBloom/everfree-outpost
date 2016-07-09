@@ -648,8 +648,8 @@ DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.renderFrame = function(ping) {
-    this._raw['render_frame'](this.client, ping);
+DynAsm.prototype.renderFrame = function() {
+    this._raw['render_frame'](this.client);
 };
 
 DynAsm.prototype.debugRecord = function(frame_time, ping) {
@@ -666,6 +666,16 @@ DynAsm.prototype.setPlaneFlags = function(flags) {
 
 DynAsm.prototype.initTiming = function(server_now) {
     this._raw['init_timing'](this.client, server_now);
+};
+
+DynAsm.prototype.handlePong = function(client_send, client_recv, server_now) {
+    client_send -= this._time_base;
+    client_recv -= this._time_base;
+    this._raw['handle_pong'](this.client, client_send, client_recv, server_now);
+};
+
+DynAsm.prototype.predictArrival = function() {
+    return this._raw['predict_arrival'](this.client);
 };
 
 DynAsm.prototype.toggleCursor = function() {

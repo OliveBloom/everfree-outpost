@@ -19,7 +19,7 @@ use Time;
 use util::{sqrt, round};
 
 
-const TICK_MS: Time = 32;
+pub const TICK_MS: Time = 32;
 const TICK_MASK: Time = TICK_MS - 1;
 
 type ClientTime = Time;
@@ -95,6 +95,7 @@ impl Wheel {
 pub struct Timing {
     delta: Wheel,
     ping: Wheel,
+    ping_inited: bool,
 }
 
 impl Timing {
@@ -102,25 +103,30 @@ impl Timing {
         Timing {
             delta: Wheel::new(0),
             ping: Wheel::new(0),
+            ping_inited: false,
         }
     }
 
-    pub fn init(&mut self, client_send: ClientTime, client_recv: ClientTime, server: u16) {
+    pub fn init(&mut self, client: ClientTime, server: u16) {
         let server = server as Time;
-        let delta = server - client_recv;
-        let ping = client_recv - client_send;
+        let delta = server - client;
 
         self.delta = Wheel::new(delta);
-        self.ping = Wheel::new(ping);
     }
 
-    pub fn record(&mut self, client_send: ClientTime, client_recv: ClientTime, server: u16) {
+    pub fn record_ping(&mut self, client_send: ClientTime, client_recv: ClientTime, server: u16) {
         let server = self.decode(client_recv, server);
         let delta = server - client_recv;
         let ping = client_recv - client_send;
 
         self.delta.set_advance(delta);
-        self.ping.set_advance(ping);
+
+        if self.ping_inited {
+            self.ping.set_advance(ping);
+        } else {
+            self.ping = Wheel::new(ping);
+            self.ping_inited = true;
+        }
     }
 
     pub fn record_delta(&mut self, client_recv: ClientTime, server: u16) {
@@ -158,5 +164,17 @@ impl Timing {
     pub fn predict_confidence(&self, client: ClientTime, devs: i32) -> ServerTime {
         let ping = self.ping.mean() + self.ping.stddev() * devs / 100;
         self.convert_confidence(client, devs) + ping
+    }
+
+    pub fn get_ping(&self) -> Delta {
+        self.ping.mean()
+    }
+
+    pub fn get_ping_dev(&self) -> Delta {
+        self.ping.stddev()
+    }
+
+    pub fn get_delta_dev(&self) -> Delta {
+        self.delta.stddev()
     }
 }

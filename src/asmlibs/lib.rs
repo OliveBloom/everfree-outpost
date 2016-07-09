@@ -335,18 +335,16 @@ unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
 
 
 #[no_mangle]
-pub unsafe extern fn render_frame(client: &mut Client,
-                                  ping: i32) {
-    client.render_frame(ping);
+pub unsafe extern fn render_frame(client: &mut Client) {
+    client.render_frame();
 }
 
 // Misc
 
 #[no_mangle]
 pub unsafe extern fn debug_record(client: &mut Client,
-                                  frame_time: i32,
-                                  ping: u32) {
-    client.debug_record(frame_time, ping);
+                                  frame_time: i32) {
+    client.debug_record(frame_time);
 }
 
 #[no_mangle]
@@ -367,6 +365,19 @@ pub unsafe extern fn set_plane_flags(client: &mut Client,
 pub unsafe extern fn init_timing(client: &mut Client,
                                  time: u16) {
     client.init_timing(time);
+}
+
+#[no_mangle]
+pub unsafe extern fn handle_pong(client: &mut Client,
+                                 client_send: i32,
+                                 client_recv: i32,
+                                 server: u16) {
+    client.handle_pong(client_send, client_recv, server);
+}
+
+#[no_mangle]
+pub unsafe extern fn predict_arrival(client: &mut Client) -> i32 {
+    client.predict_arrival()
 }
 
 #[no_mangle]

@@ -31,7 +31,7 @@ use predict::{Predictor, Activity};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
-use timing::Timing;
+use timing::{Timing, TICK_MS};
 use ui::{UI, Dyn};
 use ui::input::{KeyAction, Modifiers, KeyEvent, EventStatus};
 
@@ -431,14 +431,11 @@ impl<'d, P: Platform> Client<'d, P> {
     // Physics
 
     pub fn feed_input(&mut self, time: Time, bits: u16) {
+        println!("predicted input at {}", time);
         self.predictor.input(time, InputBits::from_bits(bits).expect("invalid input bits"));
     }
 
     pub fn processed_inputs(&mut self, time: u16, count: u16) {
-        // TODO: get send time as well, from predictor input queue
-        let recv = self.platform.get_time();
-        self.timing.record_delta(recv, time);
-
         let time = self.decode_time(time);
         self.predictor.processed_inputs(time, count as usize);
     }
@@ -536,13 +533,16 @@ impl<'d, P: Platform> Client<'d, P> {
         self.renderer.load_cavern_map(&*grid);
     }
 
-    pub fn render_frame(&mut self, ping: Time) {
+    pub fn render_frame(&mut self) {
         let client_now = self.platform.get_time();
         // Only render ticks that are very likely to lie fully in the past.
         let now = self.timing.convert_confidence(client_now, -200);
-        let future = now + ping;
+        let future = self.timing.predict_confidence(client_now, 200);
 
         self.debug.record_interval(now);
+        self.debug.ping = self.timing.get_ping() as u32;
+        self.debug.ping_dev = self.timing.get_ping_dev() as u32;
+        self.debug.delta_dev = self.timing.get_delta_dev() as u32;
         let day_time = self.misc.day_night.time_of_day(now);
         self.debug.day_time = day_time;
         self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
@@ -596,9 +596,8 @@ impl<'d, P: Platform> Client<'d, P> {
         self.timing.convert(client)
     }
 
-    pub fn debug_record(&mut self, frame_time: Time, ping: u32) {
+    pub fn debug_record(&mut self, frame_time: Time) {
         self.debug.record_frame_time(frame_time);
-        self.debug.ping = ping;
     }
 
     pub fn init_day_night(&mut self, now: u16, base_offset: Time, cycle_ms: Time) {
@@ -612,9 +611,18 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn init_timing(&mut self, server: u16) {
-        // TODO: need client send time as well
         let client = self.platform.get_time();
-        self.timing.init(client, client, server);
+        self.timing.init(client, server);
+    }
+
+    pub fn handle_pong(&mut self, client_send: Time, client_recv: Time, server: u16) {
+        self.timing.record_ping(client_send, client_recv, server);
+    }
+
+    pub fn predict_arrival(&mut self) -> Time {
+        let client = self.platform.get_time();
+        let server = self.timing.predict_confidence(client, 200);
+        (server + TICK_MS - 1) & !TICK_MS
     }
 
     pub fn toggle_cursor(&mut self) {

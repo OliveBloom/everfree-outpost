@@ -45,12 +45,14 @@ const ROW_WIDTH: i32 = 128;
 const ROW_HEIGHT: i32 = 10;
 const GRAPH_HEIGHT: i32 = 20;
 
+const NUM_ROWS: i32 = 5;
+
 impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
     fn size(&mut self) -> V2 {
         match self.state.mode {
             Mode::Nothing => scalar(0),
             Mode::Framerate => V2::new(FPS_WIDTH, ROW_HEIGHT),
-            Mode::Full => V2::new(ROW_WIDTH, ROW_HEIGHT * 4 + GRAPH_HEIGHT),
+            Mode::Full => V2::new(ROW_WIDTH, ROW_HEIGHT * NUM_ROWS + GRAPH_HEIGHT),
         }
     }
 
@@ -84,14 +86,17 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
                     let rate = calc_framerate(self.dyn.total_interval);
                     row(0, "FPS", &format!("{}.{}", rate / 10, rate % 10));
                     row(1, "Ping", &format!("{} ms", self.dyn.ping));
-                    row(2, "Pos", &format!("{:?}", self.dyn.pos));
-                    row(3, "Time", &format!("{}.{:03} ({})",
+                    row(2, "T.Dev", &format!("P: {} ms; D: {} ms",
+                                             self.dyn.ping_dev,
+                                             self.dyn.delta_dev));
+                    row(3, "Pos", &format!("{:?}", self.dyn.pos));
+                    row(4, "Time", &format!("{}.{:03} ({})",
                                             self.dyn.day_time / 1000,
                                             self.dyn.day_time % 1000,
                                             self.dyn.day_phase));
                 }
 
-                let graph_pos = rect.min + step * scalar(4);
+                let graph_pos = rect.min + step * scalar(NUM_ROWS);
                 let graph_rect = Region::sized(V2::new(ROW_WIDTH, GRAPH_HEIGHT)) + graph_pos;
                 let idx = self.dyn.cur_frame;
                 let last = (idx + debug::NUM_FRAMES - 1) % debug::NUM_FRAMES;

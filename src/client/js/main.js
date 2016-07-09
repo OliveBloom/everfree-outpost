@@ -205,12 +205,14 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
         handleSyncStatus(new_synced);
     };
 
-    conn.sendReady();
-
-    timing = new Timing(conn);
-    timing.scheduleUpdates(5, 30);
+    // NB: create Timing (which sends a Ping) before sendReady().  This ensures
+    // the slight delay of loading chunks won't impact the initial ping time.
+    timing = new Timing(asm_client, conn);
+    timing.scheduleUpdates(2, 5);
     inv_tracker = new InventoryTracker(conn, asm_client);
     asm_client.conn = conn;
+
+    conn.sendReady();
 
     console.log('handoff complete');
 
@@ -358,7 +360,8 @@ function setupKeyHandler() {
             updateWalkDir();
             return true;
         } else if (down) {
-            var time = timing.encodeSend(timing.nextArrival());
+            // TODO: actions don't get predicted, so time shouldn't matter
+            var time = timing.encodeSend(asm_client.predictArrival());
 
             switch (binding) {
                 // UI actions
@@ -450,7 +453,7 @@ function setupKeyHandler() {
             target_velocity = target_velocity.mulScalar(50);
         }
 
-        var arrival = timing.nextArrival() + Config.input_delay.get();
+        var arrival = asm_client.predictArrival() + Config.input_delay.get();
         conn.sendInput(timing.encodeSend(arrival), bits);
 
         asm_client.feedInput(arrival, bits);
@@ -487,7 +490,6 @@ function handleClose(evt, reason) {
 }
 
 function handleInit(entity_id, now, cycle_base, cycle_ms) {
-
     asm_client.setPawnId(entity_id);
     asm_client.initTiming(now);
     asm_client.initDayNight(now, cycle_base, cycle_ms);
@@ -608,7 +610,7 @@ function handleGenericGetArgs(dialog_id, parts, cb) {
     var d = new (DIALOG_TYPES[dialog_id])(parts);
     d.onsubmit = function(args) {
         dialog.hide();
-        var time = timing.encodeSend(timing.nextArrival());
+        var time = timing.encodeSend(asm_client.predictArrival());
         cb(time, args);
     };
     dialog.show(d);
@@ -697,8 +699,8 @@ function frame(fine_now) {
     }
 
     var start_time = Date.now();
-    asm_client.renderFrame(timing.ping);
+    asm_client.renderFrame();
     var end_time = Date.now();
 
-    asm_client.debugRecord(end_time - start_time, timing.ping);
+    asm_client.debugRecord(end_time - start_time);
 }
