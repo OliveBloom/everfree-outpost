@@ -91,7 +91,7 @@ function Connection(x) {
         var dev = Config.debug_fake_lag_dev.get();
         var dispatch = function() {
             this_._handleMessage(queue.shift());
-        }
+        };
         socket.onmessage = function(evt) {
             queue.push(evt);
             var delay = lag + (Math.random() * 2 - 1) * dev;
