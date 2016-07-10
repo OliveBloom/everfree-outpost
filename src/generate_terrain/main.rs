@@ -90,6 +90,7 @@ fn io_main(ctx: &mut Context) -> io::Result<()> {
 
                 try!(stdout.write_bytes(len as u32));
                 try!(stdout.write_all(&bytes));
+                try!(stdout.flush());
             },
             OP_SHUTDOWN => {
                 info!("clean shutdown");

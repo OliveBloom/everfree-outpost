@@ -38,6 +38,7 @@ use world::flags;
 use world::object::*;
 
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Request {
     InitPlane(Stable<PlaneId>, u32),
     ForgetPlane(Stable<PlaneId>),
