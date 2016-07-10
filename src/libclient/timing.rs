@@ -162,8 +162,7 @@ impl Timing {
     }
 
     pub fn predict_confidence(&self, client: ClientTime, devs: i32) -> ServerTime {
-        let ping = self.ping.mean() + self.ping.stddev() * devs / 100;
-        self.convert_confidence(client, devs) + ping
+        self.convert(client) + self.ping.mean() + self.ping.stddev() * devs / 100
     }
 
     pub fn get_ping(&self) -> Delta {
