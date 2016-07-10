@@ -147,15 +147,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 #[derive(Clone, Copy)]
 struct TopBarDyn<'a> {
     inv: Option<&'a Inventory>,
-    state: &'a misc::Hotbar,
+    hotbar: &'a misc::Hotbar,
 }
 
 impl<'a> TopBarDyn<'a> {
     fn new(inv: Option<&'a Inventory>,
-           state: &'a misc::Hotbar) -> TopBarDyn<'a> {
+           hotbar: &'a misc::Hotbar) -> TopBarDyn<'a> {
         TopBarDyn {
             inv: inv,
-            state: state,
+            hotbar: hotbar,
         }
     }
 }
@@ -171,12 +171,12 @@ impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
                 is_active_ability: false,
             },
         };
-        let item_id = self.state.item_id(idx);
+        let item_id = self.hotbar.item_id(idx);
         let quantity =
-            if self.state.is_item(idx) { Some(inv.count(item_id)) }
+            if self.hotbar.is_item(idx) { Some(inv.count(item_id)) }
             else { None };
-        let is_active_item = self.state.active_item_index() == Some(idx);
-        let is_active_ability = self.state.active_ability_index() == Some(idx);
+        let is_active_item = self.hotbar.active_item_index() == Some(idx);
+        let is_active_ability = self.hotbar.active_ability_index() == Some(idx);
 
         hotbar::SlotInfo {
             item_id: item_id,
@@ -184,5 +184,17 @@ impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
             is_active_item: is_active_item,
             is_active_ability: is_active_ability,
         }
+    }
+
+    fn cur_energy(self) -> i32 {
+        240
+    }
+
+    fn max_energy(self) -> i32 {
+        240
+    }
+
+    fn energy_tribe(self) -> top_bar::Tribe {
+        top_bar::Tribe::Earth
     }
 }

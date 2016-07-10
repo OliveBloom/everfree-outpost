@@ -25,10 +25,9 @@ pub enum Tribe {
 pub trait TopBarDyn: Copy {
     fn hotbar_slot_info(self, idx: u8) -> hotbar::SlotInfo;
 
-    // TODO
-    fn cur_energy(self) -> i32 { 50 }
-    fn max_energy(self) -> i32 { 100 }
-    fn energy_tribe(self) -> Tribe { Tribe::Earth }
+    fn cur_energy(self) -> i32;
+    fn max_energy(self) -> i32;
+    fn energy_tribe(self) -> Tribe;
 }
 
 impl TopBar {
