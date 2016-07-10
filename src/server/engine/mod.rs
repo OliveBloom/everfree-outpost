@@ -39,6 +39,7 @@ pub struct Engine<'d> {
     pub storage: &'d Storage,
     pub script_hooks: &'d ScriptHooks,
     pub now: Time,
+    last_tick: Time,
 
     pub world: World<'d>,
 
@@ -74,6 +75,7 @@ impl<'d> Engine<'d> {
             storage: storage,
             script_hooks: script_hooks,
             now: TIME_MIN,
+            last_tick: TIME_MIN,
 
             world: World::new(data),
 
@@ -224,7 +226,7 @@ impl<'d> Engine<'d> {
         use messages::ClientEvent::*;
         match evt {
             Input(time, input) => {
-                let tick = (time - next_tick(self.now)) / TICK_MS;
+                let tick = (time - next_tick(self.last_tick)) / TICK_MS;
                 self.input.schedule_input(cid, tick as i32, input);
             },
 
@@ -274,7 +276,8 @@ impl<'d> Engine<'d> {
     }
 
 
-    fn tick(&mut self) {
+    pub fn tick(&mut self) {
+        self.last_tick = self.now;
         logic::tick::tick(self);
     }
 

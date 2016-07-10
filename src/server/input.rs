@@ -26,7 +26,7 @@ pub enum Action {
 }
 
 
-const QUEUE_SIZE: usize = 4;
+const QUEUE_SIZE: usize = 8;
 
 /// Track the latest input from each client.
 pub struct Input {
@@ -50,8 +50,9 @@ impl Input {
     }
 
     pub fn schedule_input(&mut self, cid: ClientId, offset: i32, input: InputBits) {
-        let slot = cmp::max(0, cmp::min(self.input_index + offset, QUEUE_SIZE as i32 - 1));
-        let mut i = self.pending_input_maps[slot as usize].entry(cid).or_insert((input, 0));
+        let offset = cmp::max(0, cmp::min(offset, QUEUE_SIZE as i32 - 1));
+        let slot = (self.input_index + offset) as usize % QUEUE_SIZE;
+        let mut i = self.pending_input_maps[slot].entry(cid).or_insert((input, 0));
         i.0 = input;
         // If this ever wraps, the client will get very confused, but that's their own fault for
         // spamming 65,000 inputs in a single tick.

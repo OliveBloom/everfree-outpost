@@ -17,7 +17,7 @@ pub fn tick(eng: &mut Engine) {
     let next = next_tick(now);
 
     // Schedule this first, so it gets the first slot in the timing wheel bucket.
-    eng.timer.schedule(next, |eng| tick(eng.unwrap()));
+    eng.timer.schedule(next, |eng| eng.unwrap().tick());
 
     for (cid, (act, args)) in eng.input.actions() {
         if let Some(e) = eng.world.client(cid).pawn() {

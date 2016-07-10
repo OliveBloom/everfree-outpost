@@ -213,7 +213,6 @@ impl<'a, 'd> common_movement::Entity for EntityWrapper<'a, 'd> {
             end_time: None,
             anim_id: walk_anim(self.data, facing, speed),
         };
-        println!("set velocity to {:?}", velocity);
     }
 
     fn end_motion(&mut self, now: Time) {

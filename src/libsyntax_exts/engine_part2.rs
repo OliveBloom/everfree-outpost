@@ -157,6 +157,7 @@ fn gen_struct(name: &str, is_pub: bool, flags: EngineParts) -> String {
     code.push_str("    _storage: &'d ::storage::Storage,\n");
     code.push_str("    _script_hooks: &'d ::script::ScriptHooks,\n");
     code.push_str("    _now: ::types::Time,\n");
+    code.push_str("    _last_tick: ::types::Time,\n");
 
     for i in 0 .. NUM_PARTS {
         let field_name = PART_NAMES[i].to_lowercase();
