@@ -6,7 +6,7 @@ from outpost_data.core.structure import Shape, solid
 from outpost_data.outpost.lib import models
 
 OPEN_DOOR_SHAPE = Shape(3, 1, 2, [
-        'solid', 'floor', 'solid',
+        'solid', 'empty', 'solid',
         'solid', 'empty', 'solid',
         ])
 
