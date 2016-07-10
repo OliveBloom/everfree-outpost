@@ -99,8 +99,8 @@ var DEFAULT_CONFIG = {
     'debug_force_browser_warning': false,
     'debug_block_webgl_extensions': {},
     'debug_shader_defs': {},
-    'debug_delay_recv': 0,
-    'debug_delay_send': 0,
+    'debug_fake_lag': 0,
+    'debug_fake_lag_dev': 0,
 };
 
 
@@ -142,8 +142,8 @@ exports.Config = {
     debug_force_browser_warning: new ConfigItem('debug_force_browser_warning'),
     debug_block_webgl_extensions: new ConfigItem('debug_block_webgl_extensions'),
     debug_shader_defs: new ConfigItem('debug_shader_defs'),
-    debug_delay_recv: new ConfigItem('debug_delay_recv'),
-    debug_delay_send: new ConfigItem('debug_delay_send'),
+    debug_fake_lag: new ConfigItem('debug_fake_lag'),
+    debug_fake_lag_dev: new ConfigItem('debug_fake_lag_dev'),
 };
 
 

@@ -83,12 +83,19 @@ function Connection(x) {
     }
     socket.binaryType = 'arraybuffer';
     socket.onopen = function(evt) { this_._handleOpen(evt); };
-    if (Config.debug_delay_recv.get() == 0) {
+    if (Config.debug_fake_lag.get() == 0) {
         socket.onmessage = function(evt) { this_._handleMessage(evt); };
     } else {
-        var delay = Config.debug_delay_recv.get();
+        var queue = [];
+        var lag = Config.debug_fake_lag.get();
+        var dev = Config.debug_fake_lag_dev.get();
+        function dispatch() {
+            this_._handleMessage(queue.shift());
+        }
         socket.onmessage = function(evt) {
-            window.setTimeout(function() { this_._handleMessage(evt); }, delay);
+            queue.push(evt);
+            var delay = lag + (Math.random() * 2 - 1) * dev;
+            window.setTimeout(dispatch, delay);
         };
     }
     socket.onclose = function(evt) { this_._handleClose(evt); };
@@ -136,15 +143,7 @@ function Connection(x) {
 exports.Connection = Connection;
 
 Connection.prototype._send = function(msg) {
-    if (Config.debug_delay_send.get() == 0) {
-        this.socket.send(msg);
-    } else {
-        var delay = Config.debug_delay_send.get();
-        var this_ = this;
-        window.setTimeout(function() {
-            this_.socket.send(msg);
-        }, delay);
-    }
+    this.socket.send(msg);
 }
 
 Connection.prototype._handleOpen = function(evt) {
