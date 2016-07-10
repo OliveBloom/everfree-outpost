@@ -9,7 +9,7 @@ use misc;
 use platform::Config;
 use ui::geom::Geom;
 use ui::input::{KeyAction, KeyEvent, EventStatus};
-use ui::{dialog, dialogs, hotbar, debug};
+use ui::{dialog, dialogs, hotbar, debug, top_bar};
 use ui::widget::*;
 
 
@@ -62,10 +62,10 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
         {
             // Hotbar
-            let dyn = HotbarDyn::new(self.dyn.inventories.main_inventory(),
+            let dyn = TopBarDyn::new(self.dyn.inventories.main_inventory(),
                                      self.dyn.hotbar);
-            let mut child = WidgetPack::stateless(hotbar::Hotbar, dyn);
-            let rect = Region::sized(child.size()) + pos + scalar(1);
+            let mut child = WidgetPack::stateless(top_bar::TopBar, dyn);
+            let rect = Region::sized(child.size()) + pos;
             v.visit(&mut child, rect);
         }
 
@@ -145,23 +145,23 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 
 
 #[derive(Clone, Copy)]
-struct HotbarDyn<'a> {
+struct TopBarDyn<'a> {
     inv: Option<&'a Inventory>,
     state: &'a misc::Hotbar,
 }
 
-impl<'a> HotbarDyn<'a> {
+impl<'a> TopBarDyn<'a> {
     fn new(inv: Option<&'a Inventory>,
-           state: &'a misc::Hotbar) -> HotbarDyn<'a> {
-        HotbarDyn {
+           state: &'a misc::Hotbar) -> TopBarDyn<'a> {
+        TopBarDyn {
             inv: inv,
             state: state,
         }
     }
 }
 
-impl<'a> hotbar::HotbarDyn for HotbarDyn<'a> {
-    fn slot_info(self, idx: u8) -> hotbar::SlotInfo {
+impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
+    fn hotbar_slot_info(self, idx: u8) -> hotbar::SlotInfo {
         let inv = match self.inv {
             Some(x) => x,
             None => return hotbar::SlotInfo {

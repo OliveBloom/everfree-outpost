@@ -64,12 +64,9 @@ pub trait HotbarDyn: Copy {
 
 impl Hotbar {
     pub fn size() -> V2 {
-        let w = Slot::size().x;
-
-        // Height of all slots, including the gaps in between.
-        let slot_h = 9 * Slot::size().y + 8 * 1;
-        let h = 8 + slot_h + 8;
-
+        // Width of all slots, including the gaps in between and at start and end.
+        let w = 9 * Slot::size().y + 10 * 1;
+        let h = Slot::size().y;
         V2::new(w, h)
     }
 }
@@ -78,9 +75,9 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
     fn size(&mut self) -> V2 { Hotbar::size() }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let base = pos + V2::new(0, 8);
+        let base = pos + V2::new(1, 0);
         let child_size = Slot::size();
-        let step = V2::new(0, child_size.y + 1);
+        let step = V2::new(child_size.x + 1, 0);
 
         for i in 0 .. 9 {
             let info = self.dyn.slot_info(i);
@@ -99,18 +96,8 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
-        /*
-        let (cap_w, cap_h) = atlas::HOTBAR_CAP_TOP.size;
-        let cap_rect = Region::sized(V2::new(cap_w as i32, cap_h as i32));
-
-        geom.draw_ui(atlas::HOTBAR_CAP_TOP,
-                     cap_rect.align(rect, Align::Center, Align::Start).min);
-        geom.draw_ui(atlas::HOTBAR_CAP_BOTTOM,
-                     cap_rect.align(rect, Align::Center, Align::End).min);
-                     */
-
-        let bar_w = atlas::HOTBAR_BAR.size.0;
-        let bar_rect = Region::sized(V2::new(bar_w as i32, rect.size().y - 2 * 7));
+        let bar_h = atlas::HOTBAR_BAR.size.1;
+        let bar_rect = Region::sized(V2::new(rect.size().x, bar_h as i32));
 
         let bar_dest = bar_rect.align(rect, Align::Center, Align::Center);
         geom.draw_ui_tiled(atlas::HOTBAR_BAR, bar_dest);
@@ -119,8 +106,8 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
     fn on_drop(&mut self, ctx: &mut Context, rect: Region<V2>, data: &DragData) -> EventStatus {
         let DragData { src_inv, src_slot } = *data;
 
-        let y_off = ctx.mouse_pos.y - rect.min.y;
-        let slot_idx = (y_off - 8) / (Slot::size().y + 1);
+        let x_off = ctx.mouse_pos.x - rect.min.x;
+        let slot_idx = (x_off - 1) / (Slot::size().x + 1);
         if slot_idx < 0 || slot_idx >= 9 {
             return EventStatus::Unhandled;
         }
@@ -132,10 +119,10 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
     }
 
     fn check_drop(&mut self, ctx: &Context, rect: Region<V2>, _data: &DragData) -> bool {
-        let y_off = ctx.mouse_pos.y - rect.min.y;
-        let slot_idx = (y_off - 8) / (Slot::size().y + 1);
+        let x_off = ctx.mouse_pos.x - rect.min.x;
+        let slot_idx = (x_off - 1) / (Slot::size().x + 1);
         if slot_idx < 0 || slot_idx >= 9 {
-            return false;
+            return false
         }
         true
     }
