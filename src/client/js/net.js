@@ -89,7 +89,7 @@ function Connection(x) {
         var queue = [];
         var lag = Config.debug_fake_lag.get();
         var dev = Config.debug_fake_lag_dev.get();
-        function dispatch() {
+        var dispatch = function() {
             this_._handleMessage(queue.shift());
         }
         socket.onmessage = function(evt) {
