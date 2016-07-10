@@ -4,28 +4,6 @@ var ConfigEditor = require('ui/configedit').ConfigEditor;
 function $(x) { return document.getElementById(x); }
 
 function init() {
-    $('reset-login').addEventListener('click', function() {
-        $('confirm-reset-login').disabled = false;
-    });
-    $('confirm-reset-login').disabled = true;
-
-    $('confirm-reset-login').addEventListener('click', function() {
-        Config.login_name.reset();
-        Config.login_secret.reset();
-    });
-
-    $('enable-simplified-slicing').addEventListener('change', function() {
-        var value = $('enable-simplified-slicing').checked;
-        Config.render_simplified_slicing.set(value);
-    });
-    $('enable-simplified-slicing').checked = Config.render_simplified_slicing.get();
-
-    $('enable-motion-prediction').addEventListener('change', function() {
-        var value = $('enable-motion-prediction').checked;
-        Config.motion_prediction.set(value);
-    });
-    $('enable-motion-prediction').checked = Config.motion_prediction.get();
-
     $('show-inventory-updates').addEventListener('change', function() {
         var value = $('show-inventory-updates').checked;
         Config.show_inventory_updates.set(value);
