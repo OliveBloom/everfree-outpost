@@ -292,7 +292,7 @@ if __name__ == '__main__':
         data.font('title', '$root/assets/misc/Alagard.png',
             extra_args='--no-shadow --color=0xdeeed6'),
         data.font('hotbar', '$root/assets/misc/hotbar-font.png',
-            charset_args='--char-list="0123456789.k"'),
+            charset_args='--char-list="0123456789.k/"'),
         data.font_stack('$b_data/fonts', ('name', 'bold', 'hotbar', 'title')),
         data.server_json('$b_data/server.json'),
         data.ui_atlas('$b_data', '$root/assets/ui_gl/png'),

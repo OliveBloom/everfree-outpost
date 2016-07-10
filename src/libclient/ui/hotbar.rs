@@ -99,6 +99,7 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
+        /*
         let (cap_w, cap_h) = atlas::HOTBAR_CAP_TOP.size;
         let cap_rect = Region::sized(V2::new(cap_w as i32, cap_h as i32));
 
@@ -106,6 +107,7 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
                      cap_rect.align(rect, Align::Center, Align::Start).min);
         geom.draw_ui(atlas::HOTBAR_CAP_BOTTOM,
                      cap_rect.align(rect, Align::Center, Align::End).min);
+                     */
 
         let bar_w = atlas::HOTBAR_BAR.size.0;
         let bar_rect = Region::sized(V2::new(bar_w as i32, rect.size().y - 2 * 7));
