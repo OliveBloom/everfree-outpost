@@ -1,11 +1,11 @@
 use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
+use common::Gauge;
 
 use Time;
 use client::ClientObj;
 use debug::Debug as DebugDyn;
-use gauge::Gauge;
 use inventory::{Inventory, Inventories};
 use misc;
 use platform::Config;

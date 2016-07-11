@@ -1,8 +1,9 @@
 use std::prelude::v1::*;
 
+use common::Gauge;
+
 use Time;
 use data::Data;
-use gauge::Gauge;
 use platform::{Config, ConfigKey};
 
 /// Miscellaneous client state

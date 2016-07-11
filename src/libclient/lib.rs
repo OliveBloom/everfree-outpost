@@ -20,6 +20,7 @@
 
 extern crate client_fonts;
 extern crate client_ui_atlas;
+extern crate common;
 extern crate common_movement;
 extern crate physics;
 
@@ -42,7 +43,6 @@ mod misc;
 mod predict;
 mod debug;
 mod timing;
-mod gauge;
 
 pub mod graphics;
 pub mod ui;

@@ -16,13 +16,13 @@ use physics;
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE};
 use physics::Shape;
 use physics::v3::{V3, V2, Vn, scalar, Region};
+use common::Gauge;
 use common_movement::InputBits;
 
 use Time;
 use data::Data;
 use debug::Debug;
 use entity::{self, Entities, EntityId};
-use gauge::Gauge;
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;

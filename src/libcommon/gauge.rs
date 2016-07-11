@@ -1,15 +1,15 @@
 use std::cmp;
-use std::i32;
 
-use Time;
+use types::{Time, TIME_MAX};
 
 
 pub struct Gauge {
-    last_val: i32,
     last_time: Time,
 
     /// The delta (= now - last_time) at which the value will hit `min` or `max`.
     max_delta: Time,
+
+    last_val: i32,
 
     /// The numerator of the rate of change.
     rate_numer: i16,
@@ -37,15 +37,15 @@ impl Gauge {
     }
 
     fn calc_max_delta(&self) -> Time {
-        let d = 1000 * self.rate_denom as i32;
+        let d = 1000 * self.rate_denom as Time;
         if self.rate_numer > 0 {
-            let n = self.rate_numer as i32;
-            ((self.max - self.last_val) * d + n - 1) / n
+            let n = self.rate_numer as Time;
+            ((self.max - self.last_val) as Time * d + n - 1) / n
         } else if self.rate_numer < 0 {
-            let n = -self.rate_numer as i32;
-            ((self.last_val - self.min) * d + n - 1) / n
+            let n = -self.rate_numer as Time;
+            ((self.last_val - self.min) as Time * d + n - 1) / n
         } else {    // self.rate == 0
-            i32::MAX
+            TIME_MAX
         }
     }
 
@@ -59,9 +59,9 @@ impl Gauge {
                 self.min
             }
         } else {
-            let n = self.rate_numer as i32;
-            let d = 1000 * self.rate_denom as i32;
-            self.last_val + delta * n / d
+            let n = self.rate_numer as Time;
+            let d = 1000 * self.rate_denom as Time;
+            self.last_val + (delta * n / d) as i32
         }
     }
 
