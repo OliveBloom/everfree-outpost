@@ -15,11 +15,11 @@ pub struct Energy {
 
 impl Component<Entity> for Energy {
     fn get<'a>(eng: &'a EngineComponents) -> &'a Self {
-        unimplemented!()
+        &eng.energy
     }
 
     fn get_mut<'a>(eng: &'a mut EngineComponents) -> &'a mut Self {
-        unimplemented!()
+        &mut eng.energy
     }
 
     fn export(&self, id: EntityId, b: &mut bundle::Entity, now: Time) {
@@ -69,12 +69,21 @@ impl Energy {
         self.map.get(&id).map_or(0, |g| g.get(now))
     }
 
-    pub fn get_gauge(&mut self, id: EntityId) -> Option<&mut Gauge> {
+    pub fn take(&mut self, id: EntityId, amount: i32, now: Time) -> bool {
+        let g = unwrap_or!(self.get_gauge_mut(id), return false);
+        if g.get(now) < amount {
+            return false;
+        }
+        g.adjust(-amount, now);
+        true
+    }
+
+    pub fn get_gauge_mut(&mut self, id: EntityId) -> Option<&mut Gauge> {
         self.map.get_mut(&id)
     }
 
-    pub fn gauge(&mut self, id: EntityId) -> &mut Gauge {
-        self.get_gauge(id)
+    pub fn gauge_mut(&mut self, id: EntityId) -> &mut Gauge {
+        self.get_gauge_mut(id)
             .unwrap_or_else(|| panic!("no energy gauge for entity {:?}", id))
     }
 }

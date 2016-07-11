@@ -173,7 +173,7 @@ fn login_with_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart
     let pos = eng.world.entity(eid).pos(eng.now);
 
     // Run handler logic
-    logic::world::on_import(eng.refine(), &importer);
+    logic::world::on_import(eng.refine(), &importer, &bundle);
 
     Ok(LoginPart {
         cid: cid,
@@ -230,7 +230,7 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
                                                        DAY_NIGHT_CYCLE_MS));
 
     warn_on_err!(DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid)));
-    logic::world::on_import(eng.refine(), &importer);
+    logic::world::on_import(eng.refine(), &importer, &bundle);
 
     // Init scripts
     warn_on_err!(eng.script_hooks.call_client_login(eng.as_ref(), cid));
@@ -268,21 +268,13 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
     eng.vision.purge_inventory_subscriptions(cid);
 
     // Export the client bundle.
-    let exporter = {
-        let c = eng.world.client(cid);
+    let mut exporter = bundle::Exporter::new(eng.data);
+    exporter.add_client(&eng.world.client(cid));
+    logic::world::on_export(eng.refine(), &mut exporter);
+    let b = exporter.finish();
 
-        let mut exporter = bundle::Exporter::new(eng.data);
-        exporter.add_client(&c);
-        let b = exporter.finish();
-
-        let mut file = eng.storage.create_client_file(uid);
-        try!(bundle::write_bundle(&mut file, &b));
-
-        exporter
-    };
-
-    // Run handler logic
-    logic::world::on_export(eng.refine(), &exporter);
+    let mut file = eng.storage.create_client_file(uid);
+    try!(bundle::write_bundle(&mut file, &b));
 
     // Destroy the client and associated objects
     try!(world::Fragment::destroy_client(&mut eng.as_ref().as_world_fragment(), cid));

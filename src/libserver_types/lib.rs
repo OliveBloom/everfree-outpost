@@ -1,6 +1,7 @@
 #![crate_name = "server_types"]
 extern crate physics as libphysics;
 
+use std::convert::Into;
 use std::marker::PhantomData;
 use std::{i64, u8, u16};
 use libphysics::CHUNK_BITS;
@@ -78,6 +79,12 @@ macro_rules! mk_id_newtypes {
                 pub fn unwrap(self) -> $inner {
                     let $name(x) = self;
                     x
+                }
+            }
+
+            impl Into<usize> for $name {
+                fn into(self) -> usize {
+                    self.unwrap() as usize
                 }
             }
         )*

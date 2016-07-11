@@ -45,7 +45,7 @@ impl ObjectType for Structure {
 }
 
 
-engine_part2!(pub EngineComponents());
+engine_part2!(pub EngineComponents(Components));
 
 pub trait Component<Obj: ObjectType> {
     fn get<'a>(eng: &'a EngineComponents) -> &'a Self;
@@ -56,24 +56,48 @@ pub trait Component<Obj: ObjectType> {
     fn cleanup(&mut self, id: Obj::Id);
 }
 
-pub trait ComponentObj<Obj: ObjectType> {
-    fn export(eng: &EngineComponents, id: Obj::Id, b: &mut Obj::Bundled);
-    fn import(eng: &mut EngineComponents, id: Obj::Id, b: &Obj::Bundled);
-    fn cleanup(eng: &mut EngineComponents, id: Obj::Id);
+
+macro_rules! gen_funcs {
+    ($(
+            object $Obj:ident {
+                export $export_obj:ident;
+                import $import_obj:ident;
+                cleanup $cleanup_obj:ident;
+                components {
+                    $( $component:ty, )*
+                }
+            }
+            )*) => {
+        $(
+            pub fn $export_obj(eng: &EngineComponents,
+                               id: <$Obj as ObjectType>::Id,
+                               b: &mut <$Obj as ObjectType>::Bundled) {
+                let now = eng.now();
+                $( <$component as Component<$Obj>>::get(eng).export(id, b, now); )*
+            }
+
+            pub fn $import_obj(eng: &mut EngineComponents,
+                               id: <$Obj as ObjectType>::Id,
+                               b: &<$Obj as ObjectType>::Bundled) {
+                let now = eng.now();
+                $( <$component as Component<$Obj>>::get_mut(eng).import(id, b, now); )*
+            }
+
+            pub fn $cleanup_obj(eng: &mut EngineComponents,
+                                id: <$Obj as ObjectType>::Id) {
+                $( <$component as Component<$Obj>>::get_mut(eng).cleanup(id); )*
+            }
+        )*
+    }
 }
 
-impl<Obj: ObjectType, C: Component<Obj>> ComponentObj<Obj> for C {
-    fn export(eng: &EngineComponents, id: Obj::Id, b: &mut Obj::Bundled) {
-        let now = eng.now();
-        C::get(eng).export(id, b, now);
-    }
-
-    fn import(eng: &mut EngineComponents, id: Obj::Id, b: &Obj::Bundled) {
-        let now = eng.now();
-        C::get_mut(eng).import(id, b, now);
-    }
-
-    fn cleanup(eng: &mut EngineComponents, id: Obj::Id) {
-        C::get_mut(eng).cleanup(id);
+gen_funcs! {
+    object Entity {
+        export export_entity;
+        import import_entity;
+        cleanup cleanup_entity;
+        components {
+            energy::Energy,
+        }
     }
 }

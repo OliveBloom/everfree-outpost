@@ -165,5 +165,5 @@ pub unsafe trait Coded: Sized {
 }
 
 unsafe impl<'d> Coded for Engine<'d> {
-    type Code = Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<E>>>>>>>>>>>>;
+    type Code = Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<Y<E>>>>>>>>>>>>>;
 }

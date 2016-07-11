@@ -368,6 +368,48 @@ impl<'d> Exporter<'d> {
             f(AnyId::Structure(id));
         }
     }
+
+    pub fn visit_exports<V: Visitor>(&mut self, v: &mut V) {
+        for (id, val) in self.clients.iter_mut() {
+            let val = val.as_mut()
+                .unwrap_or_else(|| panic!("missing object {:?} in exporter", id));
+            v.visit_client(id, val);
+        }
+        for (id, val) in self.entities.iter_mut() {
+            let val = val.as_mut()
+                .unwrap_or_else(|| panic!("missing object {:?} in exporter", id));
+            v.visit_entity(id, val);
+        }
+        for (id, val) in self.inventories.iter_mut() {
+            let val = val.as_mut()
+                .unwrap_or_else(|| panic!("missing object {:?} in exporter", id));
+            v.visit_inventory(id, val);
+        }
+        for (id, val) in self.planes.iter_mut() {
+            let val = val.as_mut()
+                .unwrap_or_else(|| panic!("missing object {:?} in exporter", id));
+            v.visit_plane(id, val);
+        }
+        for (id, val) in self.terrain_chunks.iter_mut() {
+            let val = val.as_mut()
+                .unwrap_or_else(|| panic!("missing object {:?} in exporter", id));
+            v.visit_terrain_chunk(id, val);
+        }
+        for (id, val) in self.structures.iter_mut() {
+            let val = val.as_mut()
+                .unwrap_or_else(|| panic!("missing object {:?} in exporter", id));
+            v.visit_structure(id, val);
+        }
+    }
+}
+
+pub trait Visitor {
+    fn visit_client(&mut self, id: ClientId, b: &mut b::Client);
+    fn visit_entity(&mut self, id: EntityId, b: &mut b::Entity);
+    fn visit_inventory(&mut self, id: InventoryId, b: &mut b::Inventory);
+    fn visit_plane(&mut self, id: PlaneId, b: &mut b::Plane);
+    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, b: &mut b::TerrainChunk);
+    fn visit_structure(&mut self, id: StructureId, b: &mut b::Structure);
 }
 
 

@@ -72,7 +72,7 @@ fn import_plane(eng: &mut Engine, stable_pid: Stable<PlaneId>) -> bundle::Result
     let mut file = unwrap!(eng.storage.open_plane_file(stable_pid));
     let b = try!(bundle::read_bundle(&mut file));
     let importer = bundle::import_bundle(&mut DummyFragment::new(&mut eng.world), &b);
-    logic::world::on_import(eng.refine(), &importer);
+    logic::world::on_import(eng.refine(), &importer, &b);
 
     Ok(())
 }
@@ -81,20 +81,14 @@ fn export_plane(eng: &mut Engine, pid: PlaneId) -> bundle::Result<()> {
     let stable_pid = DummyFragment::new(&mut eng.world).plane_mut(pid).stable_id();
     trace!("unload plane {:?}", stable_pid);
 
-    let exporter = {
-        let p = eng.world.plane(pid);
+    let mut exporter = bundle::Exporter::new(eng.data);
+    exporter.add_plane(&eng.world.plane(pid));
+    logic::world::on_export(eng.refine(), &mut exporter);
+    let b = exporter.finish();
 
-        let mut exporter = bundle::Exporter::new(eng.data);
-        exporter.add_plane(&p);
-        let b = exporter.finish();
+    let mut file = eng.storage.create_plane_file(stable_pid);
+    try!(bundle::write_bundle(&mut file, &b));
 
-        let mut file = eng.storage.create_plane_file(stable_pid);
-        try!(bundle::write_bundle(&mut file, &b));
-
-        exporter
-    };
-
-    logic::world::on_export(eng.refine(), &exporter);
     try!(DummyFragment::new(&mut eng.world).destroy_plane(pid));
     Ok(())
 }
@@ -109,7 +103,7 @@ fn import_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
         // TODO: do something intelligent if loading fails, so the whole server doesn't crash
         let b = try!(bundle::read_bundle(&mut file));
         let importer = bundle::import_bundle(&mut DummyFragment::new(&mut eng.world), &b);
-        logic::world::on_import(eng.refine(), &importer);
+        logic::world::on_import(eng.refine(), &importer, &b);
     } else {
         trace!("load chunk from terrain_gen: ({:?}, {:?})", pid, cpos);
 
@@ -126,29 +120,30 @@ fn export_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
     // TODO(plane): use pid + cpos for filename
     trace!("unload chunk: ({:?}, {:?})", pid, cpos);
     let stable_tcid = DummyFragment::new(&mut eng.world).plane_mut(pid).save_terrain_chunk(cpos);
-    let (tcid, opt_exporter) = {
+
+    let mut exporter = bundle::Exporter::new(eng.data());
+
+    let (tcid, exported) = {
         let p = eng.world.plane(pid);
         let tc = p.terrain_chunk(cpos);
 
         // Don't save chunks that are not fully generated, since they are filled with
         // 'placeholder' block instead of real data.  Instead, let the generated data be
         // discarded, and let the chunk be regenerated the next time it is needed.
-        let mut exporter = bundle::Exporter::new(eng.data());
         if !tc.flags().contains(flags::TC_GENERATION_PENDING) {
             exporter.add_terrain_chunk(&tc);
-            let b = exporter.finish();
-
-            let mut file = eng.storage().create_terrain_chunk_file(stable_tcid);
-            try!(bundle::write_bundle(&mut file, &b));
-
-            (tc.id(), Some(exporter))
+            (tc.id(), true)
         } else {
-            (tc.id(), None)
+            (tc.id(), false)
         }
     };
 
-    if let Some(exporter) = opt_exporter {
-        logic::world::on_export(eng.refine(), &exporter);
+    if exported {
+        logic::world::on_export(eng.refine(), &mut exporter);
+        let b = exporter.finish();
+
+        let mut file = eng.storage().create_terrain_chunk_file(stable_tcid);
+        try!(bundle::write_bundle(&mut file, &b));
     } else {
         logic::terrain_chunk::on_destroy_recursive(eng.refine(), tcid);
     }

@@ -31,7 +31,7 @@ pub fn process(eng: &mut Engine, resp: Response) {
                 bundle::import_bundle(&mut wf, &bundle)
             };
 
-            logic::world::on_import(eng.refine(), &importer);
+            logic::world::on_import(eng.refine(), &importer, &bundle);
         },
     }
 }

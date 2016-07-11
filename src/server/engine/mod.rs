@@ -6,6 +6,7 @@ use types::*;
 use cache::TerrainCache;
 use chat::Chat;
 use chunks::Chunks;
+use components::energy::Energy;
 use data::Data;
 use dialogs::Dialogs;
 use input::{Input, Action};
@@ -54,6 +55,8 @@ pub struct Engine<'d> {
     pub chat: Chat,
     pub dialogs: Dialogs,
     pub input: Input,
+
+    pub energy: Energy,
 }
 
 #[must_use]
@@ -90,6 +93,8 @@ impl<'d> Engine<'d> {
             chat: Chat::new(),
             dialogs: Dialogs::new(),
             input: Input::new(),
+
+            energy: Energy::new(),
         }
     }
 

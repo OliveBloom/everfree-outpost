@@ -321,6 +321,36 @@ impl<'d> Importer<'d> {
             f(AnyId::Structure(id));
         }
     }
+
+    pub fn visit_imports<V: Visitor>(&self, b: &b::Bundle, v: &mut V) {
+        for (idx, &id) in self.client_id_map.iter().enumerate() {
+            v.visit_client(id, &b.clients[idx]);
+        }
+        for (idx, &id) in self.entity_id_map.iter().enumerate() {
+            v.visit_entity(id, &b.entities[idx]);
+        }
+        for (idx, &id) in self.inventory_id_map.iter().enumerate() {
+            v.visit_inventory(id, &b.inventories[idx]);
+        }
+        for (idx, &id) in self.plane_id_map.iter().enumerate() {
+            v.visit_plane(id, &b.planes[idx]);
+        }
+        for (idx, &id) in self.terrain_chunk_id_map.iter().enumerate() {
+            v.visit_terrain_chunk(id, &b.terrain_chunks[idx]);
+        }
+        for (idx, &id) in self.structure_id_map.iter().enumerate() {
+            v.visit_structure(id, &b.structures[idx]);
+        }
+    }
+}
+
+pub trait Visitor {
+    fn visit_client(&mut self, id: ClientId, b: &b::Client);
+    fn visit_entity(&mut self, id: EntityId, b: &b::Entity);
+    fn visit_inventory(&mut self, id: InventoryId, b: &b::Inventory);
+    fn visit_plane(&mut self, id: PlaneId, b: &b::Plane);
+    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, b: &b::TerrainChunk);
+    fn visit_structure(&mut self, id: StructureId, b: &b::Structure);
 }
 
 pub fn import_bundle<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>

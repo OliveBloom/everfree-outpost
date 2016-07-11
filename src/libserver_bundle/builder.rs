@@ -45,7 +45,54 @@ impl<Val, Id: Eq+Hash+Copy> Remapper<Val, Id> {
     pub fn keys(&self) -> hash_map::Keys<Id, Id> {
         self.id_map.keys()
     }
+
+    pub fn iter(&self) -> RemapperIter<Val, Id> {
+        RemapperIter {
+            iter: self.id_map.iter(),
+            vec: &self.vals
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> RemapperIterMut<Val, Id> {
+        RemapperIterMut {
+            iter: self.id_map.iter_mut(),
+            vec: &mut self.vals
+        }
+    }
 }
+
+pub struct RemapperIter<'a, Val: 'a, Id: 'a> {
+    iter: hash_map::Iter<'a, Id, Id>,
+    vec: &'a Vec<Val>,
+}
+
+impl<'a, Val, Id: Eq+Hash+Copy+Into<usize>> Iterator for RemapperIter<'a, Val, Id> {
+    type Item = (Id, &'a Val);
+
+    fn next(&mut self) -> Option<(Id, &'a Val)> {
+        let (&old_id, &new_id) = unwrap_or!(self.iter.next(), return None);
+        let idx: usize = new_id.into();
+        Some((old_id, &self.vec[idx]))
+    }
+}
+
+pub struct RemapperIterMut<'a, Val: 'a, Id: 'a> {
+    iter: hash_map::IterMut<'a, Id, Id>,
+    vec: &'a mut Vec<Val>,
+}
+
+impl<'a, Val, Id: Eq+Hash+Copy+Into<usize>> Iterator for RemapperIterMut<'a, Val, Id> {
+    type Item = (Id, &'a mut Val);
+
+    fn next(&mut self) -> Option<(Id, &'a mut Val)> {
+        let (&old_id, &mut new_id) = unwrap_or!(self.iter.next(), return None);
+        let idx: usize = new_id.into();
+        // Fiddle with the lifetime.  This is okay because all elements of `vec` are disjoint.
+        let val: &'a mut Val = unsafe { &mut *(&mut self.vec[idx] as *mut _) };
+        Some((old_id, val))
+    }
+}
+
 
 
 pub struct Builder<'d> {

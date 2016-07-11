@@ -54,10 +54,11 @@ mod parts {
             (Ct  9) CHAT =          ::chat::Chat;
             (Di 10) DIALOGS =       ::dialogs::Dialogs;
             (In 11) INPUT =         ::input::Input;
+            (En 12) ENERGY =        ::components::energy::Energy;
     }
 }
 
-const NUM_PARTS: usize = 12;
+const NUM_PARTS: usize = 13;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]
@@ -88,8 +89,10 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         chat = CHAT;
         dialogs = DIALOGS;
         input = INPUT;
+        energy = ENERGY;
 
-        all = EngineParts::all();
+        All = EngineParts::all();
+        Components = ENERGY;
 
         // Example syntax:
         //VisionHooks = world | messages;

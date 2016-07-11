@@ -17,6 +17,8 @@ use messages::{ClientResponse, SyncKind};
 use world::{self, World, Structure};
 use world::Motion;
 use world::bundle::{Importer, Exporter, AnyId};
+use world::bundle::{import, export};
+use world::bundle::types as b;
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
@@ -148,25 +150,66 @@ pub fn teleport_entity_stable_plane(wf: WorldFragment,
 
 engine_part2!(pub EngineLifecycle(world, physics, cache, vision, messages, dialogs));
 
+
+struct ImportVisitor<'a, 'd: 'a>(&'a mut EngineLifecycle<'d>);
+
+impl<'a, 'd> import::Visitor for ImportVisitor<'a, 'd> {
+    fn visit_client(&mut self, id: ClientId, b: &b::Client) {
+    }
+
+    fn visit_entity(&mut self, id: EntityId, b: &b::Entity) {
+        logic::entity::on_create(self.0.refine(), id);
+    }
+
+    fn visit_inventory(&mut self, id: InventoryId, b: &b::Inventory) {
+    }
+
+    fn visit_plane(&mut self, id: PlaneId, b: &b::Plane) {
+    }
+
+    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, b: &b::TerrainChunk) {
+        logic::terrain_chunk::on_create(self.0.refine(), id);
+    }
+
+    fn visit_structure(&mut self, id: StructureId, b: &b::Structure) {
+        logic::structure::on_create(self.0.refine(), id);
+        logic::structure::on_import(self.0.refine(), id);
+    }
+}
+
 /// Hook to be called after importing some new game objects.
-pub fn on_import(eng: &mut EngineLifecycle, importer: &Importer) {
-    importer.iter_imports(|id| match id {
-        AnyId::Entity(eid) => logic::entity::on_create(eng.refine(), eid),
-        AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_create(eng.refine(), tcid),
-        AnyId::Structure(sid) => {
-            logic::structure::on_create(eng.refine(), sid);
-            logic::structure::on_import(eng.refine(), sid);
-        },
-        _ => {},
-    });
+pub fn on_import(eng: &mut EngineLifecycle, importer: &Importer, bundle: &b::Bundle) {
+    importer.visit_imports(bundle, &mut ImportVisitor(eng));
+}
+
+
+// TODO: separate "export" logic from "destroy" logic
+struct ExportVisitor<'a, 'd: 'a>(&'a mut EngineLifecycle<'d>);
+
+impl<'a, 'd> export::Visitor for ExportVisitor<'a, 'd> {
+    fn visit_client(&mut self, id: ClientId, b: &mut b::Client) {
+    }
+
+    fn visit_entity(&mut self, id: EntityId, b: &mut b::Entity) {
+        logic::entity::on_destroy(self.0.refine(), id);
+    }
+
+    fn visit_inventory(&mut self, id: InventoryId, b: &mut b::Inventory) {
+    }
+
+    fn visit_plane(&mut self, id: PlaneId, b: &mut b::Plane) {
+    }
+
+    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, b: &mut b::TerrainChunk) {
+        logic::terrain_chunk::on_destroy(self.0.refine(), id);
+    }
+
+    fn visit_structure(&mut self, id: StructureId, b: &mut b::Structure) {
+        logic::structure::on_destroy(self.0.refine(), id);
+    }
 }
 
 /// Hook to be called before deleting some exported game objects..
-pub fn on_export(eng: &mut EngineLifecycle, exporter: &Exporter) {
-    exporter.iter_exports(|id| match id {
-        AnyId::Entity(eid) => logic::entity::on_destroy(eng.refine(), eid),
-        AnyId::TerrainChunk(tcid) => logic::terrain_chunk::on_destroy(eng.refine(), tcid),
-        AnyId::Structure(sid) => logic::structure::on_destroy(eng.refine(), sid),
-        _ => {},
-    });
+pub fn on_export(eng: &mut EngineLifecycle, exporter: &mut Exporter) {
+    exporter.visit_exports(&mut ExportVisitor(eng));
 }
