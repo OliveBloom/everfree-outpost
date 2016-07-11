@@ -22,6 +22,7 @@ use Time;
 use data::Data;
 use debug::Debug;
 use entity::{self, Entities, EntityId};
+use gauge::Gauge;
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
@@ -356,10 +357,13 @@ impl<'d, P: Platform> Client<'d, P> {
         let sx = (self.view_size.0 + c - 1) / c;
         let sy = (self.view_size.1 + c - 1) / c;
 
-        let dyn = Dyn::new((sx, sy),
+        // TODO: should take the time as an argument instead of calling now()
+        let dyn = Dyn::new(self.now(),
+                           (sx, sy),
                            &self.inventories,
                            &self.misc.hotbar,
-                           &self.debug);
+                           &self.debug,
+                           &self.misc.energy);
         f(&mut self.ui, dyn)
     }
 
@@ -613,6 +617,8 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn init_timing(&mut self, server: u16) {
         let client = self.platform.get_time();
         self.timing.init(client, server);
+
+        self.misc.energy = Gauge::new(0, (1, 6), server as Time, 0, 240);
     }
 
     pub fn handle_pong(&mut self, client_send: Time, client_recv: Time, server: u16) {

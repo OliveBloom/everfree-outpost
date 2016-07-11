@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 
 use Time;
 use data::Data;
+use gauge::Gauge;
 use platform::{Config, ConfigKey};
 
 /// Miscellaneous client state
@@ -10,6 +11,7 @@ pub struct Misc {
     pub day_night: DayNight,
     pub plane_is_dark: bool,
     pub show_cursor: bool,
+    pub energy: Gauge,
 }
 
 impl Misc {
@@ -19,6 +21,7 @@ impl Misc {
             day_night: DayNight::new(),
             plane_is_dark: false,
             show_cursor: false,
+            energy: Gauge::new(0, (0, 0), 0, 0, 0),
         }
     }
 }

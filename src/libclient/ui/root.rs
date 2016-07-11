@@ -2,8 +2,10 @@ use std::prelude::v1::*;
 
 use physics::v3::{V2, scalar, Region, Align};
 
+use Time;
 use client::ClientObj;
 use debug::Debug as DebugDyn;
+use gauge::Gauge;
 use inventory::{Inventory, Inventories};
 use misc;
 use platform::Config;
@@ -34,22 +36,28 @@ impl Root {
 #[derive(Clone, Copy)]
 pub struct RootDyn<'a> {
     pub screen_size: V2,
+    pub now: Time,
     pub inventories: &'a Inventories,
     pub hotbar: &'a misc::Hotbar,
     pub debug: &'a DebugDyn,
+    pub energy: &'a Gauge,
 }
 
 impl<'a> RootDyn<'a> {
-    pub fn new(screen_size: (u16, u16),
+    pub fn new(now: Time,
+               screen_size: (u16, u16),
                inventories: &'a Inventories,
                hotbar: &'a misc::Hotbar,
-               debug: &'a DebugDyn) -> RootDyn<'a> {
+               debug: &'a DebugDyn,
+               energy: &'a Gauge) -> RootDyn<'a> {
         RootDyn {
+            now: now,
             screen_size: V2::new(screen_size.0 as i32,
                                  screen_size.1 as i32),
             inventories: inventories,
             hotbar: hotbar,
             debug: debug,
+            energy: energy,
         }
     }
 }
@@ -62,8 +70,10 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
         {
             // Hotbar
-            let dyn = TopBarDyn::new(self.dyn.inventories.main_inventory(),
-                                     self.dyn.hotbar);
+            let dyn = TopBarDyn::new(self.dyn.now,
+                                     self.dyn.inventories.main_inventory(),
+                                     self.dyn.hotbar,
+                                     self.dyn.energy);
             let mut child = WidgetPack::stateless(top_bar::TopBar, dyn);
             let rect = Region::sized(child.size()) + pos;
             v.visit(&mut child, rect);
@@ -146,16 +156,22 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 
 #[derive(Clone, Copy)]
 struct TopBarDyn<'a> {
+    now: Time,
     inv: Option<&'a Inventory>,
     hotbar: &'a misc::Hotbar,
+    energy: &'a Gauge,
 }
 
 impl<'a> TopBarDyn<'a> {
-    fn new(inv: Option<&'a Inventory>,
-           hotbar: &'a misc::Hotbar) -> TopBarDyn<'a> {
+    fn new(now: Time,
+           inv: Option<&'a Inventory>,
+           hotbar: &'a misc::Hotbar,
+           energy: &'a Gauge) -> TopBarDyn<'a> {
         TopBarDyn {
+            now: now,
             inv: inv,
             hotbar: hotbar,
+            energy: energy,
         }
     }
 }
@@ -187,11 +203,11 @@ impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
     }
 
     fn cur_energy(self) -> i32 {
-        240
+        self.energy.get(self.now)
     }
 
     fn max_energy(self) -> i32 {
-        240
+        self.energy.max()
     }
 
     fn energy_tribe(self) -> top_bar::Tribe {

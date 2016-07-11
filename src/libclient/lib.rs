@@ -42,6 +42,7 @@ mod misc;
 mod predict;
 mod debug;
 mod timing;
+mod gauge;
 
 pub mod graphics;
 pub mod ui;
