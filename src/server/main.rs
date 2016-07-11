@@ -75,6 +75,7 @@ mod vision;
 mod logic;
 mod cache;
 mod dialogs;
+mod components;
 
 mod script;
 
