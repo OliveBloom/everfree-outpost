@@ -89,6 +89,39 @@ macro_rules! mk_value {
 with_value_variants!(mk_value!(Value, Repr));
 
 
+impl Value {
+    pub fn as_bool(self) -> Option<bool> {
+        match self {
+            Value::Bool(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_int(self) -> Option<i64> {
+        match self {
+            Value::Int(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_float(self) -> Option<f64> {
+        match self {
+            Value::Float(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> Option<String> {
+        match self {
+            Value::Str(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    // TODO: add the rest as needed
+}
+
+
 pub enum View<'a> {
     Value(Value),
     Array(ArrayView<'a>),
@@ -104,6 +137,14 @@ impl<'a> View<'a> {
         }
     }
 
+
+    pub fn as_value(self) -> Option<Value> {
+        match self {
+            View::Value(x) => Some(x),
+            _ => None,
+        }
+    }
+
     pub fn unwrap_value(self) -> Value {
         match self {
             View::Value(x) => x,
@@ -111,10 +152,26 @@ impl<'a> View<'a> {
         }
     }
 
+
+    pub fn as_array(self) -> Option<ArrayView<'a>> {
+        match self {
+            View::Array(x) => Some(x),
+            _ => None,
+        }
+    }
+
     pub fn unwrap_array(self) -> ArrayView<'a> {
         match self {
             View::Array(x) => x,
             _ => panic!("not an Array"),
+        }
+    }
+
+
+    pub fn as_hash(self) -> Option<HashView<'a>> {
+        match self {
+            View::Hash(x) => Some(x),
+            _ => None,
         }
     }
 
@@ -141,6 +198,14 @@ impl<'a> ViewMut<'a> {
         }
     }
 
+
+    pub fn as_value(self) -> Option<Value> {
+        match self {
+            ViewMut::Value(x) => Some(x),
+            _ => None,
+        }
+    }
+
     pub fn unwrap_value(self) -> Value {
         match self {
             ViewMut::Value(x) => x,
@@ -148,10 +213,26 @@ impl<'a> ViewMut<'a> {
         }
     }
 
+
+    pub fn as_array(self) -> Option<ArrayViewMut<'a>> {
+        match self {
+            ViewMut::Array(x) => Some(x),
+            _ => None,
+        }
+    }
+
     pub fn unwrap_array(self) -> ArrayViewMut<'a> {
         match self {
             ViewMut::Array(x) => x,
             _ => panic!("not an Array"),
+        }
+    }
+
+
+    pub fn as_hash(self) -> Option<HashViewMut<'a>> {
+        match self {
+            ViewMut::Hash(x) => Some(x),
+            _ => None,
         }
     }
 

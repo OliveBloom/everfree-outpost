@@ -88,6 +88,16 @@ impl Gauge {
         self.max_delta = self.calc_max_delta();
     }
 
+    pub fn set_min(&mut self, min: i32) {
+        self.min = min;
+        self.max_delta = self.calc_max_delta();
+    }
+
+    pub fn set_max(&mut self, max: i32) {
+        self.max = max;
+        self.max_delta = self.calc_max_delta();
+    }
+
 
     pub fn min(&self) -> i32 {
         self.min

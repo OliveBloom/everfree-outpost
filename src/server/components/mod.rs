@@ -6,6 +6,9 @@ use world::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
 use world::bundle;
 
 
+pub mod energy;
+
+
 pub trait ObjectType {
     type Id: Copy;
     type Bundled;
