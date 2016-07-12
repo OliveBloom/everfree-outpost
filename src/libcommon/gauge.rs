@@ -113,4 +113,12 @@ impl Gauge {
     pub fn rate(&self) -> (i16, u16) {
         (self.rate_numer, self.rate_denom)
     }
+
+    pub fn last_value(&self) -> i32 {
+        self.last_val
+    }
+
+    pub fn last_time(&self) -> Time {
+        self.last_time
+    }
 }

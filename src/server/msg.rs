@@ -106,6 +106,7 @@ mod op {
         OpenPonyEdit = 0x8024,
         EntityActivityIcon = 0x8025,
         CancelDialog = 0x8026,
+        EnergyUpdate = 0x8027,
 
         // Deprecated responses
         PlayerMotion = 0x8002,
@@ -290,6 +291,7 @@ pub enum Response {
     OpenPonyEdit(String),
     EntityActivityIcon(EntityId, AnimId),
     CancelDialog,
+    EnergyUpdate(u16, u16, (i16, u16), LocalTime),
 
     ClientRemoved(WireId),
     ReplResult(u16, String),
@@ -366,6 +368,8 @@ impl Response {
                 ww.write_msg(id, (op::EntityActivityIcon, eid, anim)),
             CancelDialog =>
                 ww.write_msg(id, op::CancelDialog),
+            EnergyUpdate(cur, max, rate, time) =>
+                ww.write_msg(id, (op::EnergyUpdate, cur, max, rate, time)),
 
             ClientRemoved(wire_id) =>
                 ww.write_msg(id, (op::ClientRemoved, wire_id)),

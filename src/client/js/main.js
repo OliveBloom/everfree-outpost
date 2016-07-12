@@ -190,6 +190,7 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     conn.onOpenPonyEdit = handleOpenPonyEdit;
     conn.onEntityActivityIcon = handleEntityActivityIcon;
     conn.onCancelDialog = handleCancelDialog;
+    conn.onEnergyUpdate = handleEnergyUpdate;
 
     conn.onSyncStatus = function(new_synced) {
         // The first time the status becomes SYNC_OK, swap out the canvas and
@@ -582,6 +583,10 @@ function handleAbilityInventory(iid) {
     ability_inv = inv_tracker.get(iid);
 
     asm_client.inventoryAbilityId(iid);
+}
+
+function handleEnergyUpdate(cur, max, rate_n, rate_d, time) {
+    console.log('energy: ' + cur + '/' + max + ', rate ' + rate_n + '/' + rate_d);
 }
 
 function handlePlaneFlags(flags) {

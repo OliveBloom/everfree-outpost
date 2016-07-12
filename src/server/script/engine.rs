@@ -220,6 +220,11 @@ define_python_class! {
             Ok(())
         }
 
+        fn energy_check_init(eng: EngineRef, eid: EntityId, max: i32) -> PyResult<()> {
+            try!(logic::energy::check_init(eng.unwrap().refine(), eid, max));
+            Ok(())
+        }
+
         fn energy_get(eng: EngineRef, eid: EntityId) -> PyResult<i32> {
             let result = try!(logic::energy::get(eng.unwrap().refine(), eid));
             Ok(result)

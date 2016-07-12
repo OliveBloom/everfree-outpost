@@ -116,6 +116,7 @@ pub enum ClientResponse {
     CancelDialog,
     MainInventory(InventoryId),
     AbilityInventory(InventoryId),
+    EnergyUpdate(i32, i32, (i16, u16), Time),
     ProcessedInputs(Time, u16),
     ChatUpdate(String),
     KickReason(String),
@@ -526,6 +527,10 @@ impl Messages {
 
             ClientResponse::AbilityInventory(iid) =>
                 self.send_raw(wire_id, Response::AbilityInventory(iid)),
+
+            ClientResponse::EnergyUpdate(cur, max, rate, time) =>
+                self.send_raw(wire_id, Response::EnergyUpdate(
+                        cur as u16, max as u16, rate, time.to_local())),
 
             ClientResponse::ProcessedInputs(time, count) =>
                 self.send_raw(wire_id, Response::ProcessedInputs(time.to_local(), count)),

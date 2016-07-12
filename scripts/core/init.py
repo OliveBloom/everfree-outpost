@@ -38,6 +38,8 @@ def client_login(eng, cid):
             DATA.animation_id('activity//none')))
         e.set_activity(Walk())
 
+    e.energy().check_init(240)
+
 # TODO: get rid of all these hacks
 
 # Fix this by letting terrain_gen set up `extra` directly (part of Bundle)

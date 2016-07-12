@@ -225,6 +225,9 @@ class EntityEnergy(ObjectProxy):
     def init(self, max):
         self._eng.energy_init(self.id, max)
 
+    def check_init(self, max):
+        self._eng.energy_check_init(self.id, max)
+
     def get(self):
         return self._eng.energy_get(self.id)
 

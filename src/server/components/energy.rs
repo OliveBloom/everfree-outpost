@@ -58,10 +58,6 @@ impl Energy {
     }
 
     pub fn init(&mut self, id: EntityId, max: i32) {
-        if self.map.contains_key(&id) {
-            return;
-        }
-
         // TODO: hardcoded rate
         let g = Gauge::new(max, (1, 6), 0, 0, max);
         self.map.insert(id, g);
@@ -85,6 +81,20 @@ impl Energy {
         }
         g.adjust(-amount, now);
         true
+    }
+
+
+    pub fn has_gauge(&self, id: EntityId) -> bool {
+        self.map.contains_key(&id)
+    }
+
+    pub fn get_gauge(&self, id: EntityId) -> Option<&Gauge> {
+        self.map.get(&id)
+    }
+
+    pub fn gauge(&self, id: EntityId) -> &Gauge {
+        self.get_gauge(id)
+            .unwrap_or_else(|| panic!("no energy gauge for entity {:?}", id))
     }
 
     pub fn get_gauge_mut(&mut self, id: EntityId) -> Option<&mut Gauge> {
