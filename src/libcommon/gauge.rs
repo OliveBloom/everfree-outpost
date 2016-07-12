@@ -32,6 +32,7 @@ impl Gauge {
             min: min,
             max: max,
         };
+        assert!(g.rate_denom != 0);
         g.max_delta = g.calc_max_delta();
         g
     }
@@ -79,6 +80,8 @@ impl Gauge {
     }
 
     pub fn set_rate(&mut self, numer: i16, denom: u16, time: Time) {
+        assert!(denom != 0);
+
         // Update so that last_time = time.
         let val = self.get(time);
         self.set(val, time);

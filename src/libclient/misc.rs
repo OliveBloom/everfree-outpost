@@ -22,7 +22,7 @@ impl Misc {
             day_night: DayNight::new(),
             plane_is_dark: false,
             show_cursor: false,
-            energy: Gauge::new(0, (0, 0), 0, 0, 0),
+            energy: Gauge::new(0, (0, 1), 0, 0, 0),
         }
     }
 }

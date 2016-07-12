@@ -216,6 +216,24 @@ class EntityProxy(ObjectProxy):
     inv = _inv
     create_inv = _create_inv
 
+    def energy(self):
+        return EntityEnergy(self._eng, self.id)
+
+class EntityEnergy(ObjectProxy):
+    ID_TYPE = EntityId
+
+    def init(self, max):
+        self._eng.energy_init(self.id, max)
+
+    def get(self):
+        return self._eng.energy_get(self.id)
+
+    def give(self, amount):
+        return self._eng.energy_give(self.id, amount)
+
+    def take(self, amount):
+        return self._eng.energy_take(self.id, amount)
+
 
 class InventoryProxy(ObjectProxy):
     ID_TYPE = InventoryId

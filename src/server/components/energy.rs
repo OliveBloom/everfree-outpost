@@ -39,7 +39,8 @@ impl Component<Entity> for Energy {
         let cur = unwrap_or!(e.get("cur").and_then(|v| v.as_value()).and_then(|v| v.as_int()));
         let max = unwrap_or!(e.get("max").and_then(|v| v.as_value()).and_then(|v| v.as_int()));
 
-        let g = Gauge::new(cur as i32, (0, 0), now, 0, max as i32);
+        // TODO: hardcoded rate
+        let g = Gauge::new(cur as i32, (1, 6), now, 0, max as i32);
         self.map.insert(id, g);
     }
 
@@ -61,7 +62,8 @@ impl Energy {
             return;
         }
 
-        let g = Gauge::new(max, (0, 0), 0, 0, max);
+        // TODO: hardcoded rate
+        let g = Gauge::new(max, (1, 6), 0, 0, max);
         self.map.insert(id, g);
     }
 
