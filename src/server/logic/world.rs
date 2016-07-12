@@ -7,6 +7,7 @@ use util::SmallSet;
 use util::StrResult;
 
 use chunks;
+use components;
 use data::StructureTemplate;
 use engine::Engine;
 use engine::glue::*;
@@ -148,7 +149,9 @@ pub fn teleport_entity_stable_plane(wf: WorldFragment,
 }
 
 
-engine_part2!(pub EngineLifecycle(world, physics, cache, vision, messages, dialogs));
+engine_part2!(pub EngineLifecycle(
+        world, physics, cache, vision, messages, dialogs,
+        Components));
 
 
 struct ImportVisitor<'a, 'd: 'a>(&'a mut EngineLifecycle<'d>);
@@ -159,6 +162,7 @@ impl<'a, 'd> import::Visitor for ImportVisitor<'a, 'd> {
 
     fn visit_entity(&mut self, id: EntityId, b: &b::Entity) {
         logic::entity::on_create(self.0.refine(), id);
+        components::import_entity(self.0.refine(), id, b);
     }
 
     fn visit_inventory(&mut self, id: InventoryId, b: &b::Inventory) {
@@ -191,7 +195,10 @@ impl<'a, 'd> export::Visitor for ExportVisitor<'a, 'd> {
     }
 
     fn visit_entity(&mut self, id: EntityId, b: &mut b::Entity) {
+        components::export_entity(self.0.refine(), id, b);
+
         logic::entity::on_destroy(self.0.refine(), id);
+        components::cleanup_entity(self.0.refine(), id);
     }
 
     fn visit_inventory(&mut self, id: InventoryId, b: &mut b::Inventory) {
