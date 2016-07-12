@@ -382,6 +382,16 @@ pub unsafe extern fn predict_arrival(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn energy_update(client: &mut Client,
+                                   cur: i32,
+                                   max: i32,
+                                   rate_n: i16,
+                                   rate_d: u16,
+                                   time: u16) {
+    client.energy_update(cur, max, (rate_n, rate_d), time);
+}
+
+#[no_mangle]
 pub unsafe extern fn toggle_cursor(client: &mut Client) {
     client.toggle_cursor();
 }

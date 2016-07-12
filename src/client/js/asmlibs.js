@@ -678,6 +678,10 @@ DynAsm.prototype.predictArrival = function(extra_delay) {
     return this._raw['predict_arrival'](this.client, extra_delay);
 };
 
+DynAsm.prototype.energyUpdate = function(cur, max, rate_n, rate_d, time) {
+    this._raw['energy_update'](this.client, cur, max, rate_n, rate_d, time);
+};
+
 DynAsm.prototype.toggleCursor = function() {
     this._raw['toggle_cursor'](this.client);
 };

@@ -631,6 +631,11 @@ impl<'d, P: Platform> Client<'d, P> {
         (server + extra_delay + TICK_MS - 1) & !(TICK_MS - 1)
     }
 
+    pub fn energy_update(&mut self, cur: i32, max: i32, rate: (i16, u16), time: u16) {
+        let time = self.decode_time(time);
+        self.misc.energy = Gauge::new(cur, rate, time, 0, max);
+    }
+
     pub fn toggle_cursor(&mut self) {
         self.misc.show_cursor = !self.misc.show_cursor;
     }

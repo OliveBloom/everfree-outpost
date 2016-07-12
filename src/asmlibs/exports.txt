@@ -47,6 +47,7 @@ set_plane_flags
 init_timing
 handle_pong
 predict_arrival
+energy_update
 toggle_cursor
 calc_scale
 resize_window

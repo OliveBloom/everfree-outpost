@@ -586,7 +586,7 @@ function handleAbilityInventory(iid) {
 }
 
 function handleEnergyUpdate(cur, max, rate_n, rate_d, time) {
-    console.log('energy: ' + cur + '/' + max + ', rate ' + rate_n + '/' + rate_d);
+    asm_client.energyUpdate(cur, max, rate_n, rate_d, time);
 }
 
 function handlePlaneFlags(flags) {
