@@ -215,6 +215,27 @@ define_python_class! {
         }
 
 
+        fn energy_init(eng: EngineRef, eid: EntityId, max: i32) -> PyResult<()> {
+            try!(logic::energy::init(eng.unwrap().refine(), eid, max));
+            Ok(())
+        }
+
+        fn energy_get(eng: EngineRef, eid: EntityId) -> PyResult<i32> {
+            let result = try!(logic::energy::get(eng.unwrap().refine(), eid));
+            Ok(result)
+        }
+
+        fn energy_give(eng: EngineRef, eid: EntityId, amount: i32) -> PyResult<i32> {
+            let result = try!(logic::energy::give(eng.unwrap().refine(), eid, amount));
+            Ok(result)
+        }
+
+        fn energy_take(eng: EngineRef, eid: EntityId, amount: i32) -> PyResult<bool> {
+            let result = try!(logic::energy::take(eng.unwrap().refine(), eid, amount));
+            Ok(result)
+        }
+
+
         fn messages_clients_len(eng: OnlyMessages,) -> usize {
             eng.messages().clients_len()
         }

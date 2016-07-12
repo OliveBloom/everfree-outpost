@@ -69,6 +69,13 @@ impl Energy {
         self.map.get(&id).map_or(0, |g| g.get(now))
     }
 
+    pub fn give(&mut self, id: EntityId, amount: i32, now: Time) -> i32 {
+        let g = unwrap_or!(self.get_gauge_mut(id), return 0);
+        let old = g.get(now);
+        g.adjust(amount, now);
+        g.get(now) - old
+    }
+
     pub fn take(&mut self, id: EntityId, amount: i32, now: Time) -> bool {
         let g = unwrap_or!(self.get_gauge_mut(id), return false);
         if g.get(now) < amount {

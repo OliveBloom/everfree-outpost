@@ -10,6 +10,7 @@ pub mod extra;
 pub mod tick;
 pub mod terrain_gen;
 pub mod dialogs;
+pub mod energy;
 
 pub mod entity;
 pub mod inventory;
