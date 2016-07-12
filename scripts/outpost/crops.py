@@ -34,6 +34,10 @@ def register(basename):
     @use.item(item)
     def plant_crop(e, args):
         if not e.plane().get_block(util.hit_tile(e)).name.startswith('farmland/'):
+            if e.inv().count(item) == 0:
+                raise RuntimeError('missing item in inventory')
+            e.energy().give(10)
+            e.inv().bulk_remove(item, 1)
             return
 
         s = structure_items.place(e, item, t[0])

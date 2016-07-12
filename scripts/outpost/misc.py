@@ -3,6 +3,7 @@ import random
 from outpost_server.core import alias, use, util
 from outpost_server.core.data import DATA
 from outpost_server.outpost.lib import structure_items, tool, ward
+from outpost_server.outpost.lib.energy import energy_cost
 from outpost_server.outpost.lib.timed_action import timed_action
 
 structure_items.register('bookshelf', 'bookshelf/0')
@@ -47,6 +48,7 @@ alias.register_template('tree/v1', TREE)
 
 @use.structure(TREE)
 @use.structure(STUMP)
+@energy_cost(2)
 @timed_action(1000, 'activity//activity/kick')
 def use_tree(e, s, args):
     e.inv().bulk_add(WOOD, 2)
@@ -71,6 +73,7 @@ STONE = DATA.item('stone')
 CRYSTAL = DATA.item('crystal')
 
 @use.structure(ROCK)
+@energy_cost(2)
 @timed_action(1000, 'activity//activity/kick')
 def use_rock(e, s, args):
     e.inv().bulk_add(STONE, 2)
