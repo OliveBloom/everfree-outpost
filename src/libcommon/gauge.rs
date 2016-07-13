@@ -74,15 +74,36 @@ impl Gauge {
         val
     }
 
+    /// Like `set`, but keeps any partial progress that's been made toward the next
+    /// increase/decrease due to `rate`.
+    pub fn set_keep_progress(&mut self, val: i32, time: Time) -> i32 {
+        let delta = time - self.last_time;
+        let n = self.rate_numer as Time;
+        let d = 1000 * self.rate_denom as Time;
+        // We've progressed `frac_time` ms and increased by `frac_val` points since the last whole
+        // umltiple of `d`.
+        let frac_time = delta % d;
+        let frac_val = (frac_time * n / d) as i32;
+
+        let val = cmp::max(self.min, cmp::min(val, self.max));
+        // NB: This does allow last_val to exceed min..max.  But for times >= `time`, `get()` will
+        // still return values in the appropriate range.
+        self.last_val = val - frac_val;
+        self.last_time = time - frac_time;
+        self.max_delta = self.calc_max_delta();
+        val
+    }
+
     pub fn adjust(&mut self, adj: i32, time: Time) -> i32 {
         let val = self.get(time) + adj;
-        self.set(val, time)
+        self.set_keep_progress(val, time)
     }
 
     pub fn set_rate(&mut self, numer: i16, denom: u16, time: Time) {
         assert!(denom != 0);
 
-        // Update so that last_time = time.
+        // Update so that last_time = time.  Don't try to keep progress, since that relies on
+        // having a constant `rate`.
         let val = self.get(time);
         self.set(val, time);
 
