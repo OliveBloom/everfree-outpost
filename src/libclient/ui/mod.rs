@@ -39,7 +39,7 @@ impl UI {
         }
     }
 
-    pub fn generate_geom(&mut self, dyn: Dyn) -> (Vec<geom::Vertex>, Vec<geom::Special>) {
+    pub fn generate_geom(&mut self, dyn: &Dyn) -> (Vec<geom::Vertex>, Vec<geom::Special>) {
         let mut geom = geom::Geom::new();
 
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
@@ -54,7 +54,7 @@ impl UI {
                     let item = inv.items[data.src_slot];
 
                     let dyn = item::ItemDyn::from_item(item);
-                    let mut disp = widget::WidgetPack::stateless(item::ItemDisplay, dyn);
+                    let mut disp = widget::WidgetPack::stateless(item::ItemDisplay, &dyn);
                     let disp_rect = Region::sized(disp.size()) + self.context.mouse_pos;
                     disp.render(&mut geom, disp_rect);
                 }
@@ -66,7 +66,7 @@ impl UI {
 
     pub fn handle_key(&mut self,
                       key: input::KeyEvent,
-                      dyn: Dyn) -> input::EventStatus {
+                      dyn: &Dyn) -> input::EventStatus {
         if !self.context.dragging() {
             let mut root = widget::WidgetPack::new(&mut self.root, dyn);
             root.on_key(key)
@@ -83,7 +83,7 @@ impl UI {
 
     pub fn handle_mouse_move(&mut self,
                              pos: V2,
-                             dyn: Dyn) -> input::EventStatus {
+                             dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -93,7 +93,7 @@ impl UI {
 
     pub fn handle_mouse_down(&mut self,
                              pos: V2,
-                             dyn: Dyn) -> input::EventStatus {
+                             dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -110,7 +110,7 @@ impl UI {
 
     pub fn handle_mouse_up(&mut self,
                            pos: V2,
-                           dyn: Dyn) -> input::EventStatus {
+                           dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -125,7 +125,7 @@ impl UI {
         }
     }
 
-    pub fn get_cursor(&mut self, dyn: Dyn) -> Cursor {
+    pub fn get_cursor(&mut self, dyn: &Dyn) -> Cursor {
         if !self.context.dragging() {
             return Cursor::Normal;
         }

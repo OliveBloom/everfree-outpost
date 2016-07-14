@@ -74,7 +74,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
                                      self.dyn.inventories.main_inventory(),
                                      self.dyn.hotbar,
                                      self.dyn.energy);
-            let mut child = WidgetPack::stateless(top_bar::TopBar, dyn);
+            let mut child = WidgetPack::stateless(top_bar::TopBar, &dyn);
             let rect = Region::sized(child.size()) + pos;
             v.visit(&mut child, rect);
         }
@@ -83,7 +83,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             // Dialog
             let self_rect = Region::sized(self.size()) + pos;
             let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories);
-            let mut child = WidgetPack::new(&mut self.state.dialog, dyn);
+            let mut child = WidgetPack::new(&mut self.state.dialog, &dyn);
             let child_rect = Region::sized(child.size());
             let rect = child_rect.align(self_rect, Align::Center, Align::Center);
             v.visit(&mut child, rect);
@@ -91,7 +91,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 
         {
             // Debug pane
-            let mut child = WidgetPack::new(&mut self.state.debug, self.dyn.debug);
+            let mut child = WidgetPack::new(&mut self.state.debug, &self.dyn.debug);
             let base = pos + V2::new(self.dyn.screen_size.x - child.size().x, 0);
             let rect = Region::sized(child.size()) + base;
             v.visit(&mut child, rect);
@@ -177,7 +177,7 @@ impl<'a> TopBarDyn<'a> {
 }
 
 impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
-    fn hotbar_slot_info(self, idx: u8) -> hotbar::SlotInfo {
+    fn hotbar_slot_info(&self, idx: u8) -> hotbar::SlotInfo {
         let inv = match self.inv {
             Some(x) => x,
             None => return hotbar::SlotInfo {
@@ -202,15 +202,15 @@ impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
         }
     }
 
-    fn cur_energy(self) -> i32 {
+    fn cur_energy(&self) -> i32 {
         self.energy.get(self.now)
     }
 
-    fn max_energy(self) -> i32 {
+    fn max_energy(&self) -> i32 {
         self.energy.max()
     }
 
-    fn energy_tribe(self) -> top_bar::Tribe {
+    fn energy_tribe(&self) -> top_bar::Tribe {
         top_bar::Tribe::Earth
     }
 }

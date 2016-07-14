@@ -75,20 +75,20 @@ pub trait Visitor {
 }
 
 
-pub struct WidgetPack<'a, W: 'a, D: Copy> {
+pub struct WidgetPack<'a, W: 'a, D: 'a> {
     pub state: &'a mut W,
-    pub dyn: D,
+    pub dyn: &'a D,
 }
 
-impl<'a, W, D: Copy> WidgetPack<'a, W, D> {
-    pub fn new(state: &'a mut W, dyn: D) -> WidgetPack<'a, W, D> {
+impl<'a, W, D> WidgetPack<'a, W, D> {
+    pub fn new(state: &'a mut W, dyn: &'a D) -> WidgetPack<'a, W, D> {
         WidgetPack {
             state: state,
             dyn: dyn,
         }
     }
 
-    pub fn stateless(_w: W, dyn: D) -> WidgetPack<'a, W, D> {
+    pub fn stateless(_w: W, dyn: &'a D) -> WidgetPack<'a, W, D> {
         assert!(mem::size_of::<W>() == 0);
         WidgetPack {
             state: unsafe { mem::transmute(1 as *mut W) },

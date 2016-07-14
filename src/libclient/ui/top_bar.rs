@@ -22,12 +22,12 @@ pub enum Tribe {
     Alicorn,
 }
 
-pub trait TopBarDyn: Copy {
-    fn hotbar_slot_info(self, idx: u8) -> hotbar::SlotInfo;
+pub trait TopBarDyn {
+    fn hotbar_slot_info(&self, idx: u8) -> hotbar::SlotInfo;
 
-    fn cur_energy(self) -> i32;
-    fn max_energy(self) -> i32;
-    fn energy_tribe(self) -> Tribe;
+    fn cur_energy(&self) -> i32;
+    fn max_energy(&self) -> i32;
+    fn energy_tribe(&self) -> Tribe;
 }
 
 impl TopBar {
@@ -43,7 +43,8 @@ impl<'a, D: TopBarDyn> Widget for WidgetPack<'a, TopBar, D> {
     fn size(&mut self) -> V2 { TopBar::size() }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let mut child = WidgetPack::stateless(Hotbar, HotbarDynWrapper(self.dyn));
+        let dyn = HotbarDynWrapper(self.dyn);
+        let mut child = WidgetPack::stateless(Hotbar, &dyn);
         let rect = Region::sized(child.size()) + pos + V2::new(7, 1);
         v.visit(&mut child, rect);
     }
@@ -82,10 +83,10 @@ impl<'a, D: TopBarDyn> Widget for WidgetPack<'a, TopBar, D> {
 
 
 #[derive(Clone, Copy)]
-struct HotbarDynWrapper<D>(D);
+struct HotbarDynWrapper<'a, D: 'a>(&'a D);
 
-impl<D> HotbarDyn for HotbarDynWrapper<D> where D: TopBarDyn {
-    fn slot_info(self, idx: u8) -> hotbar::SlotInfo {
+impl<'a, D> HotbarDyn for HotbarDynWrapper<'a, D> where D: TopBarDyn {
+    fn slot_info(&self, idx: u8) -> hotbar::SlotInfo {
         self.0.hotbar_slot_info(idx)
     }
 }

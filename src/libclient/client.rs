@@ -352,7 +352,7 @@ impl<'d, P: Platform> Client<'d, P> {
         }
     }
 
-    fn with_ui_dyn<F: FnOnce(&mut UI, Dyn) -> R, R>(&mut self, f: F) -> R {
+    fn with_ui_dyn<F: FnOnce(&mut UI, &Dyn) -> R, R>(&mut self, f: F) -> R {
         let c = self.ui_scale;
         let sx = (self.view_size.0 + c - 1) / c;
         let sy = (self.view_size.1 + c - 1) / c;
@@ -364,7 +364,7 @@ impl<'d, P: Platform> Client<'d, P> {
                            &self.misc.hotbar,
                            &self.debug,
                            &self.misc.energy);
-        f(&mut self.ui, dyn)
+        f(&mut self.ui, &dyn)
     }
 
     pub fn input_key(&mut self, code: u8, mods: u8) -> bool {

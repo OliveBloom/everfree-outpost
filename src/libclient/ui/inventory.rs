@@ -40,7 +40,7 @@ impl<'a> Widget for WidgetPack<'a, Slot, SlotDyn> {
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
         let dyn = item::ItemDyn::from_item(self.dyn.item);
-        let mut child = WidgetPack::stateless(item::ItemDisplay, dyn);
+        let mut child = WidgetPack::stateless(item::ItemDisplay, &dyn);
         let rect = Region::sized(child.size()) + pos + scalar(2);
         v.visit(&mut child, rect);
     }
@@ -80,12 +80,12 @@ impl Grid {
     }
 }
 
-pub trait GridDyn: Copy {
-    fn grid_size(self) -> V2;
-    fn len(self) -> usize;
-    fn item(self, i: usize) -> Item;
-    fn active(self) -> bool;
-    fn inv_id(self) -> Option<u32>;
+pub trait GridDyn {
+    fn grid_size(&self) -> V2;
+    fn len(&self) -> usize;
+    fn item(&self, i: usize) -> Item;
+    fn active(&self) -> bool;
+    fn inv_id(&self) -> Option<u32>;
 }
 
 impl<'a, D: GridDyn> WidgetPack<'a, Grid, D> {
@@ -133,7 +133,7 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
                     else { SlotStatus::Inactive },
             };
 
-            let mut child = WidgetPack::stateless(Slot, dyn);
+            let mut child = WidgetPack::stateless(Slot, &dyn);
             let rect = Region::sized(child.size()) + pos + slot_pos * Slot::size();
             v.visit(&mut child, rect);
         }

@@ -52,12 +52,14 @@ impl<'a> InventoryDyn<'a> {
 
 impl<'a, 'b> Widget for WidgetPack<'a, Inventory, InventoryDyn<'b>> {
     fn size(&mut self) -> V2 {
-        let mut child = WidgetPack::new(&mut self.state.grid, self.dyn.as_grid_dyn());
+        let dyn = self.dyn.as_grid_dyn();
+        let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
         child.size()
     }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let mut child = WidgetPack::new(&mut self.state.grid, self.dyn.as_grid_dyn());
+        let dyn = self.dyn.as_grid_dyn();
+        let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
         let rect = Region::sized(child.size()) + pos;
         v.visit(&mut child, rect);
     }
@@ -84,11 +86,11 @@ impl<'a> GridDyn<'a> {
 }
 
 impl<'a> inventory::GridDyn for GridDyn<'a> {
-    fn grid_size(self) -> V2 {
+    fn grid_size(&self) -> V2 {
         V2::new(6, 5)
     }
 
-    fn len(self) -> usize {
+    fn len(&self) -> usize {
         if let Some(inv) = self.inv {
             inv.len()
         } else {
@@ -96,15 +98,15 @@ impl<'a> inventory::GridDyn for GridDyn<'a> {
         }
     }
 
-    fn item(self, i: usize) -> Item {
+    fn item(&self, i: usize) -> Item {
         self.inv.unwrap().items[i]
     }
 
-    fn active(self) -> bool {
+    fn active(&self) -> bool {
         self.active
     }
 
-    fn inv_id(self) -> Option<u32> {
+    fn inv_id(&self) -> Option<u32> {
         self.inv.map(|i| i.id)
     }
 }
@@ -156,8 +158,8 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
         let mut x = 0;
         for idx in 0 .. 2 {
             let inv = self.dyn.invs.get(self.state.inv_id[idx]);
-            let mut child = WidgetPack::new(&mut self.state.grid[idx],
-                                            GridDyn::new(inv, idx as u8 == self.state.focus));
+            let dyn = GridDyn::new(inv, idx as u8 == self.state.focus);
+            let mut child = WidgetPack::new(&mut self.state.grid[idx], &dyn);
             let rect = Region::sized(child.size()) + pos + V2::new(x, 0);
             v.visit(&mut child, rect);
             x += rect.size().x + 7;
@@ -184,8 +186,8 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
         let idx = self.state.focus as usize;
         let mut status = {
             let inv = self.dyn.invs.get(self.state.inv_id[idx]);
-            let mut child = WidgetPack::new(&mut self.state.grid[idx],
-                                            GridDyn::new(inv, true));
+            let dyn = GridDyn::new(inv, true);
+            let mut child = WidgetPack::new(&mut self.state.grid[idx], &dyn);
             child.on_key(key)
         };
 

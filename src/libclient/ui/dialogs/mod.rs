@@ -93,21 +93,21 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
 
             AnyDialog::Inventory(ref mut state) => {
                 let dyn = InventoryDyn::new(self.dyn.inventories.main_inventory());
-                let mut child = WidgetPack::new(state, dyn);
+                let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },
 
             AnyDialog::Ability(ref mut state) => {
                 let dyn = InventoryDyn::new(self.dyn.inventories.ability_inventory());
-                let mut child = WidgetPack::new(state, dyn);
+                let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },
 
             AnyDialog::Container(ref mut state) => {
                 let dyn = ContainerDyn::new(self.dyn.inventories);
-                let mut child = WidgetPack::new(state, dyn);
+                let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },
