@@ -111,19 +111,20 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
     }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let outer_bounds = Region::sized(self.state.size) + pos;
-        let bounds = outer_bounds.inset(3, 3, 3, 3);
-        let width = bounds.size().x;
-        let height = bounds.size().y;
+        let bounds = Region::sized(self.state.size) + pos;
+        let body_bounds = bounds.inset(3, 3 + 11, 3, 3);
+        let scroll_bounds = bounds.inset(-10, 0, 1, 1);
+
+        let width = body_bounds.size().x;
+        let height = body_bounds.size().y;
 
         let (start, end, base_offset) = self.state.calc_bounds_and_offset(self.dyn, height);
         assert!(0 <= start && start <= end && end < self.dyn.len(),
                 "bad start/end: expected 0 <= {} <= {} < {}", start, end, self.dyn.len());
 
         for idx in start .. end {
-            let x = bounds.min.x;
-            let y = bounds.min.y + base_offset + (idx - start) as i32 * ENTRY_HEIGHT;
-            let pos = V2::new(x, y);
+            let y_off = base_offset + (idx - start) as i32 * ENTRY_HEIGHT;
+            let pos = body_bounds.min + V2::new(0, y_off);
 
             let dyn = EntryDyn {
                 width: width,
@@ -131,21 +132,91 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
             };
             let mut child = WidgetPack::stateless(Entry, &dyn);
             let rect = Region::sized(child.size()) + pos;
-            v.visit_clipped(&mut child, rect, bounds);
+            v.visit_clipped(&mut child, rect, body_bounds);
+        }
+
+        {
+            let mut state = ScrollBar::new(0,
+                                           self.dyn.len(),
+                                           &mut self.state.focus,
+                                           scroll_bounds.size());
+            let dyn = ();
+            let mut child = WidgetPack::new(&mut state, &dyn);
+            v.visit(&mut child, scroll_bounds);
         }
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
-        geom.draw_ui(atlas::SCROLL_LIST_BORDER_NW, rect.inset(0, -3, 0, -3).min);
-        geom.draw_ui(atlas::SCROLL_LIST_BORDER_NE, rect.inset(-3, 0, 0, -3).min);
-        geom.draw_ui(atlas::SCROLL_LIST_BORDER_SW, rect.inset(0, -3, -3, 0).min);
-        geom.draw_ui(atlas::SCROLL_LIST_BORDER_SE, rect.inset(-3, 0, -3, 0).min);
+        let body = rect.inset(0, 11, 0, 0);
+        let scroll = rect.inset(-10, 0, 1, 1);
 
-        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_N, rect.inset(3, 3, 0, -3));
-        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_S, rect.inset(3, 3, -3, 0));
-        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_W, rect.inset(0, -3, 3, 3));
-        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_E, rect.inset(-3, 0, 3, 3));
+        geom.draw_ui(atlas::SCROLL_LIST_BORDER_NW, body.inset(0, -3, 0, -3).min);
+        geom.draw_ui(atlas::SCROLL_LIST_BORDER_NE, body.inset(-3, 0, 0, -3).min);
+        geom.draw_ui(atlas::SCROLL_LIST_BORDER_SW, body.inset(0, -3, -3, 0).min);
+        geom.draw_ui(atlas::SCROLL_LIST_BORDER_SE, body.inset(-3, 0, -3, 0).min);
+
+        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_N, body.inset(3, 3, 0, -3));
+        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_S, body.inset(3, 3, -3, 0));
+        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_W, body.inset(0, -3, 3, 3));
+        geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_E, body.inset(-3, 0, 3, 3));
+
+        // TODO: fill background
+    }
+}
+
+
+struct ScrollBar<'a> {
+    min: usize,
+    max: usize,
+    cur: &'a mut usize,
+    size: V2,
+}
+
+const SCROLL_BAR_CAP_SIZE: i32 = atlas::SCROLL_BAR_CAP.size.1 as i32;
+
+impl<'a> ScrollBar<'a> {
+    pub fn new(min: usize, max: usize, cur: &'a mut usize, size: V2) -> ScrollBar<'a> {
+        assert!(min <= max);
+        ScrollBar {
+            min: min,
+            max: max,
+            cur: cur,
+            size: size,
+        }
     }
 
+    fn thumb_pos(&self, height: i32) -> i32 {
+        let height = (height - 2 * SCROLL_BAR_CAP_SIZE) as usize;
+        ((*self.cur - self.min) * height / (self.max - self.min)) as i32
+    }
+}
 
+impl<'a, 'b> Widget for WidgetPack<'a, ScrollBar<'b>, ()> {
+    fn size(&mut self) -> V2 {
+        self.state.size
+    }
+
+    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
+    }
+
+    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
+        const CAP_SIZE: i32 = SCROLL_BAR_CAP_SIZE;
+        let bar = rect.inset(3, 3, CAP_SIZE, CAP_SIZE);
+
+        const THUMB_INNER_HEIGHT: i32 = atlas::SCROLL_BAR_THUMB.size.1 as i32 - 2;
+        let thumb_offset = self.state.thumb_pos(bar.size().y - THUMB_INNER_HEIGHT);
+        let thumb_y = bar.min.y - 1 + thumb_offset;
+
+        geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_ABOVE,
+                           Region::new(V2::new(bar.min.x, bar.min.y - 1),
+                                       V2::new(bar.max.x, thumb_y)));
+        geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_BELOW,
+                           Region::new(V2::new(bar.min.x, thumb_y),
+                                       V2::new(bar.max.x, bar.max.y + 1)));
+
+        geom.draw_ui(atlas::SCROLL_BAR_CAP, V2::new(rect.min.x + 1, rect.min.y));
+        geom.draw_ui(atlas::SCROLL_BAR_CAP, V2::new(rect.min.x + 1, rect.max.y - CAP_SIZE));
+
+        geom.draw_ui(atlas::SCROLL_BAR_THUMB, V2::new(rect.min.x, thumb_y));
+    }
 }
