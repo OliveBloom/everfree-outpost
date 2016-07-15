@@ -14,10 +14,23 @@ use ui::input::{KeyAction, KeyEvent, EventStatus};
 use ui::{dialog, dialogs, hotbar, debug, top_bar};
 use ui::widget::*;
 
+use ui::scroll_list;
+
+
+struct DummyListDyn;
+static STRINGS: &'static [&'static str] = &["test", "one", "two", "three"];
+impl scroll_list::ScrollListDyn for DummyListDyn {
+    fn get(&self, idx: usize) -> &str { STRINGS[idx % STRINGS.len()] }
+    fn len(&self) -> usize { 50 }
+}
+
+
+
 
 pub struct Root {
     pub dialog: dialog::Dialog<dialogs::AnyDialog>,
     pub debug: debug::Debug,
+    pub test_list: scroll_list::ScrollList,
 }
 
 impl Root {
@@ -25,6 +38,7 @@ impl Root {
         Root {
             dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
             debug: debug::Debug::new(),
+            test_list: scroll_list::ScrollList::new(V2::new(150, 100)),
         }
     }
 
@@ -94,6 +108,13 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             let mut child = WidgetPack::new(&mut self.state.debug, &self.dyn.debug);
             let base = pos + V2::new(self.dyn.screen_size.x - child.size().x, 0);
             let rect = Region::sized(child.size()) + base;
+            v.visit(&mut child, rect);
+        }
+
+        {
+            let dyn = DummyListDyn;
+            let mut child = WidgetPack::new(&mut self.state.test_list, &dyn);
+            let rect = Region::sized(child.size()) + V2::new(50, 50);
             v.visit(&mut child, rect);
         }
 

@@ -72,6 +72,10 @@ pub trait Widget: Sized {
 
 pub trait Visitor {
     fn visit<W: Widget>(&mut self, _w: &mut W, _rect: Region<V2>) {}
+
+    fn visit_clipped<W: Widget>(&mut self, w: &mut W, rect: Region<V2>, _clip: Region<V2>) {
+        self.visit(w, rect);
+    }
 }
 
 
@@ -181,6 +185,13 @@ impl<'a, 'b> Visitor for MouseEventVisitor<'a, 'b> {
                 MouseEvent::Drop(data) => w.on_drop(self.ctx, rect, data),
             };
     }
+
+    fn visit_clipped<W: Widget>(&mut self, w: &mut W, rect: Region<V2>, clip: Region<V2>) {
+        if !clip.contains(self.ctx.mouse_pos) {
+            return;
+        }
+        self.visit(w, rect);
+    }
 }
 
 
@@ -222,5 +233,12 @@ impl<'a, 'b> Visitor for DropCheckVisitor<'a, 'b> {
         }
 
         self.result = w.check_drop(self.ctx, rect, self.data);
+    }
+
+    fn visit_clipped<W: Widget>(&mut self, w: &mut W, rect: Region<V2>, clip: Region<V2>) {
+        if !clip.contains(self.ctx.mouse_pos) {
+            return;
+        }
+        self.visit(w, rect);
     }
 }

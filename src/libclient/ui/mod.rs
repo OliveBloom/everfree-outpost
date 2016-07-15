@@ -20,6 +20,7 @@ mod hotbar;
 mod dialog;
 mod debug;
 mod top_bar;
+mod scroll_list;
 
 pub mod dialogs;    // TODO: make private
 mod root;
@@ -203,5 +204,12 @@ impl<'a> Visitor for RenderVisitor<'a> {
     fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
         w.render(self.geom, rect);
         w.walk_layout(self, rect.min);
+    }
+
+    fn visit_clipped<W: Widget>(&mut self, w: &mut W, rect: Region<V2>, clip: Region<V2>) {
+        self.geom.clipped(clip, |geom| {
+            w.render(geom, rect);
+            w.walk_layout(&mut RenderVisitor::new(geom), rect.min);
+        });
     }
 }
