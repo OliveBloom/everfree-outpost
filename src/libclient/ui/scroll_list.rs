@@ -162,6 +162,31 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
 
         // TODO: fill background
     }
+
+    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+        use ui::input::KeyAction::*;
+
+        let amt = if key.shift() { 10 } else { 1 };
+        let old_focus = self.state.focus;
+        match key.code {
+            MoveUp => {
+                self.state.focus -= cmp::min(amt, self.state.focus);
+            },
+
+            MoveDown => {
+                self.state.focus = cmp::min(self.state.focus + amt, self.dyn.len() - 1);
+            },
+
+            _ => {},
+        }
+
+
+        if self.state.focus != old_focus {
+            EventStatus::Handled
+        } else {
+            EventStatus::Unhandled
+        }
+    }
 }
 
 
