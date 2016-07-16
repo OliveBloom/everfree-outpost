@@ -5,6 +5,7 @@ use common::Gauge;
 
 use Time;
 use client::ClientObj;
+use data::Data;
 use debug::Debug as DebugDyn;
 use inventory::{Inventory, Inventories};
 use misc;
@@ -51,6 +52,7 @@ impl Root {
 pub struct RootDyn<'a> {
     pub screen_size: V2,
     pub now: Time,
+    pub data: &'a Data,
     pub inventories: &'a Inventories,
     pub hotbar: &'a misc::Hotbar,
     pub debug: &'a DebugDyn,
@@ -58,16 +60,18 @@ pub struct RootDyn<'a> {
 }
 
 impl<'a> RootDyn<'a> {
-    pub fn new(now: Time,
-               screen_size: (u16, u16),
+    pub fn new(screen_size: (u16, u16),
+               now: Time,
+               data: &'a Data,
                inventories: &'a Inventories,
                hotbar: &'a misc::Hotbar,
                debug: &'a DebugDyn,
                energy: &'a Gauge) -> RootDyn<'a> {
         RootDyn {
-            now: now,
             screen_size: V2::new(screen_size.0 as i32,
                                  screen_size.1 as i32),
+            now: now,
+            data: data,
             inventories: inventories,
             hotbar: hotbar,
             debug: debug,
@@ -115,6 +119,14 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             let dyn = DummyListDyn;
             let mut child = WidgetPack::new(&mut self.state.test_list, &dyn);
             let rect = Region::sized(child.size()) + V2::new(50, 50);
+            v.visit(&mut child, rect);
+        }
+
+        {
+            let recipe = self.dyn.data.recipe(0);
+            let dyn = ::ui::crafting::RecipeDyn::new(&recipe, 10);
+            let mut child = WidgetPack::stateless(::ui::crafting::Recipe, &dyn);
+            let rect = Region::sized(child.size()) + V2::new(50, 200);
             v.visit(&mut child, rect);
         }
 

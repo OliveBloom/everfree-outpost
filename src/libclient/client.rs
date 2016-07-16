@@ -358,8 +358,9 @@ impl<'d, P: Platform> Client<'d, P> {
         let sy = (self.view_size.1 + c - 1) / c;
 
         // TODO: should take the time as an argument instead of calling now()
-        let dyn = Dyn::new(self.now(),
-                           (sx, sy),
+        let dyn = Dyn::new((sx, sy),
+                           self.now(),
+                           &self.data,
                            &self.inventories,
                            &self.misc.hotbar,
                            &self.debug,

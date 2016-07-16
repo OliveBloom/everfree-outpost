@@ -21,6 +21,7 @@ mod dialog;
 mod debug;
 mod top_bar;
 mod scroll_list;
+mod crafting;
 
 pub mod dialogs;    // TODO: make private
 mod root;
