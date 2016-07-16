@@ -1,5 +1,6 @@
 use std::prelude::v1::*;
 use std::mem;
+use std::ops::Deref;
 use std::slice;
 use std::str;
 
@@ -19,21 +20,64 @@ pub struct RawItemDef {
 
 pub struct ItemDef<'a> {
     def: &'a RawItemDef,
-    strs: &'a str,
+    data: &'a Data,
 }
 
 impl<'a> ItemDef<'a> {
-    fn slice(&self, off: usize, len: usize) -> &'a str {
-        &self.strs[off .. off + len]
-    }
-
     pub fn name(&self) -> &'a str {
-        self.slice(self.def.name_off, self.def.name_len)
+        self.data.string_slice(self.def.name_off, self.def.name_len)
     }
 
     pub fn ui_name(&self) -> &'a str {
-        self.slice(self.def.ui_name_off, self.def.ui_name_len)
+        self.data.string_slice(self.def.ui_name_off, self.def.ui_name_len)
     }
+}
+
+
+pub struct RawRecipeDef {
+    pub ui_name_off: usize,
+    pub ui_name_len: usize,
+    pub inputs_off: u16,
+    pub inputs_len: u16,
+    pub outputs_off: u16,
+    pub outputs_len: u16,
+    pub ability: u16,
+    pub station: u16,
+}
+
+pub struct RecipeDef<'a> {
+    def: &'a RawRecipeDef,
+    data: &'a Data,
+}
+
+impl<'a> RecipeDef<'a> {
+    pub fn ui_name(&self) -> &'a str {
+        self.data.string_slice(self.def.ui_name_off, self.def.ui_name_len)
+    }
+
+    pub fn inputs(&self) -> &'a [RecipeItem] {
+        let off = self.def.inputs_off as usize;
+        let len = self.def.inputs_len as usize;
+        self.data.recipe_item_slice(off, len)
+    }
+
+    pub fn outputs(&self) -> &'a [RecipeItem] {
+        let off = self.def.outputs_off as usize;
+        let len = self.def.outputs_len as usize;
+        self.data.recipe_item_slice(off, len)
+    }
+}
+
+impl<'a> Deref for RecipeDef<'a> {
+    type Target = RawRecipeDef;
+    fn deref(&self) -> &RawRecipeDef {
+        self.def
+    }
+}
+
+pub struct RecipeItem {
+    pub item: u16,
+    pub quantity: u16,
 }
 
 
@@ -173,6 +217,9 @@ gen_data! {
     sprite_layers (b"SprtLayr"): SpriteLayer,
     sprite_graphics (b"SprtGrfx"): SpriteGraphics,
 
+    recipes (b"RcpeDefs"): RawRecipeDef,
+    recipe_items (b"RcpeItms"): RecipeItem,
+
     day_night_phases (b"DyNtPhas"): DayNightPhase,
     day_night_colors (b"DyNtColr"): (u8, u8, u8),
 
@@ -185,6 +232,16 @@ gen_data! {
 }
 
 impl Data {
+    fn string_slice(&self, off: usize, len: usize) -> &str {
+        &self.strings()[off .. off + len]
+    }
+
+    fn recipe_item_slice(&self, off: usize, len: usize) -> &[RecipeItem] {
+        &self.recipe_items()[off .. off + len]
+    }
+
+
+    // TODO: remove these template_x methods, use template(id).field instead
     pub fn template_size(&self, template_id: u32) -> V3 {
         let t = &self.templates()[template_id as usize];
         util::unpack_v3(t.size)
@@ -198,10 +255,11 @@ impl Data {
         &self.template_shapes()[base .. base + volume]
     }
 
+
     fn make_item_def<'a>(&'a self, raw: &'a RawItemDef) -> ItemDef<'a> {
         ItemDef {
             def: raw,
-            strs: self.strings(),
+            data: self,
         }
     }
 
@@ -217,6 +275,14 @@ impl Data {
             }
         }
         None
+    }
+
+
+    pub fn recipe(&self, id: u16) -> RecipeDef {
+        RecipeDef {
+            def: &self.recipes()[id as usize],
+            data: self,
+        }
     }
 
 

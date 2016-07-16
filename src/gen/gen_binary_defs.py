@@ -74,9 +74,15 @@ class BinaryDefs:
     def __init__(self, args):
         self.sections = {}
         self.args = args
+        self.header = None
+
+        # String interning
         self.strings = bytearray()
         self.string_map = {}
-        self.header = None
+
+        # Recipe inputs and outputs
+        self.recipe_items = []
+        self.recipe_item_map = {}
 
         self.deps = set()
 
@@ -117,6 +123,7 @@ class BinaryDefs:
                 b.extend(struct.pack(fmt, x))
         self.add_section(name, b, struct.calcsize(fmt), len(arr))
 
+
     def intern(self, s):
         if s not in self.string_map:
             self.string_map[s] = len(self.strings)
@@ -130,8 +137,27 @@ class BinaryDefs:
                 obj[k + '_len'] = len(v)
 
 
+    def intern_recipe_item_entry(self, x):
+        if x not in self.recipe_item_map:
+            self.recipe_item_map[x] = len(self.recipe_items)
+            self.recipe_items.extend(x)
+        return self.recipe_item_map[x]
+
+    def intern_recipe_items(self, obj):
+        if 'inputs' in obj:
+            inputs = tuple(tuple(entry) for entry in obj['inputs'])
+            obj['inputs_off'] = self.intern_recipe_item_entry(inputs)
+            obj['inputs_len'] = len(inputs)
+
+        if 'outputs' in obj:
+            outputs = tuple(tuple(entry) for entry in obj['outputs'])
+            obj['outputs_off'] = self.intern_recipe_item_entry(outputs)
+            obj['outputs_len'] = len(outputs)
+
+
     def finish(self):
         self.add_section(b'Strings\0', self.strings, 1, len(self.strings))
+        self.pack_array(b'RcpeItms', self.recipe_items, 'HH')
 
         base_offset = 16 * (1 + len(self.sections))
 
@@ -265,6 +291,24 @@ class BinaryDefs:
             ))
         self.convert_file(b'SprtGrfx', 'sprite_graphics_client.json', c)
 
+    def convert_recipes(self):
+        def adjust(obj):
+            self.intern_strings(obj)
+            self.intern_recipe_items(obj)
+
+        c = Converter(20, (
+            Field('ui_name_off',    'I',    0),
+            Field('ui_name_len',    'I',    4),
+            Field('inputs_off',     'H',    8),
+            Field('inputs_len',     'H',   10),
+            Field('outputs_off',    'H',   12),
+            Field('outputs_len',    'H',   14),
+            Field('ability',        'H',   16),
+            Field('station',        'H',   18),
+            ))
+        self.convert_file(b'RcpeDefs', 'recipes_client.json', c,
+                adjust=adjust)
+
     def convert_extras(self):
         j = self.load('extras_client.json')
 
@@ -333,6 +377,7 @@ def main():
     bd.convert_items()
     bd.convert_structures()
     bd.convert_sprites()
+    bd.convert_recipes()
     bd.convert_extras()
     bd.convert_day_night()
 
