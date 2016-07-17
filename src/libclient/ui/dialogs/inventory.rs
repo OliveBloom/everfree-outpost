@@ -70,7 +70,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Inventory, InventoryDyn<'b>> {
 
 
 #[derive(Clone, Copy)]
-struct GridDyn<'a> {
+pub struct GridDyn<'a> {
     inv: Option<&'a ::inventory::Inventory>,
     active: bool,
 }

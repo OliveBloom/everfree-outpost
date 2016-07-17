@@ -42,7 +42,8 @@ pub struct RawRecipeDef {
     pub outputs_off: u16,
     pub outputs_len: u16,
     pub ability: u16,
-    pub station: u16,
+    _pad0: u16,
+    pub station: u32,
 }
 
 pub struct RecipeDef<'a> {

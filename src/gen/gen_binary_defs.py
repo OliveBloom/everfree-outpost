@@ -296,7 +296,7 @@ class BinaryDefs:
             self.intern_strings(obj)
             self.intern_recipe_items(obj)
 
-        c = Converter(20, (
+        c = Converter(24, (
             Field('ui_name_off',    'I',    0),
             Field('ui_name_len',    'I',    4),
             Field('inputs_off',     'H',    8),
@@ -304,7 +304,7 @@ class BinaryDefs:
             Field('outputs_off',    'H',   12),
             Field('outputs_len',    'H',   14),
             Field('ability',        'H',   16),
-            Field('station',        'H',   18),
+            Field('station',        'I',   20),
             ))
         self.convert_file(b'RcpeDefs', 'recipes_client.json', c,
                 adjust=adjust)

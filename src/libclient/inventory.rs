@@ -5,7 +5,7 @@ use std::ops::Index;
 
 pub type InventoryId = u32;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub struct Item {
     pub id: u16,
     pub quantity: u8,

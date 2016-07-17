@@ -119,8 +119,8 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         let height = body_bounds.size().y;
 
         let (start, end, base_offset) = self.state.calc_bounds_and_offset(self.dyn, height);
-        assert!(0 <= start && start <= end && end < self.dyn.len(),
-                "bad start/end: expected 0 <= {} <= {} < {}", start, end, self.dyn.len());
+        assert!(0 <= start && start <= end && end <= self.dyn.len(),
+                "bad start/end: expected 0 <= {} <= {} <= {}", start, end, self.dyn.len());
 
         for idx in start .. end {
             let y_off = base_offset + (idx - start) as i32 * ENTRY_HEIGHT;
@@ -211,6 +211,9 @@ impl<'a> ScrollBar<'a> {
     }
 
     fn thumb_pos(&self, height: i32) -> i32 {
+        if self.min == self.max {
+            return 0;
+        }
         let height = (height - 2 * SCROLL_BAR_CAP_SIZE) as usize;
         ((*self.cur - self.min) * height / (self.max - self.min)) as i32
     }

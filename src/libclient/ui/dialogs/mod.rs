@@ -10,9 +10,11 @@ use ui::widget::*;
 
 
 mod inventory;
+mod crafting;
 
 pub use self::inventory::{Inventory, InventoryDyn};
 pub use self::inventory::{Container, ContainerDyn};
+pub use self::crafting::{Crafting, CraftingDyn};
 
 
 pub enum AnyDialog {

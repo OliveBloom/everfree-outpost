@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use std::hash::{Hash, Hasher, SipHasher};
 use std::intrinsics;
 use physics::v3::{V3, V2, Vn, Region, scalar};
 
@@ -37,4 +38,11 @@ pub fn floor(x: f64) -> f64 {
 
 pub fn round(x: f64) -> f64 {
     floor(x + 0.5)
+}
+
+
+pub fn hash<H: ?Sized+Hash>(x: &H) -> u64 {
+    let mut sip = SipHasher::new();
+    x.hash(&mut sip);
+    sip.finish()
 }
