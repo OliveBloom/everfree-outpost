@@ -34,7 +34,7 @@ pub fn open_container(eng: &mut Engine,
     // Check that IDs are valid.
     unwrap!(eng.world.get_client(cid));
     unwrap!(eng.world.get_inventory(iid1));
-    unwrap!(eng.world.get_inventory(iid1));
+    unwrap!(eng.world.get_inventory(iid2));
 
     logic::dialogs::open_dialog(eng.refine(), cid, DialogType::Container(iid1, iid2));
     eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::Container(iid1, iid2)));
