@@ -20,6 +20,7 @@ struct Entry;
 struct EntryDyn<'a> {
     width: i32,
     label: &'a str,
+    active: bool,
 }
 
 const ENTRY_HEIGHT: i32 = 13;
@@ -39,8 +40,12 @@ impl<'a> Widget for WidgetPack<'a, Entry, EntryDyn<'a>> {
         geom.draw_ui_tiled(atlas::SCROLL_LIST_ENTRY_MID,
                            Region::new(rect.min + V2::new(2, 0),
                                        rect.max - V2::new(1, 0)));
+        if self.dyn.active {
+            geom.draw_ui(atlas::SCROLL_LIST_MARKER,
+                         rect.min + V2::new(2, 2));
+        }
 
-        let offset = V2::new(2, 2);
+        let offset = V2::new(9, 2);
         geom.draw_str(&fonts::NAME, self.dyn.label, rect.min + offset);
     }
 }
@@ -129,6 +134,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
             let dyn = EntryDyn {
                 width: width,
                 label: self.dyn.get(idx as usize),
+                active: idx == self.state.focus,
             };
             let mut child = WidgetPack::stateless(Entry, &dyn);
             let rect = Region::sized(child.size()) + pos;
