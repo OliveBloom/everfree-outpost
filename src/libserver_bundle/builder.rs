@@ -8,7 +8,7 @@ use server_extra::Extra;
 use server_types::*;
 use server_world_types::{Motion, Item};
 use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
-use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
+use server_world_types::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
 
 use super::types::*;
 
@@ -885,6 +885,7 @@ impl InventoryBits {
 
             extra: self.extra,
             stable_id: self.stable_id,
+            flags: InventoryFlags::empty(),
             attachment: self.attachment,
         }
     }

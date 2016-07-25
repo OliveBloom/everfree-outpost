@@ -6,7 +6,7 @@ use types::*;
 use util;
 use util::SmallVec;
 
-use world::{Inventory, InventoryAttachment, Item};
+use world::{Inventory, InventoryAttachment, InventoryFlags, Item};
 use world::{Fragment, Hooks, World};
 use world::extra::Extra;
 use world::ops::OpResult;
@@ -20,6 +20,7 @@ pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
+        flags: InventoryFlags::empty(),
         attachment: InventoryAttachment::World,
 
         version: f.world().snapshot.version() + 1,
@@ -37,6 +38,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
+        flags: InventoryFlags::empty(),
         attachment: InventoryAttachment::World,
 
         version: w.snapshot.version() + 1,

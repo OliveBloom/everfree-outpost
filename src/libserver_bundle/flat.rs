@@ -35,7 +35,7 @@ use server_util::Convert;
 use server_util::{StrError, StrResult};
 
 use server_world_types::{Motion, Item};
-use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
+use server_world_types::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
 use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
 use server_extra::{self as extra, Extra};
 
@@ -245,7 +245,7 @@ fn align(x: usize) -> usize {
 
 /// The maximum alignment of any field of any member of Flat.
 const ALIGNMENT: usize = 8;
-const CURRENT_VERSION: (u16, u16) = (1, 0);
+const CURRENT_VERSION: (u16, u16) = (1, 1);
 
 macro_rules! filter_sections {
     (file_header, $e:expr) => { () };
@@ -444,6 +444,9 @@ macro_rules! flat {
                 };
                 v.file_header = Some(file_header);
 
+                if (file_header.major, file_header.minor) != CURRENT_VERSION {
+                    fail!("FlatView::from_bytes: unsupported bundle version");
+                }
                 if file_header.header_offset as usize % ALIGNMENT != 0 {
                     fail!("FlatView::from_bytes: misaligned section header offset");
                 }
@@ -495,6 +498,9 @@ macro_rules! flat {
                 // Discard lifetime
                 v.file_header = unsafe { mem::transmute(Some(&mut *file_header)) };
 
+                if (file_header.major, file_header.minor) != CURRENT_VERSION {
+                    fail!("FlatViewMut::from_bytes: unsupported bundle version");
+                }
                 if file_header.header_offset as usize % ALIGNMENT != 0 {
                     fail!("FlatViewMut::from_bytes: misaligned section header offset");
                 }
@@ -697,6 +703,7 @@ pub struct FlatInventory {
 
     pub extra: FlatExtra,
     pub stable_id: u64,
+    pub flags: u32,
     pub attachment: CAttachment,
 }
 
@@ -1170,6 +1177,16 @@ impl Flatten for Item {
 
 impl FixedSize for Item {}
 
+
+impl Conv for InventoryFlags {
+    type C = u32;
+    fn conv(self) -> u32 {
+        self.bits()
+    }
+    fn unconv(obj: u32) -> InventoryFlags {
+        InventoryFlags::from_bits(obj).unwrap()
+    }
+}
 
 impl Conv for TerrainChunkFlags {
     type C = u32;
@@ -1755,6 +1772,7 @@ impl Flatten for Inventory {
 
             extra: f.flatten_part(&self.extra),
             stable_id: self.stable_id,
+            flags: conv(self.flags),
             attachment: conv(self.attachment),
         };
         f.inventories.push(fi);
@@ -1768,6 +1786,7 @@ impl Flatten for Inventory {
 
             extra: f.unflatten_part(&fi.extra),
             stable_id: fi.stable_id,
+            flags: unconv(fi.flags),
             attachment: unconv(fi.attachment),
         }
     }

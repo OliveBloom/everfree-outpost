@@ -290,6 +290,7 @@ impl<'d> Exporter<'d> {
 
             extra: self.export(&i.extra),
             stable_id: i.stable_id,
+            flags: i.flags,
             attachment: self.export(&i.attachment),
         };
         self.inventories.vals[idx] = Some(b);

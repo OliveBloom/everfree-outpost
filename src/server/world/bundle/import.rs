@@ -166,6 +166,7 @@ impl<'d> Importer<'d> {
 
         i.extra = self.import(&b.extra);
         i.stable_id = b.stable_id;
+        i.flags = b.flags;
         i.attachment = self.import(&b.attachment);
     }
 
