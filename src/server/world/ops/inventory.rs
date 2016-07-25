@@ -16,7 +16,7 @@ use world::ops::OpResult;
 pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
         where F: Fragment<'d> {
     let i = Inventory {
-        contents: util::make_array(Item::Empty, size as usize),
+        contents: util::make_array(Item::none(), size as usize),
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
@@ -33,7 +33,7 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
         where F: Fragment<'d> {
     let w = f.world_mut();
     let iid = w.inventories.insert(Inventory {
-        contents: util::make_array(Item::Empty, 0),
+        contents: util::make_array(Item::none(), 0),
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
@@ -129,6 +129,8 @@ pub fn transfer_propose(w: &World,
                         iid: InventoryId,
                         slot_id: SlotId,
                         count: u8) -> OpResult<Item> {
+    unimplemented!()
+        /*
     let i = unwrap!(w.inventories.get(iid));
 
     if slot_id == NO_SLOT {
@@ -142,6 +144,7 @@ pub fn transfer_propose(w: &World,
             Ok(Item::Bulk(cmp::min(count, slot_count), item_id)),
         Item::Special(_, _) => Ok(*slot),
     }
+    */
 }
 
 pub fn transfer_receive<'d, F>(f: &mut F,
@@ -149,6 +152,8 @@ pub fn transfer_receive<'d, F>(f: &mut F,
                                slot_id: SlotId,
                                xfer: Item) -> OpResult<Item>
         where F: Fragment<'d> {
+    unimplemented!()
+        /*
     // Might need to adjust slot_id before calling hooks, if it was initially NO_SLOT.
     let mut slot_id = slot_id;
     let actual =
@@ -225,6 +230,7 @@ pub fn transfer_receive<'d, F>(f: &mut F,
 
     f.with_hooks(|h| h.on_inventory_update(iid, slot_id));
     Ok(actual)
+        */
 }
 
 pub fn transfer_commit<'d, F>(f: &mut F,
@@ -232,6 +238,8 @@ pub fn transfer_commit<'d, F>(f: &mut F,
                               slot_id: SlotId,
                               xfer: Item) -> OpResult<()>
         where F: Fragment<'d> {
+    unimplemented!()
+        /*
     {
         let i = unwrap!(f.world_mut().inventories.get_mut(iid));
         let slot = unwrap!(i.contents.get_mut(slot_id as usize));
@@ -283,6 +291,7 @@ pub fn transfer_commit<'d, F>(f: &mut F,
 
     f.with_hooks(|h| h.on_inventory_update(iid, slot_id));
     Ok(())
+    */
 }
 
 
@@ -296,6 +305,8 @@ pub fn bulk_add<'d, F>(f: &mut F,
                        item_id: ItemId,
                        adjust: u16) -> OpResult<u16>
         where F: Fragment<'d> {
+    unimplemented!()
+        /*
     let mut updated_slots = SmallVec::new();
     let transferred = {
         let i = unwrap!(f.world_mut().inventories.get_mut(iid));
@@ -334,6 +345,7 @@ pub fn bulk_add<'d, F>(f: &mut F,
     }
 
     Ok(transferred)
+    */
 }
 
 /// Try to remove a number of bulk items.  Returns the actual number of items removed.  Fails only
@@ -343,6 +355,8 @@ pub fn bulk_remove<'d, F>(f: &mut F,
                        item_id: ItemId,
                        adjust: u16) -> OpResult<u16>
         where F: Fragment<'d> {
+    unimplemented!()
+        /*
     let mut updated_slots = SmallVec::new();
     let transferred = {
         let i = unwrap!(f.world_mut().inventories.get_mut(iid));
@@ -376,4 +390,5 @@ pub fn bulk_remove<'d, F>(f: &mut F,
     }
 
     Ok(transferred)
+    */
 }

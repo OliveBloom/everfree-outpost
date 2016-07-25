@@ -30,37 +30,34 @@ pub enum InventoryAttachment {
 }
 
 
-#[derive(Clone, Copy, Debug)]
-pub enum Item {
-    /// No item in this slot.
-    Empty,
-    /// Bulk item (stackable).  The `u8` is the item count in the stack, which should never be
-    /// zero.  These items can be moved around, split, combined, etc. with no script intervention.
-    Bulk(u8, ItemId),
-    /// Special item (non-stackable).  This item has script data attached.  The `u8` is an
-    /// identifier assigned by the script.  Moving this item to a different inventory requires
-    /// script intervention.  (Moving within a container does not, because the table slot does not
-    /// change.)
-    Special(u8, ItemId),
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Item {
+    pub id: ItemId,
+    pub count: u8,
 }
 
 impl Item {
-    pub fn count(&self) -> u8 {
-        use self::Item::*;
-        match *self {
-            Empty => 0,
-            Bulk(count, _) => count,
-            Special(_, _) => 1,
+    pub fn new(id: ItemId, count: u8) -> Item {
+        if id == NO_ITEM || count == 0 {
+            Item::none()
+        } else {
+            Item::new_unchecked(id, count)
         }
     }
 
-    pub fn item(&self) -> ItemId {
-        use self::Item::*;
-        match *self {
-            Empty => NO_ITEM,
-            Bulk(_, item_id) => item_id,
-            Special(_, item_id) => item_id,
+    pub fn new_unchecked(id: ItemId, count: u8) -> Item {
+        Item { id: id, count: count }
+    }
+
+    pub fn none() -> Item {
+        Item {
+            id: NO_ITEM,
+            count: 0,
         }
+    }
+
+    pub fn is_none(&self) -> bool {
+        self.id == NO_ITEM
     }
 }
 

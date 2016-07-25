@@ -330,7 +330,7 @@ impl<'d> Builder<'d> {
             }
         }
 
-        // Inventories have ItemIds, but they have no default value (the default is Item::Empty).
+        // Inventories have ItemIds, but they have no default value (the default is Item::none()).
     }
 
     pub fn finish(mut self) -> Bundle {
@@ -909,19 +909,19 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
     }
 
     pub fn size(&mut self, count: u8) -> &mut Self {
-        self.get().contents = iter::repeat(Item::Empty).take(count as usize).collect();
+        self.get().contents = iter::repeat(Item::none()).take(count as usize).collect();
         self
     }
 
     pub fn item(&mut self, slot: u8, name: &str, count: u8) -> &mut Self {
         let id = self.owner.item(name);
-        self.get().contents[slot as usize] = Item::Bulk(count, id);
+        self.get().contents[slot as usize] = Item::new(id, count);
         self
     }
 
     pub fn item_id(&mut self, slot: u8, item_id: ItemId, count: u8) -> &mut Self {
         let id = self.owner.item_id(item_id);
-        self.get().contents[slot as usize] = Item::Bulk(count, id);
+        self.get().contents[slot as usize] = Item::new(id, count);
         self
     }
 

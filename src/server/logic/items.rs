@@ -139,7 +139,7 @@ pub fn move_items2(eng: &mut Engine,
     }
     info!("  commited transfer");
 
-    Ok(actual.count())
+    Ok(actual.count)
 }
 
 

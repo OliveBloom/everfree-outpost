@@ -593,9 +593,8 @@ pub struct CLoadedChunk {
 
 #[repr(C)] #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct CItem {
-    pub tag: u8,
-    pub extra: u8,
     pub id: u16,
+    pub count: u8,
 }
 
 #[repr(C)]
@@ -1146,20 +1145,14 @@ impl Conv for Item {
     type C = CItem;
 
     fn conv(self) -> CItem {
-        match self {
-            Item::Empty => CItem { tag: 0, extra: 0, id: 0 },
-            Item::Bulk(count, id) => CItem { tag: 1, extra: count, id: id },
-            Item::Special(extra, id) => CItem { tag: 1, extra: extra, id: id },
+        CItem {
+            id: self.id,
+            count: self.count,
         }
     }
 
     fn unconv(obj: CItem) -> Item {
-        match obj.tag {
-            0 => Item::Empty,
-            1 => Item::Bulk(obj.extra, obj.id),
-            2 => Item::Special(obj.extra, obj.id),
-            _ => panic!("bad tag for Item"),
-        }
+        Item::new(obj.id, obj.count)
     }
 }
 
