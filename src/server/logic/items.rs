@@ -276,11 +276,11 @@ pub fn craft_recipe(eng: &mut Engine,
     let recipe = unwrap!(eng.data.recipes.get_recipe(recipe_id));
 
     let _ = station_sid; // TODO
-    let mut eng_ref = eng.as_ref();
-    let mut wf = eng_ref.as_world_fragment();
-    let mut i = unwrap!(world::Fragment::get_inventory_mut(&mut wf, iid));
 
     let real_count = {
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut i = unwrap!(wf.get_inventory_mut(iid));
+
         let mut count = count;
 
         for (&item_id, &num_required) in recipe.inputs.iter() {
@@ -298,11 +298,11 @@ pub fn craft_recipe(eng: &mut Engine,
 
     if real_count > 0 {
         for (&item_id, &num_required) in recipe.inputs.iter() {
-            i.bulk_remove(item_id, real_count * num_required as u16);
+            bulk_remove(eng, iid, item_id, real_count * num_required as u16);
         }
 
         for (&item_id, &num_produced) in recipe.outputs.iter() {
-            i.bulk_add(item_id, real_count * num_produced as u16);
+            bulk_add(eng, iid, item_id, real_count * num_produced as u16);
         }
     }
     Ok(())

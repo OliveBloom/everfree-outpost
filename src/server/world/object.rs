@@ -352,28 +352,6 @@ pub trait InventoryRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Inventory, 
         self.world_mut().inventories.pin(iid)
     }
 
-    fn bulk_add(&mut self, item_id: ItemId, adjust: u16) -> u16 {
-        let iid = self.id();
-        // OK: self.id() is always a valid InventoryId
-        ops::inventory::bulk_add(self.fragment_mut(), iid, item_id, adjust).unwrap()
-    }
-
-    fn bulk_add_by_name(&mut self, name: &str, adjust: u16) -> OpResult<u16> {
-        let item_id = unwrap!(self.world().data().item_data.find_id(name));
-        Ok(self.bulk_add(item_id, adjust))
-    }
-
-    fn bulk_remove(&mut self, item_id: ItemId, adjust: u16) -> u16 {
-        let iid = self.id();
-        // OK: self.id() is always a valid InventoryId
-        ops::inventory::bulk_remove(self.fragment_mut(), iid, item_id, adjust).unwrap()
-    }
-
-    fn bulk_remove_by_name(&mut self, name: &str, adjust: u16) -> OpResult<u16> {
-        let item_id = unwrap!(self.world().data().item_data.find_id(name));
-        Ok(self.bulk_remove(item_id, adjust))
-    }
-
     fn set_attachment(&mut self, attach: InventoryAttachment) -> OpResult<InventoryAttachment> {
         let iid = self.id();
         ops::inventory::attach(self.fragment_mut(), iid, attach)
