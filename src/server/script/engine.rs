@@ -551,20 +551,24 @@ define_python_class! {
                                     iid: InventoryId,
                                     item: ItemId,
                                     count: u16) -> PyResult<u16> {
-            let mut eng = eng;
-            let mut i = pyunwrap!(eng.get_inventory_mut(iid),
-                                  runtime_error, "no inventory with that ID");
-            Ok(i.bulk_add(item, count))
+            // FIXME: actually-unsafe transmute
+            let eng = unsafe { mem::transmute(eng) };
+            let result = logic::items::bulk_add(eng, iid, item, count);
+            // Bad iid is currently the only possible failure mode
+            pyassert!(result.is_ok(), runtime_error, "no inventory with that ID");
+            Ok(result.unwrap())
         }
 
         fn world_inventory_bulk_remove(eng: glue::WorldFragment,
                                        iid: InventoryId,
                                        item: ItemId,
                                        count: u16) -> PyResult<u16> {
-            let mut eng = eng;
-            let mut i = pyunwrap!(eng.get_inventory_mut(iid),
-                                  runtime_error, "no inventory with that ID");
-            Ok(i.bulk_remove(item, count))
+            // FIXME: actually-unsafe transmute
+            let eng = unsafe { mem::transmute(eng) };
+            let result = logic::items::bulk_remove(eng, iid, item, count);
+            // Bad iid is currently the only possible failure mode
+            pyassert!(result.is_ok(), runtime_error, "no inventory with that ID");
+            Ok(result.unwrap())
         }
 
 

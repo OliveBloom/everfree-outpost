@@ -422,7 +422,7 @@ impl<I: Import> Import for Option<I> {
 
 impl Import for Item {
     fn import_from(&self, i: &Importer) -> Item {
-        Item::new_unchecked(i.import_item_id(self.id), self.count)
+        Item::new(i.import_item_id(self.id), self.count)
     }
 }
 

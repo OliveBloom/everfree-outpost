@@ -160,6 +160,10 @@ impl super::Inventory {
         &self.contents
     }
 
+    pub fn contents_mut(&mut self) -> &mut [Item] {
+        &mut self.contents
+    }
+
     pub fn attachment(&self) -> InventoryAttachment {
         self.attachment
     }

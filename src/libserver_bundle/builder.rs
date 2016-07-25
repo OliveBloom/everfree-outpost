@@ -909,7 +909,8 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
     }
 
     pub fn size(&mut self, count: u8) -> &mut Self {
-        self.get().contents = iter::repeat(Item::none()).take(count as usize).collect();
+        let id = self.owner.item_id(Item::none().id);
+        self.get().contents = iter::repeat(Item::new(id, 0)).take(count as usize).collect();
         self
     }
 

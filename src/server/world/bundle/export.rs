@@ -479,7 +479,7 @@ impl<E: Export> Export for Option<E> {
 
 impl Export for Item {
     fn export_to(&self, e: &mut Exporter) -> Item {
-        Item::new_unchecked(e.export_item_id(self.id), self.count)
+        Item::new(e.export_item_id(self.id), self.count)
     }
 }
 

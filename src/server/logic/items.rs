@@ -1,6 +1,8 @@
 use std::cmp;
+use std::u8;
 
 use types::*;
+use util::SmallVec;
 use util::StrResult;
 
 use dialogs::{DialogType, TargetId};
@@ -10,6 +12,8 @@ use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, Dialog};
 use world;
+use world::Item;
+use world::fragment::{Fragment, DummyFragment};
 use world::object::*;
 use vision;
 
@@ -91,55 +95,176 @@ pub fn set_main_inventories(mut eng: EngineRef,
 }
 
 
-pub fn move_items(eng: &mut Engine,
-                  from_iid: InventoryId,
-                  to_iid: InventoryId,
-                  item_id: ItemId,
-                  count: u16) -> StrResult<u16> {
-    let avail = unwrap!(eng.world.get_inventory(from_iid)).count(item_id);
-    let space = unwrap!(eng.world.get_inventory(to_iid)).count_space(item_id);
-    let actual = cmp::min(cmp::min(avail, space), count);
-
-    // OK: inventory IDs have already been checked.
-    world::Fragment::inventory_mut(&mut eng.as_ref().as_world_fragment(), from_iid)
-         .bulk_remove(item_id, actual);
-    world::Fragment::inventory_mut(&mut eng.as_ref().as_world_fragment(), to_iid)
-         .bulk_add(item_id, actual);
-
-    Ok(actual)
-}
-
 pub fn move_items2(eng: &mut Engine,
                    from_iid: InventoryId,
                    from_slot: u8,
                    to_iid: InventoryId,
                    to_slot: u8,
                    count: u8) -> StrResult<u8> {
-    let mut eng_ref = eng.as_ref();
-    let mut wf = eng_ref.as_world_fragment();
 
-    info!("move {} from {:?}.{} to {:?}.{}", count, from_iid, from_slot, to_iid, to_slot);
-    let proposed = {
-        let i = unwrap!(wf.world().get_inventory(from_iid));
-        try!(i.transfer_propose(from_slot, count))
-    };
-    info!("  proposal: {:?}", proposed);
+    let src = unwrap!(eng.world.get_inventory(from_iid)
+        .and_then(|i| i.contents().get(from_slot as usize).map(|&slot| slot)));
+    let to_move = cmp::min(src.count, count);
+    let mut remaining = to_move;
 
-    let actual = {
-        let mut i = unwrap!(world::Fragment::get_inventory_mut(&mut wf, to_iid));
-        try!(i.transfer_receive(to_slot, proposed))
-    };
-    info!("  actual: {:?}", actual);
-
+    // Update destination, keeping track of which slots were updated and how much was moved.
+    let mut updated_slots = SmallVec::new();
     {
-        // OK: already checked to_iid
-        let mut i = world::Fragment::inventory_mut(&mut wf, from_iid);
-        // Should never fail, but it's good to check.
-        warn_on_err!(i.transfer_commit(from_slot, actual));
-    }
-    info!("  commited transfer");
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut i = unwrap!(wf.get_inventory_mut(to_iid));
+        if to_slot != NO_SLOT && to_slot as usize >= i.contents().len() {
+            fail!("bad slot for inventory");
+        }
+        // Cannot fail past this point.
 
-    Ok(actual.count)
+        let mut move_into = |slot: &mut Item, idx: u8| -> bool {
+            assert!(slot.id == src.id || slot.is_none());
+
+            let space = u8::MAX - slot.count;
+            let moved = cmp::min(remaining, space);
+
+            if moved > 0 {
+                if slot.is_none() {
+                    slot.id = src.id;
+                }
+                slot.count += moved;
+                remaining -= moved;
+                updated_slots.push(idx)
+            }
+
+            remaining == 0
+        };
+
+        if to_slot != NO_SLOT {
+            let slot = &mut i.contents_mut()[to_slot as usize];
+            if slot.id == src.id || slot.is_none() {
+                move_into(slot, to_slot);
+            }
+        } else {
+            for (idx, slot) in i.contents_mut().iter_mut().enumerate()
+                    .filter(|&(_, ref s)| s.id == src.id || s.is_none()) {
+                let done = move_into(slot, idx as u8);
+                if done {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Update source inventory.
+    let total_moved = to_move - remaining;
+    {
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut i = unwrap!(wf.get_inventory_mut(from_iid));
+        let slot = &mut i.contents_mut()[from_slot as usize];
+        slot.count -= total_moved;
+        if slot.count == 0 {
+            *slot = Item::none();
+        }
+    }
+
+    // Send messages.
+    if total_moved > 0 {
+        logic::inventory::on_update(eng.refine(), from_iid, from_slot);
+        for &idx in updated_slots.iter() {
+            logic::inventory::on_update(eng.refine(), to_iid, idx);
+        }
+    }
+
+    Ok(total_moved)
+}
+
+pub fn bulk_add(eng: &mut Engine,
+                iid: InventoryId,
+                item_id: ItemId,
+                count: u16) -> StrResult<u16> {
+    let mut remaining = count;
+
+    // Update destination, keeping track of which slots were updated and how much was moved.
+    let mut updated_slots = SmallVec::new();
+    {
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut i = unwrap!(wf.get_inventory_mut(iid));
+        // Cannot fail past this point.
+
+        for (idx, slot) in i.contents_mut().iter_mut().enumerate()
+                .filter(|&(_, ref s)| s.id == item_id || s.is_none()) {
+            let space = u8::MAX - slot.count;
+            // Final cast never truncates because `space` is already a u8.
+            let moved = cmp::min(remaining, space as u16) as u8;
+            info!("slot {}: remaining = {}, space = {}, moved = {}",
+                  idx, remaining, space, moved);
+
+            if moved > 0 {
+                if slot.is_none() {
+                    slot.id = item_id;
+                }
+                slot.count += moved;
+                remaining -= moved as u16;
+                updated_slots.push(idx as u8)
+            }
+
+            if remaining == 0 {
+                break;
+            }
+        }
+    }
+
+    let total_moved = count - remaining;
+    // Send messages.
+    if total_moved > 0 {
+        for &idx in updated_slots.iter() {
+            logic::inventory::on_update(eng.refine(), iid, idx);
+        }
+    }
+
+    Ok(total_moved)
+}
+
+pub fn bulk_remove(eng: &mut Engine,
+                   iid: InventoryId,
+                   item_id: ItemId,
+                   count: u16) -> StrResult<u16> {
+    let mut remaining = count;
+
+    // Update destination, keeping track of which slots were updated and how much was moved.
+    let mut updated_slots = SmallVec::new();
+    {
+        let mut wf = DummyFragment::new(&mut eng.world);
+        let mut i = unwrap!(wf.get_inventory_mut(iid));
+        // Cannot fail past this point.
+
+        for (idx, slot) in i.contents_mut().iter_mut().enumerate()
+                .filter(|&(_, ref s)| s.id == item_id) {
+            // Final cast never truncates because `slot.count` is already a u8.
+            let moved = cmp::min(remaining, slot.count as u16) as u8;
+            info!("slot {}: remaining = {}, count = {}, moved = {}",
+                  idx, remaining, slot.count, moved);
+
+            if moved > 0 {
+                slot.count -= moved;
+                if slot.count == 0 {
+                    *slot = Item::none();
+                }
+                remaining -= moved as u16;
+                updated_slots.push(idx as u8)
+            }
+
+            if remaining == 0 {
+                break;
+            }
+        }
+    }
+
+    let total_moved = count - remaining;
+    // Send messages.
+    if total_moved > 0 {
+        for &idx in updated_slots.iter() {
+            logic::inventory::on_update(eng.refine(), iid, idx);
+        }
+    }
+
+    Ok(total_moved)
 }
 
 

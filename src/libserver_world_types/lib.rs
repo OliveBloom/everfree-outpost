@@ -38,14 +38,6 @@ pub struct Item {
 
 impl Item {
     pub fn new(id: ItemId, count: u8) -> Item {
-        if id == NO_ITEM || count == 0 {
-            Item::none()
-        } else {
-            Item::new_unchecked(id, count)
-        }
-    }
-
-    pub fn new_unchecked(id: ItemId, count: u8) -> Item {
         Item { id: id, count: count }
     }
 
