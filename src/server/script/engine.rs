@@ -8,8 +8,7 @@ use types::*;
 
 use engine::Engine;
 use engine::glue;
-use engine::split::{EngineRef, Part, PartFlags};
-use engine::split2::Coded;
+use engine::split2::{Coded, BitList};
 use logic;
 use msg::ExtraArg;
 use python::api as py;
@@ -85,7 +84,7 @@ impl NestedRefBase {
 struct PyEngineRef {
     base: NestedRefBase,
     ptr: *mut Engine<'static>,
-    flags: usize,
+    code: u32,
 }
 
 macro_rules! engine_ref_func_wrapper {
@@ -102,25 +101,27 @@ macro_rules! engine_ref_func_wrapper {
                       type_error, "expected EngineRef");
             unsafe {
                 let er = &mut *(slf.as_ptr() as *mut PyEngineRef);
-                let ref_flags = er.flags;
-                let target_flags = <$engty as PartFlags>::flags();
-                pyassert!(ref_flags & target_flags == target_flags,
+                let ref_code = er.code;
+                let target_code = <$engty as Coded>::Code::code();
+                pyassert!(ref_code & target_code == target_code,
                           type_error,
                           concat!("EngineRef does not have sufficient permissions for ",
                                   stringify!($engty)));
                 pyassert!(er.base.valid(), runtime_error, "EngineRef has expired");
 
-                er.flags = 0;
+                // Make the old engine ref unusable, in case the native code `$call` reenters some
+                // other Python code.
+                er.code = 0;
                 er.base.incr_version();
                 let result = Unpack::unpack(args)
                     .and_then(|$args| {
                         let $slf = slf;
-                        let $engname = <$engty as Part>::from_ptr(er.ptr);
+                        let $engname = &mut *(er.ptr as *mut $engty);
                         let result = $call;
                         Pack::pack(result)
                     });
-                // Need to reset flags regardless of outcome
-                er.flags = ref_flags;
+                // Need to reset code regardless of outcome
+                er.code = ref_code;
 
                 result
             }
@@ -130,7 +131,7 @@ macro_rules! engine_ref_func_wrapper {
 
 macro_rules! engine_ref_func {
     ( $fname:ident,
-      ( $aname1:ident : $aty1:path, $($args_rest:tt)* ),
+      ( $aname1:ident : &mut $aty1:path, $($args_rest:tt)* ),
       $ret_ty:ty,
       $body:expr ) => {
 
@@ -138,7 +139,7 @@ macro_rules! engine_ref_func {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
-            method_imp1!(imp, ($aname1: $aty1, $($args_rest)*), $ret_ty, $body);
+            method_imp1!(imp, ($aname1: &mut $aty1, $($args_rest)*), $ret_ty, $body);
 
             engine_ref_func_wrapper!(wrap, $aty1, slf, args, engine,
                                      imp(engine, args));
@@ -149,14 +150,14 @@ macro_rules! engine_ref_func {
 
 macro_rules! engine_ref_func_with_ref {
     ( $fname:ident,
-      ( $aname1:ident : $aty1:path, $($args_rest:tt)* ),
+      ( $aname1:ident : &mut $aty1:path, $($args_rest:tt)* ),
       $ret_ty:ty,
       $body:expr ) => {
 
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
-            method_imp2!(imp, ($aname1: $aty1, $($args_rest)*), $ret_ty, $body);
+            method_imp2!(imp, ($aname1: &mut $aty1, $($args_rest)*), $ret_ty, $body);
 
             engine_ref_func_wrapper!(wrap, $aty1, slf, args, engine,
                                      imp(engine, slf, args));
@@ -165,21 +166,21 @@ macro_rules! engine_ref_func_with_ref {
     };
 }
 
-pub fn with_engine_ref<E, F, R>(e: E, f: F) -> R
-        where E: Part + PartFlags, F: FnOnce(PyRef) -> R {
+pub fn with_engine_ref<E, F, R>(e: &mut E, f: F) -> R
+        where E: Coded, F: FnOnce(PyRef) -> R {
     unsafe {
         let obj = py::type_::instantiate(get_engine_type()).unwrap();
         {
             let er = &mut *(obj.as_ptr() as *mut PyEngineRef);
-            er.ptr = e.as_ptr();
-            er.flags = <E as PartFlags>::flags();
+            er.ptr = e as *mut E as *mut _;
+            er.code = <E as Coded>::Code::code();
         }
 
         let result = f(obj.borrow());
 
         {
             let er = &mut *(obj.as_ptr() as *mut PyEngineRef);
-            er.flags = 0;
+            er.code = 0;
             // Invalidate all ExtraRefs derived from `er`.
             er.base.incr_version();
         }
@@ -193,6 +194,8 @@ engine_part_typedef!(OnlyMessages(messages));
 engine_part_typedef!(OnlyTimer(timer));
 engine_part_typedef!(EmptyPart());
 
+engine_part2!(EmptyEngine());
+
 
 define_python_class! {
     class EngineRef: PyEngineRef {
@@ -205,11 +208,12 @@ define_python_class! {
     slots:
     methods:
 
-        fn now(eng: EmptyPart,) -> Time {
+        fn now(eng: &mut EmptyEngine,) -> Time {
             eng.now()
         }
 
 
+    /*
         fn engine_client_kick(eng: EngineRef, cid: ClientId, msg: String) {
             eng.unwrap().kick_client(cid, &msg as &str);
         }
@@ -749,6 +753,7 @@ define_python_class! {
             }
             None
         }
+        */
     }
 }
 

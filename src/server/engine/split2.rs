@@ -82,12 +82,12 @@ pub struct E;
 
 
 pub trait BitList {
-    fn code() -> u64;
+    fn code() -> u32;
     fn len() -> usize;
 }
 
 impl<T: BitList> BitList for Y<T> {
-    fn code() -> u64 {
+    fn code() -> u32 {
         (<T as BitList>::code() << 1) | 1
     }
 
@@ -97,7 +97,7 @@ impl<T: BitList> BitList for Y<T> {
 }
 
 impl<T: BitList> BitList for N<T> {
-    fn code() -> u64 {
+    fn code() -> u32 {
         (<T as BitList>::code() << 1) | 0
     }
 
@@ -107,7 +107,7 @@ impl<T: BitList> BitList for N<T> {
 }
 
 impl BitList for E {
-    fn code() -> u64 {
+    fn code() -> u32 {
         0
     }
 
