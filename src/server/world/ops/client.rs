@@ -8,7 +8,7 @@ use input::InputBits;
 use world::EntityAttachment;
 
 use world::Client;
-use world::{Fragment, Hooks};
+use world::Fragment;
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 

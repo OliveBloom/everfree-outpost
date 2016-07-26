@@ -7,7 +7,7 @@ use util;
 use util::SmallVec;
 
 use world::{Inventory, InventoryAttachment, InventoryFlags, Item};
-use world::{Fragment, Hooks, World};
+use world::{Fragment, World};
 use world::extra::Extra;
 use world::ops::OpResult;
 

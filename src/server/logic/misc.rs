@@ -4,7 +4,7 @@ use libphysics::CHUNK_SIZE;
 use types::*;
 
 use logic;
-use world::{self, Hooks};
+use world;
 use world::object::*;
 
 

@@ -26,26 +26,6 @@ use world::object::*;
 use vision;
 
 
-macro_rules! impl_world_Hooks {
-    ($WorldHooks:ident, $as_vision_fragment:ident) => {
-
-impl<'a, 'd> world::Hooks for $WorldHooks<'a, 'd> {
-    fn on_inventory_update(&mut self,
-                           iid: InventoryId,
-                           slot_idx: u8) {
-        logic::inventory::on_update(unsafe { mem::transmute_copy(self) },
-                                    iid, slot_idx);
-    }
-}
-
-// End of macro_rules
-    };
-}
-
-
-impl_world_Hooks!(WorldHooks, as_vision_fragment);
-impl_world_Hooks!(HiddenWorldHooks, as_hidden_vision_fragment);
-
 
 pub fn structure_area(s: ObjectRef<Structure>) -> SmallSet<V2> {
     let mut area = SmallSet::new();

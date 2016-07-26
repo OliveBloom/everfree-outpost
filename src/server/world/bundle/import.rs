@@ -8,7 +8,6 @@ use world::bundle::types as b;
 use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
-use world::Hooks;
 use world::fragment::Fragment;
 use world::ops;
 use world::extra::{self, Extra};
