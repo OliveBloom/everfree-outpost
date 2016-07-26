@@ -8,6 +8,7 @@ import outpost_server.core.data
 import outpost_server.core.chat
 import outpost_server.core.eval
 import outpost_server.core.import_hooks
+import outpost_server.core.inventory_hooks
 import outpost_server.core.state_machine
 import outpost_server.core.timer
 import outpost_server.core.use
@@ -70,6 +71,7 @@ def init(storage, data, hooks):
     core.chat.init(hooks)
     core.eval.init(hooks)
     core.import_hooks.init(hooks)
+    core.inventory_hooks.init(hooks)
     core.timer.init(hooks)
     core.use.init(hooks)
 

@@ -172,7 +172,9 @@ pub fn move_items2(eng: &mut Engine,
 
         // Run hooks.
         logic::inventory::call_update_hook(eng, from_iid);
-        logic::inventory::call_update_hook(eng, to_iid);
+        if to_iid != from_iid {
+            logic::inventory::call_update_hook(eng, to_iid);
+        }
     }
 
 

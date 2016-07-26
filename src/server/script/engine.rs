@@ -539,6 +539,43 @@ define_python_class! {
             Ok(())
         }
 
+        fn(engine_ref_func_with_ref!) world_inventory_extra(eng: &mut OnlyWorld,
+                                                            eng_ref: PyRef,
+                                                            iid: InventoryId) -> PyResult<PyBox> {
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut i = pyunwrap!(wf.get_inventory_mut(iid),
+                                  runtime_error, "no inventory with that ID");
+            let extra = i.extra_mut();
+            unsafe { derive_extra_ref(extra, eng_ref) }
+        }
+
+        fn world_inventory_size(eng: &mut OnlyWorld,
+                                iid: InventoryId) -> PyResult<usize> {
+            let i = pyunwrap!(eng.world.get_inventory(iid),
+                              runtime_error, "no inventory with that ID");
+            Ok(i.contents().len())
+        }
+
+        fn world_inventory_slot_item(eng: &mut OnlyWorld,
+                                     iid: InventoryId,
+                                     idx: usize) -> PyResult<ItemId> {
+            let i = pyunwrap!(eng.world.get_inventory(iid),
+                              runtime_error, "no inventory with that ID");
+            let slot = pyunwrap!(i.contents().get(idx),
+                                 index_error, "index exceeds size of inventory");
+            Ok(slot.id)
+        }
+
+        fn world_inventory_slot_count(eng: &mut OnlyWorld,
+                                      iid: InventoryId,
+                                      idx: usize) -> PyResult<u8> {
+            let i = pyunwrap!(eng.world.get_inventory(iid),
+                              runtime_error, "no inventory with that ID");
+            let slot = pyunwrap!(i.contents().get(idx),
+                                 index_error, "index exceeds size of inventory");
+            Ok(slot.count)
+        }
+
         fn world_inventory_count(eng: &mut OnlyWorld,
                                  iid: InventoryId,
                                  item: ItemId) -> PyResult<u16> {

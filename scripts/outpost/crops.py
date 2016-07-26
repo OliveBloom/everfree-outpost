@@ -3,11 +3,14 @@ import random
 from outpost_server.core import state_machine, use, util
 from outpost_server.core.data import DATA
 
+from outpost_server.outpost.chest import register_crate_variant
 from outpost_server.outpost.lib import appearance, structure_items, ward
 
 def register(basename):
     t = [DATA.template('%s/%d' % (basename, i)) for i in range(4)]
     item = DATA.item(basename)
+
+    register_crate_variant(basename)
 
     @state_machine.structure(t[0])
     @state_machine.structure(t[1])
