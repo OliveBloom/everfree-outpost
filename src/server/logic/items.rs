@@ -163,13 +163,18 @@ pub fn move_items2(eng: &mut Engine,
         }
     }
 
-    // Send messages.
     if total_moved > 0 {
+        // Send messages.
         logic::inventory::on_update(eng.refine(), from_iid, from_slot);
         for &idx in updated_slots.iter() {
             logic::inventory::on_update(eng.refine(), to_iid, idx);
         }
+
+        // Run hooks.
+        logic::inventory::call_update_hook(eng, from_iid);
+        logic::inventory::call_update_hook(eng, to_iid);
     }
+
 
     Ok(total_moved)
 }
@@ -211,11 +216,14 @@ pub fn bulk_add(eng: &mut Engine,
     }
 
     let total_moved = count - remaining;
-    // Send messages.
     if total_moved > 0 {
+        // Send messages.
         for &idx in updated_slots.iter() {
             logic::inventory::on_update(eng.refine(), iid, idx);
         }
+
+        // Run hooks.
+        logic::inventory::call_update_hook(eng, iid);
     }
 
     Ok(total_moved)
@@ -259,9 +267,13 @@ pub fn bulk_remove(eng: &mut Engine,
     let total_moved = count - remaining;
     // Send messages.
     if total_moved > 0 {
+        // Send messages.
         for &idx in updated_slots.iter() {
             logic::inventory::on_update(eng.refine(), iid, idx);
         }
+
+        // Run hooks.
+        logic::inventory::call_update_hook(eng, iid);
     }
 
     Ok(total_moved)

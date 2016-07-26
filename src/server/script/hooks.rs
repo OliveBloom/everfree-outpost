@@ -60,6 +60,7 @@ define_script_hooks!(
 
     structure_import_hook,
     // structure_export_hook,   // unimplemented
+    inventory_change_hook,
 
     hack_apply_structure_extras,
 );
@@ -130,6 +131,12 @@ impl ScriptHooks {
                                                 eng: &mut E,
                                                 sid: StructureId) -> PyResult<()> {
         call_with_engine1(&self.structure_import_hook, eng, sid)
+    }
+
+    pub fn call_inventory_change_hook<E: Coded>(&self,
+                                                eng: &mut E,
+                                                iid: InventoryId) -> PyResult<()> {
+        call_with_engine1(&self.inventory_change_hook, eng, iid)
     }
 
 

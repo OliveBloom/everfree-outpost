@@ -4,6 +4,7 @@ use types::*;
 
 use input::InputBits;
 use world::extra::Extra;
+use world::flags::InventoryFlags;
 
 pub use super::World;
 pub use super::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
@@ -174,6 +175,18 @@ impl super::Inventory {
 
     pub fn extra_mut(&mut self) -> &mut Extra {
         &mut self.extra
+    }
+
+    pub fn flags(&self) -> InventoryFlags {
+        self.flags
+    }
+
+    pub fn flags_mut(&mut self) -> &mut InventoryFlags {
+        &mut self.flags
+    }
+
+    pub fn set_flags(&mut self, flags: InventoryFlags) {
+        self.flags = flags;
     }
 }
 

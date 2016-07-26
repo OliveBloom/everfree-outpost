@@ -575,6 +575,21 @@ define_python_class! {
             Ok(result.unwrap())
         }
 
+        fn world_inventory_set_has_change_hook(eng: &mut OnlyWorld,
+                                               iid: InventoryId,
+                                               set: bool) -> PyResult<()> {
+            use world::flags;
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut i = pyunwrap!(wf.get_inventory_mut(iid),
+                                  runtime_error, "no inventory with that ID");
+            if set {
+                i.flags_mut().insert(flags::I_HAS_CHANGE_HOOK);
+            } else {
+                i.flags_mut().remove(flags::I_HAS_CHANGE_HOOK);
+            }
+            Ok(())
+        }
+
 
         fn world_plane_create(eng: &mut Engine,
                               name: String) -> PyResult<PlaneId> {
