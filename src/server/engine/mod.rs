@@ -184,7 +184,7 @@ impl<'d> Engine<'d> {
             },
 
             ReplCommand(cookie, msg) => {
-                let result = self.script_hooks.call_eval(self.as_ref(), &msg);
+                let result = self.script_hooks.call_eval(self, &msg);
                 let result_str = match result {
                     Ok(s) => s + "\n",
                     Err(e) => format!("[exception: {}]\n", e),

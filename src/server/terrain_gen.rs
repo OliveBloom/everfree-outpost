@@ -30,7 +30,6 @@ use engine::split2::Coded;
 use logic;
 use storage::Storage;
 use world::Fragment as World_Fragment;
-use world::Hooks;
 use world::StructureAttachment;
 use world::bundle::Bundle;
 use world::bundle::flat::FlatView;

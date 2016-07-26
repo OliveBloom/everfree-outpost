@@ -26,7 +26,7 @@ macro_rules! impl_slice {
 }
 
 
-parts!(WorldFragment, WorldHooks, VisionFragment, VisionHooks);
+parts!(WorldFragment);
 
 impl<'a, 'd> world::Fragment<'d> for WorldFragment<'a, 'd> {
     fn world(&self) -> &World<'d> {
@@ -36,24 +36,14 @@ impl<'a, 'd> world::Fragment<'d> for WorldFragment<'a, 'd> {
     fn world_mut(&mut self) -> &mut World<'d> {
         (**self).world_mut()
     }
-
-    type H = WorldHooks<'a, 'd>;
-    fn with_hooks<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut WorldHooks<'a, 'd>) -> R {
-        let e = unsafe { self.borrow().fiddle().to_part().slice() };
-        f(&mut Part::from_part(e))
-    }
 }
 
 impl_slice! {
     EngineRef::as_world_fragment -> WorldFragment;
-    EngineRef::as_vision_fragment -> VisionFragment;
-    WorldHooks::as_vision_fragment -> VisionFragment;
-    WorldHooks::as_hidden_world_fragment -> HiddenWorldFragment;
 }
 
 
-parts!(HiddenWorldFragment, HiddenWorldHooks, HiddenVisionFragment);
+parts!(HiddenWorldFragment);
 
 impl<'a, 'd> world::Fragment<'d> for HiddenWorldFragment<'a, 'd> {
     fn world(&self) -> &World<'d> {
@@ -63,17 +53,8 @@ impl<'a, 'd> world::Fragment<'d> for HiddenWorldFragment<'a, 'd> {
     fn world_mut(&mut self) -> &mut World<'d> {
         (**self).world_mut()
     }
-
-    type H = HiddenWorldHooks<'a, 'd>;
-    fn with_hooks<F, R>(&mut self, f: F) -> R
-            where F: FnOnce(&mut HiddenWorldHooks<'a, 'd>) -> R {
-        let e = unsafe { self.borrow().fiddle().to_part().slice() };
-        f(&mut Part::from_part(e))
-    }
 }
 
 impl_slice! {
     EngineRef::as_hidden_world_fragment -> HiddenWorldFragment;
-    EngineRef::as_hidden_vision_fragment -> HiddenVisionFragment;
-    HiddenWorldHooks::as_hidden_vision_fragment -> HiddenVisionFragment;
 }

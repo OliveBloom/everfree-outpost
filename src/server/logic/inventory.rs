@@ -8,6 +8,7 @@ use messages::{Messages, ClientResponse};
 use physics::Physics;
 use vision::Vision;
 use world::{Activity, Motion, World};
+use world::flags::I_HAS_CHANGE_HOOK;
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
@@ -56,4 +57,12 @@ pub fn on_update(eng: &mut EngineSubscribe, iid: InventoryId, slot_idx: u8) {
     eng.vision.update_inventory(iid, |cid| {
         messages.send_client(cid, msg.clone());
     });
+}
+
+
+pub fn call_update_hook(eng: &mut Engine, iid: InventoryId) {
+    let flags = eng.world.inventory(iid).flags();
+    if flags.contains(I_HAS_CHANGE_HOOK) {
+        eng.script_hooks.call_inventory_change_hook(eng, iid);
+    }
 }

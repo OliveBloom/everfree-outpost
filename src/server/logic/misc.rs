@@ -3,39 +3,39 @@ use std::mem;
 use libphysics::CHUNK_SIZE;
 use types::*;
 
+use engine::Engine;
+use engine::split2::Coded;
 use logic;
-use world::{self, Hooks};
+use world;
+use world::fragment::{Fragment, DummyFragment};
 use world::object::*;
 
 
-pub fn set_block_interior<'d, F>(wf: &mut F,
-                                 pid: PlaneId,
-                                 center: V3,
-                                 base: &str) -> world::OpResult<()>
-        where F: world::Fragment<'d> {
-    try!(update_block_interior(wf, pid, center, base, true));
+pub fn set_block_interior(eng: &mut Engine,
+                          pid: PlaneId,
+                          center: V3,
+                          base: &str) -> world::OpResult<()> {
+    try!(update_block_interior(eng, pid, center, base, true));
 
     let update_region = Region::new(center - V3::new(1, 1, 0),
                                     center + V3::new(2, 2, 1));
     for cpos in update_region.reduce().div_round_signed(CHUNK_SIZE).points() {
-        let tcid = wf.world().plane(pid).terrain_chunk(cpos).id();
-        // FIXME
-        let eng2 = unsafe { mem::transmute_copy(wf) };
-        logic::terrain_chunk::on_update(eng2, tcid);
+        let tcid = eng.world.plane(pid).terrain_chunk(cpos).id();
+        logic::terrain_chunk::on_update(eng.refine(), tcid);
     }
 
     Ok(())
 }
 
-pub fn clear_block_interior<'d, F>(wf: &mut F,
-                                   pid: PlaneId,
-                                   center: V3,
-                                   base: &str,
-                                   new_center: BlockId) -> world::OpResult<()>
-        where F: world::Fragment<'d> {
-    try!(update_block_interior(wf, pid, center, base, false));
+pub fn clear_block_interior(eng: &mut Engine,
+                            pid: PlaneId,
+                            center: V3,
+                            base: &str,
+                            new_center: BlockId) -> world::OpResult<()> {
+    try!(update_block_interior(eng, pid, center, base, false));
 
     {
+        let mut wf = DummyFragment::new(&mut eng.world);
         let mut p = wf.plane_mut(pid);
         let cpos = center.reduce().div_floor(scalar(CHUNK_SIZE));
         let mut tc = p.terrain_chunk_mut(cpos);
@@ -46,21 +46,18 @@ pub fn clear_block_interior<'d, F>(wf: &mut F,
     let update_region = Region::new(center - V3::new(1, 1, 0),
                                     center + V3::new(2, 2, 1));
     for cpos in update_region.reduce().div_round_signed(CHUNK_SIZE).points() {
-        let tcid = wf.world().plane(pid).terrain_chunk(cpos).id();
-        // FIXME
-        let eng2 = unsafe { mem::transmute_copy(wf) };
-        logic::terrain_chunk::on_update(eng2, tcid);
+        let tcid = eng.world.plane(pid).terrain_chunk(cpos).id();
+        logic::terrain_chunk::on_update(eng.refine(), tcid);
     }
 
     Ok(())
 }
 
-fn update_block_interior<'d, F>(wf: &mut F,
-                                pid: PlaneId,
-                                center: V3,
-                                base: &str,
-                                inside: bool) -> world::OpResult<()>
-        where F: world::Fragment<'d> {
+fn update_block_interior(eng: &mut Engine,
+                         pid: PlaneId,
+                         center: V3,
+                         base: &str,
+                         inside: bool) -> world::OpResult<()> {
     let prefix = format!("{}/", base);
 
     let mut updates = [None; 9];
@@ -80,9 +77,8 @@ fn update_block_interior<'d, F>(wf: &mut F,
         let mut cache = [Status::Uninitialized; 25];
         cache[2 * 5 + 2] = if inside { Status::Inside } else { Status::Outside };
 
-        let w = wf.world();
-        let bd = &w.data().block_data;
-        let p = unwrap!(w.get_plane(pid));
+        let bd = &eng.data.block_data;
+        let p = unwrap!(eng.world.get_plane(pid));
 
         let cache_region = Region::new(center - V3::new(2, 2, 0),
                                        center + V3::new(3, 3, 1));
@@ -146,6 +142,7 @@ fn update_block_interior<'d, F>(wf: &mut F,
     }
 
     {
+        let mut wf = DummyFragment::new(&mut eng.world);
         let mut p = wf.plane_mut(pid);
 
         for pos in update_region.points() {
@@ -234,16 +231,16 @@ const INTERIOR_NAMES: [&'static str; 47] = [
 
 
 #[allow(non_snake_case)]    // for T, F
-pub fn set_cave<'d, F>(wf: &mut F,
-                       pid: PlaneId,
-                       center: V3) -> world::OpResult<bool>
-        where F: world::Fragment<'d> {
-    if !is_plain_cave(&unwrap!(wf.world().get_plane(pid)), center) {
+pub fn set_cave(eng: &mut Engine,
+                pid: PlaneId,
+                center: V3) -> world::OpResult<bool> {
+    if !is_plain_cave(&unwrap!(eng.world.get_plane(pid)), center) {
         return Ok(false);
     }
 
     let mut mined = false;
     {
+        let mut wf = DummyFragment::new(&mut eng.world);
         let mut p = unwrap!(wf.get_plane_mut(pid));
 
         let (T, F) = (true, false);
@@ -263,10 +260,8 @@ pub fn set_cave<'d, F>(wf: &mut F,
         let update_region = Region::new(center - V3::new(1, 1, 0),
                                         center + V3::new(2, 2, 1));
         for cpos in update_region.reduce().div_round_signed(CHUNK_SIZE).points() {
-            let tcid = unwrap_or!(wf.world().plane(pid).get_terrain_chunk(cpos), continue).id();
-            // FIXME
-            let eng2 = unsafe { mem::transmute_copy(wf) };
-            logic::terrain_chunk::on_update(eng2, tcid);
+            let tcid = unwrap_or!(eng.world.plane(pid).get_terrain_chunk(cpos), continue).id();
+            logic::terrain_chunk::on_update(eng.refine(), tcid);
         }
     }
     Ok(mined)

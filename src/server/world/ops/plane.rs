@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use types::*;
 
 use world::Plane;
-use world::{Fragment, Hooks};
+use world::Fragment;
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 

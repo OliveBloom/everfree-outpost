@@ -8,7 +8,6 @@ use world::bundle::types as b;
 use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
-use world::Hooks;
 use world::fragment::Fragment;
 use world::ops;
 use world::extra::{self, Extra};
@@ -166,6 +165,7 @@ impl<'d> Importer<'d> {
 
         i.extra = self.import(&b.extra);
         i.stable_id = b.stable_id;
+        i.flags = b.flags;
         i.attachment = self.import(&b.attachment);
     }
 
@@ -422,11 +422,7 @@ impl<I: Import> Import for Option<I> {
 
 impl Import for Item {
     fn import_from(&self, i: &Importer) -> Item {
-        match *self {
-            Item::Empty => Item::Empty,
-            Item::Bulk(count, id) => Item::Bulk(count, i.import_item_id(id)),
-            Item::Special(extra, id) => Item::Special(extra, i.import_item_id(id)),
-        }
+        Item::new(i.import_item_id(self.id), self.count)
     }
 }
 

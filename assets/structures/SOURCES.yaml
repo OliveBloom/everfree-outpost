@@ -33,6 +33,7 @@ crystal-formation-green.png: *gervais-roguelike
 anvil.png: *daneeklu-farming
 crops.png: *daneeklu-farming
 fence.png: *daneeklu-farming
+crate.png: *daneeklu-farming
 
 sign.png:
     derived-from: lpc-signpost

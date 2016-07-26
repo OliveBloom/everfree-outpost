@@ -244,6 +244,19 @@ class InventoryProxy(ObjectProxy):
     def attach(self, parent):
         self._eng.world_inventory_attach(self.id, parent)
 
+    def extra(self):
+        return ExtraHashProxy(self._eng.world_inventory_extra(self.id))
+
+    def size(self):
+        return self._eng.world_inventory_size(self.id)
+
+    def slot_item(self, idx):
+        item_id = self._eng.world_inventory_slot_item(self.id, idx)
+        return DATA.item(item_id)
+
+    def slot_count(self, idx):
+        return self._eng.world_inventory_slot_count(self.id, idx)
+
     def count(self, item):
         item = DATA.item_id(item)
         return self._eng.world_inventory_count(self.id, item)
@@ -259,6 +272,20 @@ class InventoryProxy(ObjectProxy):
     def bulk_remove(self, item, count):
         item = DATA.item_id(item)
         return self._eng.world_inventory_bulk_remove(self.id, item, count)
+
+    def set_special(self, name, *args, **kwargs):
+        e = self.extra()
+        if name is None:
+            del e['special']
+            self._eng.world_inventory_set_has_change_hook(self.id, False)
+        else:
+            dct = {'name': name}
+            if args:
+                dct['args'] = args
+            if kwargs:
+                dct['kwargs'] = kwargs
+            e['special'] = dct
+            self._eng.world_inventory_set_has_change_hook(self.id, True)
 
 
 class PlaneProxy(ObjectProxy):

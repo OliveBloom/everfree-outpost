@@ -4,6 +4,7 @@ use types::*;
 
 use input::InputBits;
 use world::extra::Extra;
+use world::flags::InventoryFlags;
 
 pub use super::World;
 pub use super::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
@@ -136,14 +137,8 @@ impl super::Inventory {
     pub fn count(&self, item_id: ItemId) -> u16 {
         let mut total = 0;
         for slot in &*self.contents {
-            match *slot {
-                Item::Bulk(count, slot_item_id) if slot_item_id == item_id => {
-                    total += count as u16;
-                },
-                Item::Special(_, slot_item_id) if slot_item_id == item_id => {
-                    total += 1;
-                },
-                _ => {},
+            if slot.id == item_id {
+                total += slot.count as u16;
             }
         }
         total
@@ -153,14 +148,10 @@ impl super::Inventory {
     pub fn count_space(&self, item_id: ItemId) -> u16 {
         let mut total = 0;
         for slot in &*self.contents {
-            match *slot {
-                Item::Bulk(count, slot_item_id) if slot_item_id == item_id => {
-                    total += (u8::MAX - count) as u16;
-                },
-                Item::Empty => {
-                    total += u8::MAX as u16;
-                }
-                _ => {},
+            if slot.id == item_id {
+                total += (u8::MAX - slot.count) as u16;
+            } else if slot.is_none() {
+                total += u8::MAX as u16;
             }
         }
         total
@@ -168,6 +159,10 @@ impl super::Inventory {
 
     pub fn contents(&self) -> &[Item] {
         &self.contents
+    }
+
+    pub fn contents_mut(&mut self) -> &mut [Item] {
+        &mut self.contents
     }
 
     pub fn attachment(&self) -> InventoryAttachment {
@@ -180,6 +175,18 @@ impl super::Inventory {
 
     pub fn extra_mut(&mut self) -> &mut Extra {
         &mut self.extra
+    }
+
+    pub fn flags(&self) -> InventoryFlags {
+        self.flags
+    }
+
+    pub fn flags_mut(&mut self) -> &mut InventoryFlags {
+        &mut self.flags
+    }
+
+    pub fn set_flags(&mut self, flags: InventoryFlags) {
+        self.flags = flags;
     }
 }
 

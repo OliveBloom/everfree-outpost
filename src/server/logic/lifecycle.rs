@@ -47,7 +47,7 @@ pub fn start_up(eng: &mut Engine) {
         assert!(stable_pid == STABLE_PLANE_FOREST);
     }
 
-    warn_on_err!(eng.script_hooks.call_server_startup(eng.as_ref()));
+    warn_on_err!(eng.script_hooks.call_server_startup(eng));
 }
 
 
@@ -65,7 +65,7 @@ pub fn shut_down(eng: &mut Engine) {
         logic::chunks::unload_plane(eng, pid);
     }
 
-    warn_on_err!(eng.script_hooks.call_server_shutdown(eng.as_ref()));
+    warn_on_err!(eng.script_hooks.call_server_shutdown(eng));
 
     {
         let mut exporter = bundle::Exporter::new(eng.data);

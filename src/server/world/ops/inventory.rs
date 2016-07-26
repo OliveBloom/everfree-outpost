@@ -6,8 +6,8 @@ use types::*;
 use util;
 use util::SmallVec;
 
-use world::{Inventory, InventoryAttachment, Item};
-use world::{Fragment, Hooks, World};
+use world::{Inventory, InventoryAttachment, InventoryFlags, Item};
+use world::{Fragment, World};
 use world::extra::Extra;
 use world::ops::OpResult;
 
@@ -16,10 +16,11 @@ use world::ops::OpResult;
 pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
         where F: Fragment<'d> {
     let i = Inventory {
-        contents: util::make_array(Item::Empty, size as usize),
+        contents: util::make_array(Item::none(), size as usize),
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
+        flags: InventoryFlags::empty(),
         attachment: InventoryAttachment::World,
 
         version: f.world().snapshot.version() + 1,
@@ -33,10 +34,11 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
         where F: Fragment<'d> {
     let w = f.world_mut();
     let iid = w.inventories.insert(Inventory {
-        contents: util::make_array(Item::Empty, 0),
+        contents: util::make_array(Item::none(), 0),
 
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
+        flags: InventoryFlags::empty(),
         attachment: InventoryAttachment::World,
 
         version: w.snapshot.version() + 1,
@@ -121,259 +123,4 @@ pub fn attach<'d, F>(f: &mut F,
     }
 
     Ok(old_attach)
-}
-
-// This read-only method is here because it goes together with `transfer_receive` and
-// `transfer_commit`.
-pub fn transfer_propose(w: &World,
-                        iid: InventoryId,
-                        slot_id: SlotId,
-                        count: u8) -> OpResult<Item> {
-    let i = unwrap!(w.inventories.get(iid));
-
-    if slot_id == NO_SLOT {
-        fail!("can't transfer items out of NO_SLOT");
-    }
-    let slot = unwrap!(i.contents.get(slot_id as usize));
-
-    match *slot {
-        Item::Empty => Ok(*slot),
-        Item::Bulk(slot_count, item_id) =>
-            Ok(Item::Bulk(cmp::min(count, slot_count), item_id)),
-        Item::Special(_, _) => Ok(*slot),
-    }
-}
-
-pub fn transfer_receive<'d, F>(f: &mut F,
-                               iid: InventoryId,
-                               slot_id: SlotId,
-                               xfer: Item) -> OpResult<Item>
-        where F: Fragment<'d> {
-    // Might need to adjust slot_id before calling hooks, if it was initially NO_SLOT.
-    let mut slot_id = slot_id;
-    let actual =
-        match xfer {
-            Item::Empty => {
-                // Don't need to call any hooks, since nothing changed.  (Calling hooks would also
-                // require us to find a real slot_id, if slot_id == NO_SLOT.)
-                return Ok(xfer);
-            },
-
-            Item::Bulk(count, item_id) if slot_id == NO_SLOT => {
-                info!("  receive: bulk_add {:?}", xfer);
-                let actual = try!(bulk_add(f, iid, item_id, count as u16)) as u8;
-                // bulk_add handles calling the hooks, so we can bail out immediately.
-                return Ok(Item::Bulk(actual, item_id));
-            },
-
-            Item::Bulk(count, item_id) => {
-                let i = unwrap!(f.world_mut().inventories.get_mut(iid));
-                let slot = *unwrap!(i.contents.get(slot_id as usize));
-                match slot {
-                    Item::Empty => {
-                        info!("  receive: fill empty with {:?}", xfer);
-                        i.contents[slot_id as usize] = xfer;
-                        xfer
-                    },
-                    Item::Bulk(slot_count, slot_item_id) => {
-                        if slot_item_id != item_id {
-                            // Can't stack differing items.
-                            return Ok(Item::Empty);
-                        }
-
-                        let avail = u8::MAX - slot_count;
-                        let actual = cmp::min(count, avail);
-                        i.contents[slot_id as usize] = Item::Bulk(slot_count + actual, item_id);
-                        Item::Bulk(actual, item_id)
-                    },
-                    Item::Special(_, _) => {
-                        // Bulk and Special items don't mix.
-                        Item::Empty
-                    },
-                }
-            },
-
-            Item::Special(_, _) => {
-                let i = unwrap!(f.world_mut().inventories.get_mut(iid));
-
-                if slot_id == NO_SLOT {
-                    let mut found_empty = None;
-                    for (idx, slot) in i.contents.iter().enumerate() {
-                        match *slot {
-                            Item::Empty => {
-                                found_empty = Some(idx as u8);
-                                break;
-                            },
-                            _ => {},
-                        }
-                    }
-                    slot_id = unwrap!(found_empty);
-                }
-
-                let slot = unwrap!(i.contents.get_mut(slot_id as usize));
-                match *slot {
-                    Item::Empty => {
-                        *slot = xfer;
-                        xfer
-                    },
-                    _ => {
-                        Item::Empty
-                    },
-                }
-            },
-        };
-
-    f.with_hooks(|h| h.on_inventory_update(iid, slot_id));
-    Ok(actual)
-}
-
-pub fn transfer_commit<'d, F>(f: &mut F,
-                              iid: InventoryId,
-                              slot_id: SlotId,
-                              xfer: Item) -> OpResult<()>
-        where F: Fragment<'d> {
-    {
-        let i = unwrap!(f.world_mut().inventories.get_mut(iid));
-        let slot = unwrap!(i.contents.get_mut(slot_id as usize));
-        info!("  commit: remove {:?} from {:?}", xfer, *slot);
-
-        match xfer {
-            Item::Empty => {},
-
-            Item::Bulk(count, item_id) => {
-                match *slot {
-                    Item::Bulk(slot_count, slot_item_id) => {
-                        if item_id != slot_item_id {
-                            fail!("bad transfer_commit: item IDs don't match");
-                        }
-                        if slot_count < count {
-                            fail!("bad transfer_commit: item IDs don't match");
-                        }
-
-                        if slot_count == count {
-                            *slot = Item::Empty;
-                        } else {
-                            *slot = Item::Bulk(slot_count - count, item_id);
-                        }
-                    },
-                    _ => {
-                        fail!("bad transfer_commit: mismatched slot type (expected Bulk)");
-                    },
-                }
-            },
-
-            Item::Special(extra, item_id) => {
-                match *slot {
-                    Item::Special(slot_extra, slot_item_id) => {
-                        if item_id != slot_item_id {
-                            fail!("bad transfer_commit: item IDs don't match");
-                        }
-                        if extra != slot_extra {
-                            fail!("bad transfer_commit: item extras don't match");
-                        }
-                        *slot = Item::Empty;
-                    },
-                    _ => {
-                        fail!("bad transfer_commit: mismatched slot type (expected Special)");
-                    },
-                }
-            },
-        }
-    }
-
-    f.with_hooks(|h| h.on_inventory_update(iid, slot_id));
-    Ok(())
-}
-
-
-/// Try to add a number of bulk items.  Returns the actual number of items added.  Fails only if
-/// `iid` is not valid.
-///
-/// Bulk-related function (add, remove, count) all use u16 because the max number of bulk items is
-/// 255 (slots) * 255 (stack size).
-pub fn bulk_add<'d, F>(f: &mut F,
-                       iid: InventoryId,
-                       item_id: ItemId,
-                       adjust: u16) -> OpResult<u16>
-        where F: Fragment<'d> {
-    let mut updated_slots = SmallVec::new();
-    let transferred = {
-        let i = unwrap!(f.world_mut().inventories.get_mut(iid));
-
-        // Amount transferred so far
-        let mut acc = 0;
-        for (idx, slot) in i.contents.iter_mut().enumerate() {
-            if acc == adjust {
-                break;
-            }
-
-            match *slot {
-                Item::Empty => {
-                    let delta = cmp::min(u8::MAX as u16, adjust - acc) as u8;
-                    *slot = Item::Bulk(delta, item_id);
-                    updated_slots.push(idx as u8);
-                    acc += delta as u16;
-                },
-                Item::Bulk(count, slot_item_id) if slot_item_id == item_id => {
-                    if count < u8::MAX {
-                        let delta = cmp::min((u8::MAX - count) as u16, adjust - acc) as u8;
-                        // Sum never exceeds u8::MAX.
-                        *slot = Item::Bulk(count + delta, item_id);
-                        updated_slots.push(idx as u8);
-                        acc += delta as u16;
-                    }
-                },
-                _ => continue,
-            }
-        }
-        acc
-    };
-
-    for &slot_idx in updated_slots.iter() {
-        f.with_hooks(|h| h.on_inventory_update(iid, slot_idx));
-    }
-
-    Ok(transferred)
-}
-
-/// Try to remove a number of bulk items.  Returns the actual number of items removed.  Fails only
-/// if `iid` is not valid.
-pub fn bulk_remove<'d, F>(f: &mut F,
-                       iid: InventoryId,
-                       item_id: ItemId,
-                       adjust: u16) -> OpResult<u16>
-        where F: Fragment<'d> {
-    let mut updated_slots = SmallVec::new();
-    let transferred = {
-        let i = unwrap!(f.world_mut().inventories.get_mut(iid));
-
-        // Amount transferred so far
-        let mut acc = 0;
-        for (idx, slot) in i.contents.iter_mut().enumerate() {
-            if acc == adjust {
-                break;
-            }
-
-            match *slot {
-                Item::Bulk(count, slot_item_id) if slot_item_id == item_id => {
-                    let delta = cmp::min(count as u16, adjust - acc) as u8;
-                    if delta == count {
-                        *slot = Item::Empty;
-                    } else {
-                        *slot = Item::Bulk(count - delta, item_id);
-                    }
-                    updated_slots.push(idx as u8);
-                    acc += delta as u16;
-                },
-                _ => continue,
-            }
-        }
-        acc
-    };
-
-    for &slot_idx in updated_slots.iter() {
-        f.with_hooks(|h| h.on_inventory_update(iid, slot_idx));
-    }
-
-    Ok(transferred)
 }

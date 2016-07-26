@@ -116,10 +116,7 @@ pub fn on_replace(eng: &mut EngineLifecycle,
 /// Handler to be called just after importing an entity.
 pub fn on_import(eng: &mut EngineLifecycle, sid: StructureId) {
     if eng.world.structure(sid).flags().contains(S_HAS_IMPORT_HOOK) {
-        let hooks = eng.script_hooks();
-        // FIXME bad transmute
-        let wf: WorldFragment = unsafe { mem::transmute(eng) };
-        hooks.call_structure_import_hook(wf, sid);
+        eng.script_hooks().call_structure_import_hook(eng, sid);
     }
 }
 

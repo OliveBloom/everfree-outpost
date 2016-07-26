@@ -38,6 +38,7 @@ pub struct Exporter<'d> {
 
 impl<'d> Exporter<'d> {
     pub fn new(data: &'d Data) -> Exporter<'d> {
+
         Exporter {
             data: data,
 
@@ -289,6 +290,7 @@ impl<'d> Exporter<'d> {
 
             extra: self.export(&i.extra),
             stable_id: i.stable_id,
+            flags: i.flags,
             attachment: self.export(&i.attachment),
         };
         self.inventories.vals[idx] = Some(b);
@@ -478,11 +480,7 @@ impl<E: Export> Export for Option<E> {
 
 impl Export for Item {
     fn export_to(&self, e: &mut Exporter) -> Item {
-        match *self {
-            Item::Empty => Item::Empty,
-            Item::Bulk(count, id) => Item::Bulk(count, e.export_item_id(id)),
-            Item::Special(extra, id) => Item::Special(extra, e.export_item_id(id)),
-        }
+        Item::new(e.export_item_id(self.id), self.count)
     }
 }
 

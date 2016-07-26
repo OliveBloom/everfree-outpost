@@ -1,6 +1,6 @@
 use types::*;
 
-use engine::split;
+use engine::split2::Coded;
 use msg::ExtraArg;
 use python::api as py;
 use python::api::{PyBox, PyRef, PyResult};
@@ -60,20 +60,21 @@ define_script_hooks!(
 
     structure_import_hook,
     // structure_export_hook,   // unimplemented
+    inventory_change_hook,
 
     hack_apply_structure_extras,
 );
 
 impl ScriptHooks {
-    pub fn call_server_startup(&self, eng: split::EngineRef) -> PyResult<()> {
+    pub fn call_server_startup<E: Coded>(&self, eng: &mut E) -> PyResult<()> {
         call_with_engine0(&self.server_startup, eng)
     }
 
-    pub fn call_server_shutdown(&self, eng: split::EngineRef) -> PyResult<()> {
+    pub fn call_server_shutdown<E: Coded>(&self, eng: &mut E) -> PyResult<()> {
         call_with_engine0(&self.server_shutdown, eng)
     }
 
-    pub fn call_eval(&self, eng: split::EngineRef, s: &str) -> PyResult<String> {
+    pub fn call_eval<E: Coded>(&self, eng: &mut E, s: &str) -> PyResult<String> {
         if let Some(ref func) = self.eval {
             with_engine_ref(eng, |eng| {
                 call(func.borrow(), (eng, s))
@@ -83,62 +84,67 @@ impl ScriptHooks {
         }
     }
 
-    pub fn call_timer_fired(&self,
-                            eng: split::EngineRef,
-                            userdata: PyBox) -> PyResult<()> {
+    pub fn call_timer_fired<E: Coded>(&self,
+                                      eng: &mut E,
+                                      userdata: PyBox) -> PyResult<()> {
         call_with_engine1(&self.timer_fired, eng, userdata)
     }
 
-    pub fn call_client_login(&self,
-                             eng: split::EngineRef,
-                             cid: ClientId) -> PyResult<()> {
+    pub fn call_client_login<E: Coded>(&self,
+                                       eng: &mut E,
+                                       cid: ClientId) -> PyResult<()> {
         call_with_engine1(&self.client_login, eng, cid)
     }
 
-    pub fn call_client_chat_command(&self,
-                                    eng: split::EngineRef,
-                                    cid: ClientId,
-                                    msg: &str) -> PyResult<()> {
+    pub fn call_client_chat_command<E: Coded>(&self,
+                                              eng: &mut E,
+                                              cid: ClientId,
+                                              msg: &str) -> PyResult<()> {
         call_with_engine2(&self.client_chat_command, eng, cid, msg)
     }
 
-    pub fn call_client_interact(&self,
-                                eng: split::EngineRef,
-                                cid: ClientId,
-                                args: Option<ExtraArg>) -> PyResult<()> {
+    pub fn call_client_interact<E: Coded>(&self,
+                                          eng: &mut E,
+                                          cid: ClientId,
+                                          args: Option<ExtraArg>) -> PyResult<()> {
         call_with_engine2(&self.client_interact, eng, cid, args)
     }
 
-    pub fn call_client_use_item(&self,
-                                eng: split::EngineRef,
-                                cid: ClientId,
-                                item: ItemId,
-                                args: Option<ExtraArg>) -> PyResult<()> {
+    pub fn call_client_use_item<E: Coded>(&self,
+                                          eng: &mut E,
+                                          cid: ClientId,
+                                          item: ItemId,
+                                          args: Option<ExtraArg>) -> PyResult<()> {
         call_with_engine3(&self.client_use_item, eng, cid, item, args)
     }
 
-    pub fn call_client_use_ability(&self,
-                                   eng: split::EngineRef,
-                                   cid: ClientId,
-                                   ability: ItemId,
-                                   args: Option<ExtraArg>) -> PyResult<()> {
+    pub fn call_client_use_ability<E: Coded>(&self,
+                                             eng: &mut E,
+                                             cid: ClientId,
+                                             ability: ItemId,
+                                             args: Option<ExtraArg>) -> PyResult<()> {
         call_with_engine3(&self.client_use_ability, eng, cid, ability, args)
     }
 
 
-    pub fn call_structure_import_hook<'d, F>(&self,
-                                             f: F,
-                                             sid: StructureId) -> PyResult<()>
-            where F: world::Fragment<'d> + split::Part + split::PartFlags {
-        call_with_engine1(&self.structure_import_hook, f, sid)
+    pub fn call_structure_import_hook<E: Coded>(&self,
+                                                eng: &mut E,
+                                                sid: StructureId) -> PyResult<()> {
+        call_with_engine1(&self.structure_import_hook, eng, sid)
+    }
+
+    pub fn call_inventory_change_hook<E: Coded>(&self,
+                                                eng: &mut E,
+                                                iid: InventoryId) -> PyResult<()> {
+        call_with_engine1(&self.inventory_change_hook, eng, iid)
     }
 
 
-    pub fn call_hack_apply_structure_extras(&self,
-                                            eng: split::EngineRef,
-                                            sid: StructureId,
-                                            k: &str,
-                                            v: &str) -> PyResult<()> {
+    pub fn call_hack_apply_structure_extras<E: Coded>(&self,
+                                                      eng: &mut E,
+                                                      sid: StructureId,
+                                                      k: &str,
+                                                      v: &str) -> PyResult<()> {
         call_with_engine3(&self.hack_apply_structure_extras, eng, sid, k, v)
     }
 }
@@ -164,8 +170,8 @@ pub fn call_void<A: Pack>(f: PyRef, args: A) -> PyResult<()> {
     Ok(())
 }
 
-fn call_with_engine0<E>(opt_func: &Option<PyBox>, eng: E) -> PyResult<()>
-        where E: split::Part + split::PartFlags {
+fn call_with_engine0<E>(opt_func: &Option<PyBox>, eng: &mut E) -> PyResult<()>
+        where E: Coded {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng,))
@@ -176,10 +182,9 @@ fn call_with_engine0<E>(opt_func: &Option<PyBox>, eng: E) -> PyResult<()>
 }
 
 fn call_with_engine1<E, A>(opt_func: &Option<PyBox>,
-                           eng: E,
+                           eng: &mut E,
                            a: A) -> PyResult<()>
-        where E: split::Part + split::PartFlags,
-              A: Pack {
+        where E: Coded, A: Pack {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a))
@@ -190,11 +195,10 @@ fn call_with_engine1<E, A>(opt_func: &Option<PyBox>,
 }
 
 fn call_with_engine2<E, A, B>(opt_func: &Option<PyBox>,
-                              eng: E,
+                              eng: &mut E,
                               a: A,
                               b: B) -> PyResult<()>
-        where E: split::Part + split::PartFlags,
-              A: Pack, B: Pack {
+        where E: Coded, A: Pack, B: Pack {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a, b))
@@ -205,12 +209,11 @@ fn call_with_engine2<E, A, B>(opt_func: &Option<PyBox>,
 }
 
 fn call_with_engine3<E, A, B, C>(opt_func: &Option<PyBox>,
-                                 eng: E,
+                                 eng: &mut E,
                                  a: A,
                                  b: B,
                                  c: C) -> PyResult<()>
-        where E: split::Part + split::PartFlags,
-              A: Pack, B: Pack, C: Pack {
+        where E: Coded, A: Pack, B: Pack, C: Pack {
     if let Some(ref func) = *opt_func {
         with_engine_ref(eng, |eng| {
             call_void(func.borrow(), (eng, a, b, c))

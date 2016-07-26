@@ -1,6 +1,6 @@
 use server_extra::Extra;
 use server_types::*;
-use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
+use server_world_types::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
 use server_world_types::{Motion, Item};
 use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
 
@@ -67,6 +67,7 @@ pub struct Inventory {
 
     pub extra: Extra,
     pub stable_id: StableId,
+    pub flags: InventoryFlags,
     pub attachment: InventoryAttachment,
 }
 
@@ -167,6 +168,7 @@ impl Clone for Inventory {
 
             extra: self.extra.clone(),
             stable_id: self.stable_id,
+            flags: self.flags,
             attachment: self.attachment,
         }
     }

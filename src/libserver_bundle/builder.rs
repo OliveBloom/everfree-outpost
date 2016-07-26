@@ -8,7 +8,7 @@ use server_extra::Extra;
 use server_types::*;
 use server_world_types::{Motion, Item};
 use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
-use server_world_types::flags::{TerrainChunkFlags, StructureFlags};
+use server_world_types::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
 
 use super::types::*;
 
@@ -330,7 +330,7 @@ impl<'d> Builder<'d> {
             }
         }
 
-        // Inventories have ItemIds, but they have no default value (the default is Item::Empty).
+        // Inventories have ItemIds, but they have no default value (the default is Item::none()).
     }
 
     pub fn finish(mut self) -> Bundle {
@@ -885,6 +885,7 @@ impl InventoryBits {
 
             extra: self.extra,
             stable_id: self.stable_id,
+            flags: InventoryFlags::empty(),
             attachment: self.attachment,
         }
     }
@@ -909,19 +910,20 @@ impl<'a, 'd> InventoryBuilder<'a, 'd> {
     }
 
     pub fn size(&mut self, count: u8) -> &mut Self {
-        self.get().contents = iter::repeat(Item::Empty).take(count as usize).collect();
+        let id = self.owner.item_id(Item::none().id);
+        self.get().contents = iter::repeat(Item::new(id, 0)).take(count as usize).collect();
         self
     }
 
     pub fn item(&mut self, slot: u8, name: &str, count: u8) -> &mut Self {
         let id = self.owner.item(name);
-        self.get().contents[slot as usize] = Item::Bulk(count, id);
+        self.get().contents[slot as usize] = Item::new(id, count);
         self
     }
 
     pub fn item_id(&mut self, slot: u8, item_id: ItemId, count: u8) -> &mut Self {
         let id = self.owner.item_id(item_id);
-        self.get().contents[slot as usize] = Item::Bulk(count, id);
+        self.get().contents[slot as usize] = Item::new(id, count);
         self
     }
 

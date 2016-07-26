@@ -551,13 +551,13 @@ impl Messages {
 }
 
 fn encode_item(i: world::Item) -> (u8, u8, ItemId) {
+    // TODO: change protocol encoding of items
     const TAG_EMPTY: u8 = 0;
     const TAG_BULK: u8 = 1;
-    const TAG_SPECIAL: u8 = 2;
 
-    match i {
-        world::Item::Empty => (TAG_EMPTY, 0, 0),
-        world::Item::Bulk(count, item_id) => (TAG_BULK, count, item_id),
-        world::Item::Special(script_data, item_id) => (TAG_SPECIAL, script_data, item_id),
+    if i.is_none() {
+        (TAG_EMPTY, 0, 0)
+    } else {
+        (TAG_BULK, i.count, i.id)
     }
 }

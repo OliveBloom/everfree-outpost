@@ -5,10 +5,9 @@ use input::InputBits;
 use types::*;
 use util::stable_id_map::StableIdMap;
 
-pub use self::flags::{TerrainChunkFlags, StructureFlags};
+pub use self::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
 pub use self::fragment::Fragment;
 pub use self::ops::OpResult;
-pub use self::hooks::Hooks;
 pub use self::types::{
     EntityAttachment,
     StructureAttachment,
@@ -42,7 +41,6 @@ macro_rules! check {
 pub mod object;
 mod ops;
 mod debug;
-pub mod hooks;
 mod types;
 pub mod fragment;
 pub mod flags;
@@ -128,6 +126,7 @@ pub struct Inventory {
 
     extra: Extra,
     stable_id: StableId,
+    flags: InventoryFlags,
     attachment: InventoryAttachment,
 
     version: u32,

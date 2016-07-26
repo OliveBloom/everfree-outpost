@@ -9,7 +9,7 @@ def _thing(proxy, by_name):
             id = by_name(x)
             return proxy.by_id(id)
         elif isinstance(x, int):
-            return proxy.by_id(id)
+            return proxy.by_id(x)
         else:
             raise TypeError('expected %s, int, or str' % proxy.__name__)
     return f
@@ -22,8 +22,8 @@ def _get_thing(proxy, get_by_name):
             id = get_by_name(x)
             return proxy.by_id(id) if id is not None else None
         elif isinstance(x, int):
-            if 0 <= id < len(proxy.INSTANCES):
-                return proxy.by_id(id)
+            if 0 <= x < len(proxy.INSTANCES):
+                return proxy.by_id(x)
             else:
                 return None
         elif x is None:

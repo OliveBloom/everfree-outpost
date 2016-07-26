@@ -120,7 +120,7 @@ pub fn login(eng: &mut Engine,
 
     if opt_eid.is_some() {
         // Init scripts
-        warn_on_err!(eng.script_hooks.call_client_login(eng.as_ref(), cid));
+        warn_on_err!(eng.script_hooks.call_client_login(eng, cid));
     } else {
         eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::PonyEdit(name.clone())));
     }
@@ -233,7 +233,7 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
     logic::world::on_import(eng.refine(), &importer, &bundle);
 
     // Init scripts
-    warn_on_err!(eng.script_hooks.call_client_login(eng.as_ref(), cid));
+    warn_on_err!(eng.script_hooks.call_client_login(eng, cid));
 
     Ok(())
 }
