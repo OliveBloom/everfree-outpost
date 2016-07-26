@@ -18,13 +18,13 @@ use world::object::*;
 use vision;
 
 
-pub fn open_inventory(mut eng: EngineRef, cid: ClientId, iid: InventoryId) -> StrResult<()> {
+pub fn open_inventory(eng: &mut Engine, cid: ClientId, iid: InventoryId) -> StrResult<()> {
     // Check that IDs are valid.
-    unwrap!(eng.world().get_client(cid));
-    unwrap!(eng.world().get_inventory(iid));
+    unwrap!(eng.world.get_client(cid));
+    unwrap!(eng.world.get_inventory(iid));
 
-    logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, iid);
-    eng.messages_mut().send_client(cid, ClientResponse::OpenDialog(Dialog::Inventory(iid)));
+    logic::inventory::subscribe(eng.refine(), cid, iid);
+    eng.messages.send_client(cid, ClientResponse::OpenDialog(Dialog::Inventory(iid)));
 
     Ok(())
 }
@@ -77,19 +77,19 @@ pub fn open_crafting(eng: &mut Engine,
     Ok(())
 }
 
-pub fn set_main_inventories(mut eng: EngineRef,
+pub fn set_main_inventories(eng: &mut Engine,
                             cid: ClientId,
                             item_iid: InventoryId,
                             ability_iid: InventoryId) -> StrResult<()> {
     // Check that IDs are valid.
-    unwrap!(eng.world().get_client(cid));
-    unwrap!(eng.world().get_inventory(item_iid));
-    unwrap!(eng.world().get_inventory(ability_iid));
+    unwrap!(eng.world.get_client(cid));
+    unwrap!(eng.world.get_inventory(item_iid));
+    unwrap!(eng.world.get_inventory(ability_iid));
 
-    logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, item_iid);
-    logic::inventory::subscribe(eng.borrow().unwrap().refine(), cid, ability_iid);
-    eng.messages_mut().send_client(cid, ClientResponse::MainInventory(item_iid));
-    eng.messages_mut().send_client(cid, ClientResponse::AbilityInventory(ability_iid));
+    logic::inventory::subscribe(eng.refine(), cid, item_iid);
+    logic::inventory::subscribe(eng.refine(), cid, ability_iid);
+    eng.messages.send_client(cid, ClientResponse::MainInventory(item_iid));
+    eng.messages.send_client(cid, ClientResponse::AbilityInventory(ability_iid));
 
     Ok(())
 }

@@ -18,7 +18,7 @@ use timer;
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 use world::Activity;
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
-use world::Fragment as World_Fragment;
+use world::fragment::{Fragment as World_Fragment, DummyFragment};
 use world::object::*;
 
 
@@ -189,12 +189,10 @@ pub fn with_engine_ref<E, F, R>(e: &mut E, f: F) -> R
     }
 }
 
-engine_part_typedef!(OnlyWorld(world));
-engine_part_typedef!(OnlyMessages(messages));
-engine_part_typedef!(OnlyTimer(timer));
-engine_part_typedef!(EmptyPart());
-
 engine_part2!(EmptyEngine());
+engine_part2!(OnlyMessages(messages));
+engine_part2!(OnlyTimer(timer));
+engine_part2!(OnlyWorld(world));
 
 
 define_python_class! {
@@ -213,126 +211,134 @@ define_python_class! {
         }
 
 
-    /*
-        fn engine_client_kick(eng: EngineRef, cid: ClientId, msg: String) {
-            eng.unwrap().kick_client(cid, &msg as &str);
+        fn engine_client_kick(eng: &mut Engine, cid: ClientId, msg: String) {
+            eng.kick_client(cid, &msg as &str);
         }
 
 
-        fn energy_init(eng: EngineRef, eid: EntityId, max: i32) -> PyResult<()> {
-            try!(logic::energy::init(eng.unwrap().refine(), eid, max));
+        fn energy_init(eng: &mut logic::energy::EngineParts,
+                       eid: EntityId,
+                       max: i32) -> PyResult<()> {
+            try!(logic::energy::init(eng, eid, max));
             Ok(())
         }
 
-        fn energy_check_init(eng: EngineRef, eid: EntityId, max: i32) -> PyResult<()> {
-            try!(logic::energy::check_init(eng.unwrap().refine(), eid, max));
+        fn energy_check_init(eng: &mut logic::energy::EngineParts,
+                             eid: EntityId,
+                             max: i32) -> PyResult<()> {
+            try!(logic::energy::check_init(eng, eid, max));
             Ok(())
         }
 
-        fn energy_get(eng: EngineRef, eid: EntityId) -> PyResult<i32> {
-            let result = try!(logic::energy::get(eng.unwrap().refine(), eid));
+        fn energy_get(eng: &mut logic::energy::EngineParts,
+                      eid: EntityId) -> PyResult<i32> {
+            let result = try!(logic::energy::get(eng, eid));
             Ok(result)
         }
 
-        fn energy_give(eng: EngineRef, eid: EntityId, amount: i32) -> PyResult<i32> {
-            let result = try!(logic::energy::give(eng.unwrap().refine(), eid, amount));
+        fn energy_give(eng: &mut logic::energy::EngineParts,
+                       eid: EntityId,
+                       amount: i32) -> PyResult<i32> {
+            let result = try!(logic::energy::give(eng, eid, amount));
             Ok(result)
         }
 
-        fn energy_take(eng: EngineRef, eid: EntityId, amount: i32) -> PyResult<bool> {
-            let result = try!(logic::energy::take(eng.unwrap().refine(), eid, amount));
+        fn energy_take(eng: &mut logic::energy::EngineParts,
+                       eid: EntityId,
+                       amount: i32) -> PyResult<bool> {
+            let result = try!(logic::energy::take(eng, eid, amount));
             Ok(result)
         }
 
 
-        fn messages_clients_len(eng: OnlyMessages,) -> usize {
-            eng.messages().clients_len()
+        fn messages_clients_len(eng: &mut OnlyMessages,) -> usize {
+            eng.messages.clients_len()
         }
 
-        fn messages_client_by_name(eng: OnlyMessages, name: String) -> Option<ClientId> {
-            eng.messages().name_to_client(&name)
+        fn messages_client_by_name(eng: &mut OnlyMessages,
+                                   name: String) -> Option<ClientId> {
+            eng.messages.name_to_client(&name)
         }
 
-        fn messages_send_chat_update(eng: OnlyMessages, cid: ClientId, msg: String) {
+        fn messages_send_chat_update(eng: &mut OnlyMessages,
+                                     cid: ClientId,
+                                     msg: String) {
             use messages::ClientResponse;
             let resp = ClientResponse::ChatUpdate(msg);
-            eng.messages().send_client(cid, resp);
+            eng.messages.send_client(cid, resp);
         }
 
-        fn messages_send_get_interact_args(eng: OnlyMessages,
+        fn messages_send_get_interact_args(eng: &mut OnlyMessages,
                                            cid: ClientId,
                                            dialog_id: u32,
                                            args: ExtraArg) {
             use messages::ClientResponse;
             let resp = ClientResponse::GetInteractArgs(dialog_id, args);
-            eng.messages().send_client(cid, resp);
+            eng.messages.send_client(cid, resp);
         }
 
-        fn messages_send_get_use_item_args(eng: OnlyMessages,
+        fn messages_send_get_use_item_args(eng: &mut OnlyMessages,
                                            cid: ClientId,
                                            item: ItemId,
                                            dialog_id: u32,
                                            args: ExtraArg) {
             use messages::ClientResponse;
             let resp = ClientResponse::GetUseItemArgs(item, dialog_id, args);
-            eng.messages().send_client(cid, resp);
+            eng.messages.send_client(cid, resp);
         }
 
-        fn messages_send_get_use_ability_args(eng: OnlyMessages,
+        fn messages_send_get_use_ability_args(eng: &mut OnlyMessages,
                                               cid: ClientId,
                                               ability: ItemId,
                                               dialog_id: u32,
                                               args: ExtraArg) {
             use messages::ClientResponse;
             let resp = ClientResponse::GetUseAbilityArgs(ability, dialog_id, args);
-            eng.messages().send_client(cid, resp);
+            eng.messages.send_client(cid, resp);
         }
 
 
-        fn logic_set_main_inventories(eng: EngineRef,
+        fn logic_set_main_inventories(eng: &mut Engine,
                                       cid: ClientId,
                                       item_iid: InventoryId,
                                       ability_iid: InventoryId) {
             warn_on_err!(logic::items::set_main_inventories(eng, cid, item_iid, ability_iid));
         }
 
-        fn logic_open_container(eng: EngineRef,
+        fn logic_open_container(eng: &mut Engine,
                                 cid: ClientId,
                                 iid1: InventoryId,
                                 iid2: InventoryId) {
-            warn_on_err!(logic::items::open_container(eng.unwrap(), cid, iid1, iid2));
+            warn_on_err!(logic::items::open_container(eng, cid, iid1, iid2));
         }
 
-        fn logic_open_crafting(eng: EngineRef,
+        fn logic_open_crafting(eng: &mut Engine,
                                cid: ClientId,
                                sid: StructureId,
                                iid: InventoryId) {
-            warn_on_err!(logic::items::open_crafting(eng.unwrap(), cid, sid, iid));
+            warn_on_err!(logic::items::open_crafting(eng, cid, sid, iid));
         }
 
-        fn logic_set_cave(eng: glue::WorldFragment,
+        fn logic_set_cave(eng: &mut Engine,
                           pid: PlaneId,
                           pos: V3) -> PyResult<bool> {
-            let mut eng = eng;
-            Ok(try!(logic::misc::set_cave(&mut eng, pid, pos)))
+            Ok(try!(logic::misc::set_cave(eng, pid, pos)))
         }
 
-        fn logic_set_interior(eng: glue::WorldFragment,
+        fn logic_set_interior(eng: &mut Engine,
                               pid: PlaneId,
                               pos: V3,
                               base: String) {
-            let mut eng = eng;
-            warn_on_err!(logic::misc::set_block_interior(&mut eng, pid, pos, &base));
+            warn_on_err!(logic::misc::set_block_interior(eng, pid, pos, &base));
         }
 
-        fn logic_clear_interior(eng: glue::WorldFragment,
+        fn logic_clear_interior(eng: &mut Engine,
                                 pid: PlaneId,
                                 pos: V3,
                                 base: String,
                                 new_center: String) -> PyResult<()> {
-            let mut eng = eng;
-            let new_center_id = pyunwrap!(eng.data().block_data.find_id(&new_center));
-            warn_on_err!(logic::misc::clear_block_interior(&mut eng,
+            let new_center_id = pyunwrap!(eng.data.block_data.find_id(&new_center));
+            warn_on_err!(logic::misc::clear_block_interior(eng,
                                                            pid,
                                                            pos,
                                                            &base,
@@ -341,119 +347,120 @@ define_python_class! {
         }
 
 
-        fn timer_schedule(eng: OnlyTimer,
+        fn timer_schedule(eng: &mut OnlyTimer,
                           when: Time,
                           userdata: PyBox) -> u32 {
-            let mut eng = eng;
-            let cookie = eng.timer_mut().schedule(when, move |eng| {
+            let cookie = eng.timer.schedule(when, move |eng| {
                 let sh = eng.script_hooks();
-                warn_on_err!(sh.call_timer_fired(eng, userdata));
+                warn_on_err!(sh.call_timer_fired(eng.unwrap(), userdata));
             });
             cookie.raw()
         }
 
-        fn timer_cancel(eng: OnlyTimer,
+        fn timer_cancel(eng: &mut OnlyTimer,
                         cookie: u32) {
-            let mut eng = eng;
-            eng.timer_mut().cancel(timer::Cookie::from_raw(cookie))
+            eng.timer.cancel(timer::Cookie::from_raw(cookie))
         }
 
 
-        fn(engine_ref_func_with_ref!) world_extra(eng: glue::WorldFragment,
+        fn(engine_ref_func_with_ref!) world_extra(eng: &mut OnlyWorld,
                                                   eng_ref: PyRef) -> PyResult<PyBox> {
-            let mut eng = eng;
-            let extra = eng.world_mut().extra_mut();
+            let extra = eng.world.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
 
-
-        fn(engine_ref_func_with_ref!) world_client_extra(eng: glue::WorldFragment,
+        fn(engine_ref_func_with_ref!) world_client_extra(eng: &mut OnlyWorld,
                                                          eng_ref: PyRef,
                                                          cid: ClientId) -> PyResult<PyBox> {
-            let mut eng = eng;
-            let mut c = pyunwrap!(eng.get_client_mut(cid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut c = pyunwrap!(wf.get_client_mut(cid),
                                   runtime_error, "no client with that ID");
             let extra = c.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
-        fn world_client_name(eng: OnlyWorld, cid: ClientId) -> PyResult<String> {
-            let c = pyunwrap!(eng.world().get_client(cid),
+        fn world_client_name(eng: &mut OnlyWorld,
+                             cid: ClientId) -> PyResult<String> {
+            let c = pyunwrap!(eng.world.get_client(cid),
                               runtime_error, "no client with that ID");
             Ok(c.name().to_owned())
         }
 
-        fn world_client_pawn_id(eng: OnlyWorld, cid: ClientId) -> PyResult<Option<EntityId>> {
-            let c = pyunwrap!(eng.world().get_client(cid),
+        fn world_client_pawn_id(eng: &mut OnlyWorld,
+                                cid: ClientId) -> PyResult<Option<EntityId>> {
+            let c = pyunwrap!(eng.world.get_client(cid),
                               runtime_error, "no client with that ID");
             Ok(c.pawn_id())
         }
 
 
-        fn(engine_ref_func_with_ref!) world_entity_extra(eng: glue::WorldFragment,
+        fn(engine_ref_func_with_ref!) world_entity_extra(eng: &mut OnlyWorld,
                                                          eng_ref: PyRef,
                                                          eid: EntityId) -> PyResult<PyBox> {
-            let mut eng = eng;
-            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut e = pyunwrap!(wf.get_entity_mut(eid),
                                   runtime_error, "no entity with that ID");
             let extra = e.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
-        fn world_entity_stable_id(eng: glue::WorldFragment,
+        fn world_entity_stable_id(eng: &mut OnlyWorld,
                                   eid: EntityId) -> PyResult<Stable<EntityId>> {
-            let mut eng = eng;
-            let mut e = pyunwrap!(eng.get_entity_mut(eid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut e = pyunwrap!(wf.get_entity_mut(eid),
                                   runtime_error, "no entity with that ID");
             Ok(e.stable_id())
         }
 
-        fn world_entity_transient_id(eng: OnlyWorld,
+        fn world_entity_transient_id(eng: &mut OnlyWorld,
                                      stable_eid: Stable<EntityId>) -> Option<EntityId> {
-            eng.world().transient_entity_id(stable_eid)
+            eng.world.transient_entity_id(stable_eid)
         }
 
-        fn world_entity_pos(eng: OnlyWorld, eid: EntityId) -> PyResult<V3> {
-            let e = pyunwrap!(eng.world().get_entity(eid),
+        fn world_entity_pos(eng: &mut OnlyWorld,
+                            eid: EntityId) -> PyResult<V3> {
+            let e = pyunwrap!(eng.world.get_entity(eid),
                               runtime_error, "no entity with that ID");
             Ok(e.pos(eng.now()))
         }
 
-        fn world_entity_facing(eng: OnlyWorld, eid: EntityId) -> PyResult<V3> {
-            let e = pyunwrap!(eng.world().get_entity(eid),
+        fn world_entity_facing(eng: &mut OnlyWorld,
+                               eid: EntityId) -> PyResult<V3> {
+            let e = pyunwrap!(eng.world.get_entity(eid),
                               runtime_error, "no entity with that ID");
             Ok(e.facing())
         }
 
-        fn world_entity_plane_id(eng: OnlyWorld, eid: EntityId) -> PyResult<PlaneId> {
-            let e = pyunwrap!(eng.world().get_entity(eid),
+        fn world_entity_plane_id(eng: &mut OnlyWorld,
+                                 eid: EntityId) -> PyResult<PlaneId> {
+            let e = pyunwrap!(eng.world.get_entity(eid),
                               runtime_error, "no entity with that ID");
             Ok(e.plane_id())
         }
 
-        fn world_entity_appearance(eng: OnlyWorld, eid: EntityId) -> PyResult<u32> {
-            let e = pyunwrap!(eng.world().get_entity(eid),
+        fn world_entity_appearance(eng: &mut OnlyWorld,
+                                   eid: EntityId) -> PyResult<u32> {
+            let e = pyunwrap!(eng.world.get_entity(eid),
                               runtime_error, "no entity with that ID");
             Ok(e.appearance())
         }
 
-        fn world_entity_set_appearance(eng: glue::WorldFragment,
+        fn world_entity_set_appearance(eng: &mut Engine,
                                        eid: EntityId,
                                        appearance: u32) -> PyResult<()> {
-            // FIXME: actually-unsafe transmute
-            let eng = unsafe { mem::transmute(eng) };
-            let ok = logic::entity::set_appearance(eng, eid, appearance);
+            let ok = logic::entity::set_appearance(eng.refine(), eid, appearance);
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
-        fn world_entity_controller(eng: OnlyWorld, eid: EntityId) -> PyResult<Option<ClientId>> {
-            let e = pyunwrap!(eng.world().get_entity(eid),
+        fn world_entity_controller(eng: &mut OnlyWorld,
+                                   eid: EntityId) -> PyResult<Option<ClientId>> {
+            let e = pyunwrap!(eng.world.get_entity(eid),
                               runtime_error, "no entity with that ID");
             if let EntityAttachment::Client(cid) = e.attachment() {
-                let c = eng.world().client(cid);
+                let c = eng.world.client(cid);
                 if c.pawn_id() == Some(eid) {
                     return Ok(Some(cid));
                 }
@@ -461,159 +468,155 @@ define_python_class! {
             Ok(None)
         }
 
-        fn world_entity_teleport(eng: glue::WorldFragment,
+        fn world_entity_teleport(eng: &mut Engine,
                                  eid: EntityId,
                                  pos: V3) -> PyResult<()> {
-            try!(logic::world::teleport_entity(eng, eid, pos));
+            try!(logic::world::teleport_entity(eng.as_ref().as_world_fragment(),
+                                               eid, pos));
             Ok(())
         }
 
-        fn world_entity_teleport_plane(eng: glue::WorldFragment,
+        fn world_entity_teleport_plane(eng: &mut Engine,
                                        eid: EntityId,
                                        pid: PlaneId,
                                        pos: V3) -> PyResult<()> {
-            try!(logic::world::teleport_entity_plane(eng, eid, pid, pos));
+            try!(logic::world::teleport_entity_plane(eng.as_ref().as_world_fragment(),
+                                                     eid, pid, pos));
             Ok(())
         }
 
-        fn world_entity_teleport_stable_plane(eng: glue::WorldFragment,
+        fn world_entity_teleport_stable_plane(eng: &mut Engine,
                                               eid: EntityId,
                                               stable_pid: Stable<PlaneId>,
                                               pos: V3) -> PyResult<()> {
-            try!(logic::world::teleport_entity_stable_plane(eng, eid, stable_pid, pos));
+            try!(logic::world::teleport_entity_stable_plane(eng.as_ref().as_world_fragment(),
+                                                            eid, stable_pid, pos));
             Ok(())
         }
 
-        fn world_entity_set_activity_walk(eng: glue::WorldFragment,
+        fn world_entity_set_activity_walk(eng: &mut Engine,
                                           eid: EntityId) -> PyResult<()> {
-            // FIXME: actually-unsafe transmute
-            let eng = unsafe { mem::transmute(eng) };
-            let ok = logic::entity::set_activity(eng, eid, Activity::Walk);
+            let ok = logic::entity::set_activity(eng.refine(), eid, Activity::Walk);
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
-        fn world_entity_set_activity_emote(eng: glue::WorldFragment,
+        fn world_entity_set_activity_emote(eng: &mut Engine,
                                            eid: EntityId,
                                            anim: AnimId) -> PyResult<()> {
-            // FIXME: actually-unsafe transmute
-            let eng = unsafe { mem::transmute(eng) };
-            let ok = logic::entity::set_activity(eng, eid, Activity::Emote(anim));
+            let ok = logic::entity::set_activity(eng.refine(), eid, Activity::Emote(anim));
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
-        fn world_entity_set_activity_work(eng: glue::WorldFragment,
+        fn world_entity_set_activity_work(eng: &mut Engine,
                                           eid: EntityId,
                                           anim: AnimId,
                                           icon: AnimId) -> PyResult<()> {
-            // FIXME: actually-unsafe transmute
-            let eng = unsafe { mem::transmute(eng) };
-            let ok = logic::entity::set_activity(eng, eid, Activity::Work(anim, icon));
+            let ok = logic::entity::set_activity(eng.refine(), eid, Activity::Work(anim, icon));
             // Bad eid is currently the only possible failure mode
             pyassert!(ok, runtime_error, "no entity with that ID");
             Ok(())
         }
 
 
-        fn world_inventory_create(eng: glue::WorldFragment,
+        fn world_inventory_create(eng: &mut Engine,
                                   size: u8) -> PyResult<InventoryId> {
-            let mut eng = eng;
-            let i = try!(eng.create_inventory(size));
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let i = try!(wf.create_inventory(size));
             Ok(i.id())
         }
 
-        fn world_inventory_attach(eng: glue::WorldFragment,
+        fn world_inventory_attach(eng: &mut OnlyWorld,
                                   iid: InventoryId,
                                   attachment: InventoryAttachment) -> PyResult<()> {
-            let mut eng = eng;
-            let mut i = pyunwrap!(eng.get_inventory_mut(iid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut i = pyunwrap!(wf.get_inventory_mut(iid),
                                   runtime_error, "no inventory with that ID");
             try!(i.set_attachment(attachment));
             Ok(())
         }
 
-        fn world_inventory_count(eng: OnlyWorld,
+        fn world_inventory_count(eng: &mut OnlyWorld,
                                  iid: InventoryId,
                                  item: ItemId) -> PyResult<u16> {
-            let i = pyunwrap!(eng.world().get_inventory(iid),
+            let i = pyunwrap!(eng.world.get_inventory(iid),
                               runtime_error, "no inventory with that ID");
             Ok(i.count(item))
         }
 
-        fn world_inventory_count_space(eng: OnlyWorld,
+        fn world_inventory_count_space(eng: &mut OnlyWorld,
                                        iid: InventoryId,
                                        item: ItemId) -> PyResult<u16> {
-            let i = pyunwrap!(eng.world().get_inventory(iid),
+            let i = pyunwrap!(eng.world.get_inventory(iid),
                               runtime_error, "no inventory with that ID");
             Ok(i.count_space(item))
         }
 
-        fn world_inventory_bulk_add(eng: glue::WorldFragment,
+        fn world_inventory_bulk_add(eng: &mut Engine,
                                     iid: InventoryId,
                                     item: ItemId,
                                     count: u16) -> PyResult<u16> {
-            // FIXME: actually-unsafe transmute
-            let eng = unsafe { mem::transmute(eng) };
-            let result = logic::items::bulk_add(eng, iid, item, count);
+            let result = logic::items::bulk_add(eng.refine(), iid, item, count);
             // Bad iid is currently the only possible failure mode
             pyassert!(result.is_ok(), runtime_error, "no inventory with that ID");
             Ok(result.unwrap())
         }
 
-        fn world_inventory_bulk_remove(eng: glue::WorldFragment,
+        fn world_inventory_bulk_remove(eng: &mut Engine,
                                        iid: InventoryId,
                                        item: ItemId,
                                        count: u16) -> PyResult<u16> {
-            // FIXME: actually-unsafe transmute
-            let eng = unsafe { mem::transmute(eng) };
-            let result = logic::items::bulk_remove(eng, iid, item, count);
+            let result = logic::items::bulk_remove(eng.refine(), iid, item, count);
             // Bad iid is currently the only possible failure mode
             pyassert!(result.is_ok(), runtime_error, "no inventory with that ID");
             Ok(result.unwrap())
         }
 
 
-        fn world_plane_create(eng: glue::WorldFragment,
+        fn world_plane_create(eng: &mut Engine,
                               name: String) -> PyResult<PlaneId> {
-            let mut eng = eng;
-            let p = try!(eng.create_plane(name));
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let p = try!(wf.create_plane(name));
             Ok(p.id())
         }
 
-        fn world_plane_stable_id(eng: glue::WorldFragment,
+        fn world_plane_stable_id(eng: &mut OnlyWorld,
                                  pid: PlaneId) -> PyResult<Stable<PlaneId>> {
-            let mut eng = eng;
-            let mut p = pyunwrap!(eng.get_plane_mut(pid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut p = pyunwrap!(wf.get_plane_mut(pid),
                                   runtime_error, "no plane with that ID");
             Ok(p.stable_id())
         }
 
-        fn world_plane_transient_id(eng: OnlyWorld,
+        fn world_plane_transient_id(eng: &mut OnlyWorld,
                                     stable_pid: Stable<PlaneId>) -> Option<PlaneId> {
-            eng.world().transient_plane_id(stable_pid)
+            eng.world.transient_plane_id(stable_pid)
         }
 
-        fn(engine_ref_func_with_ref!) world_plane_extra(eng: glue::WorldFragment,
+        fn(engine_ref_func_with_ref!) world_plane_extra(eng: &mut OnlyWorld,
                                                         eng_ref: PyRef,
                                                         pid: PlaneId) -> PyResult<PyBox> {
-            let mut eng = eng;
-            let mut p = pyunwrap!(eng.get_plane_mut(pid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut p = pyunwrap!(wf.get_plane_mut(pid),
                                   runtime_error, "no plane with that ID");
             let extra = p.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
-        fn world_plane_name(eng: OnlyWorld, pid: PlaneId) -> PyResult<String> {
-            let p = pyunwrap!(eng.world().get_plane(pid),
+        fn world_plane_name(eng: &mut OnlyWorld,
+                            pid: PlaneId) -> PyResult<String> {
+            let p = pyunwrap!(eng.world.get_plane(pid),
                               runtime_error, "no plane with that ID");
             Ok(p.name().to_owned())
         }
 
-        fn world_plane_get_block(eng: OnlyWorld, pid: PlaneId, pos: V3) -> PyResult<BlockId> {
-            let p = pyunwrap!(eng.world().get_plane(pid),
+        fn world_plane_get_block(eng: &mut OnlyWorld,
+                                 pid: PlaneId,
+                                 pos: V3) -> PyResult<BlockId> {
+            let p = pyunwrap!(eng.world.get_plane(pid),
                               runtime_error, "no plane with that ID");
             let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
             let tc = pyunwrap!(p.get_terrain_chunk(cpos),
@@ -623,96 +626,98 @@ define_python_class! {
         }
 
 
-        fn world_structure_create(eng: glue::WorldFragment,
+        fn world_structure_create(eng: &mut Engine,
                                   pid: PlaneId,
                                   pos: V3,
                                   template_id: TemplateId) -> PyResult<StructureId> {
-            let mut eng = eng;
-            // FIXME hacky transmute
-            let eng2: &mut logic::structure::EngineLifecycle = unsafe { mem::transmute_copy(&eng) };
-            let sid = try!(logic::structure::checked_create(eng2.refine(), pid, pos, template_id));
-            let mut s = eng.structure_mut(sid);
-            try!(s.set_attachment(StructureAttachment::Chunk));
-            logic::structure::on_create(eng2, s.id());
-            Ok(s.id())
+            let sid = try!(logic::structure::checked_create(eng.refine(), pid, pos, template_id));
+            {
+                let mut wf = DummyFragment::new(&mut eng.world);
+                let mut s = wf.structure_mut(sid);
+                try!(s.set_attachment(StructureAttachment::Chunk));
+            }
+            logic::structure::on_create(eng.refine(), sid);
+            Ok(sid)
         }
 
-        fn world_structure_destroy(eng: glue::WorldFragment,
+        fn world_structure_destroy(eng: &mut Engine,
                                    sid: StructureId) -> PyResult<()> {
-            let mut eng = eng;
-            // FIXME hacky transmute
-            let eng2 = unsafe { mem::transmute_copy(&eng) };
-            logic::structure::on_destroy_recursive(eng2, sid);
-            try!(eng.destroy_structure(sid));
+            logic::structure::on_destroy_recursive(eng.refine(), sid);
+            {
+                let mut wf = DummyFragment::new(&mut eng.world);
+                try!(wf.destroy_structure(sid));
+            }
             Ok(())
         }
 
-        fn world_structure_replace(eng: glue::WorldFragment,
+        fn world_structure_replace(eng: &mut Engine,
                                    sid: StructureId,
                                    template_id: TemplateId) -> PyResult<()> {
-            // FIXME hacky transmute
-            let eng2: &mut logic::structure::EngineLifecycle = unsafe { mem::transmute_copy(&eng) };
             let old_template_id = {
-                let s = pyunwrap!(eng2.world.get_structure(sid),
+                let s = pyunwrap!(eng.world.get_structure(sid),
                                   runtime_error, "no structure with that ID");
                 s.template_id()
             };
-            try!(logic::structure::checked_replace(eng2.refine(), sid, template_id));
-            logic::structure::on_replace(eng2, sid, old_template_id);
+            try!(logic::structure::checked_replace(eng.refine(), sid, template_id));
+            logic::structure::on_replace(eng.refine(), sid, old_template_id);
             Ok(())
         }
 
-        fn world_structure_stable_id(eng: glue::WorldFragment,
+        fn world_structure_stable_id(eng: &mut OnlyWorld,
                                      sid: StructureId) -> PyResult<Stable<StructureId>> {
-            let mut eng = eng;
-            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut s = pyunwrap!(wf.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             Ok(s.stable_id())
         }
 
-        fn world_structure_transient_id(eng: OnlyWorld,
+        fn world_structure_transient_id(eng: &mut OnlyWorld,
                                         stable_sid: Stable<StructureId>) -> Option<StructureId> {
-            eng.world().transient_structure_id(stable_sid)
+            eng.world.transient_structure_id(stable_sid)
         }
 
-        fn(engine_ref_func_with_ref!) world_structure_extra(eng: glue::WorldFragment,
+        fn(engine_ref_func_with_ref!) world_structure_extra(eng: &mut OnlyWorld,
                                                             eng_ref: PyRef,
                                                             sid: StructureId) -> PyResult<PyBox> {
-            let mut eng = eng;
-            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut s = pyunwrap!(wf.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             let extra = s.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
         }
 
-        fn world_structure_check(eng: OnlyWorld, sid: StructureId) -> bool {
-            eng.world().get_structure(sid).is_some()
+        fn world_structure_check(eng: &mut OnlyWorld,
+                                 sid: StructureId) -> bool {
+            eng.world.get_structure(sid).is_some()
         }
 
-        fn world_structure_pos(eng: OnlyWorld, sid: StructureId) -> PyResult<V3> {
-            let s = pyunwrap!(eng.world().get_structure(sid),
+        fn world_structure_pos(eng: &mut OnlyWorld,
+                               sid: StructureId) -> PyResult<V3> {
+            let s = pyunwrap!(eng.world.get_structure(sid),
                               runtime_error, "no structure with that ID");
             Ok(s.pos())
         }
 
-        fn world_structure_plane_id(eng: OnlyWorld, sid: StructureId) -> PyResult<PlaneId> {
-            let s = pyunwrap!(eng.world().get_structure(sid),
+        fn world_structure_plane_id(eng: &mut OnlyWorld,
+                                    sid: StructureId) -> PyResult<PlaneId> {
+            let s = pyunwrap!(eng.world.get_structure(sid),
                               runtime_error, "no structure with that ID");
             Ok(s.plane_id())
         }
 
-        fn world_structure_template_id(eng: OnlyWorld, sid: StructureId) -> PyResult<TemplateId> {
-            let s = pyunwrap!(eng.world().get_structure(sid),
+        fn world_structure_template_id(eng: &mut OnlyWorld,
+                                       sid: StructureId) -> PyResult<TemplateId> {
+            let s = pyunwrap!(eng.world.get_structure(sid),
                               runtime_error, "no structure with that ID");
             Ok(s.template_id())
         }
 
-        fn world_structure_set_has_import_hook(eng: glue::WorldFragment,
+        fn world_structure_set_has_import_hook(eng: &mut OnlyWorld,
                                                sid: StructureId,
                                                set: bool) -> PyResult<()> {
             use world::flags;
-            let mut eng = eng;
-            let mut s = pyunwrap!(eng.get_structure_mut(sid),
+            let mut wf = DummyFragment::new(&mut eng.world);
+            let mut s = pyunwrap!(wf.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             let flags =
                 if set {
@@ -724,13 +729,13 @@ define_python_class! {
             Ok(())
         }
 
-        fn world_structure_find_at_point(eng: OnlyWorld,
+        fn world_structure_find_at_point(eng: &mut OnlyWorld,
                                          pid: PlaneId,
                                          pos: V3) -> Option<StructureId> {
             let chunk = pos.reduce().div_floor(scalar(CHUNK_SIZE));
             let mut best_id = None;
             let mut best_layer = 0;
-            for s in eng.world().chunk_structures(pid, chunk) {
+            for s in eng.world.chunk_structures(pid, chunk) {
                 if s.bounds().contains(pos) {
                     if s.template().layer >= best_layer {
                         best_layer = s.template().layer;
@@ -741,19 +746,18 @@ define_python_class! {
             best_id
         }
 
-        fn world_structure_find_at_point_layer(eng: OnlyWorld,
+        fn world_structure_find_at_point_layer(eng: &mut OnlyWorld,
                                                pid: PlaneId,
                                                pos: V3,
                                                layer: u8) -> Option<StructureId> {
             let chunk = pos.reduce().div_floor(scalar(CHUNK_SIZE));
-            for s in eng.world().chunk_structures(pid, chunk) {
+            for s in eng.world.chunk_structures(pid, chunk) {
                 if s.bounds().contains(pos) && s.template().layer == layer {
                     return Some(s.id())
                 }
             }
             None
         }
-        */
     }
 }
 
