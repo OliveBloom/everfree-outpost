@@ -17,7 +17,7 @@ pub fn tick(eng: &mut Engine) {
     let next = next_tick(now);
 
     // Schedule this first, so it gets the first slot in the timing wheel bucket.
-    eng.timer.schedule(next, |eng| eng.unwrap().tick());
+    eng.timer.schedule(next, |eng| eng.tick());
 
     for (cid, (act, args)) in eng.input.actions() {
         if let Some(e) = eng.world.client(cid).pawn() {
@@ -31,11 +31,11 @@ pub fn tick(eng: &mut Engine) {
 
         match act {
             Action::Interact =>
-                logic::input::interact(eng.as_ref(), cid, args),
+                logic::input::interact(eng, cid, args),
             Action::UseItem(item_id) =>
-                logic::input::use_item(eng.as_ref(), cid, item_id, args),
+                logic::input::use_item(eng, cid, item_id, args),
             Action::UseAbility(item_id) =>
-                logic::input::use_ability(eng.as_ref(), cid, item_id, args),
+                logic::input::use_ability(eng, cid, item_id, args),
         }
     }
 

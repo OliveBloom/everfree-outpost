@@ -4,7 +4,7 @@ use std::sync::mpsc::Receiver;
 
 use types::*;
 
-use engine::split::EngineRef;
+use engine::Engine;
 
 pub use self::queue::Cookie;
 pub use self::queue::WakeQueue;
@@ -13,7 +13,7 @@ pub use self::queue::WakeQueue;
 mod queue;
 
 pub struct Timer {
-    queue: WakeQueue<Box<FnBox(EngineRef)+'static>>,
+    queue: WakeQueue<Box<FnBox(&mut Engine)+'static>>,
     time_base: Time,
 }
 
@@ -53,7 +53,7 @@ impl Timer {
 
 
     pub fn schedule<F>(&mut self, when: Time, cb: F) -> Cookie
-            where F: FnOnce(EngineRef)+'static {
+            where F: FnOnce(&mut Engine)+'static {
         let unix_when = self.from_world_time(when);
         self.queue.schedule(unix_when, Box::new(cb))
     }
@@ -66,7 +66,7 @@ impl Timer {
         cast_receiver(self.queue.receiver())
     }
 
-    pub fn process(&mut self, evt: TimerEvent) -> Option<(Box<FnBox(EngineRef)+'static>, Time)> {
+    pub fn process(&mut self, evt: TimerEvent) -> Option<(Box<FnBox(&mut Engine)+'static>, Time)> {
         self.queue.retrieve(evt.0)
             .map(|(unix_when, cb)| (cb, self.world_time(unix_when)))
     }

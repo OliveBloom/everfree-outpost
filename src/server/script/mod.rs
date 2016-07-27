@@ -2,7 +2,6 @@ use libc::c_char;
 use python3_sys::*;
 use python3_sys::structmember::PyMemberDef;
 
-use engine::split::Part;
 use python;
 use python::api as py;
 use python::api::{PyRef, PyResult};

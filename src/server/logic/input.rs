@@ -1,23 +1,22 @@
 use types::*;
 
 use engine::Engine;
-use engine::split::EngineRef;
 use msg::ExtraArg;
 
 
-pub fn interact(eng: EngineRef, cid: ClientId, args: Option<ExtraArg>) {
-    warn_on_err!(eng.script_hooks().call_client_interact(eng.unwrap(), cid, args));
+pub fn interact(eng: &mut Engine, cid: ClientId, args: Option<ExtraArg>) {
+    warn_on_err!(eng.script_hooks.call_client_interact(eng, cid, args));
 }
 
-pub fn use_item(eng: EngineRef, cid: ClientId, item_id: ItemId, args: Option<ExtraArg>) {
-    warn_on_err!(eng.script_hooks().call_client_use_item(eng.unwrap(), cid, item_id, args));
+pub fn use_item(eng: &mut Engine, cid: ClientId, item_id: ItemId, args: Option<ExtraArg>) {
+    warn_on_err!(eng.script_hooks.call_client_use_item(eng, cid, item_id, args));
 }
 
-pub fn use_ability(eng: EngineRef, cid: ClientId, item_id: ItemId, args: Option<ExtraArg>) {
-    warn_on_err!(eng.script_hooks().call_client_use_ability(eng.unwrap(), cid, item_id, args));
+pub fn use_ability(eng: &mut Engine, cid: ClientId, item_id: ItemId, args: Option<ExtraArg>) {
+    warn_on_err!(eng.script_hooks.call_client_use_ability(eng, cid, item_id, args));
 }
 
-pub fn open_inventory(_eng: EngineRef, cid: ClientId) {
+pub fn open_inventory(_eng: &mut Engine, cid: ClientId) {
     error!("UNIMPLEMENTED: open_inventory - called by {:?}", cid);
 }
 

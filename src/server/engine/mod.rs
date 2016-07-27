@@ -26,7 +26,6 @@ use timing::*;
 use vision::Vision;
 use world::World;
 
-use self::split::EngineRef;
 use self::split2::Coded;
 
 
@@ -105,7 +104,7 @@ impl<'d> Engine<'d> {
             self.storage.remove_restart_file();
         }
 
-        self.timer.schedule(next_tick(self.now), |eng| eng.unwrap().tick());
+        self.timer.schedule(next_tick(self.now), |eng| eng.tick());
 
         loop {
             enum Event {
@@ -129,7 +128,7 @@ impl<'d> Engine<'d> {
                 Event::FromTimer(evt) => {
                     let (cb, now) = unwrap_or!(self.timer.process(evt), continue);
                     self.now = now;
-                    cb.call_box((self.as_ref(),));
+                    cb.call_box((self,));
                 },
                 Event::FromMessage(evt) => {
                     let (evt, now) = unwrap_or!(self.messages.process(evt), continue);
@@ -313,10 +312,6 @@ impl<'d> Engine<'d> {
         self.extra.wire_info.remove(&wire_id);
     }
 
-
-    pub fn as_ref<'b>(&'b mut self) -> EngineRef<'b, 'd> {
-        EngineRef::new(self)
-    }
 
     pub fn now(&self) -> Time {
         self.now

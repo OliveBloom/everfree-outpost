@@ -348,8 +348,7 @@ define_python_class! {
                           when: Time,
                           userdata: PyBox) -> u32 {
             let cookie = eng.timer.schedule(when, move |eng| {
-                let sh = eng.script_hooks();
-                warn_on_err!(sh.call_timer_fired(eng.unwrap(), userdata));
+                warn_on_err!(eng.script_hooks.call_timer_fired(eng, userdata));
             });
             cookie.raw()
         }
