@@ -16,8 +16,6 @@ use data::Data;
 use timing::next_tick;
 use world::{World, Entity};
 use world::{Motion, Activity};
-use world::fragment::Fragment as World_Fragment;
-use world::fragment::DummyFragment;
 use world::object::*;
 
 
@@ -144,13 +142,12 @@ impl<'a, 'b, 'd> Coroutine<(&'b mut World<'d>, &'b TerrainCache)> for UpdateCo<'
 
     fn send(&mut self, args: (&'b mut World<'d>, &'b TerrainCache)) -> Option<Self::Item> {
         let (world, cache) = args;
-        let mut wf = DummyFragment::new(world);
 
         for (&eid, me) in &mut self.inner {
             let now = self.now;
             let next = next_tick(now);
 
-            let mut e = match wf.get_entity_mut(eid) {
+            let mut e = match world.get_entity_mut(eid) {
                 Some(e) => EntityWrapper::new(e),
                 None => {
                     error!("BUG: no such entity: {:?}", eid);
