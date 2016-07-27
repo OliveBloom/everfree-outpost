@@ -103,6 +103,7 @@ impl<'d> Engine<'d> {
             self.storage.remove_restart_file();
         }
 
+        // Schedule the first tick.
         self.timer.schedule(next_tick(self.now), |eng| eng.tick());
 
         loop {
