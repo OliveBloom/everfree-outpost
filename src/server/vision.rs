@@ -18,7 +18,6 @@ use std::collections::HashMap;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use types::*;
-use util::SmallSet;
 
 use pubsub::{self, PubSub};
 

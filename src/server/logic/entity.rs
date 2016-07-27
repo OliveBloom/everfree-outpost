@@ -3,10 +3,8 @@ use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use engine::Engine;
 use logic;
-use messages::{Messages, ClientResponse};
-use physics::Physics;
-use vision::Vision;
-use world::{Activity, Motion, World};
+use messages::ClientResponse;
+use world::{Activity, Motion};
 use world::object::*;
 
 

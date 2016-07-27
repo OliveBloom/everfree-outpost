@@ -1,13 +1,8 @@
 use types::*;
-use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
 use engine::Engine;
 use engine::split2::Coded;
 use logic;
-use messages::{Messages, ClientResponse};
-use physics::Physics;
-use vision::Vision;
-use world::{Activity, Motion, World};
 use world::flags::I_HAS_CHANGE_HOOK;
 use world::object::*;
 
@@ -61,6 +56,6 @@ pub fn on_update(eng: &mut EngineSubscribe, iid: InventoryId, slot_idx: u8) {
 pub fn call_update_hook(eng: &mut Engine, iid: InventoryId) {
     let flags = eng.world.inventory(iid).flags();
     if flags.contains(I_HAS_CHANGE_HOOK) {
-        eng.script_hooks.call_inventory_change_hook(eng, iid);
+        warn_on_err!(eng.script_hooks.call_inventory_change_hook(eng, iid));
     }
 }

@@ -6,7 +6,6 @@ use python::api as py;
 use python::api::{PyBox, PyRef, PyResult};
 use python::conv::{Pack, Unpack};
 use python::rust_ref::{RustRef, RustRefType};
-use world;
 
 use super::engine::with_engine_ref;
 

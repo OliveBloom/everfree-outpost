@@ -1,18 +1,11 @@
-use std::mem;
-
 use types::*;
-use libphysics::{CHUNK_SIZE, TILE_SIZE};
+use libphysics::CHUNK_SIZE;
 use util::SmallVec;
 
 use cache::TerrainCache;
 use data::StructureTemplate;
-use engine::Engine;
 use engine::split2::Coded;
 use logic;
-use messages::{Messages, ClientResponse};
-use physics::Physics;
-use vision::Vision;
-use world::{Activity, Motion, Structure, World};
 use world::flags::*;
 use world::object::*;
 use world::OpResult;
@@ -113,7 +106,7 @@ pub fn on_replace(eng: &mut EngineLifecycle,
 /// Handler to be called just after importing an entity.
 pub fn on_import(eng: &mut EngineLifecycle, sid: StructureId) {
     if eng.world.structure(sid).flags().contains(S_HAS_IMPORT_HOOK) {
-        eng.script_hooks().call_structure_import_hook(eng, sid);
+        warn_on_err!(eng.script_hooks().call_structure_import_hook(eng, sid));
     }
 }
 
@@ -134,7 +127,6 @@ pub fn checked_create(eng: &mut EngineCheck,
 pub fn checked_replace(eng: &mut EngineCheck,
                        sid: StructureId,
                        template_id: TemplateId) -> OpResult<()> {
-    let data = eng.data();
     let new_template = unwrap!(eng.data().structure_templates.get_template(template_id));
 
     let mut s = unwrap!(eng.world.get_structure_mut(sid));

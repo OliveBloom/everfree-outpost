@@ -4,7 +4,6 @@ use types::*;
 use util::now;
 
 use engine::Engine;
-use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
 use wire::{WireWriter, WireReader};

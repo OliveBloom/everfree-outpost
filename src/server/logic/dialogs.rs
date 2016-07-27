@@ -1,16 +1,9 @@
 use types::*;
-use libphysics::{TILE_SIZE, CHUNK_SIZE};
 
 use dialogs::{DialogType, TargetId};
-use engine::Engine;
 use engine::split2::Coded;
-use input::{Action, InputBits, INPUT_DIR_MASK};
 use logic;
 use messages::ClientResponse;
-use physics::UpdateKind;
-use timing::next_tick;
-use world::Activity;
-use world::object::*;
 
 
 engine_part2!(pub EngineDialogs(world, vision, messages, dialogs));
@@ -55,6 +48,6 @@ pub fn clear_users(eng: &mut EngineDialogs, target: TargetId) {
         None => eng.messages.send_client(cid, ClientResponse::CancelDialog),
         Some(TargetId::Inventory(iid)) =>
             logic::inventory::unsubscribe(eng.refine(), cid, iid),
-        Some(TargetId::Structure(sid)) => {},
+        Some(TargetId::Structure(_sid)) => {},
     });
 }

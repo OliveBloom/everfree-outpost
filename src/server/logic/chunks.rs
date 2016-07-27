@@ -1,14 +1,8 @@
-use std::mem;
-
 use types::*;
 
-use chunks;
 use engine::Engine;
-use engine::glue::*;
-use engine::split::EngineRef;
 use engine::split2::Coded;
 use logic;
-use world;
 use world::bundle;
 use world::flags;
 use world::object::*;

@@ -3,7 +3,7 @@ use types::*;
 use world::World;
 use world::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
 use world::object::ObjectRefMut;
-use world::ops::{self, OpResult};
+use world::ops::OpResult;
 
 macro_rules! define_Fragment {
     ($(

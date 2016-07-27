@@ -6,11 +6,9 @@
 use std::collections::HashMap;
 
 use types::*;
-use util::StrResult;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE};
 
 use data::{Data, StructureTemplate, BlockFlags};
-use world::World;
 use world::object::*;
 
 

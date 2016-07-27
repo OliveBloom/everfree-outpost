@@ -7,18 +7,16 @@ use libphysics::CHUNK_SIZE;
 use types::*;
 
 use engine::Engine;
-use engine::glue;
 use engine::split2::{Coded, BitList};
 use logic;
 use msg::ExtraArg;
 use python::api as py;
 use python::api::{PyBox, PyRef, PyResult};
-use python::conv::{Pack, Unpack};
+use python::conv::Pack;
 use timer;
 use world::{EntityAttachment, InventoryAttachment, StructureAttachment};
 use world::Activity;
 use world::extra::{Extra, Value, ViewMut, ArrayViewMut, HashViewMut};
-use world::fragment::{Fragment as World_Fragment, DummyFragment};
 use world::object::*;
 
 
@@ -93,7 +91,6 @@ macro_rules! engine_ref_func_wrapper {
         fn $wrap(slf: $crate::python::ptr::PyRef,
                  args: $crate::python::ptr::PyRef)
                  -> $crate::python::exc::PyResult<$crate::python::ptr::PyBox> {
-            use $crate::engine::split::{Part, PartFlags};
             use $crate::python::api as py;
             use $crate::script::{Pack, Unpack};
 

@@ -44,6 +44,18 @@ macro_rules! warn_on_err {
     };
 }
 
+#[macro_export]
+macro_rules! err_on_err {
+    ($e:expr) => {
+        match $e {
+            Ok(_) => {},
+            Err(e) => error!("{}: {}",
+                             stringify!($e),
+                             ::std::error::Error::description(&e)),
+        }
+    };
+}
+
 
 pub fn now() -> Time {
     let timespec = time::get_time();

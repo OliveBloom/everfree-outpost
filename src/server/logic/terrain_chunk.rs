@@ -1,14 +1,8 @@
 use types::*;
-use libphysics::{CHUNK_SIZE, TILE_SIZE};
 use util::SmallVec;
 
-use engine::Engine;
 use engine::split2::Coded;
 use logic;
-use messages::{Messages, ClientResponse};
-use physics::Physics;
-use vision::Vision;
-use world::{Activity, Motion, World};
 use world::object::*;
 
 

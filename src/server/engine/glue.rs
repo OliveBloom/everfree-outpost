@@ -1,7 +1,4 @@
-use chunks::{self, Chunks};
-use engine::split::{EngineRef, Open, Part};
-use terrain_gen;
-use vision::{self, Vision};
+use engine::split::{EngineRef, Part};
 use world::{self, World};
 
 

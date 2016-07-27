@@ -1,5 +1,3 @@
-use std::mem;
-
 use libphysics::CHUNK_SIZE;
 use types::*;
 

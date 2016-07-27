@@ -1,11 +1,8 @@
 use types::*;
 
 use engine::Engine;
-use engine::split::{EngineRef, Open};
-use engine::split2::Coded;
-use logic;
+use engine::split::EngineRef;
 use msg::ExtraArg;
-use vision;
 
 
 pub fn interact(eng: EngineRef, cid: ClientId, args: Option<ExtraArg>) {

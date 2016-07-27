@@ -7,14 +7,11 @@ use util::StrResult;
 
 use dialogs::{DialogType, TargetId};
 use engine::Engine;
-use engine::split::EngineRef;
 use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, Dialog};
-use world;
 use world::Item;
 use world::object::*;
-use vision;
 
 
 pub fn open_inventory(eng: &mut Engine, cid: ClientId, iid: InventoryId) -> StrResult<()> {
@@ -32,8 +29,6 @@ pub fn open_container(eng: &mut Engine,
                       cid: ClientId,
                       iid1: InventoryId,
                       iid2: InventoryId) -> StrResult<()> {
-    use logic::dialogs::OnlyDialogs;
-
     // Check that IDs are valid.
     unwrap!(eng.world.get_client(cid));
     unwrap!(eng.world.get_inventory(iid1));
@@ -287,7 +282,7 @@ pub fn craft_recipe(eng: &mut Engine,
     let _ = station_sid; // TODO
 
     let real_count = {
-        let mut i = unwrap!(eng.world.get_inventory_mut(iid));
+        let i = unwrap!(eng.world.get_inventory(iid));
 
         let mut count = count;
 
@@ -306,11 +301,11 @@ pub fn craft_recipe(eng: &mut Engine,
 
     if real_count > 0 {
         for (&item_id, &num_required) in recipe.inputs.iter() {
-            bulk_remove(eng, iid, item_id, real_count * num_required as u16);
+            err_on_err!(bulk_remove(eng, iid, item_id, real_count * num_required as u16));
         }
 
         for (&item_id, &num_produced) in recipe.outputs.iter() {
-            bulk_add(eng, iid, item_id, real_count * num_produced as u16);
+            err_on_err!(bulk_add(eng, iid, item_id, real_count * num_produced as u16));
         }
     }
     Ok(())

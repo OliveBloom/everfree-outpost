@@ -1,5 +1,4 @@
 use std::collections::hash_set;
-use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 use libphysics::CHUNK_SIZE;
@@ -12,7 +11,6 @@ use world::{EntitiesById, StructuresById, InventoriesById};
 use world::{EntityAttachment, StructureAttachment, InventoryAttachment};
 use world::{TerrainChunkFlags, StructureFlags};
 use world::{Activity, Motion};
-use world::Item;
 use world::ops::{self, OpResult};
 
 

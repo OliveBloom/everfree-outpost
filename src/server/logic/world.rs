@@ -1,4 +1,3 @@
-use std::iter;
 use std::mem;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
@@ -6,24 +5,20 @@ use types::*;
 use util::SmallSet;
 use util::StrResult;
 
-use chunks;
 use components;
-use data::StructureTemplate;
 use engine::Engine;
 use engine::glue::*;
-use engine::split::Open;
 use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, SyncKind};
-use world::{self, World, Structure};
+use world::Structure;
 use world::Motion;
-use world::bundle::{Importer, Exporter, AnyId};
+use world::bundle::{Importer, Exporter};
 use world::bundle::{import, export};
 use world::bundle::types as b;
 use world::fragment::Fragment as World_Fragment;
 use world::fragment::DummyFragment;
 use world::object::*;
-use vision;
 
 
 
@@ -137,7 +132,7 @@ engine_part2!(pub EngineLifecycle(
 struct ImportVisitor<'a, 'd: 'a>(&'a mut EngineLifecycle<'d>);
 
 impl<'a, 'd> import::Visitor for ImportVisitor<'a, 'd> {
-    fn visit_client(&mut self, id: ClientId, b: &b::Client) {
+    fn visit_client(&mut self, _id: ClientId, _b: &b::Client) {
     }
 
     fn visit_entity(&mut self, id: EntityId, b: &b::Entity) {
@@ -145,17 +140,17 @@ impl<'a, 'd> import::Visitor for ImportVisitor<'a, 'd> {
         components::import_entity(self.0.refine(), id, b);
     }
 
-    fn visit_inventory(&mut self, id: InventoryId, b: &b::Inventory) {
+    fn visit_inventory(&mut self, _id: InventoryId, _b: &b::Inventory) {
     }
 
-    fn visit_plane(&mut self, id: PlaneId, b: &b::Plane) {
+    fn visit_plane(&mut self, _id: PlaneId, _b: &b::Plane) {
     }
 
-    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, b: &b::TerrainChunk) {
+    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, _b: &b::TerrainChunk) {
         logic::terrain_chunk::on_create(self.0.refine(), id);
     }
 
-    fn visit_structure(&mut self, id: StructureId, b: &b::Structure) {
+    fn visit_structure(&mut self, id: StructureId, _b: &b::Structure) {
         logic::structure::on_create(self.0.refine(), id);
         logic::structure::on_import(self.0.refine(), id);
     }
@@ -171,7 +166,7 @@ pub fn on_import(eng: &mut EngineLifecycle, importer: &Importer, bundle: &b::Bun
 struct ExportVisitor<'a, 'd: 'a>(&'a mut EngineLifecycle<'d>);
 
 impl<'a, 'd> export::Visitor for ExportVisitor<'a, 'd> {
-    fn visit_client(&mut self, id: ClientId, b: &mut b::Client) {
+    fn visit_client(&mut self, _id: ClientId, _b: &mut b::Client) {
     }
 
     fn visit_entity(&mut self, id: EntityId, b: &mut b::Entity) {
@@ -181,17 +176,17 @@ impl<'a, 'd> export::Visitor for ExportVisitor<'a, 'd> {
         components::cleanup_entity(self.0.refine(), id);
     }
 
-    fn visit_inventory(&mut self, id: InventoryId, b: &mut b::Inventory) {
+    fn visit_inventory(&mut self, _id: InventoryId, _b: &mut b::Inventory) {
     }
 
-    fn visit_plane(&mut self, id: PlaneId, b: &mut b::Plane) {
+    fn visit_plane(&mut self, _id: PlaneId, _b: &mut b::Plane) {
     }
 
-    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, b: &mut b::TerrainChunk) {
+    fn visit_terrain_chunk(&mut self, id: TerrainChunkId, _b: &mut b::TerrainChunk) {
         logic::terrain_chunk::on_destroy(self.0.refine(), id);
     }
 
-    fn visit_structure(&mut self, id: StructureId, b: &mut b::Structure) {
+    fn visit_structure(&mut self, id: StructureId, _b: &mut b::Structure) {
         logic::structure::on_destroy(self.0.refine(), id);
     }
 }

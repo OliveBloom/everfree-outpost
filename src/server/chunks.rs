@@ -5,12 +5,10 @@
 //! callbacks to do the actual loading and unloading.
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::*;
-use std::error::Error;
 
 use types::*;
 
 use storage::Storage;
-use world::World;
 use world::object::*;
 
 

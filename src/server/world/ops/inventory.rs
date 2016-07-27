@@ -1,10 +1,7 @@
-use std::cmp;
 use std::mem::replace;
-use std::u8;
 
 use types::*;
 use util;
-use util::SmallVec;
 
 use world::{World, Inventory, InventoryAttachment, InventoryFlags, Item};
 use world::extra::Extra;

@@ -17,24 +17,11 @@ use std::process::{Command, Child, Stdio, ChildStdin, ChildStdout};
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread::{self, JoinHandle};
 
-use libphysics::CHUNK_SIZE;
-use libterrain_gen::worker;
 use types::*;
-use util::StrResult;
 use util::bytes::{ReadBytes, WriteBytes};
 
-use data::Data;
-use engine::Engine;
-use engine::split::EngineRef;
-use engine::split2::Coded;
-use logic;
-use storage::Storage;
-use world::Fragment as World_Fragment;
-use world::StructureAttachment;
 use world::bundle::Bundle;
 use world::bundle::flat::FlatView;
-use world::flags;
-use world::object::*;
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -88,7 +75,7 @@ impl Drop for TerrainGen {
 }
 
 impl TerrainGen {
-    pub fn new(data: &Data, storage: &Storage) -> TerrainGen {
+    pub fn new() -> TerrainGen {
         let (send_req, recv_req) = mpsc::channel();
         let (send_resp, recv_resp) = mpsc::channel();
 
@@ -103,14 +90,10 @@ impl TerrainGen {
         let to_child = child.stdin.take().unwrap();
         let from_child = child.stdout.take().unwrap();
                 
-        let thread = unsafe {
-            let ctx = mem::transmute((data, storage));
-            thread::spawn(move || {
-                let (data, storage) = ctx;
-                io_worker(data, storage, recv_req, send_resp, to_child, from_child)
-                    .unwrap_or_else(|e| panic!("io_worker failed: {}", e));
-            })
-        };
+        let thread = thread::spawn(move || {
+            io_worker(recv_req, send_resp, to_child, from_child)
+                .unwrap_or_else(|e| panic!("io_worker failed: {}", e));
+        });
 
         TerrainGen {
             send: send_req,
@@ -131,9 +114,7 @@ impl TerrainGen {
 }
 
 
-fn io_worker(data: &Data,
-             storage: &Storage,
-             recv: Receiver<Request>,
+fn io_worker(recv: Receiver<Request>,
              send: Sender<Response>,
              mut to_child: ChildStdin,
              mut from_child: ChildStdout) -> io::Result<()> {
@@ -155,14 +136,14 @@ fn io_worker(data: &Data,
                 try!(to_child.write_bytes(pid));
                 // No response expected
                 let b = try!(read_bundle(&mut from_child));
-                send.send(Response::NewPlane(pid, b));
+                send.send(Response::NewPlane(pid, b)).unwrap();
             },
 
             Request::GenChunk(pid, cpos) => {
                 try!(to_child.write_bytes(OP_GEN_CHUNK));
                 try!(to_child.write_bytes((pid, cpos)));
                 let b = try!(read_bundle(&mut from_child));
-                send.send(Response::NewChunk(pid, cpos, b));
+                send.send(Response::NewChunk(pid, cpos, b)).unwrap();
             },
 
             Request::Shutdown => {

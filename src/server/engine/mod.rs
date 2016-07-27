@@ -89,7 +89,7 @@ impl<'d> Engine<'d> {
             vision: Vision::new(),
             chunks: Chunks::new(storage),
             cache: TerrainCache::new(),
-            terrain_gen: TerrainGen::new(data, storage),
+            terrain_gen: TerrainGen::new(),
             chat: Chat::new(),
             dialogs: Dialogs::new(),
             input: Input::new(),

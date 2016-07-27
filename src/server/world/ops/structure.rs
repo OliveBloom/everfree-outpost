@@ -5,7 +5,6 @@ use types::*;
 use util::{multimap_insert, multimap_remove};
 
 use world::{World, Structure, StructureAttachment, StructureFlags};
-use world::Fragment;
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 
@@ -164,23 +163,15 @@ pub fn attach(w: &mut World,
 pub fn replace(w: &mut World,
                sid: StructureId,
                new_tid: TemplateId) -> OpResult<()> {
-    let (pid, pos, old_t, new_t) = {
+    let bounds = {
         let s = unwrap!(w.structures.get(sid));
-        let old_t = unwrap!(w.data.structure_templates.get_template(s.template));
-        let new_t = unwrap!(w.data.structure_templates.get_template(new_tid));
-        (s.plane, s.pos, old_t, new_t)
+        let t = unwrap!(w.data.structure_templates.get_template(new_tid));
+        Region::new(s.pos, s.pos + t.size)
     };
 
-    let old_bounds = Region::new(pos, pos + old_t.size);
-    let new_bounds = Region::new(pos, pos + new_t.size);
-
-    if old_t.size != new_t.size ||
-       old_t.shape != new_t.shape ||
-       old_t.layer != new_t.layer {
-        // If the templates aren't identical, we need to do some extra checks.
-        if new_bounds.min.z < 0 || new_bounds.max.z > CHUNK_SIZE {
-            fail!("structure replacement blocked by map bounds");
-        }
+    // If the structure is changing size, make sure it's still within bounds.
+    if bounds.min.z < 0 || bounds.max.z > CHUNK_SIZE {
+        fail!("structure replacement blocked by map bounds");
     }
 
     w.structures[sid].template = new_tid;

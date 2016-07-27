@@ -1,23 +1,21 @@
-use types::*;
-
 use engine::Engine;
 use engine::split2::Coded;
 use logic;
 use terrain_gen::Response;
-use world::bundle::{self, AnyId};
+use world::bundle;
 use world::object::*;
 
 pub fn process(eng: &mut Engine, resp: Response) {
     match resp {
         Response::NewPlane(stable_pid, _bundle) => {
-            let pid = unwrap_or!(eng.world.transient_plane_id(stable_pid));
+            let _pid = unwrap_or!(eng.world.transient_plane_id(stable_pid));
 
             unimplemented!();
             // TODO: add plane flags, check that plane is safe to overwrite
             // TODO: import/merge bundle with existing plane, without dropping loaded_chunks
         },
 
-        Response::NewChunk(stable_pid, cpos, mut bundle) => {
+        Response::NewChunk(stable_pid, cpos, bundle) => {
             let pid = unwrap_or!(eng.world.transient_plane_id(stable_pid));
             let tcid = unwrap_or!(eng.world.get_chunk(pid, cpos)).id();
 
@@ -25,7 +23,8 @@ pub fn process(eng: &mut Engine, resp: Response) {
             // merge the old and new ones.
             logic::terrain_chunk::on_destroy(eng.refine(), tcid);
             let importer = {
-                eng.world.destroy_terrain_chunk(tcid);
+                // The chunk definitely exists, so it's safe to destroy.
+                eng.world.destroy_terrain_chunk(tcid).unwrap();
                 bundle::import_bundle(&mut eng.world, &bundle)
             };
 

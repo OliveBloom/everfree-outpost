@@ -9,7 +9,6 @@
     filling_drop,
     fnbox,
     mpsc_select,
-    nonzero,
     plugin,
     trace_macros,
     unboxed_closures,

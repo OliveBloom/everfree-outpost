@@ -15,14 +15,12 @@
 use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
 
-use chunks;
 use engine::Engine;
 use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, SyncKind, Dialog};
-use world;
 use world::Motion;
-use world::bundle::{self, Bundle, Builder, AnyId};
+use world::bundle::{self, Bundle, Builder};
 use world::extra;
 use world::object::*;
 use vision::{self, ViewableId};
@@ -318,8 +316,8 @@ pub fn update_view(eng: &mut Engine,
 }
 
 
-engine_part2!(pub Engine_Vision(world, vision, messages));
-fn on_chunk_appear(eng: &mut Engine_Vision,
+engine_part2!(pub EngineVision(world, vision, messages));
+fn on_chunk_appear(eng: &mut EngineVision,
                    cid: ClientId,
                    plane: PlaneId,
                    cpos: V2) {
@@ -343,11 +341,10 @@ fn on_chunk_appear(eng: &mut Engine_Vision,
     });
 }
 
-fn on_chunk_gone(eng: &mut Engine_Vision,
+fn on_chunk_gone(eng: &mut EngineVision,
                  cid: ClientId,
                  plane: PlaneId,
                  cpos: V2) {
-    let now = eng.now();
     let world = &eng.world;
     let messages = &mut eng.messages;
     eng.vision.client_remove(cid, plane, cpos, |id| match id {
@@ -355,7 +352,7 @@ fn on_chunk_gone(eng: &mut Engine_Vision,
             let e = world.entity(eid);
             messages.send_client(cid, logic::vision::entity_gone_message(e));
         },
-        ViewableId::TerrainChunk(tcid) => {
+        ViewableId::TerrainChunk(_tcid) => {
             // No "gone" message for terrainchunks
         },
         ViewableId::Structure(sid) => {
@@ -365,7 +362,7 @@ fn on_chunk_gone(eng: &mut Engine_Vision,
     });
 }
 
-fn on_plane_change(eng: &mut Engine_Vision,
+fn on_plane_change(eng: &mut EngineVision,
                    cid: ClientId,
                    pid: PlaneId) {
     // TODO: super hack.  add a flags field to the plane or something.

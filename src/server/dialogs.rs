@@ -48,12 +48,12 @@ impl Dialogs {
         self.map.insert(cid, dialog);
     }
 
-    pub fn clear_inventory_users<F>(&mut self, iid: InventoryId, mut f: F)
+    pub fn clear_inventory_users<F>(&mut self, iid: InventoryId, f: F)
             where F: FnMut(ClientId, Option<TargetId>) {
         self.clear_users(TargetId::Inventory(iid), f);
     }
 
-    pub fn clear_structure_users<F>(&mut self, sid: StructureId, mut f: F)
+    pub fn clear_structure_users<F>(&mut self, sid: StructureId, f: F)
             where F: FnMut(ClientId, Option<TargetId>) {
         self.clear_users(TargetId::Structure(sid), f);
     }

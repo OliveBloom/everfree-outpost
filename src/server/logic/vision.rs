@@ -2,11 +2,9 @@ use std::borrow::ToOwned;
 
 use types::*;
 
-use engine::glue::*;
-use messages::{Messages, ClientResponse};
-use world::{World, Entity, Inventory, TerrainChunk, Structure, Motion};
+use messages::ClientResponse;
+use world::{Entity, Inventory, TerrainChunk, Structure, Motion};
 use world::object::*;
-use vision::{self, Vision};
 
 
 pub fn entity_appear_message(e: ObjectRef<Entity>) -> ClientResponse {
