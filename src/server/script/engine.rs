@@ -373,8 +373,7 @@ define_python_class! {
         fn(engine_ref_func_with_ref!) world_client_extra(eng: &mut OnlyWorld,
                                                          eng_ref: PyRef,
                                                          cid: ClientId) -> PyResult<PyBox> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut c = pyunwrap!(wf.get_client_mut(cid),
+            let mut c = pyunwrap!(eng.world.get_client_mut(cid),
                                   runtime_error, "no client with that ID");
             let extra = c.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
@@ -398,8 +397,7 @@ define_python_class! {
         fn(engine_ref_func_with_ref!) world_entity_extra(eng: &mut OnlyWorld,
                                                          eng_ref: PyRef,
                                                          eid: EntityId) -> PyResult<PyBox> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut e = pyunwrap!(wf.get_entity_mut(eid),
+            let mut e = pyunwrap!(eng.world.get_entity_mut(eid),
                                   runtime_error, "no entity with that ID");
             let extra = e.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
@@ -407,8 +405,7 @@ define_python_class! {
 
         fn world_entity_stable_id(eng: &mut OnlyWorld,
                                   eid: EntityId) -> PyResult<Stable<EntityId>> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut e = pyunwrap!(wf.get_entity_mut(eid),
+            let mut e = pyunwrap!(eng.world.get_entity_mut(eid),
                                   runtime_error, "no entity with that ID");
             Ok(e.stable_id())
         }
@@ -524,16 +521,14 @@ define_python_class! {
 
         fn world_inventory_create(eng: &mut Engine,
                                   size: u8) -> PyResult<InventoryId> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let i = try!(wf.create_inventory(size));
+            let i = try!(eng.world.create_inventory(size));
             Ok(i.id())
         }
 
         fn world_inventory_attach(eng: &mut OnlyWorld,
                                   iid: InventoryId,
                                   attachment: InventoryAttachment) -> PyResult<()> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut i = pyunwrap!(wf.get_inventory_mut(iid),
+            let mut i = pyunwrap!(eng.world.get_inventory_mut(iid),
                                   runtime_error, "no inventory with that ID");
             try!(i.set_attachment(attachment));
             Ok(())
@@ -542,8 +537,7 @@ define_python_class! {
         fn(engine_ref_func_with_ref!) world_inventory_extra(eng: &mut OnlyWorld,
                                                             eng_ref: PyRef,
                                                             iid: InventoryId) -> PyResult<PyBox> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut i = pyunwrap!(wf.get_inventory_mut(iid),
+            let mut i = pyunwrap!(eng.world.get_inventory_mut(iid),
                                   runtime_error, "no inventory with that ID");
             let extra = i.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
@@ -616,8 +610,7 @@ define_python_class! {
                                                iid: InventoryId,
                                                set: bool) -> PyResult<()> {
             use world::flags;
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut i = pyunwrap!(wf.get_inventory_mut(iid),
+            let mut i = pyunwrap!(eng.world.get_inventory_mut(iid),
                                   runtime_error, "no inventory with that ID");
             if set {
                 i.flags_mut().insert(flags::I_HAS_CHANGE_HOOK);
@@ -630,15 +623,13 @@ define_python_class! {
 
         fn world_plane_create(eng: &mut Engine,
                               name: String) -> PyResult<PlaneId> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let p = try!(wf.create_plane(name));
+            let p = try!(eng.world.create_plane(name));
             Ok(p.id())
         }
 
         fn world_plane_stable_id(eng: &mut OnlyWorld,
                                  pid: PlaneId) -> PyResult<Stable<PlaneId>> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut p = pyunwrap!(wf.get_plane_mut(pid),
+            let mut p = pyunwrap!(eng.world.get_plane_mut(pid),
                                   runtime_error, "no plane with that ID");
             Ok(p.stable_id())
         }
@@ -651,8 +642,7 @@ define_python_class! {
         fn(engine_ref_func_with_ref!) world_plane_extra(eng: &mut OnlyWorld,
                                                         eng_ref: PyRef,
                                                         pid: PlaneId) -> PyResult<PyBox> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut p = pyunwrap!(wf.get_plane_mut(pid),
+            let mut p = pyunwrap!(eng.world.get_plane_mut(pid),
                                   runtime_error, "no plane with that ID");
             let extra = p.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
@@ -684,8 +674,7 @@ define_python_class! {
                                   template_id: TemplateId) -> PyResult<StructureId> {
             let sid = try!(logic::structure::checked_create(eng.refine(), pid, pos, template_id));
             {
-                let mut wf = DummyFragment::new(&mut eng.world);
-                let mut s = wf.structure_mut(sid);
+                let mut s = eng.world.structure_mut(sid);
                 try!(s.set_attachment(StructureAttachment::Chunk));
             }
             logic::structure::on_create(eng.refine(), sid);
@@ -695,10 +684,7 @@ define_python_class! {
         fn world_structure_destroy(eng: &mut Engine,
                                    sid: StructureId) -> PyResult<()> {
             logic::structure::on_destroy_recursive(eng.refine(), sid);
-            {
-                let mut wf = DummyFragment::new(&mut eng.world);
-                try!(wf.destroy_structure(sid));
-            }
+            try!(eng.world.destroy_structure(sid));
             Ok(())
         }
 
@@ -717,8 +703,7 @@ define_python_class! {
 
         fn world_structure_stable_id(eng: &mut OnlyWorld,
                                      sid: StructureId) -> PyResult<Stable<StructureId>> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut s = pyunwrap!(wf.get_structure_mut(sid),
+            let mut s = pyunwrap!(eng.world.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             Ok(s.stable_id())
         }
@@ -731,8 +716,7 @@ define_python_class! {
         fn(engine_ref_func_with_ref!) world_structure_extra(eng: &mut OnlyWorld,
                                                             eng_ref: PyRef,
                                                             sid: StructureId) -> PyResult<PyBox> {
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut s = pyunwrap!(wf.get_structure_mut(sid),
+            let mut s = pyunwrap!(eng.world.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             let extra = s.extra_mut();
             unsafe { derive_extra_ref(extra, eng_ref) }
@@ -768,8 +752,7 @@ define_python_class! {
                                                sid: StructureId,
                                                set: bool) -> PyResult<()> {
             use world::flags;
-            let mut wf = DummyFragment::new(&mut eng.world);
-            let mut s = pyunwrap!(wf.get_structure_mut(sid),
+            let mut s = pyunwrap!(eng.world.get_structure_mut(sid),
                                   runtime_error, "no structure with that ID");
             let flags =
                 if set {
