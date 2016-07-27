@@ -297,10 +297,9 @@ fn is_plain_cave(p: &ObjectRef<world::Plane>,
     true
 }
 
-pub fn set_cave_single<'a, 'd, F>(p: &mut ObjectRefMut<'a, 'd, world::Plane, F>,
-                                  pos: V3,
-                                  set_corners: [bool; 4]) -> world::OpResult<bool>
-        where F: world::Fragment<'d> {
+pub fn set_cave_single<'a, 'd>(p: &mut ObjectRefMut<'a, 'd, world::Plane>,
+                               pos: V3,
+                               set_corners: [bool; 4]) -> world::OpResult<bool> {
     let block_data = &p.world().data().block_data;
     let mut tc = unwrap!(p.get_terrain_chunk_mut(pos.reduce().div_floor(scalar(CHUNK_SIZE))));
 

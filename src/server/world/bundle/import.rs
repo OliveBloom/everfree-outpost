@@ -96,17 +96,17 @@ impl<'d> Importer<'d> {
             .map(|s| d.structure_templates.get_id(&s)).collect();
 
         self.client_id_map = (0 .. b.clients.len())
-            .map(|_| ops::client::create_unchecked(f)).collect();
+            .map(|_| ops::client::create_unchecked(f.world_mut())).collect();
         self.entity_id_map = (0 .. b.entities.len())
-            .map(|_| ops::entity::create_unchecked(f)).collect();
+            .map(|_| ops::entity::create_unchecked(f.world_mut())).collect();
         self.inventory_id_map = (0 .. b.inventories.len())
-            .map(|_| ops::inventory::create_unchecked(f)).collect();
+            .map(|_| ops::inventory::create_unchecked(f.world_mut())).collect();
         self.plane_id_map = (0 .. b.planes.len())
-            .map(|_| ops::plane::create_unchecked(f)).collect();
+            .map(|_| ops::plane::create_unchecked(f.world_mut())).collect();
         self.terrain_chunk_id_map = (0 .. b.terrain_chunks.len())
-            .map(|_| ops::terrain_chunk::create_unchecked(f)).collect();
+            .map(|_| ops::terrain_chunk::create_unchecked(f.world_mut())).collect();
         self.structure_id_map = (0 .. b.structures.len())
-            .map(|_| ops::structure::create_unchecked(f)).collect();
+            .map(|_| ops::structure::create_unchecked(f.world_mut())).collect();
     }
 
 
@@ -228,7 +228,7 @@ impl<'d> Importer<'d> {
             where F: Fragment<'d> {
         let id = self.import(&idx);
         self.init_entity(f.world_mut(), id, b);
-        ops::entity::post_init(f, id);
+        ops::entity::post_init(f.world_mut(), id);
     }
 
     fn add_inventory<F>(&self, f: &mut F, idx: InventoryId, b: &b::Inventory)
@@ -242,21 +242,21 @@ impl<'d> Importer<'d> {
             where F: Fragment<'d> {
         let id = self.import(&idx);
         self.init_plane(f.world_mut(), id, b);
-        ops::plane::post_init(f, id);
+        ops::plane::post_init(f.world_mut(), id);
     }
 
     fn add_terrain_chunk<F>(&self, f: &mut F, idx: TerrainChunkId, b: &b::TerrainChunk)
             where F: Fragment<'d> {
         let id = self.import(&idx);
         self.init_terrain_chunk(f.world_mut(), id, b);
-        ops::terrain_chunk::post_init(f, id);
+        ops::terrain_chunk::post_init(f.world_mut(), id);
     }
 
     fn add_structure<F>(&self, f: &mut F, idx: StructureId, b: &b::Structure)
             where F: Fragment<'d> {
         let id = self.import(&idx);
         self.init_structure(f.world_mut(), id, b);
-        ops::structure::post_init(f, id);
+        ops::structure::post_init(f.world_mut(), id);
     }
 
     fn add_bundle<F>(&self, f: &mut F, b: &b::Bundle)

@@ -6,7 +6,8 @@ use data::Data;
 use util::stable_id_map::{self, StableIdMap};
 use world::extra::Extra;
 use world::types::*;
-use world::object::{Object, ObjectRef};
+use world::object::{Object, ObjectRef, ObjectRefMut};
+use world::ops::{self, OpResult};
 use world::snapshot::Snapshot;
 
 
@@ -129,6 +130,7 @@ macro_rules! process_objects {
                 map clients;
                 module client;
                 lifecycle (name: &str)
+                    // TODO: remove id + expr args from create_client and lookups
                     create_client [id -> id],
                     destroy_client,
                 lookups [id -> id]
@@ -223,11 +225,22 @@ macro_rules! world_methods {
             lookups [$lookup_id_name:ident -> $lookup_id_expr:expr]
                 $get_obj:ident, $obj:ident,
                 $get_obj_mut:ident, $obj_mut:ident,
-            $(stable_ids
-                $transient_obj_id:ident;)*
+            stable_ids
+                $transient_obj_id:ident;
         }
     )*) => {
         impl<'d> World<'d> { $(
+            pub fn $create_obj<'a>(&'a mut self, $($create_arg: $create_arg_ty,)*)
+                           -> OpResult<ObjectRefMut<'a, 'd, $Obj>> {
+                #![allow(unused_variables)]  // id_expr may not reference id_name
+                let $create_id_name = try!(ops::$module::create(self, $($create_arg,)*));
+                Ok(ObjectRefMut::new(self, $create_id_expr))
+            }
+
+            pub fn $destroy_obj(&mut self, id: $Id) -> OpResult<()> {
+                ops::$module::destroy(self, id)
+            }
+
             pub fn $get_obj<'a>(&'a self,
                                 $lookup_id_name: $Id) -> Option<ObjectRef<'a, 'd, $Obj>> {
                 let obj = match self.$objs.get($lookup_id_expr) {
@@ -244,14 +257,30 @@ macro_rules! world_methods {
 
             pub fn $obj<'a>(&'a self, id: $Id) -> ObjectRef<'a, 'd, $Obj> {
                 self.$get_obj(id)
-                    .expect(concat!("no ", stringify!($Obj), " with given id"))
+                    .unwrap_or_else(|| panic!("no such object: {:?}", id))
             }
 
-            $(
-                pub fn $transient_obj_id(&self, stable_id: Stable<$Id>) -> Option<$Id> {
-                    self.$objs.get_id(stable_id)
+            pub fn $get_obj_mut<'a>(&'a mut self, $lookup_id_name: $Id)
+                                -> Option<ObjectRefMut<'a, 'd, $Obj>> {
+                match self.$objs.get($lookup_id_expr) {
+                    None => return None,
+                    Some(_) => {},
                 }
-            )*
+
+                Some(ObjectRefMut {
+                    world: self,
+                    id: $lookup_id_name,
+                })
+            }
+
+            pub fn $obj_mut<'a>(&'a mut self, id: $Id) -> ObjectRefMut<'a, 'd, $Obj> {
+                self.$get_obj_mut(id)
+                    .unwrap_or_else(|| panic!("no such object: {:?}", id))
+            }
+
+            pub fn $transient_obj_id(&self, stable_id: Stable<$Id>) -> Option<$Id> {
+                self.$objs.get_id(stable_id)
+            }
 
         )* }
     }

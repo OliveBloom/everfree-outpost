@@ -4,18 +4,16 @@ use std::mem::replace;
 use types::*;
 use util::{multimap_insert, multimap_remove};
 
-use world::{Entity, EntityAttachment, Motion, Activity};
-use world::Fragment;
+use world::{World, Entity, EntityAttachment, Motion, Activity};
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
-pub fn create<'d, F>(f: &mut F,
-                     stable_pid: Stable<PlaneId>,
-                     pos: V3,
-                     anim: AnimId,
-                     appearance: u32) -> OpResult<EntityId>
-        where F: Fragment<'d> {
+pub fn create(w: &mut World,
+              stable_pid: Stable<PlaneId>,
+              pos: V3,
+              anim: AnimId,
+              appearance: u32) -> OpResult<EntityId> {
     let e = Entity {
         stable_plane: stable_pid,
         // Initialization of `plane` is handled in `post_init`.
@@ -33,17 +31,15 @@ pub fn create<'d, F>(f: &mut F,
         attachment: EntityAttachment::World,
         child_inventories: HashSet::new(),
 
-        version: f.world().snapshot.version() + 1,
+        version: w.snapshot.version() + 1,
     };
 
-    let eid = unwrap!(f.world_mut().entities.insert(e));
-    post_init(f, eid);
+    let eid = unwrap!(w.entities.insert(e));
+    post_init(w, eid);
     Ok(eid)
 }
 
-pub fn create_unchecked<'d, F>(f: &mut F) -> EntityId
-        where F: Fragment<'d> {
-    let w = f.world_mut();
+pub fn create_unchecked(w: &mut World) -> EntityId {
     let eid = w.entities.insert(Entity {
         stable_plane: Stable::none(),
         plane: PLANE_LIMBO,
@@ -65,10 +61,8 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> EntityId
     eid
 }
 
-pub fn post_init<'d, F>(f: &mut F,
-                        eid: EntityId)
-        where F: Fragment<'d> {
-    let w = f.world_mut();
+pub fn post_init(w: &mut World,
+                 eid: EntityId) {
     let e = &mut w.entities[eid];
 
     e.plane = w.planes.get_id(e.stable_plane).unwrap_or(PLANE_LIMBO);
@@ -80,10 +74,8 @@ pub fn post_init<'d, F>(f: &mut F,
     }
 }
 
-pub fn pre_fini<'d, F>(f: &mut F,
-                       eid: EntityId)
-        where F: Fragment<'d> {
-    let w = f.world_mut();
+pub fn pre_fini(w: &mut World,
+                eid: EntityId) {
     let e = &w.entities[eid];
 
     if e.plane == PLANE_LIMBO {
@@ -93,14 +85,13 @@ pub fn pre_fini<'d, F>(f: &mut F,
     }
 }
 
-pub fn destroy<'d, F>(f: &mut F,
-                      eid: EntityId) -> OpResult<()>
-        where F: Fragment<'d> {
+pub fn destroy(w: &mut World,
+               eid: EntityId) -> OpResult<()> {
     use world::EntityAttachment::*;
-    pre_fini(f, eid);
-    let e = unwrap!(f.world_mut().entities.remove(eid));
+    pre_fini(w, eid);
+    let e = unwrap!(w.entities.remove(eid));
     // Further lookup failures indicate an invariant violation.
-    f.world_mut().snapshot.record_entity(eid, &e);
+    w.snapshot.record_entity(eid, &e);
 
     match e.attachment {
         World => {},
@@ -109,7 +100,7 @@ pub fn destroy<'d, F>(f: &mut F,
             // The parent Client may not exist due to `x_destroy` operating top-down.
             // (`client_destroy` destroys the Client first, then calls `entity_destroy` on each
             // child entity.  In this situation, `cid` will not be found in `w.clients`.)
-            if let Some(c) = f.world_mut().clients.get_mut(cid) {
+            if let Some(c) = w.clients.get_mut(cid) {
                 if c.pawn == Some(eid) {
                     // NB: keep this behavior in sync with client_clear_pawn
                     c.pawn = None;
@@ -120,19 +111,17 @@ pub fn destroy<'d, F>(f: &mut F,
     }
 
     for &iid in e.child_inventories.iter() {
-        ops::inventory::destroy(f, iid).unwrap();
+        ops::inventory::destroy(w, iid).unwrap();
     }
 
     Ok(())
 }
 
-pub fn attach<'d, F>(f: &mut F,
-                     eid: EntityId,
-                     new_attach: EntityAttachment) -> OpResult<EntityAttachment>
-        where F: Fragment<'d> {
+pub fn attach(w: &mut World,
+              eid: EntityId,
+              new_attach: EntityAttachment) -> OpResult<EntityAttachment> {
     use world::EntityAttachment::*;
 
-    let w = f.world_mut();
     let e = unwrap!(w.entities.get_mut(eid));
 
     if new_attach == e.attachment {
@@ -172,45 +161,40 @@ pub fn attach<'d, F>(f: &mut F,
     Ok(old_attach)
 }
 
-pub fn set_plane<'d, F>(f: &mut F,
-                        eid: EntityId,
-                        new_pid: PlaneId) -> OpResult<()>
-        where F: Fragment<'d> {
-    let new_stable_pid = unwrap!(f.world_mut().planes.try_pin(new_pid));
-    set_stable_plane(f, eid, new_stable_pid)
+pub fn set_plane(w: &mut World,
+                 eid: EntityId,
+                 new_pid: PlaneId) -> OpResult<()> {
+    let new_stable_pid = unwrap!(w.planes.try_pin(new_pid));
+    set_stable_plane(w, eid, new_stable_pid)
 }
 
-pub fn set_stable_plane<'d, F>(f: &mut F,
-                               eid: EntityId,
-                               new_stable_pid: Stable<PlaneId>) -> OpResult<()>
-        where F: Fragment<'d> {
-    {
-        let w = f.world_mut();
-        let e = unwrap!(w.entities.get_mut(eid));
+pub fn set_stable_plane(w: &mut World,
+                        eid: EntityId,
+                        new_stable_pid: Stable<PlaneId>) -> OpResult<()> {
+    let e = unwrap!(w.entities.get_mut(eid));
 
-        let old_stable_pid = e.stable_plane;
-        if new_stable_pid == old_stable_pid {
-            return Ok(());
-        }
-
-        let new_pid = w.planes.get_id(new_stable_pid).unwrap_or(PLANE_LIMBO);
-        let old_pid = e.plane;
-
-        if old_pid == PLANE_LIMBO {
-            multimap_remove(&mut w.limbo_entities, old_stable_pid, eid);
-        } else {
-            multimap_remove(&mut w.entities_by_plane, old_pid, eid);
-        }
-
-        if new_pid == PLANE_LIMBO {
-            multimap_insert(&mut w.limbo_entities, new_stable_pid, eid);
-        } else {
-            multimap_insert(&mut w.entities_by_plane, new_pid, eid);
-        }
-
-        e.plane = new_pid;
-        e.stable_plane = new_stable_pid;
+    let old_stable_pid = e.stable_plane;
+    if new_stable_pid == old_stable_pid {
+        return Ok(());
     }
+
+    let new_pid = w.planes.get_id(new_stable_pid).unwrap_or(PLANE_LIMBO);
+    let old_pid = e.plane;
+
+    if old_pid == PLANE_LIMBO {
+        multimap_remove(&mut w.limbo_entities, old_stable_pid, eid);
+    } else {
+        multimap_remove(&mut w.entities_by_plane, old_pid, eid);
+    }
+
+    if new_pid == PLANE_LIMBO {
+        multimap_insert(&mut w.limbo_entities, new_stable_pid, eid);
+    } else {
+        multimap_insert(&mut w.entities_by_plane, new_pid, eid);
+    }
+
+    e.plane = new_pid;
+    e.stable_plane = new_stable_pid;
 
     Ok(())
 }

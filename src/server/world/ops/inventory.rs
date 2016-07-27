@@ -6,15 +6,13 @@ use types::*;
 use util;
 use util::SmallVec;
 
-use world::{Inventory, InventoryAttachment, InventoryFlags, Item};
-use world::{Fragment, World};
+use world::{World, Inventory, InventoryAttachment, InventoryFlags, Item};
 use world::extra::Extra;
 use world::ops::OpResult;
 
 
 // Inventory size (number of slots) is capped at 255
-pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
-        where F: Fragment<'d> {
+pub fn create(w: &mut World, size: u8) -> OpResult<InventoryId> {
     let i = Inventory {
         contents: util::make_array(Item::none(), size as usize),
 
@@ -23,16 +21,14 @@ pub fn create<'d, F>(f: &mut F, size: u8) -> OpResult<InventoryId>
         flags: InventoryFlags::empty(),
         attachment: InventoryAttachment::World,
 
-        version: f.world().snapshot.version() + 1,
+        version: w.snapshot.version() + 1,
     };
 
-    let iid = unwrap!(f.world_mut().inventories.insert(i));
+    let iid = unwrap!(w.inventories.insert(i));
     Ok(iid)
 }
 
-pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
-        where F: Fragment<'d> {
-    let w = f.world_mut();
+pub fn create_unchecked(w: &mut World) -> InventoryId {
     let iid = w.inventories.insert(Inventory {
         contents: util::make_array(Item::none(), 0),
 
@@ -46,27 +42,26 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> InventoryId
     iid
 }
 
-pub fn destroy<'d, F>(f: &mut F,
-                      iid: InventoryId) -> OpResult<()>
-        where F: Fragment<'d> {
+pub fn destroy(w: &mut World,
+               iid: InventoryId) -> OpResult<()> {
     use world::InventoryAttachment::*;
-    let i = unwrap!(f.world_mut().inventories.remove(iid));
-    f.world_mut().snapshot.record_inventory(iid, &i);
+    let i = unwrap!(w.inventories.remove(iid));
+    w.snapshot.record_inventory(iid, &i);
 
     match i.attachment {
         World => {},
         Client(cid) => {
-            if let Some(c) = f.world_mut().clients.get_mut(cid) {
+            if let Some(c) = w.clients.get_mut(cid) {
                 c.child_inventories.remove(&iid);
             }
         },
         Entity(eid) => {
-            if let Some(e) = f.world_mut().entities.get_mut(eid) {
+            if let Some(e) = w.entities.get_mut(eid) {
                 e.child_inventories.remove(&iid);
             }
         },
         Structure(sid) => {
-            if let Some(s) = f.world_mut().structures.get_mut(sid) {
+            if let Some(s) = w.structures.get_mut(sid) {
                 s.child_inventories.remove(&iid);
             }
         },
@@ -75,13 +70,11 @@ pub fn destroy<'d, F>(f: &mut F,
     Ok(())
 }
 
-pub fn attach<'d, F>(f: &mut F,
-                     iid: InventoryId,
-                     new_attach: InventoryAttachment) -> OpResult<InventoryAttachment>
-        where F: Fragment<'d> {
+pub fn attach(w: &mut World,
+              iid: InventoryId,
+              new_attach: InventoryAttachment) -> OpResult<InventoryAttachment> {
     use world::InventoryAttachment::*;
 
-    let w = f.world_mut();
     let i = unwrap!(w.inventories.get_mut(iid));
 
     if new_attach == i.attachment {

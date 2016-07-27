@@ -4,25 +4,24 @@ use libphysics::CHUNK_SIZE;
 use types::*;
 use util::{multimap_insert, multimap_remove};
 
-use world::{Structure, StructureAttachment, StructureFlags};
+use world::{World, Structure, StructureAttachment, StructureFlags};
 use world::Fragment;
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
-pub fn create<'d, F>(f: &mut F,
-                     pid: PlaneId,
-                     pos: V3,
-                     tid: TemplateId) -> OpResult<StructureId>
-        where F: Fragment<'d> {
-    let t = unwrap!(f.world().data.structure_templates.get_template(tid));
+pub fn create(w: &mut World,
+              pid: PlaneId,
+              pos: V3,
+              tid: TemplateId) -> OpResult<StructureId> {
+    let t = unwrap!(w.data.structure_templates.get_template(tid));
     let bounds = Region::new(pos, pos + t.size);
 
     if bounds.min.z < 0 || bounds.max.z > CHUNK_SIZE {
         fail!("structure placement blocked by map bounds");
     }
 
-    let stable_pid = f.world_mut().planes.pin(pid);
+    let stable_pid = w.planes.pin(pid);
     let s = Structure {
         stable_plane: stable_pid,
         plane: pid,
@@ -35,17 +34,15 @@ pub fn create<'d, F>(f: &mut F,
         attachment: StructureAttachment::Plane,
         child_inventories: HashSet::new(),
 
-        version: f.world().snapshot.version() + 1,
+        version: w.snapshot.version() + 1,
     };
 
-    let sid = unwrap!(f.world_mut().structures.insert(s));
-    add_to_lookup(&mut f.world_mut().structures_by_chunk, sid, pid, bounds);
+    let sid = unwrap!(w.structures.insert(s));
+    add_to_lookup(&mut w.structures_by_chunk, sid, pid, bounds);
     Ok(sid)
 }
 
-pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
-        where F: Fragment<'d> {
-    let w = f.world_mut();
+pub fn create_unchecked(w: &mut World) -> StructureId {
     let sid = w.structures.insert(Structure {
         stable_plane: Stable::new(0),
         plane: PlaneId(0),
@@ -63,48 +60,44 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> StructureId
     sid
 }
 
-pub fn post_init<'d, F>(f: &mut F,
-                        sid: StructureId)
-        where F: Fragment<'d> {
+pub fn post_init(w: &mut World,
+                 sid: StructureId) {
     let (pid, bounds) = {
-        let s = &f.world().structures[sid];
-        let t = f.world().data.structure_templates.template(s.template);
+        let s = &w.structures[sid];
+        let t = w.data.structure_templates.template(s.template);
 
         (s.plane, Region::new(s.pos, s.pos + t.size))
     };
 
-    add_to_lookup(&mut f.world_mut().structures_by_chunk, sid, pid, bounds);
+    add_to_lookup(&mut w.structures_by_chunk, sid, pid, bounds);
 }
 
-pub fn pre_fini<'d, F>(f: &mut F,
-                       sid: StructureId)
-        where F: Fragment<'d> {
+pub fn pre_fini(w: &mut World,
+                sid: StructureId) {
     let (pid, bounds) = {
-        let s = &f.world().structures[sid];
-        let t = f.world().data.structure_templates.template(s.template);
+        let s = &w.structures[sid];
+        let t = w.data.structure_templates.template(s.template);
 
         (s.plane, Region::new(s.pos, s.pos + t.size))
     };
 
-    remove_from_lookup(&mut f.world_mut().structures_by_chunk, sid, pid, bounds);
+    remove_from_lookup(&mut w.structures_by_chunk, sid, pid, bounds);
 }
 
-pub fn destroy<'d, F>(f: &mut F,
-                      sid: StructureId) -> OpResult<()>
-        where F: Fragment<'d> {
+pub fn destroy(w: &mut World,
+               sid: StructureId) -> OpResult<()> {
     use world::StructureAttachment::*;
-    let s = unwrap!(f.world_mut().structures.remove(sid));
-    f.world_mut().snapshot.record_structure(sid, &s);
+    let s = unwrap!(w.structures.remove(sid));
+    w.snapshot.record_structure(sid, &s);
 
-    let t = f.world().data.structure_templates.template(s.template);
+    let t = w.data.structure_templates.template(s.template);
     let bounds = Region::new(s.pos, s.pos + t.size);
-    remove_from_lookup(&mut f.world_mut().structures_by_chunk, sid, s.plane, bounds);
+    remove_from_lookup(&mut w.structures_by_chunk, sid, s.plane, bounds);
 
     match s.attachment {
         // TODO: proper support for Plane attachment
         Plane => {},
         Chunk => {
-            let w = f.world_mut();
             // Plane or chunk may not be loaded, since destruction proceeds top-down.
             if let Some(p) = w.planes.get_mut(s.plane) {
                 let chunk_pos = s.pos.reduce().div_floor(scalar(CHUNK_SIZE));
@@ -118,19 +111,17 @@ pub fn destroy<'d, F>(f: &mut F,
     }
 
     for &iid in s.child_inventories.iter() {
-        ops::inventory::destroy(f, iid).unwrap();
+        ops::inventory::destroy(w, iid).unwrap();
     }
 
     Ok(())
 }
 
-pub fn attach<'d, F>(f: &mut F,
-                     sid: StructureId,
-                     new_attach: StructureAttachment) -> OpResult<StructureAttachment>
-        where F: Fragment<'d> {
+pub fn attach(w: &mut World,
+              sid: StructureId,
+              new_attach: StructureAttachment) -> OpResult<StructureAttachment> {
     use world::StructureAttachment::*;
 
-    let w = f.world_mut();
     let s = unwrap!(w.structures.get_mut(sid));
     let old_attach = s.attachment;
 
@@ -170,12 +161,10 @@ pub fn attach<'d, F>(f: &mut F,
     Ok(old_attach)
 }
 
-pub fn replace<'d, F>(f: &mut F,
-                      sid: StructureId,
-                      new_tid: TemplateId) -> OpResult<()>
-        where F: Fragment<'d> {
+pub fn replace(w: &mut World,
+               sid: StructureId,
+               new_tid: TemplateId) -> OpResult<()> {
     let (pid, pos, old_t, new_t) = {
-        let w = f.world();
         let s = unwrap!(w.structures.get(sid));
         let old_t = unwrap!(w.data.structure_templates.get_template(s.template));
         let new_t = unwrap!(w.data.structure_templates.get_template(new_tid));
@@ -194,11 +183,7 @@ pub fn replace<'d, F>(f: &mut F,
         }
     }
 
-    {
-        let w = f.world_mut();
-        let s = &mut w.structures[sid];
-        s.template = new_tid;
-    }
+    w.structures[sid].template = new_tid;
 
     Ok(())
 }

@@ -79,14 +79,14 @@ impl<'d> Physics<'d> {
     }
 }
 
-struct EntityWrapper<'a, 'd, F: World_Fragment<'d>+'a> {
-    entity: ObjectRefMut<'a, 'd, Entity, F>,
+struct EntityWrapper<'a, 'd: 'a> {
+    entity: ObjectRefMut<'a, 'd, Entity>,
     started: bool,
     ended: bool,
 }
 
-impl<'a, 'd, F: World_Fragment<'d>> EntityWrapper<'a, 'd, F> {
-    fn new(entity: ObjectRefMut<'a, 'd, Entity, F>) -> EntityWrapper<'a, 'd, F> {
+impl<'a, 'd> EntityWrapper<'a, 'd> {
+    fn new(entity: ObjectRefMut<'a, 'd, Entity>) -> EntityWrapper<'a, 'd> {
         EntityWrapper {
             entity: entity,
             started: false,
@@ -95,7 +95,7 @@ impl<'a, 'd, F: World_Fragment<'d>> EntityWrapper<'a, 'd, F> {
     }
 }
 
-impl<'a, 'd, F: World_Fragment<'d>> movement::Entity for EntityWrapper<'a, 'd, F> {
+impl<'a, 'd> movement::Entity for EntityWrapper<'a, 'd> {
     fn activity(&self) -> movement::Activity {
         match self.entity.activity() {
             Activity::Walk => movement::Activity::Walk,

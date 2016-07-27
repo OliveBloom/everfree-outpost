@@ -13,7 +13,6 @@ use world::{EntityAttachment, StructureAttachment, InventoryAttachment};
 use world::{TerrainChunkFlags, StructureFlags};
 use world::{Activity, Motion};
 use world::Item;
-use world::fragment::Fragment;
 use world::ops::{self, OpResult};
 
 
@@ -116,18 +115,16 @@ impl<'a, 'd, O: Object> Clone for ObjectRef<'a, 'd, O> {
 }
 impl<'a, 'd, O: Object> Copy for ObjectRef<'a, 'd, O> { }
 
-pub struct ObjectRefMut<'a, 'd, O: Object, F: Fragment<'d>+'a> {
-    pub fragment: &'a mut F,
+pub struct ObjectRefMut<'a, 'd: 'a, O: Object> {
+    pub world: &'a mut World<'d>,
     pub id: <O as Object>::Id,
-    _marker0: PhantomData<&'d ()>,
 }
 
-impl<'a, 'd, O: Object, F: Fragment<'d>> ObjectRefMut<'a, 'd, O, F> {
-    pub fn new(fragment: &'a mut F, id: <O as Object>::Id) -> ObjectRefMut<'a, 'd, O, F> {
+impl<'a, 'd, O: Object> ObjectRefMut<'a, 'd, O> {
+    pub fn new(world: &'a mut World<'d>, id: <O as Object>::Id) -> ObjectRefMut<'a, 'd, O> {
         ObjectRefMut {
-            fragment: fragment,
+            world: world,
             id: id,
-            _marker0: PhantomData,
         }
     }
 
@@ -146,9 +143,8 @@ pub trait ObjectRefBase<'d, O: Object> {
     fn obj(&self) -> &O;
 }
 
-pub trait ObjectRefMutBase<'d, O: Object, F: Fragment<'d>>: ObjectRefBase<'d, O> {
+pub trait ObjectRefMutBase<'d, O: Object>: ObjectRefBase<'d, O> {
     fn world_mut(&mut self) -> &mut World<'d>;
-    fn fragment_mut(&mut self) -> &mut F;
     fn obj_mut(&mut self) -> &mut O;
 }
 
@@ -166,9 +162,9 @@ impl<'a, 'd, O: Object> ObjectRefBase<'d, O> for ObjectRef<'a, 'd, O> {
     }
 }
 
-impl<'a, 'd, O: Object, F: Fragment<'d>> ObjectRefBase<'d, O> for ObjectRefMut<'a, 'd, O, F> {
+impl<'a, 'd, O: Object> ObjectRefBase<'d, O> for ObjectRefMut<'a, 'd, O> {
     fn world(&self) -> &World<'d> {
-        self.fragment.world()
+        self.world
     }
 
     fn id(&self) -> <O as Object>::Id {
@@ -176,22 +172,18 @@ impl<'a, 'd, O: Object, F: Fragment<'d>> ObjectRefBase<'d, O> for ObjectRefMut<'
     }
 
     fn obj(&self) -> &O {
-        <O as Object>::get(self.world(), self.id)
+        <O as Object>::get(self.world, self.id)
             .expect("tried to call ObjectRefMut::obj() after deleting the object")
     }
 }
 
-impl<'a, 'd, O: Object, F: Fragment<'d>> ObjectRefMutBase<'d, O, F> for ObjectRefMut<'a, 'd, O, F> {
+impl<'a, 'd, O: Object> ObjectRefMutBase<'d, O> for ObjectRefMut<'a, 'd, O> {
     fn world_mut(&mut self) -> &mut World<'d> {
-        self.fragment.world_mut()
-    }
-
-    fn fragment_mut(&mut self) -> &mut F {
-        self.fragment
+        self.world
     }
 
     fn obj_mut(&mut self) -> &mut O {
-        <O as Object>::get_mut(self.fragment.world_mut(), self.id)
+        <O as Object>::get_mut(self.world, self.id)
             .expect("tried to call ObjectRefMut::obj_mut() after deleting the object")
     }
 }
@@ -203,14 +195,14 @@ impl<'a, 'd, O: Object> Deref for ObjectRef<'a, 'd, O> {
     }
 }
 
-impl<'a, 'd, O: Object, F: Fragment<'d>> Deref for ObjectRefMut<'a, 'd, O, F> {
+impl<'a, 'd, O: Object> Deref for ObjectRefMut<'a, 'd, O> {
     type Target = O;
     fn deref(&self) -> &O {
         self.obj()
     }
 }
 
-impl<'a, 'd, O: Object, F: Fragment<'d>> DerefMut for ObjectRefMut<'a, 'd, O, F> {
+impl<'a, 'd, O: Object> DerefMut for ObjectRefMut<'a, 'd, O> {
     fn deref_mut<'b>(&'b mut self) -> &'b mut O {
         self.obj_mut()
     }
@@ -241,19 +233,19 @@ pub trait ClientRef<'d>: ObjectRefBase<'d, Client> {
     }
 }
 impl<'a, 'd> ClientRef<'d> for ObjectRef<'a, 'd, Client> { }
-impl<'a, 'd, F: Fragment<'d>> ClientRef<'d> for ObjectRefMut<'a, 'd, Client, F> { }
+impl<'a, 'd> ClientRef<'d> for ObjectRefMut<'a, 'd, Client> { }
 
-pub trait ClientRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Client, F> {
+pub trait ClientRefMut<'d>: ObjectRefMutBase<'d, Client> {
     fn stable_id(&mut self) -> Stable<ClientId> {
         let cid = self.id();
         self.world_mut().clients.pin(cid)
     }
 
-    fn pawn_mut<'a>(&'a mut self) -> Option<ObjectRefMut<'a, 'd, Entity, F>> {
+    fn pawn_mut<'a>(&'a mut self) -> Option<ObjectRefMut<'a, 'd, Entity>> {
         match self.obj().pawn {
             None => None,
             Some(eid) => {
-                Some(self.fragment_mut().entity_mut(eid))
+                Some(self.world_mut().entity_mut(eid))
             },
         }
     }
@@ -261,12 +253,12 @@ pub trait ClientRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Client, F> {
     fn set_pawn(&mut self, pawn: Option<EntityId>) -> OpResult<Option<EntityId>> {
         let cid = self.id();
         match pawn {
-            Some(eid) => ops::client::set_pawn(self.fragment_mut(), cid, eid),
-            None => ops::client::clear_pawn(self.fragment_mut(), cid),
+            Some(eid) => ops::client::set_pawn(self.world_mut(), cid, eid),
+            None => ops::client::clear_pawn(self.world_mut(), cid),
         }
     }
 }
-impl<'a, 'd, F: Fragment<'d>> ClientRefMut<'d, F> for ObjectRefMut<'a, 'd, Client, F> { }
+impl<'a, 'd> ClientRefMut<'d> for ObjectRefMut<'a, 'd, Client> { }
 
 
 pub trait EntityRef<'d>: ObjectRefBase<'d, Entity> {
@@ -287,9 +279,9 @@ pub trait EntityRef<'d>: ObjectRefBase<'d, Entity> {
     }
 }
 impl<'a, 'd> EntityRef<'d> for ObjectRef<'a, 'd, Entity> { }
-impl<'a, 'd, F: Fragment<'d>> EntityRef<'d> for ObjectRefMut<'a, 'd, Entity, F> { }
+impl<'a, 'd> EntityRef<'d> for ObjectRefMut<'a, 'd, Entity> { }
 
-pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
+pub trait EntityRefMut<'d>: ObjectRefMutBase<'d, Entity> {
     fn stable_id(&mut self) -> Stable<EntityId> {
         let eid = self.id();
         self.world_mut().entities.pin(eid)
@@ -297,12 +289,12 @@ pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
 
     fn set_plane_id(&mut self, pid: PlaneId) -> OpResult<()> {
         let eid = self.id();
-        ops::entity::set_plane(self.fragment_mut(), eid, pid)
+        ops::entity::set_plane(self.world_mut(), eid, pid)
     }
 
     fn set_stable_plane_id(&mut self, stable_pid: Stable<PlaneId>) -> OpResult<()> {
         let eid = self.id();
-        ops::entity::set_stable_plane(self.fragment_mut(), eid, stable_pid)
+        ops::entity::set_stable_plane(self.world_mut(), eid, stable_pid)
     }
 
     fn set_activity(&mut self, activity: Activity) {
@@ -319,13 +311,13 @@ pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
 
     fn set_attachment(&mut self, attach: EntityAttachment) -> OpResult<EntityAttachment> {
         let eid = self.id();
-        ops::entity::attach(self.fragment_mut(), eid, attach)
+        ops::entity::attach(self.world_mut(), eid, attach)
     }
 
-    fn pawn_owner_mut<'a>(&'a mut self) -> Option<ObjectRefMut<'a, 'd, Client, F>> {
+    fn pawn_owner_mut<'a>(&'a mut self) -> Option<ObjectRefMut<'a, 'd, Client>> {
         let eid = self.id();
         if let EntityAttachment::Client(cid) = self.obj().attachment {
-            let c = unwrap_or!(self.fragment_mut().get_client_mut(cid), return None);
+            let c = unwrap_or!(self.world_mut().get_client_mut(cid), return None);
             if c.pawn_id() == Some(eid) {
                 return Some(c)
             }
@@ -333,7 +325,7 @@ pub trait EntityRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Entity, F> {
         None
     }
 }
-impl<'a, 'd, F: Fragment<'d>> EntityRefMut<'d, F> for ObjectRefMut<'a, 'd, Entity, F> { }
+impl<'a, 'd> EntityRefMut<'d> for ObjectRefMut<'a, 'd, Entity> { }
 
 
 pub trait InventoryRef<'d>: ObjectRefBase<'d, Inventory> {
@@ -344,9 +336,9 @@ pub trait InventoryRef<'d>: ObjectRefBase<'d, Inventory> {
 
 }
 impl<'a, 'd> InventoryRef<'d> for ObjectRef<'a, 'd, Inventory> { }
-impl<'a, 'd, F: Fragment<'d>> InventoryRef<'d> for ObjectRefMut<'a, 'd, Inventory, F> { }
+impl<'a, 'd> InventoryRef<'d> for ObjectRefMut<'a, 'd, Inventory> { }
 
-pub trait InventoryRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Inventory, F> {
+pub trait InventoryRefMut<'d>: ObjectRefMutBase<'d, Inventory> {
     fn stable_id(&mut self) -> Stable<InventoryId> {
         let iid = self.id();
         self.world_mut().inventories.pin(iid)
@@ -354,10 +346,10 @@ pub trait InventoryRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Inventory, 
 
     fn set_attachment(&mut self, attach: InventoryAttachment) -> OpResult<InventoryAttachment> {
         let iid = self.id();
-        ops::inventory::attach(self.fragment_mut(), iid, attach)
+        ops::inventory::attach(self.world_mut(), iid, attach)
     }
 }
-impl<'a, 'd, F: Fragment<'d>> InventoryRefMut<'d, F> for ObjectRefMut<'a, 'd, Inventory, F> { }
+impl<'a, 'd> InventoryRefMut<'d> for ObjectRefMut<'a, 'd, Inventory> { }
 
 
 
@@ -373,21 +365,21 @@ pub trait PlaneRef<'d>: ObjectRefBase<'d, Plane> {
     }
 }
 impl<'a, 'd> PlaneRef<'d> for ObjectRef<'a, 'd, Plane> { }
-impl<'a, 'd, F: Fragment<'d>> PlaneRef<'d> for ObjectRefMut<'a, 'd, Plane, F> { }
+impl<'a, 'd> PlaneRef<'d> for ObjectRefMut<'a, 'd, Plane> { }
 
-pub trait PlaneRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Plane, F> {
+pub trait PlaneRefMut<'d>: ObjectRefMutBase<'d, Plane> {
     fn stable_id(&mut self) -> Stable<PlaneId> {
         let pid = self.id();
         self.world_mut().planes.pin(pid)
     }
 
     fn get_terrain_chunk_mut<'b>(&'b mut self, cpos: V2)
-                                 -> Option<ObjectRefMut<'b, 'd, TerrainChunk, F>> {
+                                 -> Option<ObjectRefMut<'b, 'd, TerrainChunk>> {
         let &tcid = unwrap_or!(self.obj().loaded_chunks.get(&cpos), return None);
-        Some(self.fragment_mut().terrain_chunk_mut(tcid))
+        Some(self.world_mut().terrain_chunk_mut(tcid))
     }
 
-    fn terrain_chunk_mut<'b>(&'b mut self, cpos: V2) -> ObjectRefMut<'b, 'd, TerrainChunk, F> {
+    fn terrain_chunk_mut<'b>(&'b mut self, cpos: V2) -> ObjectRefMut<'b, 'd, TerrainChunk> {
         self.get_terrain_chunk_mut(cpos).expect("no TerrainChunk at given pos")
     }
 
@@ -403,7 +395,7 @@ pub trait PlaneRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Plane, F> {
         self.try_save_terrain_chunk(cpos).expect("no TerrainChunk at given pos")
     }
 }
-impl<'a, 'd, F: Fragment<'d>> PlaneRefMut<'d, F> for ObjectRefMut<'a, 'd, Plane, F> { }
+impl<'a, 'd> PlaneRefMut<'d> for ObjectRefMut<'a, 'd, Plane> { }
 
 
 
@@ -443,9 +435,9 @@ pub trait TerrainChunkRef<'d>: ObjectRefBase<'d, TerrainChunk> {
     }
 }
 impl<'a, 'd> TerrainChunkRef<'d> for ObjectRef<'a, 'd, TerrainChunk> { }
-impl<'a, 'd, F: Fragment<'d>> TerrainChunkRef<'d> for ObjectRefMut<'a, 'd, TerrainChunk, F> { }
+impl<'a, 'd> TerrainChunkRef<'d> for ObjectRefMut<'a, 'd, TerrainChunk> { }
 
-pub trait TerrainChunkRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, TerrainChunk, F> {
+pub trait TerrainChunkRefMut<'d>: ObjectRefMutBase<'d, TerrainChunk> {
     fn stable_id(&mut self) -> Stable<TerrainChunkId> {
         let tcid = self.id();
         self.world_mut().terrain_chunks.pin(tcid)
@@ -459,7 +451,7 @@ pub trait TerrainChunkRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, TerrainC
         &mut self.obj_mut().flags
     }
 }
-impl<'a, 'd, F: Fragment<'d>> TerrainChunkRefMut<'d, F> for ObjectRefMut<'a, 'd, TerrainChunk, F> { }
+impl<'a, 'd> TerrainChunkRefMut<'d> for ObjectRefMut<'a, 'd, TerrainChunk> { }
 
 fn block_pos_to_idx<'d, R: ?Sized+TerrainChunkRef<'d>>(self_: &R, pos: V3) -> usize {
     let offset = pos - self_.base_pos();
@@ -493,9 +485,9 @@ pub trait StructureRef<'d>: ObjectRefBase<'d, Structure> {
     }
 }
 impl<'a, 'd> StructureRef<'d> for ObjectRef<'a, 'd, Structure> { }
-impl<'a, 'd, F: Fragment<'d>> StructureRef<'d> for ObjectRefMut<'a, 'd, Structure, F> { }
+impl<'a, 'd> StructureRef<'d> for ObjectRefMut<'a, 'd, Structure> { }
 
-pub trait StructureRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Structure, F> {
+pub trait StructureRefMut<'d>: ObjectRefMutBase<'d, Structure> {
     fn stable_id(&mut self) -> Stable<StructureId> {
         let sid = self.id();
         self.world_mut().structures.pin(sid)
@@ -503,7 +495,7 @@ pub trait StructureRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Structure, 
 
     fn set_template_id(&mut self, template: TemplateId) -> OpResult<()> {
         let sid = self.id();
-        ops::structure::replace(self.fragment_mut(), sid, template)
+        ops::structure::replace(self.world_mut(), sid, template)
     }
 
     fn set_flags(&mut self, flags: StructureFlags) {
@@ -512,7 +504,7 @@ pub trait StructureRefMut<'d, F: Fragment<'d>>: ObjectRefMutBase<'d, Structure, 
 
     fn set_attachment(&mut self, attach: StructureAttachment) -> OpResult<StructureAttachment> {
         let sid = self.id();
-        ops::structure::attach(self.fragment_mut(), sid, attach)
+        ops::structure::attach(self.world_mut(), sid, attach)
     }
 }
-impl<'a, 'd, F: Fragment<'d>> StructureRefMut<'d, F> for ObjectRefMut<'a, 'd, Structure, F> { }
+impl<'a, 'd> StructureRefMut<'d> for ObjectRefMut<'a, 'd, Structure> { }

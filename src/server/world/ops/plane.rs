@@ -2,14 +2,12 @@ use std::collections::HashMap;
 
 use types::*;
 
-use world::Plane;
-use world::Fragment;
+use world::{World, Plane};
 use world::extra::Extra;
 use world::ops::{self, OpResult};
 
 
-pub fn create<'d, F>(f: &mut F, name: String) -> OpResult<PlaneId>
-        where F: Fragment<'d> {
+pub fn create(w: &mut World, name: String) -> OpResult<PlaneId> {
     let p = Plane {
         name: name,
 
@@ -19,17 +17,15 @@ pub fn create<'d, F>(f: &mut F, name: String) -> OpResult<PlaneId>
         extra: Extra::new(),
         stable_id: NO_STABLE_ID,
 
-        version: f.world().snapshot.version() + 1,
+        version: w.snapshot.version() + 1,
     };
 
-    let pid = unwrap!(f.world_mut().planes.insert(p));
-    post_init(f, pid);
+    let pid = unwrap!(w.planes.insert(p));
+    post_init(w, pid);
     Ok(pid)
 }
 
-pub fn create_unchecked<'d, F>(f: &mut F) -> PlaneId
-        where F: Fragment<'d> {
-    let w = f.world_mut();
+pub fn create_unchecked(w: &mut World) -> PlaneId {
     let pid = w.planes.insert(Plane {
         name: String::new(),
 
@@ -44,53 +40,50 @@ pub fn create_unchecked<'d, F>(f: &mut F) -> PlaneId
     pid
 }
 
-pub fn post_init<'d, F>(f: &mut F,
-                        pid: PlaneId)
-        where F: Fragment<'d> {
+pub fn post_init(w: &mut World,
+                 pid: PlaneId) {
     trace!("post_init({:?})", pid);
-    let stable_pid = f.world_mut().planes.pin(pid);
+    let stable_pid = w.planes.pin(pid);
 
     // limbo_entities is manipulated using multimap_insert/multimap_remove, so if there are no
     // entities in limbo targeting this plane, there may be not HashSet under the given key.
-    if let Some(eids) = f.world_mut().limbo_entities.remove(&stable_pid) {
+    if let Some(eids) = w.limbo_entities.remove(&stable_pid) {
         let mut eids_vec = Vec::with_capacity(eids.len());
         for &eid in eids.iter() {
-            f.world_mut().entities[eid].plane = pid;
+            w.entities[eid].plane = pid;
             eids_vec.push(eid);
         }
-        f.world_mut().entities_by_plane.insert(pid, eids);
+        w.entities_by_plane.insert(pid, eids);
 
         trace!("post_init: transfer {} entities for {:?} ({:?})", eids_vec.len(), pid, stable_pid);
         trace!("post_init: entities: {:?}", eids_vec);
     }
 }
 
-pub fn pre_fini<'d, F>(f: &mut F,
-                       pid: PlaneId)
-        where F: Fragment<'d> {
+pub fn pre_fini(w: &mut World,
+                pid: PlaneId) {
     trace!("pre_fini({:?})", pid);
-    let stable_pid = f.world_mut().planes.pin(pid);
+    let stable_pid = w.planes.pin(pid);
 
     // Same multimap_* stuff as is post_init.
-    if let Some(eids) = f.world_mut().entities_by_plane.remove(&pid) {
+    if let Some(eids) = w.entities_by_plane.remove(&pid) {
         let mut eids_vec = Vec::with_capacity(eids.len());
         for &eid in eids.iter() {
-            f.world_mut().entities[eid].plane = PLANE_LIMBO;
+            w.entities[eid].plane = PLANE_LIMBO;
             eids_vec.push(eid);
         }
-        f.world_mut().limbo_entities.insert(stable_pid, eids);
+        w.limbo_entities.insert(stable_pid, eids);
     }
 }
 
-pub fn destroy<'d, F>(f: &mut F,
-                      pid: PlaneId) -> OpResult<()>
-        where F: Fragment<'d> {
-    pre_fini(f, pid);
-    let p = unwrap!(f.world_mut().planes.remove(pid));
-    f.world_mut().snapshot.record_plane(pid, &p);
+pub fn destroy(w: &mut World,
+               pid: PlaneId) -> OpResult<()> {
+    pre_fini(w, pid);
+    let p = unwrap!(w.planes.remove(pid));
+    w.snapshot.record_plane(pid, &p);
 
     for &tcid in p.loaded_chunks.values() {
-        ops::terrain_chunk::destroy(f, tcid).unwrap();
+        ops::terrain_chunk::destroy(w, tcid).unwrap();
     }
 
     Ok(())

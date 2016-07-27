@@ -29,58 +29,24 @@ pub trait Fragment<'d>: Sized {
     $(
 
     fn $create_obj<'a>(&'a mut self, $($create_arg: $create_arg_ty,)*)
-                   -> OpResult<ObjectRefMut<'a, 'd, $Obj, Self>> {
-        #![allow(unused_variables)]  // id_expr may not reference id_name
-        let $create_id_name = try!(ops::$module::create(self, $($create_arg,)*));
-        Ok(ObjectRefMut::new(self, $create_id_expr))
+                   -> OpResult<ObjectRefMut<'a, 'd, $Obj>> {
+        self.world_mut().$create_obj($($create_arg,)*)
     }
 
     fn $destroy_obj(&mut self, id: $Id) -> OpResult<()> {
-        ops::$module::destroy(self, id)
+        self.world_mut().$destroy_obj(id)
     }
 
     fn $get_obj_mut<'a>(&'a mut self, $lookup_id_name: $Id)
-                        -> Option<ObjectRefMut<'a, 'd, $Obj, Self>> {
-        match self.world().$objs.get($lookup_id_expr) {
-            None => return None,
-            Some(_) => {},
-        }
-
-        Some(ObjectRefMut::new(self, $lookup_id_name))
+                        -> Option<ObjectRefMut<'a, 'd, $Obj>> {
+        self.world_mut().$get_obj_mut($lookup_id_name)
     }
 
-    fn $obj_mut<'a>(&'a mut self, id: $Id) -> ObjectRefMut<'a, 'd, $Obj, Self> {
-        self.$get_obj_mut(id)
-            .expect(concat!("no ", stringify!($Obj), " with given id"))
+    fn $obj_mut<'a>(&'a mut self, id: $Id) -> ObjectRefMut<'a, 'd, $Obj> {
+        self.world_mut().$obj_mut(id)
     }
 
     )*
-
-    fn create_structure_unchecked<'a>(&'a mut self,
-                                      pid: PlaneId,
-                                      pos: V3,
-                                      tid: TemplateId)
-                                      -> OpResult<ObjectRefMut<'a, 'd, Structure, Self>> {
-        // Check validity of `pid` and `tid`.
-        unwrap!(self.world().get_plane(pid));
-        unwrap!(self.world().data.structure_templates.get_template(tid));
-        let stable_pid = self.world_mut().planes.pin(pid);
-
-        let sid = ops::structure::create_unchecked(self);
-        {
-            let w = self.world_mut();
-            let s = &mut w.structures[sid];
-
-            s.plane = pid;
-            s.stable_plane = stable_pid;
-            s.pos = pos;
-            s.template = tid;
-
-            s.version = w.snapshot.version() + 1;
-        }
-        ops::structure::post_init(self, sid);
-        Ok(ObjectRefMut::new(self, sid))
-    }
 }
 
     }
