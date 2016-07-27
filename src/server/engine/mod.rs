@@ -29,7 +29,6 @@ use world::World;
 use self::split2::Coded;
 
 
-#[macro_use] pub mod split;
 #[macro_use] pub mod split2;
 
 
