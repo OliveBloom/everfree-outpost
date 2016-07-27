@@ -6,7 +6,6 @@ use types::*;
 use util::stable_id_map::StableIdMap;
 
 pub use self::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
-pub use self::fragment::Fragment;
 pub use self::ops::OpResult;
 pub use self::types::{
     EntityAttachment,
@@ -42,7 +41,6 @@ pub mod object;
 mod ops;
 mod debug;
 mod types;
-pub mod fragment;
 pub mod flags;
 pub mod bundle;
 mod snapshot;
