@@ -139,7 +139,7 @@ fn login_no_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart> 
 
 
     // Import the bundle.
-    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let importer = bundle::import_bundle(&mut eng.world, &bundle);
     let cid = importer.import(&ClientId(0));
 
     let pid = logic::chunks::get_plane_id(eng, STABLE_PLANE_FOREST);
@@ -165,7 +165,7 @@ fn login_with_pawn(eng: &mut Engine, bundle: Bundle) -> bundle::Result<LoginPart
     // Import the bundle, but first import the plane so that entity import will succeed.
     let pid = logic::chunks::get_plane_id(eng, e.stable_plane);
 
-    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let importer = bundle::import_bundle(&mut eng.world, &bundle);
     let cid = importer.import(&ClientId(0));
     let eid = importer.import(&b_eid);
 
@@ -218,7 +218,7 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
 
 
     // Import the entity bundle.
-    let importer = bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &bundle);
+    let importer = bundle::import_bundle(&mut eng.world, &bundle);
     let eid = importer.import(&EntityId(0));
 
     // Send Init before EntityAppear/MotionStart, so that the client will recognize those messages

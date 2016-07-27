@@ -26,9 +26,8 @@ pub fn process(eng: &mut Engine, resp: Response) {
             // merge the old and new ones.
             logic::terrain_chunk::on_destroy(eng.refine(), tcid);
             let importer = {
-                let mut wf = DummyFragment::new(&mut eng.world);
-                wf.destroy_terrain_chunk(tcid);
-                bundle::import_bundle(&mut wf, &bundle)
+                eng.world.destroy_terrain_chunk(tcid);
+                bundle::import_bundle(&mut eng.world, &bundle)
             };
 
             logic::world::on_import(eng.refine(), &importer, &bundle);

@@ -17,7 +17,7 @@ pub fn start_up(eng: &mut Engine) {
     let world_time =
         if let Some(mut file) = eng.storage.open_world_file() {
             let b = bundle::read_bundle(&mut file).unwrap();
-            bundle::import_world(&mut eng.as_ref().as_world_fragment(), &b);
+            bundle::import_world(&mut eng.world, &b);
             b.world.as_ref().unwrap().now
         } else {
             0
@@ -31,7 +31,7 @@ pub fn start_up(eng: &mut Engine) {
 
     if let Some(mut file) = eng.storage.open_plane_file(STABLE_PLANE_LIMBO) {
         let b = bundle::read_bundle(&mut file).unwrap();
-        bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &b);
+        bundle::import_bundle(&mut eng.world, &b);
     } else {
         let name = "Limbo".to_owned();
         let stable_pid = eng.as_ref().as_world_fragment().create_plane(name).unwrap().stable_id();
@@ -40,7 +40,7 @@ pub fn start_up(eng: &mut Engine) {
 
     if let Some(mut file) = eng.storage.open_plane_file(STABLE_PLANE_FOREST) {
         let b = bundle::read_bundle(&mut file).unwrap();
-        bundle::import_bundle(&mut eng.as_ref().as_world_fragment(), &b);
+        bundle::import_bundle(&mut eng.world, &b);
     } else {
         let name = "Everfree Forest".to_owned();
         let stable_pid = eng.as_ref().as_world_fragment().create_plane(name).unwrap().stable_id();

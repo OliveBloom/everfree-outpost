@@ -72,7 +72,7 @@ fn import_plane(eng: &mut Engine, stable_pid: Stable<PlaneId>) -> bundle::Result
 
     let mut file = unwrap!(eng.storage.open_plane_file(stable_pid));
     let b = try!(bundle::read_bundle(&mut file));
-    let importer = bundle::import_bundle(&mut DummyFragment::new(&mut eng.world), &b);
+    let importer = bundle::import_bundle(&mut eng.world, &b);
     logic::world::on_import(eng.refine(), &importer, &b);
 
     Ok(())
@@ -103,7 +103,7 @@ fn import_terrain_chunk(eng: &mut PartialEngine, pid: PlaneId, cpos: V2) -> bund
         trace!("load chunk from file: {:?} @ ({:?}, {:?})", opt_tcid, pid, cpos);
         // TODO: do something intelligent if loading fails, so the whole server doesn't crash
         let b = try!(bundle::read_bundle(&mut file));
-        let importer = bundle::import_bundle(&mut DummyFragment::new(&mut eng.world), &b);
+        let importer = bundle::import_bundle(&mut eng.world, &b);
         logic::world::on_import(eng.refine(), &importer, &b);
     } else {
         trace!("load chunk from terrain_gen: ({:?}, {:?})", pid, cpos);

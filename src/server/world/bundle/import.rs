@@ -8,7 +8,7 @@ use world::bundle::types as b;
 use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
-use world::fragment::Fragment;
+use world::World;
 use world::ops;
 use world::extra::{self, Extra};
 
@@ -83,7 +83,7 @@ impl<'d> Importer<'d> {
 
     /// Populate the ID maps.  For objects, this means creating empty instances with
     /// `create_unchecked`.
-    fn init_id_maps<F: Fragment<'d>>(&mut self, f: &mut F, b: &b::Bundle) {
+    fn init_id_maps(&mut self, w: &mut World<'d>, b: &b::Bundle) {
         let d = self.data;
 
         self.anim_id_map = b.anims.iter()
@@ -96,17 +96,17 @@ impl<'d> Importer<'d> {
             .map(|s| d.structure_templates.get_id(&s)).collect();
 
         self.client_id_map = (0 .. b.clients.len())
-            .map(|_| ops::client::create_unchecked(f.world_mut())).collect();
+            .map(|_| ops::client::create_unchecked(w)).collect();
         self.entity_id_map = (0 .. b.entities.len())
-            .map(|_| ops::entity::create_unchecked(f.world_mut())).collect();
+            .map(|_| ops::entity::create_unchecked(w)).collect();
         self.inventory_id_map = (0 .. b.inventories.len())
-            .map(|_| ops::inventory::create_unchecked(f.world_mut())).collect();
+            .map(|_| ops::inventory::create_unchecked(w)).collect();
         self.plane_id_map = (0 .. b.planes.len())
-            .map(|_| ops::plane::create_unchecked(f.world_mut())).collect();
+            .map(|_| ops::plane::create_unchecked(w)).collect();
         self.terrain_chunk_id_map = (0 .. b.terrain_chunks.len())
-            .map(|_| ops::terrain_chunk::create_unchecked(f.world_mut())).collect();
+            .map(|_| ops::terrain_chunk::create_unchecked(w)).collect();
         self.structure_id_map = (0 .. b.structures.len())
-            .map(|_| ops::structure::create_unchecked(f.world_mut())).collect();
+            .map(|_| ops::structure::create_unchecked(w)).collect();
     }
 
 
@@ -217,87 +217,78 @@ impl<'d> Importer<'d> {
     }
 
 
-    fn add_client<F>(&self, f: &mut F, idx: ClientId, b: &b::Client)
-            where F: Fragment<'d> {
+    fn add_client(&self, w: &mut World<'d>, idx: ClientId, b: &b::Client) {
         let id = self.import(&idx);
-        self.init_client(f.world_mut(), id, b);
-        //ops::client::post_init(f, id);
+        self.init_client(w, id, b);
+        //ops::client::post_init(w, id);
     }
 
-    fn add_entity<F>(&self, f: &mut F, idx: EntityId, b: &b::Entity)
-            where F: Fragment<'d> {
+    fn add_entity(&self, w: &mut World<'d>, idx: EntityId, b: &b::Entity) {
         let id = self.import(&idx);
-        self.init_entity(f.world_mut(), id, b);
-        ops::entity::post_init(f.world_mut(), id);
+        self.init_entity(w, id, b);
+        ops::entity::post_init(w, id);
     }
 
-    fn add_inventory<F>(&self, f: &mut F, idx: InventoryId, b: &b::Inventory)
-            where F: Fragment<'d> {
+    fn add_inventory(&self, w: &mut World<'d>, idx: InventoryId, b: &b::Inventory) {
         let id = self.import(&idx);
-        self.init_inventory(f.world_mut(), id, b);
-        //ops::inventory::post_init(f, id);
+        self.init_inventory(w, id, b);
+        //ops::inventory::post_init(w, id);
     }
 
-    fn add_plane<F>(&self, f: &mut F, idx: PlaneId, b: &b::Plane)
-            where F: Fragment<'d> {
+    fn add_plane(&self, w: &mut World<'d>, idx: PlaneId, b: &b::Plane) {
         let id = self.import(&idx);
-        self.init_plane(f.world_mut(), id, b);
-        ops::plane::post_init(f.world_mut(), id);
+        self.init_plane(w, id, b);
+        ops::plane::post_init(w, id);
     }
 
-    fn add_terrain_chunk<F>(&self, f: &mut F, idx: TerrainChunkId, b: &b::TerrainChunk)
-            where F: Fragment<'d> {
+    fn add_terrain_chunk(&self, w: &mut World<'d>, idx: TerrainChunkId, b: &b::TerrainChunk) {
         let id = self.import(&idx);
-        self.init_terrain_chunk(f.world_mut(), id, b);
-        ops::terrain_chunk::post_init(f.world_mut(), id);
+        self.init_terrain_chunk(w, id, b);
+        ops::terrain_chunk::post_init(w, id);
     }
 
-    fn add_structure<F>(&self, f: &mut F, idx: StructureId, b: &b::Structure)
-            where F: Fragment<'d> {
+    fn add_structure(&self, w: &mut World<'d>, idx: StructureId, b: &b::Structure) {
         let id = self.import(&idx);
-        self.init_structure(f.world_mut(), id, b);
-        ops::structure::post_init(f.world_mut(), id);
+        self.init_structure(w, id, b);
+        ops::structure::post_init(w, id);
     }
 
-    fn add_bundle<F>(&self, f: &mut F, b: &b::Bundle)
-            where F: Fragment<'d> {
+    fn add_bundle(&self, w: &mut World<'d>, b: &b::Bundle) {
         // Do all the imports
         // NB: b.world is handled separately, because ordinary save bundles shouldn't have it set
         for (i, c) in b.clients.iter().enumerate() {
-            self.add_client(f, ClientId(i as u16), c);
+            self.add_client(w, ClientId(i as u16), c);
         }
         for (i, e) in b.entities.iter().enumerate() {
-            self.add_entity(f, EntityId(i as u32), e);
+            self.add_entity(w, EntityId(i as u32), e);
         }
         for (i, inv) in b.inventories.iter().enumerate() {
-            self.add_inventory(f, InventoryId(i as u32), inv);
+            self.add_inventory(w, InventoryId(i as u32), inv);
         }
         for (i, p) in b.planes.iter().enumerate() {
-            self.add_plane(f, PlaneId(i as u32), p);
+            self.add_plane(w, PlaneId(i as u32), p);
         }
         for (i, tc) in b.terrain_chunks.iter().enumerate() {
-            self.add_terrain_chunk(f, TerrainChunkId(i as u32), tc);
+            self.add_terrain_chunk(w, TerrainChunkId(i as u32), tc);
         }
         for (i, s) in b.structures.iter().enumerate() {
-            self.add_structure(f, StructureId(i as u32), s);
+            self.add_structure(w, StructureId(i as u32), s);
         }
     }
 
 
-    pub fn import_bundle<F>(&mut self, f: &mut F, b: &b::Bundle)
-            where F: Fragment<'d> {
+    pub fn import_bundle(&mut self, w: &mut World<'d>, b: &b::Bundle) {
         // TODO: validate bundle
-        self.init_id_maps(f, b);
-        self.add_bundle(f, b);
+        self.init_id_maps(w, b);
+        self.add_bundle(w, b);
     }
 
-    pub fn import_world<F>(&mut self, f: &mut F, b: &b::Bundle)
-            where F: Fragment<'d> {
+    pub fn import_world(&mut self, w: &mut World<'d>, b: &b::Bundle) {
         // TODO: validate bundle
-        let w = b.world.as_ref().unwrap() as &b::World;
-        self.init_id_maps(f, b);
-        self.init_world(f.world_mut(), w);
-        self.add_bundle(f, b);
+        let bw = b.world.as_ref().unwrap() as &b::World;
+        self.init_id_maps(w, b);
+        self.init_world(w, bw);
+        self.add_bundle(w, b);
     }
 
     pub fn iter_imports<F>(&self, mut f: F)
@@ -353,17 +344,15 @@ pub trait Visitor {
     fn visit_structure(&mut self, id: StructureId, b: &b::Structure);
 }
 
-pub fn import_bundle<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>
-        where F: Fragment<'d> {
-    let mut importer = Importer::new(f.world().data());
-    importer.import_bundle(f, b);
+pub fn import_bundle<'d>(w: &mut World<'d>, b: &b::Bundle) -> Importer<'d> {
+    let mut importer = Importer::new(w.data());
+    importer.import_bundle(w, b);
     importer
 }
 
-pub fn import_world<'d, F>(f: &mut F, b: &b::Bundle) -> Importer<'d>
-        where F: Fragment<'d> {
-    let mut importer = Importer::new(f.world().data());
-    importer.import_world(f, b);
+pub fn import_world<'d>(w: &mut World<'d>, b: &b::Bundle) -> Importer<'d> {
+    let mut importer = Importer::new(w.data());
+    importer.import_world(w, b);
     importer
 }
 
