@@ -7,7 +7,6 @@ use util::SmallVec;
 use cache::TerrainCache;
 use data::StructureTemplate;
 use engine::Engine;
-use engine::glue::WorldFragment;
 use engine::split2::Coded;
 use logic;
 use messages::{Messages, ClientResponse};
@@ -15,8 +14,6 @@ use physics::Physics;
 use vision::Vision;
 use world::{Activity, Motion, Structure, World};
 use world::flags::*;
-use world::fragment::Fragment as World_Fragment;
-use world::fragment::DummyFragment;
 use world::object::*;
 use world::OpResult;
 
@@ -130,8 +127,7 @@ pub fn checked_create(eng: &mut EngineCheck,
                       template_id: TemplateId) -> OpResult<StructureId> {
     let template = unwrap!(eng.data().structure_templates.get_template(template_id));
     try!(check_placement(&eng.cache, pid, pos, template));
-    let mut wf = DummyFragment::new(&mut eng.world);
-    let s = try!(wf.create_structure(pid, pos, template_id));
+    let s = try!(eng.world.create_structure(pid, pos, template_id));
     Ok(s.id())
 }
 
@@ -141,8 +137,7 @@ pub fn checked_replace(eng: &mut EngineCheck,
     let data = eng.data();
     let new_template = unwrap!(eng.data().structure_templates.get_template(template_id));
 
-    let mut wf = DummyFragment::new(&mut eng.world);
-    let mut s = unwrap!(wf.get_structure_mut(sid));
+    let mut s = unwrap!(eng.world.get_structure_mut(sid));
     let old_template = s.template();
 
     try!(check_replacement(&mut eng.cache, s.plane_id(), s.pos(), old_template, new_template));

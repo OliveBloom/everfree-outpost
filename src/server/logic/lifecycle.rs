@@ -8,7 +8,6 @@ use engine::split::EngineRef;
 use logic;
 use messages::{ClientResponse, SyncKind};
 use wire::{WireWriter, WireReader};
-use world::Fragment;
 use world::bundle;
 use world::object::*;
 
@@ -34,7 +33,7 @@ pub fn start_up(eng: &mut Engine) {
         bundle::import_bundle(&mut eng.world, &b);
     } else {
         let name = "Limbo".to_owned();
-        let stable_pid = eng.as_ref().as_world_fragment().create_plane(name).unwrap().stable_id();
+        let stable_pid = eng.world.create_plane(name).unwrap().stable_id();
         assert!(stable_pid == STABLE_PLANE_LIMBO);
     }
 
@@ -43,7 +42,7 @@ pub fn start_up(eng: &mut Engine) {
         bundle::import_bundle(&mut eng.world, &b);
     } else {
         let name = "Everfree Forest".to_owned();
-        let stable_pid = eng.as_ref().as_world_fragment().create_plane(name).unwrap().stable_id();
+        let stable_pid = eng.world.create_plane(name).unwrap().stable_id();
         assert!(stable_pid == STABLE_PLANE_FOREST);
     }
 

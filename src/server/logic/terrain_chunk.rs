@@ -9,8 +9,6 @@ use messages::{Messages, ClientResponse};
 use physics::Physics;
 use vision::Vision;
 use world::{Activity, Motion, World};
-use world::fragment::Fragment as World_Fragment;
-use world::fragment::DummyFragment;
 use world::object::*;
 
 

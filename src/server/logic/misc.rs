@@ -7,7 +7,6 @@ use engine::Engine;
 use engine::split2::Coded;
 use logic;
 use world;
-use world::fragment::{Fragment, DummyFragment};
 use world::object::*;
 
 
@@ -35,8 +34,7 @@ pub fn clear_block_interior(eng: &mut Engine,
     try!(update_block_interior(eng, pid, center, base, false));
 
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut p = wf.plane_mut(pid);
+        let mut p = eng.world.plane_mut(pid);
         let cpos = center.reduce().div_floor(scalar(CHUNK_SIZE));
         let mut tc = p.terrain_chunk_mut(cpos);
         let idx = tc.bounds().index(center);
@@ -142,8 +140,7 @@ fn update_block_interior(eng: &mut Engine,
     }
 
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut p = wf.plane_mut(pid);
+        let mut p = eng.world.plane_mut(pid);
 
         for pos in update_region.points() {
             if let Some(block_id) = updates[update_region.index(pos)] {
@@ -240,8 +237,7 @@ pub fn set_cave(eng: &mut Engine,
 
     let mut mined = false;
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut p = unwrap!(wf.get_plane_mut(pid));
+        let mut p = unwrap!(eng.world.get_plane_mut(pid));
 
         let (T, F) = (true, false);
         mined |= try!(set_cave_single(&mut p, center + V3::new( 0,  0, 0), [T,T,T,T]));

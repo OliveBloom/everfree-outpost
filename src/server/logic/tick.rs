@@ -61,7 +61,6 @@ pub fn tick(eng: &mut Engine) {
     }
 
     // FIXME borrow checker workaround
-    // This one's okay because VisionFragment doesn't include physics.
     let eng2: &mut Engine = unsafe { &mut *(eng as *mut _) };
 
     co_for!( (eid, m, anim, kind) in

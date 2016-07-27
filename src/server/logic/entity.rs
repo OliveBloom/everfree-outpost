@@ -7,8 +7,6 @@ use messages::{Messages, ClientResponse};
 use physics::Physics;
 use vision::Vision;
 use world::{Activity, Motion, World};
-use world::fragment::Fragment as World_Fragment;
-use world::fragment::DummyFragment;
 use world::object::*;
 
 
@@ -78,8 +76,7 @@ pub fn on_chunk_crossing(eng: &mut PartialEngine,
 pub fn set_appearance(eng: &mut PartialEngine,
                       eid: EntityId,
                       appearance: u32) -> bool {
-    let mut wf = DummyFragment::new(&mut eng.world);
-    let mut e = unwrap_or!(wf.get_entity_mut(eid), return false);
+    let mut e = unwrap_or!(eng.world.get_entity_mut(eid), return false);
     e.set_appearance(appearance);
 
     // TODO: we shouldn't need to send both of these messages.  Just the appear should do.
@@ -103,8 +100,7 @@ pub fn set_activity(eng: &mut Engine,
                     activity: Activity) -> bool {
     let now = eng.now();
 
-    let mut wf = DummyFragment::new(&mut eng.world);
-    let mut e = unwrap_or!(wf.get_entity_mut(eid), return false);
+    let mut e = unwrap_or!(eng.world.get_entity_mut(eid), return false);
 
     info!("{:?}: set activity to {:?} at {}", eid, activity, now);
 

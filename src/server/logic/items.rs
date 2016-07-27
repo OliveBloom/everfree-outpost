@@ -13,7 +13,6 @@ use logic;
 use messages::{ClientResponse, Dialog};
 use world;
 use world::Item;
-use world::fragment::{Fragment, DummyFragment};
 use world::object::*;
 use vision;
 
@@ -110,8 +109,7 @@ pub fn move_items2(eng: &mut Engine,
     // Update destination, keeping track of which slots were updated and how much was moved.
     let mut updated_slots = SmallVec::new();
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut i = unwrap!(wf.get_inventory_mut(to_iid));
+        let mut i = unwrap!(eng.world.get_inventory_mut(to_iid));
         if to_slot != NO_SLOT && to_slot as usize >= i.contents().len() {
             fail!("bad slot for inventory");
         }
@@ -154,8 +152,7 @@ pub fn move_items2(eng: &mut Engine,
     // Update source inventory.
     let total_moved = to_move - remaining;
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut i = unwrap!(wf.get_inventory_mut(from_iid));
+        let mut i = unwrap!(eng.world.get_inventory_mut(from_iid));
         let slot = &mut i.contents_mut()[from_slot as usize];
         slot.count -= total_moved;
         if slot.count == 0 {
@@ -190,8 +187,7 @@ pub fn bulk_add(eng: &mut Engine,
     // Update destination, keeping track of which slots were updated and how much was moved.
     let mut updated_slots = SmallVec::new();
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut i = unwrap!(wf.get_inventory_mut(iid));
+        let mut i = unwrap!(eng.world.get_inventory_mut(iid));
         // Cannot fail past this point.
 
         for (idx, slot) in i.contents_mut().iter_mut().enumerate()
@@ -240,8 +236,7 @@ pub fn bulk_remove(eng: &mut Engine,
     // Update destination, keeping track of which slots were updated and how much was moved.
     let mut updated_slots = SmallVec::new();
     {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut i = unwrap!(wf.get_inventory_mut(iid));
+        let mut i = unwrap!(eng.world.get_inventory_mut(iid));
         // Cannot fail past this point.
 
         for (idx, slot) in i.contents_mut().iter_mut().enumerate()
@@ -292,8 +287,7 @@ pub fn craft_recipe(eng: &mut Engine,
     let _ = station_sid; // TODO
 
     let real_count = {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut i = unwrap!(wf.get_inventory_mut(iid));
+        let mut i = unwrap!(eng.world.get_inventory_mut(iid));
 
         let mut count = count;
 

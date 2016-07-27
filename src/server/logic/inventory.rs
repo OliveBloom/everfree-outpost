@@ -9,8 +9,6 @@ use physics::Physics;
 use vision::Vision;
 use world::{Activity, Motion, World};
 use world::flags::I_HAS_CHANGE_HOOK;
-use world::fragment::Fragment as World_Fragment;
-use world::fragment::DummyFragment;
 use world::object::*;
 
 

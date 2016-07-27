@@ -24,8 +24,6 @@ use world;
 use world::Motion;
 use world::bundle::{self, Bundle, Builder, AnyId};
 use world::extra;
-use world::fragment::DummyFragment;
-use world::fragment::Fragment as World_Fragment;
 use world::object::*;
 use vision::{self, ViewableId};
 
@@ -229,7 +227,7 @@ pub fn create_character(eng: &mut Engine, cid: ClientId, appearance: u32) -> bun
                                                        cycle_base,
                                                        DAY_NIGHT_CYCLE_MS));
 
-    warn_on_err!(DummyFragment::new(&mut eng.world).client_mut(cid).set_pawn(Some(eid)));
+    warn_on_err!(eng.world.client_mut(cid).set_pawn(Some(eid)));
     logic::world::on_import(eng.refine(), &importer, &bundle);
 
     // Init scripts
@@ -277,7 +275,7 @@ pub fn logout(eng: &mut Engine, cid: ClientId) -> bundle::Result<()> {
     try!(bundle::write_bundle(&mut file, &b));
 
     // Destroy the client and associated objects
-    try!(world::Fragment::destroy_client(&mut eng.as_ref().as_world_fragment(), cid));
+    try!(eng.world.destroy_client(cid));
 
     // Now that the Entity is gone, it's safe to unload the chunks (which may trigger unloading of
     // the Plane).

@@ -5,7 +5,6 @@ use engine::split2::Coded;
 use logic;
 use terrain_gen::Response;
 use world::bundle::{self, AnyId};
-use world::fragment::{Fragment as World_Fragment, DummyFragment};
 use world::object::*;
 
 pub fn process(eng: &mut Engine, resp: Response) {
