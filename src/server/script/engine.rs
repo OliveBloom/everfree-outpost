@@ -465,8 +465,7 @@ define_python_class! {
         fn world_entity_teleport(eng: &mut Engine,
                                  eid: EntityId,
                                  pos: V3) -> PyResult<()> {
-            try!(logic::world::teleport_entity(eng.as_ref().as_world_fragment(),
-                                               eid, pos));
+            try!(logic::entity::teleport(eng, eid, pos));
             Ok(())
         }
 
@@ -474,8 +473,7 @@ define_python_class! {
                                        eid: EntityId,
                                        pid: PlaneId,
                                        pos: V3) -> PyResult<()> {
-            try!(logic::world::teleport_entity_plane(eng.as_ref().as_world_fragment(),
-                                                     eid, pid, pos));
+            try!(logic::entity::teleport_plane(eng, eid, pid, pos));
             Ok(())
         }
 
@@ -483,8 +481,7 @@ define_python_class! {
                                               eid: EntityId,
                                               stable_pid: Stable<PlaneId>,
                                               pos: V3) -> PyResult<()> {
-            try!(logic::world::teleport_entity_stable_plane(eng.as_ref().as_world_fragment(),
-                                                            eid, stable_pid, pos));
+            try!(logic::entity::teleport_stable_plane(eng, eid, stable_pid, pos));
             Ok(())
         }
 

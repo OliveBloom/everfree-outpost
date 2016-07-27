@@ -1,9 +1,10 @@
 use types::*;
 use libphysics::{CHUNK_SIZE, TILE_SIZE};
+use util::StrResult;
 
 use engine::Engine;
 use logic;
-use messages::ClientResponse;
+use messages::{ClientResponse, SyncKind};
 use world::{Activity, Motion};
 use world::object::*;
 
@@ -148,3 +149,97 @@ pub fn set_activity(eng: &mut Engine,
 
     true
 }
+
+
+
+fn teleport_impl(eng: &mut Engine,
+                 eid: EntityId,
+                 pid: Option<PlaneId>,
+                 stable_pid: Option<Stable<PlaneId>>,
+                 pos: V3) -> StrResult<()> {
+    // Figure out the old and new positions.
+    let (old_pos, old_plane, cid) = {
+        let e = unwrap!(eng.world.get_entity(eid));
+        (e.pos(eng.now), e.plane_id(), e.pawn_owner().map(|c| c.id()))
+    };
+
+    let new_plane =
+        if let Some(stable_pid) = stable_pid {
+            // Load the plane, if it's not already.
+            logic::chunks::get_plane_id(eng, stable_pid)
+        } else if let Some(pid) = pid {
+            unwrap!(eng.world.get_plane(pid));
+            pid
+        } else {
+            old_plane
+        };
+    let new_pos = pos;
+
+    let old_cpos = old_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+    let new_cpos = new_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
+
+    // Maybe send the client a desync message.
+    if let Some(cid) = cid {
+        // Check if we need to send a desync message.
+        // Teleporting to another point within the current chunk doesn't require any significant
+        // amount of data transfer, so we only send a desync (causing the client to show a loading
+        // screen) if the plane or cpos has changed.
+        if new_plane != old_plane || new_cpos != old_cpos {
+            eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Loading));
+        }
+    }
+
+    // Actually move the entity.
+    {
+        // These operations should never fail, since the values were either checked or known-good.
+        let mut e = eng.world.entity_mut(eid);
+        e.set_plane_id(new_plane).expect("failed to set plane id");
+        e.set_motion(Motion::stationary(new_pos, eng.now));
+
+        // Send messages to viewers.
+        let e = e.borrow();
+        let msg_gone = logic::vision::entity_gone_message(e);
+        let msg_appear = logic::vision::entity_appear_message(e);
+        let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now);
+        let messages = &mut eng.messages;
+        if new_plane != old_plane || new_cpos != old_cpos {
+            eng.vision.entity_add(eid, new_plane, new_cpos, |cid| {
+                messages.send_client(cid, msg_appear.clone());
+            });
+            eng.vision.entity_remove(eid, old_plane, old_cpos, |cid| {
+                messages.send_client(cid, msg_gone.clone());
+            });
+        }
+        eng.vision.entity_update(eid, |cid| {
+            messages.send_client(cid, msg_motion.clone());
+        });
+    }
+
+    // Update the client's view.  Once this finishes, the client will get a resync message.
+    if let Some(cid) = cid {
+        logic::client::update_view(eng, cid, old_plane, old_cpos, new_plane, new_cpos);
+    }
+
+    Ok(())
+}
+
+pub fn teleport(eng: &mut Engine,
+                eid: EntityId,
+                pos: V3) -> StrResult<()> {
+    teleport_impl(eng, eid, None, None, pos)
+}
+
+pub fn teleport_plane(eng: &mut Engine,
+                      eid: EntityId,
+                      pid: PlaneId,
+                      pos: V3) -> StrResult<()> {
+    teleport_impl(eng, eid, Some(pid), None, pos)
+}
+
+pub fn teleport_stable_plane(eng: &mut Engine,
+                             eid: EntityId,
+                             stable_pid: Stable<PlaneId>,
+                             pos: V3) -> StrResult<()> {
+    teleport_impl(eng, eid, None, Some(stable_pid), pos)
+}
+

@@ -1,23 +1,15 @@
-use std::mem;
-use libphysics::{CHUNK_SIZE, TILE_SIZE};
+use libphysics::CHUNK_SIZE;
 
 use types::*;
 use util::SmallSet;
-use util::StrResult;
 
 use components;
-use engine::Engine;
-use engine::glue::*;
 use engine::split2::Coded;
 use logic;
-use messages::{ClientResponse, SyncKind};
 use world::Structure;
-use world::Motion;
 use world::bundle::{Importer, Exporter};
 use world::bundle::{import, export};
 use world::bundle::types as b;
-use world::fragment::Fragment as World_Fragment;
-use world::fragment::DummyFragment;
 use world::object::*;
 
 
@@ -29,98 +21,6 @@ pub fn structure_area(s: ObjectRef<Structure>) -> SmallSet<V2> {
     }
 
     area
-}
-
-
-// TODO: move this to logic::entity
-fn teleport_entity_internal(wf: WorldFragment,
-                            eid: EntityId,
-                            pid: Option<PlaneId>,
-                            stable_pid: Option<Stable<PlaneId>>,
-                            pos: V3) -> StrResult<()> {
-    // FIXME ugly transmute
-    let eng: &mut Engine = unsafe { mem::transmute(wf) };
-
-    let (old_pos, old_plane, cid) = {
-        let e = unwrap!(eng.world.get_entity(eid));
-        (e.pos(eng.now), e.plane_id(), e.pawn_owner().map(|c| c.id()))
-    };
-
-    let new_plane =
-        if let Some(stable_pid) = stable_pid {
-            // Load the plane, if it's not already.
-            logic::chunks::get_plane_id(eng, stable_pid)
-        } else if let Some(pid) = pid {
-            unwrap!(eng.world.get_plane(pid));
-            pid
-        } else {
-            old_plane
-        };
-    let new_pos = pos;
-
-    let old_cpos = old_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-    let new_cpos = new_pos.reduce().div_floor(scalar(CHUNK_SIZE * TILE_SIZE));
-
-    if let Some(cid) = cid {
-        // Check if we need to send a desync message.
-        // Teleporting to another point within the current chunk will not cause a view
-        // update to be scheduled, so there will never be a resync message.  That's why we set
-        // the limit to CHUNK_SIZE * TILE_SIZE: traveling that distance along either the X or Y
-        // axis will definitely move the entity into a different chunk.
-        if new_plane != old_plane || new_cpos != old_cpos {
-            eng.messages.send_client(cid, ClientResponse::SyncStatus(SyncKind::Loading));
-        }
-    }
-
-    {
-        let mut wf = DummyFragment::new(&mut eng.world);
-        let mut e = wf.entity_mut(eid);
-        try!(e.set_plane_id(new_plane));
-        e.set_motion(Motion::stationary(new_pos, eng.now));
-
-        let e = e.borrow();
-        let msg_gone = logic::vision::entity_gone_message(e);
-        let msg_appear = logic::vision::entity_appear_message(e);
-        let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now);
-        let messages = &mut eng.messages;
-        if new_plane != old_plane || new_cpos != old_cpos {
-            eng.vision.entity_add(eid, new_plane, new_cpos, |cid| {
-                messages.send_client(cid, msg_appear.clone());
-            });
-            eng.vision.entity_remove(eid, old_plane, old_cpos, |cid| {
-                messages.send_client(cid, msg_gone.clone());
-            });
-        }
-        eng.vision.entity_update(eid, |cid| {
-            messages.send_client(cid, msg_motion.clone());
-        });
-    }
-
-    if let Some(cid) = cid {
-        logic::client::update_view(eng, cid, old_plane, old_cpos, new_plane, new_cpos);
-    }
-
-    Ok(())
-}
-
-pub fn teleport_entity(wf: WorldFragment,
-                       eid: EntityId,
-                       pos: V3) -> StrResult<()> {
-    teleport_entity_internal(wf, eid, None, None, pos)
-}
-
-pub fn teleport_entity_plane(wf: WorldFragment,
-                             eid: EntityId,
-                             pid: PlaneId,
-                             pos: V3) -> StrResult<()> {
-    teleport_entity_internal(wf, eid, Some(pid), None, pos)
-}
-
-pub fn teleport_entity_stable_plane(wf: WorldFragment,
-                                    eid: EntityId,
-                                    stable_pid: Stable<PlaneId>,
-                                    pos: V3) -> StrResult<()> {
-    teleport_entity_internal(wf, eid, None, Some(stable_pid), pos)
 }
 
 
