@@ -29,7 +29,7 @@ use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use misc::Misc;
 use predict::{Predictor, Activity};
-use structures::Structures;
+use structures::{Structures, StructureId};
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
@@ -417,6 +417,12 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn open_container_dialog(&mut self, inv0: InventoryId, inv1: InventoryId) {
         use ui::dialogs::AnyDialog;
         self.ui.root.dialog.inner = AnyDialog::container(inv0, inv1);
+    }
+
+    pub fn open_crafting_dialog(&mut self, inv: InventoryId, station: StructureId) {
+        use ui::dialogs::AnyDialog;
+        let template = self.structures[station].template_id;
+        self.ui.root.dialog.inner = AnyDialog::crafting(inv, station, template);
     }
 
     pub fn close_dialog(&mut self) {

@@ -569,6 +569,10 @@ DynAsm.prototype.openContainerDialog = function(inv_id0, inv_id1) {
     return this._raw['open_container_dialog'](this.client, inv_id0, inv_id1);
 };
 
+DynAsm.prototype.openCraftingDialog = function(inv_id, station_id) {
+    return this._raw['open_crafting_dialog'](this.client, inv_id, station_id);
+};
+
 DynAsm.prototype.closeDialog = function() {
     return this._raw['close_dialog'](this.client);
 };

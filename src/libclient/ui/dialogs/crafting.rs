@@ -4,6 +4,7 @@ use physics::v3::{V2, Region};
 use client::ClientObj;
 use data::Data;
 use inventory::{Item, InventoryId};
+use structures::StructureId;
 use ui::Context;
 use ui::atlas;
 use ui::crafting;
@@ -19,6 +20,7 @@ use util::hash;
 
 pub struct Crafting {
     inv_id: InventoryId,
+    station_id: StructureId,
     template: u32,
 
     list: scroll_list::ScrollList,
@@ -29,9 +31,10 @@ pub struct Crafting {
 }
 
 impl Crafting {
-    pub fn new(inv_id: InventoryId, template: u32) -> Crafting {
+    pub fn new(inv_id: InventoryId, station_id: StructureId, template: u32) -> Crafting {
         Crafting {
             inv_id: inv_id,
+            station_id: station_id,
             template: template,
 
             list: scroll_list::ScrollList::new(V2::new(LIST_WIDTH, 0)),

@@ -93,29 +93,46 @@ var asmlibs_code_raw = function(global, env, buffer) {
     }
 
 
-    function _bitshift64Lshr(low, high, bits) {
-        low = low|0; high = high|0; bits = bits|0;
-        var ander = 0;
-        if ((bits|0) < 32) {
-            ander = ((1 << bits) - 1)|0;
-            tempRet0 = high >>> bits;
-            return (low >>> bits) | ((high&ander) << (32 - bits));
+    function _llvm_cttz_i32(x) {
+        x = x|0;
+        var y = 0;
+        var n = 31;
+
+        if ((x|0) == 0) {
+            return 32;
         }
-        tempRet0 = 0;
-        return (high >>> (bits - 32))|0;
+
+        y = (x << 16)|0; if ((y|0) != 0) { n = (n - 16)|0; x = (y|0); }
+        y = (x <<  8)|0; if ((y|0) != 0) { n = (n -  8)|0; x = (y|0); }
+        y = (x <<  4)|0; if ((y|0) != 0) { n = (n -  4)|0; x = (y|0); }
+        y = (x <<  2)|0; if ((y|0) != 0) { n = (n -  2)|0; x = (y|0); }
+        y = (x <<  1)|0; if ((y|0) != 0) { n = (n -  1)|0; x = (y|0); }
+        return (n|0);
     }
 
-    function _bitshift64Shl(low, high, bits) {
-        low = low|0; high = high|0; bits = bits|0;
-        var ander = 0;
-        if ((bits|0) < 32) {
-            ander = ((1 << bits) - 1)|0;
-            tempRet0 = (high << bits) | ((low&(ander << (32 - bits))) >>> (32 - bits));
-            return low << bits;
-        }
-        tempRet0 = low << (bits - 32);
-        return 0;
-    }
+
+    // The following functions are copied from Emscripten (src/library.js)
+    // under MIT license:
+    //
+    // Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
+    // 
+    // Permission is hereby granted, free of charge, to any person obtaining a copy
+    // of this software and associated documentation files (the "Software"), to deal
+    // in the Software without restriction, including without limitation the rights
+    // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    // copies of the Software, and to permit persons to whom the Software is
+    // furnished to do so, subject to the following conditions:
+    // 
+    // The above copyright notice and this permission notice shall be included in
+    // all copies or substantial portions of the Software.
+    // 
+    // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    // THE SOFTWARE.
 
     function _memset(ptr, value, num) {
         ptr = ptr|0; value = value|0; num = num|0;
@@ -234,47 +251,6 @@ var asmlibs_code_raw = function(global, env, buffer) {
         }
         return 0;
     }
-
-    function _llvm_cttz_i32(x) {
-        x = x|0;
-        var y = 0;
-        var n = 31;
-
-        if ((x|0) == 0) {
-            return 32;
-        }
-
-        y = (x << 16)|0; if ((y|0) != 0) { n = (n - 16)|0; x = (y|0); }
-        y = (x <<  8)|0; if ((y|0) != 0) { n = (n -  8)|0; x = (y|0); }
-        y = (x <<  4)|0; if ((y|0) != 0) { n = (n -  4)|0; x = (y|0); }
-        y = (x <<  2)|0; if ((y|0) != 0) { n = (n -  2)|0; x = (y|0); }
-        y = (x <<  1)|0; if ((y|0) != 0) { n = (n -  1)|0; x = (y|0); }
-        return (n|0);
-    }
-
-
-    // The following functions are copied from Emscripten (src/library.js)
-    // under MIT license:
-    //
-    // Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
-    // 
-    // Permission is hereby granted, free of charge, to any person obtaining a copy
-    // of this software and associated documentation files (the "Software"), to deal
-    // in the Software without restriction, including without limitation the rights
-    // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    // copies of the Software, and to permit persons to whom the Software is
-    // furnished to do so, subject to the following conditions:
-    // 
-    // The above copyright notice and this permission notice shall be included in
-    // all copies or substantial portions of the Software.
-    // 
-    // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    // THE SOFTWARE.
 
     function _i64Add(a, b, c, d) {
         /*

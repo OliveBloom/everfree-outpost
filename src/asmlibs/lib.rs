@@ -279,6 +279,13 @@ pub unsafe extern fn open_container_dialog(client: &mut Client,
 }
 
 #[no_mangle]
+pub unsafe extern fn open_crafting_dialog(client: &mut Client,
+                                          inv_id: u32,
+                                          station_id: u32) {
+    client.open_crafting_dialog(inv_id, station_id);
+}
+
+#[no_mangle]
 pub unsafe extern fn close_dialog(client: &mut Client) {
     client.close_dialog();
 }

@@ -521,19 +521,7 @@ function handleOpenDialog(idx, args) {
 }
 
 function handleOpenCrafting(station_type, station_id, inventory_id) {
-    var inv = inv_tracker.get(inventory_id);
-
-    var ui = new CraftingUI(station_type, station_id, inv, ability_inv);
-    dialog.show(ui);
-
-    ui.onaction = function(station_id, inventory_id, recipe_id, count) {
-        conn.sendCraftRecipe(station_id, inventory_id, recipe_id, count);
-    };
-
-    ui.oncancel = function() {
-        dialog.hide();
-        conn.sendCloseDialog();
-    };
+    asm_client.openCraftingDialog(inventory_id, station_id);
 }
 
 function handleCancelDialog() {

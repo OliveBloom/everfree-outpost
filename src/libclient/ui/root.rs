@@ -100,7 +100,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
         {
             // Dialog
             let self_rect = Region::sized(self.size()) + pos;
-            let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories);
+            let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories, self.dyn.data);
             let mut child = WidgetPack::new(&mut self.state.dialog, &dyn);
             let child_rect = Region::sized(child.size());
             let rect = child_rect.align(self_rect, Align::Center, Align::Center);
@@ -114,17 +114,6 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             let rect = Region::sized(child.size()) + base;
             v.visit(&mut child, rect);
         }
-
-        {
-            let dyn = ::ui::dialogs::CraftingDyn::new(self.dyn.inventories, self.dyn.data);
-            let mut state = ::ui::dialogs::Crafting::new(
-                self.dyn.inventories.main_id().unwrap_or(0),
-                0);
-            let mut child = WidgetPack::new(&mut state, &dyn);
-            let rect = Region::sized(child.size()) + V2::new(50, 200);
-            v.visit(&mut child, rect);
-        }
-
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
