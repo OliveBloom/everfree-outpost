@@ -29,8 +29,8 @@ mod ffi {
                                  dest_inv: u32,
                                  dest_slot: usize,
                                  amount: u8);
-        pub fn ap_send_craft_recipe(station_id: u32,
-                                    inventory_id: u32,
+        pub fn ap_send_craft_recipe(inventory_id: u32,
+                                    station_id: u32,
                                     recipe_id: u16,
                                     count: u16);
         pub fn ap_send_close_dialog();
@@ -79,12 +79,12 @@ impl platform::Platform for Platform {
     }
 
     fn send_craft_recipe(&mut self,
-                         station_id: StructureId,
                          inventory_id: InventoryId,
+                         station_id: StructureId,
                          recipe_id: u16,
                          count: u16) {
         unsafe {
-            ffi::ap_send_craft_recipe(station_id, inventory_id, recipe_id, count);
+            ffi::ap_send_craft_recipe(inventory_id, station_id, recipe_id, count);
         }
     }
 

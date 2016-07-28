@@ -194,40 +194,30 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
         */
     }
 
-    /*
     fn on_key(&mut self, key: KeyEvent) -> EventStatus {
-        let idx = self.state.focus as usize;
+        // TODO: make the inventory display "disabled", then use the normal key visitor first.
         let mut status = {
-            let inv = self.dyn.invs.get(self.state.inv_id[idx]);
-            let dyn = GridDyn::new(inv, true);
-            let mut child = WidgetPack::new(&mut self.state.grid[idx], &dyn);
+            let dyn = ListDyn {
+                data: &self.dyn.data,
+                recipe_ids: &self.state.cache.recipe_ids,
+            };
+            let mut child = WidgetPack::new(&mut self.state.list, &dyn);
             child.on_key(key)
         };
 
         if !status.is_handled() {
             match key.code {
-                KeyAction::MoveLeft if idx > 0 => {
-                    self.state.focus -= 1;
-                    status = EventStatus::Handled;
-                },
-                KeyAction::MoveRight if idx < 1 => {
-                    self.state.focus += 1;
-                    status = EventStatus::Handled;
-                },
                 KeyAction::Select => {
-                    let src_inv = self.state.inv_id[idx];
-                    let src_slot = self.state.grid[idx].focus;
-                    let dest_inv = self.state.inv_id[1 - idx];
-                    let dest_slot = 255;    // NO_SLOT - place items automatically
-
-                    let amount = if key.shift() { 10 } else { 1 };
+                    let inv_id = self.state.inv_id;
+                    let station_id = self.state.station_id;
+                    let recipe_id = self.state.cache.recipe_ids[self.state.list.focus];
+                    let count = if key.shift() { 10 } else { 1 };
 
                     status = EventStatus::Action(box move |c: &mut ClientObj| {
-                        c.platform().send_move_item(src_inv,
-                                                    src_slot,
-                                                    dest_inv,
-                                                    dest_slot,
-                                                    amount);
+                        c.platform().send_craft_recipe(inv_id,
+                                                       station_id,
+                                                       recipe_id,
+                                                       count);
                     });
                 },
                 _ => {},
@@ -237,6 +227,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
         status
     }
 
+    /*
     fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
         let mut i = 0;
         let mut hit = None;

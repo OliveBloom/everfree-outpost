@@ -24,8 +24,8 @@ pub trait Platform {
                       dest_slot: usize,
                       amount: u8);
     fn send_craft_recipe(&mut self,
-                         station_id: StructureId,
                          inventory_id: InventoryId,
+                         station_id: StructureId,
                          recipe_id: u16,
                          count: u16);
     fn send_close_dialog(&mut self);
@@ -60,8 +60,8 @@ pub trait PlatformObj {
                       dest_slot: usize,
                       amount: u8);
     fn send_craft_recipe(&mut self,
-                         station_id: StructureId,
                          inventory_id: InventoryId,
+                         station_id: StructureId,
                          recipe_id: u16,
                          count: u16);
     fn send_close_dialog(&mut self);
@@ -93,11 +93,11 @@ impl<P: Platform> PlatformObj for P {
     }
 
     fn send_craft_recipe(&mut self,
-                         station_id: StructureId,
                          inventory_id: InventoryId,
+                         station_id: StructureId,
                          recipe_id: u16,
                          count: u16) {
-        Platform::send_craft_recipe(self, station_id, inventory_id, recipe_id, count);
+        Platform::send_craft_recipe(self, inventory_id, station_id, recipe_id, count);
     }
 
     fn send_close_dialog(&mut self) {
