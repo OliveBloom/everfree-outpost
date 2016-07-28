@@ -21,6 +21,7 @@ struct EntryDyn<'a> {
     width: i32,
     label: &'a str,
     active: bool,
+    enabled: bool,
 }
 
 const ENTRY_HEIGHT: i32 = 13;
@@ -45,8 +46,11 @@ impl<'a> Widget for WidgetPack<'a, Entry, EntryDyn<'a>> {
                          rect.min + V2::new(2, 2));
         }
 
+        let font =
+            if self.dyn.enabled { &fonts::NAME }
+            else { &fonts::DEFAULT_GRAY };
         let offset = V2::new(9, 2);
-        geom.draw_str(&fonts::NAME, self.dyn.label, rect.min + offset);
+        geom.draw_str(font, self.dyn.label, rect.min + offset);
     }
 }
 
@@ -107,6 +111,7 @@ impl ScrollList {
 
 pub trait ScrollListDyn {
     fn get(&self, idx: usize) -> &str;
+    fn is_enabled(&self, idx: usize) -> bool { true }
     fn len(&self) -> usize;
 }
 
@@ -135,6 +140,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
                 width: width,
                 label: self.dyn.get(idx as usize),
                 active: idx == self.state.focus,
+                enabled: self.dyn.is_enabled(idx as usize),
             };
             let mut child = WidgetPack::stateless(Entry, &dyn);
             let rect = Region::sized(child.size()) + pos;

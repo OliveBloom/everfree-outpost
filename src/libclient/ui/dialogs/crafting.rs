@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 use physics::v3::{V2, Region};
 
 use client::ClientObj;
-use data::Data;
+use data::{Data, RecipeDef};
 use inventory::{Item, InventoryId};
 use structures::StructureId;
 use ui::Context;
@@ -169,6 +169,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
             let dyn = ListDyn {
                 data: &self.dyn.data,
                 recipe_ids: &self.state.cache.recipe_ids,
+                inv: self.dyn.invs.get(self.state.inv_id),
             };
             let mut child = WidgetPack::new(&mut self.state.list, &dyn);
             let rect = Region::sized(child.size()) + pos + V2::new(0, 0);
@@ -200,6 +201,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
             let dyn = ListDyn {
                 data: &self.dyn.data,
                 recipe_ids: &self.state.cache.recipe_ids,
+                inv: self.dyn.invs.get(self.state.inv_id),
             };
             let mut child = WidgetPack::new(&mut self.state.list, &dyn);
             child.on_key(key)
@@ -251,16 +253,35 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
 struct ListDyn<'a> {
     data: &'a Data,
     recipe_ids: &'a [u16],
+    inv: Option<&'a ::inventory::Inventory>,
+}
+
+impl<'a> ListDyn<'a> {
+    fn get_recipe(&self, idx: usize) -> Option<RecipeDef<'a>> {
+        let id = self.recipe_ids[idx];
+        if (id as usize) < self.data.recipes().len() {
+            Some(self.data.recipe(id))
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a> scroll_list::ScrollListDyn for ListDyn<'a> {
     fn get(&self, idx: usize) -> &str {
-        let id = self.recipe_ids[idx];
-        if (id as usize) < self.data.recipes().len() {
-            self.data.recipe(id).ui_name()
-        } else {
-            "[missing recipe]"
+        self.get_recipe(idx).map_or("[unknown recipe]", |r| r.ui_name())
+    }
+
+    fn is_enabled(&self, idx: usize) -> bool {
+        if let Some(recipe) = self.get_recipe(idx) {
+            if let Some(inv) = self.inv {
+                if recipe.inputs().iter()
+                         .all(|input| inv.count(input.item) >= input.quantity) {
+                    return true;
+                }
+            }
         }
+        false
     }
 
     fn len(&self) -> usize {
