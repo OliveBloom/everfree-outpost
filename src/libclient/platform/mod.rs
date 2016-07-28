@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 
 use Time;
 use inventory::InventoryId;
+use structures::StructureId;
 
 #[macro_use] pub mod gl;
 
@@ -22,6 +23,11 @@ pub trait Platform {
                       dest_inv: InventoryId,
                       dest_slot: usize,
                       amount: u8);
+    fn send_craft_recipe(&mut self,
+                         station_id: StructureId,
+                         inventory_id: InventoryId,
+                         recipe_id: u16,
+                         count: u16);
     fn send_close_dialog(&mut self);
 
     fn get_time(&self) -> Time;
@@ -53,6 +59,11 @@ pub trait PlatformObj {
                       dest_inv: InventoryId,
                       dest_slot: usize,
                       amount: u8);
+    fn send_craft_recipe(&mut self,
+                         station_id: StructureId,
+                         inventory_id: InventoryId,
+                         recipe_id: u16,
+                         count: u16);
     fn send_close_dialog(&mut self);
 
     fn get_time(&self) -> Time;
@@ -79,6 +90,14 @@ impl<P: Platform> PlatformObj for P {
                       dest_slot: usize,
                       amount: u8) {
         Platform::send_move_item(self, src_inv, src_slot, dest_inv, dest_slot, amount);
+    }
+
+    fn send_craft_recipe(&mut self,
+                         station_id: StructureId,
+                         inventory_id: InventoryId,
+                         recipe_id: u16,
+                         count: u16) {
+        Platform::send_craft_recipe(self, station_id, inventory_id, recipe_id, count);
     }
 
     fn send_close_dialog(&mut self) {

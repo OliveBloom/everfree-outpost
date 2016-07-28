@@ -259,6 +259,10 @@ var module_env = function(asm) {
             asm.conn.sendMoveItem(src_inv, src_slot, dest_inv, dest_slot, amount);
         },
 
+        'ap_send_craft_recipe': function(station_id, inventory_id, recipe_id, count) {
+            asm.conn.sendMoveItem(station_id, inventory_id, recipe_id, count);
+        },
+
         'ap_send_close_dialog': function() {
             asm.conn.sendCloseDialog();
         },
