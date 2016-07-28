@@ -116,17 +116,10 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
         }
 
         {
-            let dyn = DummyListDyn;
-            let mut child = WidgetPack::new(&mut self.state.test_list, &dyn);
-            let rect = Region::sized(child.size()) + V2::new(50, 50);
-            v.visit(&mut child, rect);
-        }
-
-        {
-            let main = self.dyn.inventories.main_inventory();
-            let abil = self.dyn.inventories.ability_inventory();
-            let dyn = ::ui::dialogs::CraftingDyn::new(main, &self.dyn.data, abil, 0);
-            let mut state = ::ui::dialogs::Crafting::new();
+            let dyn = ::ui::dialogs::CraftingDyn::new(self.dyn.inventories, self.dyn.data);
+            let mut state = ::ui::dialogs::Crafting::new(
+                self.dyn.inventories.main_id().unwrap_or(0),
+                0);
             let mut child = WidgetPack::new(&mut state, &dyn);
             let rect = Region::sized(child.size()) + V2::new(50, 200);
             v.visit(&mut child, rect);

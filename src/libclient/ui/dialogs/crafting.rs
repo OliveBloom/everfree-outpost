@@ -18,6 +18,9 @@ use util::hash;
 
 
 pub struct Crafting {
+    inv_id: InventoryId,
+    template: u32,
+
     list: scroll_list::ScrollList,
     grid: inventory::Grid,
     focus: u8,
@@ -26,8 +29,11 @@ pub struct Crafting {
 }
 
 impl Crafting {
-    pub fn new() -> Crafting {
+    pub fn new(inv_id: InventoryId, template: u32) -> Crafting {
         Crafting {
+            inv_id: inv_id,
+            template: template,
+
             list: scroll_list::ScrollList::new(V2::new(LIST_WIDTH, 0)),
             grid: inventory::Grid::new(),
             focus: 0,
@@ -58,20 +64,23 @@ impl CraftingCache {
         }
     }
 
-    fn update(&mut self, dyn: &CraftingDyn) {
+    fn update(&mut self,
+              dyn: &CraftingDyn,
+              inv_id: InventoryId,
+              template: u32) {
         let abilities_hash =
-            if let Some(ref abilities) = dyn.abilities {
+            if let Some(abilities) = dyn.invs.ability_inventory() {
                 hash(&abilities.items as &[_])
             } else {
                 0
             };
         if abilities_hash == self.abilities_hash &&
-           dyn.template == self.template {
+           template == self.template {
             return;
         }
 
         self.abilities_hash = abilities_hash;
-        self.template = dyn.template;
+        self.template = template;
         self.recipe_ids = Vec::new();
 
         for id in 0 .. dyn.data.recipes().len() as u16 {
@@ -79,7 +88,7 @@ impl CraftingCache {
 
             // Check ability filter
             if r.ability != 0 {
-                if let Some(ref abilities) = dyn.abilities {
+                if let Some(abilities) = dyn.invs.ability_inventory() {
                     if abilities.count(r.ability) == 0 {
                         continue;
                     }
@@ -89,7 +98,7 @@ impl CraftingCache {
             }
 
             // Check station filter
-            if r.station != 0 && dyn.template != r.station {
+            if r.station != 0 && template != r.station {
                 continue;
             }
 
@@ -100,25 +109,16 @@ impl CraftingCache {
 
 #[derive(Clone, Copy)]
 pub struct CraftingDyn<'a> {
-    inv: Option<&'a ::inventory::Inventory>,
+    invs: &'a ::inventory::Inventories,
     data: &'a Data,
-
-    // For checking ability filters
-    abilities: Option<&'a ::inventory::Inventory>,
-    // For checking structure filters
-    template: u32,
 }
 
 impl<'a> CraftingDyn<'a> {
-    pub fn new(inv: Option<&'a ::inventory::Inventory>,
-               data: &'a Data,
-               abilities: Option<&'a ::inventory::Inventory>,
-               template: u32) -> CraftingDyn<'a> {
+    pub fn new(invs: &'a ::inventory::Inventories,
+               data: &'a Data) -> CraftingDyn<'a> {
         CraftingDyn {
-            inv: inv,
+            invs: invs,
             data: data,
-            abilities: abilities,
-            template: template,
         }
     }
 }
@@ -131,14 +131,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
     }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        self.state.cache.update(&self.dyn);
+        self.state.cache.update(&self.dyn, self.state.inv_id, self.state.template);
 
 
         let ox = LIST_WIDTH + 7;
         let mut oy = 0;
 
         {
-            let dyn = dialogs::inventory::GridDyn::new(self.dyn.inv, false);
+            let inv = self.dyn.invs.get(self.state.inv_id);
+            let dyn = dialogs::inventory::GridDyn::new(inv, false);
             let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
             let rect = Region::sized(child.size()) + pos + V2::new(ox, oy);
             v.visit(&mut child, rect);
