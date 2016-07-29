@@ -5,6 +5,7 @@ use common::Gauge;
 
 use Time;
 use client::ClientObj;
+use data::Data;
 use debug::Debug as DebugDyn;
 use inventory::{Inventory, Inventories};
 use misc;
@@ -14,10 +15,23 @@ use ui::input::{KeyAction, KeyEvent, EventStatus};
 use ui::{dialog, dialogs, hotbar, debug, top_bar};
 use ui::widget::*;
 
+use ui::scroll_list;
+
+
+struct DummyListDyn;
+static STRINGS: &'static [&'static str] = &["test", "one", "two", "three"];
+impl scroll_list::ScrollListDyn for DummyListDyn {
+    fn get(&self, idx: usize) -> &str { STRINGS[idx % STRINGS.len()] }
+    fn len(&self) -> usize { 50 }
+}
+
+
+
 
 pub struct Root {
     pub dialog: dialog::Dialog<dialogs::AnyDialog>,
     pub debug: debug::Debug,
+    pub test_list: scroll_list::ScrollList,
 }
 
 impl Root {
@@ -25,6 +39,7 @@ impl Root {
         Root {
             dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
             debug: debug::Debug::new(),
+            test_list: scroll_list::ScrollList::new(V2::new(150, 100)),
         }
     }
 
@@ -37,6 +52,7 @@ impl Root {
 pub struct RootDyn<'a> {
     pub screen_size: V2,
     pub now: Time,
+    pub data: &'a Data,
     pub inventories: &'a Inventories,
     pub hotbar: &'a misc::Hotbar,
     pub debug: &'a DebugDyn,
@@ -44,16 +60,18 @@ pub struct RootDyn<'a> {
 }
 
 impl<'a> RootDyn<'a> {
-    pub fn new(now: Time,
-               screen_size: (u16, u16),
+    pub fn new(screen_size: (u16, u16),
+               now: Time,
+               data: &'a Data,
                inventories: &'a Inventories,
                hotbar: &'a misc::Hotbar,
                debug: &'a DebugDyn,
                energy: &'a Gauge) -> RootDyn<'a> {
         RootDyn {
-            now: now,
             screen_size: V2::new(screen_size.0 as i32,
                                  screen_size.1 as i32),
+            now: now,
+            data: data,
             inventories: inventories,
             hotbar: hotbar,
             debug: debug,
@@ -74,7 +92,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
                                      self.dyn.inventories.main_inventory(),
                                      self.dyn.hotbar,
                                      self.dyn.energy);
-            let mut child = WidgetPack::stateless(top_bar::TopBar, dyn);
+            let mut child = WidgetPack::stateless(top_bar::TopBar, &dyn);
             let rect = Region::sized(child.size()) + pos;
             v.visit(&mut child, rect);
         }
@@ -82,8 +100,8 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
         {
             // Dialog
             let self_rect = Region::sized(self.size()) + pos;
-            let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories);
-            let mut child = WidgetPack::new(&mut self.state.dialog, dyn);
+            let dyn = dialogs::AnyDialogDyn::new(self.dyn.inventories, self.dyn.data);
+            let mut child = WidgetPack::new(&mut self.state.dialog, &dyn);
             let child_rect = Region::sized(child.size());
             let rect = child_rect.align(self_rect, Align::Center, Align::Center);
             v.visit(&mut child, rect);
@@ -91,12 +109,11 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 
         {
             // Debug pane
-            let mut child = WidgetPack::new(&mut self.state.debug, self.dyn.debug);
+            let mut child = WidgetPack::new(&mut self.state.debug, &self.dyn.debug);
             let base = pos + V2::new(self.dyn.screen_size.x - child.size().x, 0);
             let rect = Region::sized(child.size()) + base;
             v.visit(&mut child, rect);
         }
-
     }
 
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
@@ -177,7 +194,7 @@ impl<'a> TopBarDyn<'a> {
 }
 
 impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
-    fn hotbar_slot_info(self, idx: u8) -> hotbar::SlotInfo {
+    fn hotbar_slot_info(&self, idx: u8) -> hotbar::SlotInfo {
         let inv = match self.inv {
             Some(x) => x,
             None => return hotbar::SlotInfo {
@@ -202,15 +219,15 @@ impl<'a> top_bar::TopBarDyn for TopBarDyn<'a> {
         }
     }
 
-    fn cur_energy(self) -> i32 {
+    fn cur_energy(&self) -> i32 {
         self.energy.get(self.now)
     }
 
-    fn max_energy(self) -> i32 {
+    fn max_energy(&self) -> i32 {
         self.energy.max()
     }
 
-    fn energy_tribe(self) -> top_bar::Tribe {
+    fn energy_tribe(&self) -> top_bar::Tribe {
         top_bar::Tribe::Earth
     }
 }

@@ -289,13 +289,16 @@ if __name__ == '__main__':
 
         data.day_night('$b_data/day_night.json', '$root/assets/misc/day_night_pixels.png'),
         data.font('name', '$root/assets/misc/NeoSans.png'),
+        data.font('default_gray', '$root/assets/misc/NeoSans.png',
+                extra_args='--color=0x757161'),
         data.font('bold', '$root/assets/misc/NeoSans.png',
             extra_args='--bold'),
         data.font('title', '$root/assets/misc/Alagard.png',
             extra_args='--no-shadow --color=0xdeeed6'),
         data.font('hotbar', '$root/assets/misc/hotbar-font.png',
             charset_args='--char-list="0123456789.k/"'),
-        data.font_stack('$b_data/fonts', ('name', 'bold', 'hotbar', 'title')),
+        data.font_stack('$b_data/fonts',
+                ('name', 'default_gray', 'bold', 'hotbar', 'title')),
         data.server_json('$b_data/server.json'),
         data.ui_atlas('$b_data', '$root/assets/ui_gl/png'),
 

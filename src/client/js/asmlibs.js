@@ -259,6 +259,10 @@ var module_env = function(asm) {
             asm.conn.sendMoveItem(src_inv, src_slot, dest_inv, dest_slot, amount);
         },
 
+        'ap_send_craft_recipe': function(inventory_id, station_id, recipe_id, count) {
+            asm.conn.sendCraftRecipe(station_id, inventory_id, recipe_id, count);
+        },
+
         'ap_send_close_dialog': function() {
             asm.conn.sendCloseDialog();
         },
@@ -545,12 +549,12 @@ DynAsm.prototype.inputMouseMove = function(x, y) {
     return this._raw['input_mouse_move'](this.client, x, y);
 };
 
-DynAsm.prototype.inputMouseDown = function(x, y) {
-    return this._raw['input_mouse_down'](this.client, x, y);
+DynAsm.prototype.inputMouseDown = function(x, y, button, shift) {
+    return this._raw['input_mouse_down'](this.client, x, y, button, shift);
 };
 
-DynAsm.prototype.inputMouseUp = function(x, y) {
-    return this._raw['input_mouse_up'](this.client, x, y);
+DynAsm.prototype.inputMouseUp = function(x, y, button, shift) {
+    return this._raw['input_mouse_up'](this.client, x, y, button, shift);
 };
 
 DynAsm.prototype.openInventoryDialog = function() {
@@ -563,6 +567,10 @@ DynAsm.prototype.openAbilityDialog = function() {
 
 DynAsm.prototype.openContainerDialog = function(inv_id0, inv_id1) {
     return this._raw['open_container_dialog'](this.client, inv_id0, inv_id1);
+};
+
+DynAsm.prototype.openCraftingDialog = function(inv_id, station_id) {
+    return this._raw['open_crafting_dialog'](this.client, inv_id, station_id);
 };
 
 DynAsm.prototype.closeDialog = function() {
@@ -767,7 +775,8 @@ AsmClientInput.prototype.handleMouseMove = function(evt) {
 };
 
 AsmClientInput.prototype.handleMouseDown = function(evt) {
-    var ret = this._asm.inputMouseDown(evt.x, evt.y);
+    // JS numbers buttons 0,1,2, but libclient numbers them 1,2,3.
+    var ret = this._asm.inputMouseDown(evt.x, evt.y, evt.button + 1, evt.shift);
     if (!ret) {
         evt.forward();
     }
@@ -775,7 +784,19 @@ AsmClientInput.prototype.handleMouseDown = function(evt) {
 };
 
 AsmClientInput.prototype.handleMouseUp = function(evt) {
-    var ret = this._asm.inputMouseUp(evt.x, evt.y);
+    var ret = this._asm.inputMouseUp(evt.x, evt.y, evt.button + 1, evt.shift);
+    if (!ret) {
+        evt.forward();
+    }
+    return ret;
+};
+
+AsmClientInput.prototype.handleWheel = function(evt) {
+    var button = evt.raw.deltaY < 0 ? 4 : 5;
+    var ret1 = this._asm.inputMouseDown(evt.x, evt.y, button, evt.shift);
+    var ret2 = this._asm.inputMouseUp(evt.x, evt.y, button, evt.shift);
+    console.log('dispatched mouse wheel event:', button, ret1, ret2);
+    var ret = ret1 || ret2;
     if (!ret) {
         evt.forward();
     }

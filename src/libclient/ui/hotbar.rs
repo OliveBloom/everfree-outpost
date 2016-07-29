@@ -30,7 +30,7 @@ impl<'a> Widget for WidgetPack<'a, Slot, SlotDyn> {
     fn size(&mut self) -> V2 { Slot::size() }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let mut child = WidgetPack::stateless(item::ItemDisplay, self.dyn.item_dyn);
+        let mut child = WidgetPack::stateless(item::ItemDisplay, &self.dyn.item_dyn);
         let rect = Region::sized(child.size()) + pos + scalar(4);
         v.visit(&mut child, rect);
     }
@@ -58,8 +58,8 @@ pub struct SlotInfo {
     pub is_active_ability: bool,
 }
 
-pub trait HotbarDyn: Copy {
-    fn slot_info(self, idx: u8) -> SlotInfo;
+pub trait HotbarDyn {
+    fn slot_info(&self, idx: u8) -> SlotInfo;
 }
 
 impl Hotbar {
@@ -89,7 +89,7 @@ impl<'a, D: HotbarDyn> Widget for WidgetPack<'a, Hotbar, D> {
                     else { 0 },
             };
 
-            let mut child = WidgetPack::stateless(Slot, dyn);
+            let mut child = WidgetPack::stateless(Slot, &dyn);
             let rect = Region::sized(child_size) + base + step * scalar(i as i32);
             v.visit(&mut child, rect);
         }

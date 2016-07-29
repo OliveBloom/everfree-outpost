@@ -132,6 +132,9 @@ Input.prototype.attach = function(doc) {
     doc.addEventListener('mouseup', function(evt) {
         this_.handleMouseUp(evt);
     });
+    doc.addEventListener('wheel', function(evt) {
+        this_.handleWheel(evt);
+    });
 
     doc.addEventListener('contextmenu', function(evt) {
         if (alwaysStopMouse(evt)) {
@@ -262,6 +265,23 @@ Input.prototype.handleMouseUp = function(raw) {
         var h = this.handlers[i];
         if (h.handleMouseUp != null) {
             ret = h.handleMouseUp(evt);
+            if (!evt._forward) {
+                break;
+            } else {
+                evt._reset();
+            }
+        }
+    }
+    this._cleanup(evt, ret || alwaysStopMouse(raw));
+};
+
+Input.prototype.handleWheel = function(raw) {
+    var evt = new MouseEvent(raw);
+    var ret = false;
+    for (var i = this.handlers.length - 1; i >= 0; --i) {
+        var h = this.handlers[i];
+        if (h.handleWheel != null) {
+            ret = h.handleWheel(evt);
             if (!evt._forward) {
                 break;
             } else {

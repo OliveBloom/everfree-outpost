@@ -55,16 +55,16 @@ def build_rust(metrics):
 
         result += textwrap.dedent('''
 
-            pub const {name}_SPANS: [CharSpan; {num_spans}] = [
+            pub static {name}_SPANS: [CharSpan; {num_spans}] = [
             {spans_code}
             ];
-            pub const {name}_XS: [u16; {num_xs}] = [
+            pub static {name}_XS: [u16; {num_xs}] = [
             {xs_code}
             ];
-            pub const {name}_WIDTHS: [u8; {num_widths}] = [
+            pub static {name}_WIDTHS: [u8; {num_widths}] = [
             {widths_code}
             ];
-            pub const {name}: FontMetrics = FontMetrics {{
+            pub static {name}: FontMetrics = FontMetrics {{
                 spans: &{name}_SPANS,
                 y: {y},
                 height: {height},

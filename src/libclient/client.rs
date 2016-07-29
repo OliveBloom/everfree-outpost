@@ -29,12 +29,12 @@ use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item, InventoryId};
 use misc::Misc;
 use predict::{Predictor, Activity};
-use structures::Structures;
+use structures::{Structures, StructureId};
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
 use ui::{UI, Dyn};
-use ui::input::{KeyAction, Modifiers, KeyEvent, EventStatus};
+use ui::input::{KeyAction, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 
 
 pub struct Client<'d, P: Platform> {
@@ -352,19 +352,20 @@ impl<'d, P: Platform> Client<'d, P> {
         }
     }
 
-    fn with_ui_dyn<F: FnOnce(&mut UI, Dyn) -> R, R>(&mut self, f: F) -> R {
+    fn with_ui_dyn<F: FnOnce(&mut UI, &Dyn) -> R, R>(&mut self, f: F) -> R {
         let c = self.ui_scale;
         let sx = (self.view_size.0 + c - 1) / c;
         let sy = (self.view_size.1 + c - 1) / c;
 
         // TODO: should take the time as an argument instead of calling now()
-        let dyn = Dyn::new(self.now(),
-                           (sx, sy),
+        let dyn = Dyn::new((sx, sy),
+                           self.now(),
+                           &self.data,
                            &self.inventories,
                            &self.misc.hotbar,
                            &self.debug,
                            &self.misc.energy);
-        f(&mut self.ui, dyn)
+        f(&mut self.ui, &dyn)
     }
 
     pub fn input_key(&mut self, code: u8, mods: u8) -> bool {
@@ -391,15 +392,29 @@ impl<'d, P: Platform> Client<'d, P> {
         self.process_event_status(status)
     }
 
-    pub fn input_mouse_down(&mut self, pos: V2) -> bool {
-        let pos = self.convert_mouse_pos(pos);
-        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_down(pos, dyn));
+    pub fn input_mouse_down(&mut self, pos: V2, button: u8, mods: u8) -> bool {
+        let status =
+            if let Some(button) = Button::from_code(button) {
+                let pos = self.convert_mouse_pos(pos);
+                let mods = Modifiers::from_bits_truncate(mods);
+                let evt = ButtonEvent::new(button, mods);
+                self.with_ui_dyn(|ui, dyn| ui.handle_mouse_down(pos, evt, dyn))
+            } else {
+                EventStatus::Unhandled
+            };
         self.process_event_status(status)
     }
 
-    pub fn input_mouse_up(&mut self, pos: V2) -> bool {
-        let pos = self.convert_mouse_pos(pos);
-        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_up(pos, dyn));
+    pub fn input_mouse_up(&mut self, pos: V2, button: u8, mods: u8) -> bool {
+        let status =
+            if let Some(button) = Button::from_code(button) {
+                let pos = self.convert_mouse_pos(pos);
+                let mods = Modifiers::from_bits_truncate(mods);
+                let evt = ButtonEvent::new(button, mods);
+                self.with_ui_dyn(|ui, dyn| ui.handle_mouse_up(pos, evt, dyn))
+            } else {
+                EventStatus::Unhandled
+            };
         self.process_event_status(status)
     }
 
@@ -416,6 +431,12 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn open_container_dialog(&mut self, inv0: InventoryId, inv1: InventoryId) {
         use ui::dialogs::AnyDialog;
         self.ui.root.dialog.inner = AnyDialog::container(inv0, inv1);
+    }
+
+    pub fn open_crafting_dialog(&mut self, inv: InventoryId, station: StructureId) {
+        use ui::dialogs::AnyDialog;
+        let template = self.structures[station].template_id;
+        self.ui.root.dialog.inner = AnyDialog::crafting(inv, station, template);
     }
 
     pub fn close_dialog(&mut self) {

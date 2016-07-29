@@ -2,7 +2,9 @@
 use std::mem;
 use physics::v3::{V2, scalar, Region};
 
+use data::Data;
 use inventory::{Inventories, InventoryId};
+use structures::StructureId;
 use ui::dialog;
 use ui::geom::Geom;
 use ui::input::{KeyAction, KeyEvent, EventStatus};
@@ -10,9 +12,11 @@ use ui::widget::*;
 
 
 mod inventory;
+mod crafting;
 
 pub use self::inventory::{Inventory, InventoryDyn};
 pub use self::inventory::{Container, ContainerDyn};
+pub use self::crafting::{Crafting, CraftingDyn};
 
 
 pub enum AnyDialog {
@@ -20,6 +24,7 @@ pub enum AnyDialog {
     Inventory(Inventory),
     Ability(Inventory),
     Container(Container),
+    Crafting(Crafting),
 }
 
 impl AnyDialog {
@@ -40,10 +45,17 @@ impl AnyDialog {
         AnyDialog::Container(Container::new(inv_id1, inv_id2))
     }
 
+    pub fn crafting(inv_id: InventoryId,
+                    station_id: StructureId,
+                    template: u32) -> AnyDialog {
+        AnyDialog::Crafting(Crafting::new(inv_id, station_id, template))
+    }
+
 
     fn on_close(self) -> EventStatus {
         match self {
             AnyDialog::Container(s) => s.on_close(),
+            AnyDialog::Crafting(s) => s.on_close(),
             _ => EventStatus::Unhandled,
         }
     }
@@ -56,6 +68,7 @@ impl dialog::Inner for AnyDialog {
             AnyDialog::Inventory(_) => "Inventory",
             AnyDialog::Ability(_) => "Abilities",
             AnyDialog::Container(_) => "Container",
+            AnyDialog::Crafting(_) => "Crafting",
         }
     }
 
@@ -70,12 +83,15 @@ impl dialog::Inner for AnyDialog {
 #[derive(Clone, Copy)]
 pub struct AnyDialogDyn<'a> {
     inventories: &'a Inventories,
+    data: &'a Data,
 }
 
 impl<'a> AnyDialogDyn<'a> {
-    pub fn new(inventories: &'a Inventories) -> AnyDialogDyn<'a> {
+    pub fn new(inventories: &'a Inventories,
+               data: &'a Data) -> AnyDialogDyn<'a> {
         AnyDialogDyn {
             inventories: inventories,
+            data: data,
         }
     }
 }
@@ -93,21 +109,28 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
 
             AnyDialog::Inventory(ref mut state) => {
                 let dyn = InventoryDyn::new(self.dyn.inventories.main_inventory());
-                let mut child = WidgetPack::new(state, dyn);
+                let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },
 
             AnyDialog::Ability(ref mut state) => {
                 let dyn = InventoryDyn::new(self.dyn.inventories.ability_inventory());
-                let mut child = WidgetPack::new(state, dyn);
+                let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },
 
             AnyDialog::Container(ref mut state) => {
                 let dyn = ContainerDyn::new(self.dyn.inventories);
-                let mut child = WidgetPack::new(state, dyn);
+                let mut child = WidgetPack::new(state, &dyn);
+                let rect = Region::sized(child.size()) + pos;
+                v.visit(&mut child, rect);
+            },
+
+            AnyDialog::Crafting(ref mut state) => {
+                let dyn = CraftingDyn::new(self.dyn.inventories, self.dyn.data);
+                let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },

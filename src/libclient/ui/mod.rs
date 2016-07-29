@@ -20,6 +20,8 @@ mod hotbar;
 mod dialog;
 mod debug;
 mod top_bar;
+mod scroll_list;
+mod crafting;
 
 pub mod dialogs;    // TODO: make private
 mod root;
@@ -39,7 +41,7 @@ impl UI {
         }
     }
 
-    pub fn generate_geom(&mut self, dyn: Dyn) -> (Vec<geom::Vertex>, Vec<geom::Special>) {
+    pub fn generate_geom(&mut self, dyn: &Dyn) -> (Vec<geom::Vertex>, Vec<geom::Special>) {
         let mut geom = geom::Geom::new();
 
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
@@ -54,7 +56,7 @@ impl UI {
                     let item = inv.items[data.src_slot];
 
                     let dyn = item::ItemDyn::from_item(item);
-                    let mut disp = widget::WidgetPack::stateless(item::ItemDisplay, dyn);
+                    let mut disp = widget::WidgetPack::stateless(item::ItemDisplay, &dyn);
                     let disp_rect = Region::sized(disp.size()) + self.context.mouse_pos;
                     disp.render(&mut geom, disp_rect);
                 }
@@ -66,7 +68,7 @@ impl UI {
 
     pub fn handle_key(&mut self,
                       key: input::KeyEvent,
-                      dyn: Dyn) -> input::EventStatus {
+                      dyn: &Dyn) -> input::EventStatus {
         if !self.context.dragging() {
             let mut root = widget::WidgetPack::new(&mut self.root, dyn);
             root.on_key(key)
@@ -83,7 +85,7 @@ impl UI {
 
     pub fn handle_mouse_move(&mut self,
                              pos: V2,
-                             dyn: Dyn) -> input::EventStatus {
+                             dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -93,7 +95,8 @@ impl UI {
 
     pub fn handle_mouse_down(&mut self,
                              pos: V2,
-                             dyn: Dyn) -> input::EventStatus {
+                             evt: input::ButtonEvent,
+                             dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -102,7 +105,7 @@ impl UI {
         self.context.mouse_down_pos = pos;
 
         if !self.context.dragging() {
-            root.on_mouse_down(&mut self.context, rect)
+            root.on_mouse_down(&mut self.context, rect, evt)
         } else {
             input::EventStatus::Handled
         }
@@ -110,7 +113,8 @@ impl UI {
 
     pub fn handle_mouse_up(&mut self,
                            pos: V2,
-                           dyn: Dyn) -> input::EventStatus {
+                           evt: input::ButtonEvent,
+                           dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -118,14 +122,14 @@ impl UI {
         self.context.mouse_down = false;
 
         if !self.context.dragging() {
-            root.on_mouse_up(&mut self.context, rect)
+            root.on_mouse_up(&mut self.context, rect, evt)
         } else {
             let data = self.context.drag_data.take().unwrap();
             root.on_drop(&mut self.context, rect, &data)
         }
     }
 
-    pub fn get_cursor(&mut self, dyn: Dyn) -> Cursor {
+    pub fn get_cursor(&mut self, dyn: &Dyn) -> Cursor {
         if !self.context.dragging() {
             return Cursor::Normal;
         }
@@ -203,5 +207,12 @@ impl<'a> Visitor for RenderVisitor<'a> {
     fn visit<W: Widget>(&mut self, w: &mut W, rect: Region<V2>) {
         w.render(self.geom, rect);
         w.walk_layout(self, rect.min);
+    }
+
+    fn visit_clipped<W: Widget>(&mut self, w: &mut W, rect: Region<V2>, clip: Region<V2>) {
+        self.geom.clipped(clip, |geom| {
+            w.render(geom, rect);
+            w.walk_layout(&mut RenderVisitor::new(geom), rect.min);
+        });
     }
 }

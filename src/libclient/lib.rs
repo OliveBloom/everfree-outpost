@@ -36,7 +36,8 @@ mod fonts;
 mod util;
 
 mod terrain;
-mod structures;
+// TODO: move Id typedefs into a common pub mod and make these non-pub
+pub mod structures;
 pub mod entity;
 pub mod inventory;
 mod misc;

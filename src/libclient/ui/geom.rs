@@ -32,6 +32,7 @@ pub enum Special {
 pub struct Geom {
     geom: Vec<Vertex>,
     special: Vec<Special>,
+    clip: Option<Region<V2>>,
 }
 
 
@@ -49,14 +50,17 @@ impl Geom {
         Geom {
             geom: Vec::new(),
             special: Vec::new(),
+            clip: None,
         }
     }
 
     fn emit_quad(&mut self, entry: AtlasEntry, sheet: u8, dest_pos: V2, dest_size: V2) {
-        let dx = dest_pos.x as i16;
-        let dy = dest_pos.y as i16;
-        let dw = dest_size.x as u16;
-        let dh = dest_size.y as u16;
+        let raw_dest = Region::sized(dest_size) + dest_pos;
+        let dest =
+            if let Some(ref clip) = self.clip { clip.intersect(raw_dest) }
+            else { raw_dest };
+        let dx = raw_dest.min.x as i16;
+        let dy = raw_dest.min.y as i16;
 
         let mut go = |ox, oy| {
             self.geom.push(Vertex {
@@ -69,13 +73,19 @@ impl Geom {
             });
         };
 
-        go( 0,  0);
-        go( 0, dh);
-        go(dw,  0);
+        let off = dest - raw_dest.min;
+        let ox0 = off.min.x as u16;
+        let ox1 = off.max.x as u16;
+        let oy0 = off.min.y as u16;
+        let oy1 = off.max.y as u16;
 
-        go(dw,  0);
-        go( 0, dh);
-        go(dw, dh);
+        go(ox0, oy0);
+        go(ox0, oy1);
+        go(ox1, oy0);
+
+        go(ox1, oy0);
+        go(ox0, oy1);
+        go(ox1, oy1);
     }
 
     pub fn draw_ui(&mut self, entry: AtlasEntry, pos: V2) {
@@ -127,5 +137,13 @@ impl Geom {
 
     pub fn unwrap(self) -> (Vec<Vertex>, Vec<Special>) {
         (self.geom, self.special)
+    }
+
+
+    pub fn clipped<F: FnMut(&mut Geom)>(&mut self, clip: Region<V2>, mut f: F) {
+        let old = self.clip;
+        self.clip = Some(clip);
+        f(self);
+        self.clip = old;
     }
 }

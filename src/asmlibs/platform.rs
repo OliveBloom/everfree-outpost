@@ -3,6 +3,7 @@ use std::prelude::v1::*;
 use client::inventory::InventoryId;
 use client::platform;
 use client::platform::{ConfigKey, Cursor};
+use client::structures::StructureId;
 
 use gl::GL;
 
@@ -28,6 +29,10 @@ mod ffi {
                                  dest_inv: u32,
                                  dest_slot: usize,
                                  amount: u8);
+        pub fn ap_send_craft_recipe(inventory_id: u32,
+                                    station_id: u32,
+                                    recipe_id: u16,
+                                    count: u16);
         pub fn ap_send_close_dialog();
 
         pub fn ap_get_time() -> i32;
@@ -70,6 +75,16 @@ impl platform::Platform for Platform {
                       amount: u8) {
         unsafe {
             ffi::ap_send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
+        }
+    }
+
+    fn send_craft_recipe(&mut self,
+                         inventory_id: InventoryId,
+                         station_id: StructureId,
+                         recipe_id: u16,
+                         count: u16) {
+        unsafe {
+            ffi::ap_send_craft_recipe(inventory_id, station_id, recipe_id, count);
         }
     }
 

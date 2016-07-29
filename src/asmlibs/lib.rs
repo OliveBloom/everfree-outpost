@@ -250,15 +250,19 @@ pub unsafe extern fn input_mouse_move(client: &mut Client,
 #[no_mangle]
 pub unsafe extern fn input_mouse_down(client: &mut Client,
                                       x: i32,
-                                      y: i32) -> u8 {
-    client.input_mouse_down(V2::new(x, y)) as u8
+                                      y: i32,
+                                      button: u8,
+                                      mods: u8) -> u8 {
+    client.input_mouse_down(V2::new(x, y), button, mods) as u8
 }
 
 #[no_mangle]
 pub unsafe extern fn input_mouse_up(client: &mut Client,
                                     x: i32,
-                                    y: i32) -> u8 {
-    client.input_mouse_up(V2::new(x, y)) as u8
+                                    y: i32,
+                                    button: u8,
+                                    mods: u8) -> u8 {
+    client.input_mouse_up(V2::new(x, y), button, mods) as u8
 }
 
 #[no_mangle]
@@ -276,6 +280,13 @@ pub unsafe extern fn open_container_dialog(client: &mut Client,
                                            inv_id0: u32,
                                            inv_id1: u32) {
     client.open_container_dialog(inv_id0, inv_id1);
+}
+
+#[no_mangle]
+pub unsafe extern fn open_crafting_dialog(client: &mut Client,
+                                          inv_id: u32,
+                                          station_id: u32) {
+    client.open_crafting_dialog(inv_id, station_id);
 }
 
 #[no_mangle]
