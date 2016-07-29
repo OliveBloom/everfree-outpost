@@ -795,7 +795,6 @@ AsmClientInput.prototype.handleWheel = function(evt) {
     var button = evt.raw.deltaY < 0 ? 4 : 5;
     var ret1 = this._asm.inputMouseDown(evt.x, evt.y, button, evt.shift);
     var ret2 = this._asm.inputMouseUp(evt.x, evt.y, button, evt.shift);
-    console.log('dispatched mouse wheel event:', button, ret1, ret2);
     var ret = ret1 || ret2;
     if (!ret) {
         evt.forward();
