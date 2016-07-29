@@ -69,44 +69,6 @@ impl ScrollList {
             size: size,
         }
     }
-
-    fn calc_bounds_and_offset<D: ScrollListDyn>(&self,
-                                                dyn: &D,
-                                                height: i32) -> (usize, usize, i32) {
-        // Calculate the visible index range as if the view was centered on the focus element.
-        // Then adjust if it turns out the list is scrolled all the way to the top/bottom.
-
-        let center_y = (height - ENTRY_HEIGHT) / 2;
-
-        // Number of entries that can fit above the focus.
-        let space_before = ((center_y + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) as usize;
-        // Number of existing entries before the focus.
-        let max_before = self.focus;
-
-        let space_after = ((height - center_y + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) as usize;
-        let max_after = dyn.len() - self.focus;
-
-        // Number of visible entries when the list is scrolled all the way to one end.
-        let end_count = ((height + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) as usize;
-
-        if space_before > max_before {
-            // List is scrolled all the way to the top.
-            (0,
-             cmp::min(dyn.len(), end_count),
-             0)
-        } else if space_after > max_after {
-            // List is scrolled all the way to the bottom.
-            let count = cmp::min(dyn.len(), end_count);
-            (dyn.len() - count,
-             dyn.len(),
-             height - count as i32 * ENTRY_HEIGHT)
-        } else {
-            // List is centered on the focus.
-            (self.focus - space_before,
-             self.focus + space_after,
-             center_y - space_before as i32 * ENTRY_HEIGHT)
-        }
-    }
 }
 
 pub trait ScrollListDyn {
@@ -131,6 +93,69 @@ impl<'a, D: ScrollListDyn> WidgetPack<'a, ScrollList, D> {
             EventStatus::Unhandled
         }
     }
+
+    fn calc_bounds_and_offset(&self, height: i32) -> (usize, usize, i32) {
+        // Calculate the visible index range as if the view was centered on the focus element.
+        // Then adjust if it turns out the list is scrolled all the way to the top/bottom.
+
+        let center_y = (height - ENTRY_HEIGHT) / 2;
+
+        // Number of entries that can fit above the focus.
+        let space_before = ((center_y + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) as usize;
+        // Number of existing entries before the focus.
+        let max_before = self.state.focus;
+
+        let space_after = ((height - center_y + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) as usize;
+        let max_after = self.dyn.len() - self.state.focus;
+
+        // Number of visible entries when the list is scrolled all the way to one end.
+        let end_count = ((height + ENTRY_HEIGHT - 1) / ENTRY_HEIGHT) as usize;
+
+        if space_before > max_before {
+            // List is scrolled all the way to the top.
+            (0,
+             cmp::min(self.dyn.len(), end_count),
+             0)
+        } else if space_after > max_after {
+            // List is scrolled all the way to the bottom.
+            let count = cmp::min(self.dyn.len(), end_count);
+            (self.dyn.len() - count,
+             self.dyn.len(),
+             height - count as i32 * ENTRY_HEIGHT)
+        } else {
+            // List is centered on the focus.
+            (self.state.focus - space_before,
+             self.state.focus + space_after,
+             center_y - space_before as i32 * ENTRY_HEIGHT)
+        }
+    }
+
+    fn scroll_to_click(&mut self, pos: V2, rect: Region<V2>) -> EventStatus {
+        let body_bounds = rect.inset(3, 3 + 11, 3, 3);
+        if !body_bounds.contains(pos) {
+            return EventStatus::Unhandled;
+        }
+
+        let width = body_bounds.size().x;
+        let height = body_bounds.size().y;
+
+        let (start, end, base_offset) = self.calc_bounds_and_offset(height);
+        assert!(0 <= start && start <= end && end <= self.dyn.len(),
+                "bad start/end: expected 0 <= {} <= {} <= {}", start, end, self.dyn.len());
+
+        let y_off = pos.y - body_bounds.min.y - base_offset;
+        if y_off < 0 {
+            return EventStatus::Unhandled;
+        }
+
+        let idx = start + (y_off / ENTRY_HEIGHT) as usize;
+        if idx < end {
+            self.state.focus = idx;
+            EventStatus::Handled
+        } else {
+            EventStatus::Unhandled
+        }
+    }
 }
 
 impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
@@ -146,7 +171,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         let width = body_bounds.size().x;
         let height = body_bounds.size().y;
 
-        let (start, end, base_offset) = self.state.calc_bounds_and_offset(self.dyn, height);
+        let (start, end, base_offset) = self.calc_bounds_and_offset(height);
         assert!(0 <= start && start <= end && end <= self.dyn.len(),
                 "bad start/end: expected 0 <= {} <= {} <= {}", start, end, self.dyn.len());
 
@@ -214,6 +239,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         match evt.button {
             WheelUp => self.scroll_list(amt, true),
             WheelDown => self.scroll_list(amt, false),
+            Left => self.scroll_to_click(ctx.mouse_pos, rect),
             _ => EventStatus::Unhandled,
         }
     }

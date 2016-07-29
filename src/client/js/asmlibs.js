@@ -775,7 +775,8 @@ AsmClientInput.prototype.handleMouseMove = function(evt) {
 };
 
 AsmClientInput.prototype.handleMouseDown = function(evt) {
-    var ret = this._asm.inputMouseDown(evt.x, evt.y, evt.button, evt.shift);
+    // JS numbers buttons 0,1,2, but libclient numbers them 1,2,3.
+    var ret = this._asm.inputMouseDown(evt.x, evt.y, evt.button + 1, evt.shift);
     if (!ret) {
         evt.forward();
     }
@@ -783,7 +784,7 @@ AsmClientInput.prototype.handleMouseDown = function(evt) {
 };
 
 AsmClientInput.prototype.handleMouseUp = function(evt) {
-    var ret = this._asm.inputMouseUp(evt.x, evt.y, evt.button, evt.shift);
+    var ret = this._asm.inputMouseUp(evt.x, evt.y, evt.button + 1, evt.shift);
     if (!ret) {
         evt.forward();
     }
