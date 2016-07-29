@@ -1,5 +1,5 @@
 use std::prelude::v1::*;
-use physics::v3::{V2, Region};
+use physics::v3::{V2, Region, Align};
 
 use client::ClientObj;
 use data::{Data, RecipeDef};
@@ -140,14 +140,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
         let ox = LIST_WIDTH + 7;
         let mut oy = 0;
 
-        {
+        let inv_rect = {
             let inv = self.dyn.invs.get(self.state.inv_id);
             let dyn = dialogs::inventory::GridDyn::new(inv, false);
             let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
             let rect = Region::sized(child.size()) + pos + V2::new(ox, oy);
             v.visit(&mut child, rect);
             oy += rect.size().y;
-        }
+            rect
+        };
 
         oy += 7;
 
@@ -157,6 +158,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
                 let dyn = crafting::RecipeDyn::new(&r, 0);
                 let mut child = WidgetPack::stateless(crafting::Recipe, &dyn);
                 let rect = Region::sized(child.size()) + pos + V2::new(ox, oy);
+                let rect = rect.align(inv_rect, Align::Center, Align::None);
                 v.visit(&mut child, rect);
             }
         }

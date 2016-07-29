@@ -71,7 +71,7 @@ impl<'a> RecipeDyn<'a> {
 impl Recipe {
     pub fn size() -> V2 {
         // Allow up to 2 columns of items on each side, with 1px margin on each side.
-        let w = 4 * (item::ItemDisplay::size().x + 2) + 2 + atlas::CRAFTING_ARROW_EMPTY.size().x;
+        let w = 4 * (item::ItemDisplay::size().x + 2) + 8 + atlas::CRAFTING_ARROW_EMPTY.size().x;
         // Allow up to 3 rows of items
         let h = 3 * (item::ItemDisplay::size().y + 2);
         V2::new(w, h)
