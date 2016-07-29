@@ -34,7 +34,7 @@ use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
 use ui::{UI, Dyn};
-use ui::input::{KeyAction, Modifiers, KeyEvent, EventStatus};
+use ui::input::{KeyAction, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 
 
 pub struct Client<'d, P: Platform> {
@@ -392,15 +392,29 @@ impl<'d, P: Platform> Client<'d, P> {
         self.process_event_status(status)
     }
 
-    pub fn input_mouse_down(&mut self, pos: V2) -> bool {
-        let pos = self.convert_mouse_pos(pos);
-        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_down(pos, dyn));
+    pub fn input_mouse_down(&mut self, pos: V2, button: u8, mods: u8) -> bool {
+        let status =
+            if let Some(button) = Button::from_code(button) {
+                let pos = self.convert_mouse_pos(pos);
+                let mods = Modifiers::from_bits_truncate(mods);
+                let evt = ButtonEvent::new(button, mods);
+                self.with_ui_dyn(|ui, dyn| ui.handle_mouse_down(pos, evt, dyn))
+            } else {
+                EventStatus::Unhandled
+            };
         self.process_event_status(status)
     }
 
-    pub fn input_mouse_up(&mut self, pos: V2) -> bool {
-        let pos = self.convert_mouse_pos(pos);
-        let status = self.with_ui_dyn(|ui, dyn| ui.handle_mouse_up(pos, dyn));
+    pub fn input_mouse_up(&mut self, pos: V2, button: u8, mods: u8) -> bool {
+        let status =
+            if let Some(button) = Button::from_code(button) {
+                let pos = self.convert_mouse_pos(pos);
+                let mods = Modifiers::from_bits_truncate(mods);
+                let evt = ButtonEvent::new(button, mods);
+                self.with_ui_dyn(|ui, dyn| ui.handle_mouse_up(pos, evt, dyn))
+            } else {
+                EventStatus::Unhandled
+            };
         self.process_event_status(status)
     }
 

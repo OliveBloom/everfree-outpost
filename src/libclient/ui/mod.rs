@@ -95,6 +95,7 @@ impl UI {
 
     pub fn handle_mouse_down(&mut self,
                              pos: V2,
+                             evt: input::ButtonEvent,
                              dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
@@ -104,7 +105,7 @@ impl UI {
         self.context.mouse_down_pos = pos;
 
         if !self.context.dragging() {
-            root.on_mouse_down(&mut self.context, rect)
+            root.on_mouse_down(&mut self.context, rect, evt)
         } else {
             input::EventStatus::Handled
         }
@@ -112,6 +113,7 @@ impl UI {
 
     pub fn handle_mouse_up(&mut self,
                            pos: V2,
+                           evt: input::ButtonEvent,
                            dyn: &Dyn) -> input::EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
@@ -120,7 +122,7 @@ impl UI {
         self.context.mouse_down = false;
 
         if !self.context.dragging() {
-            root.on_mouse_up(&mut self.context, rect)
+            root.on_mouse_up(&mut self.context, rect, evt)
         } else {
             let data = self.context.drag_data.take().unwrap();
             root.on_drop(&mut self.context, rect, &data)

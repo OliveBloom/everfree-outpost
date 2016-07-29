@@ -67,6 +67,49 @@ impl KeyEvent {
 }
 
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Button {
+    Left,
+    Middle,
+    Right,
+    ScrollUp,
+    ScrollDown,
+}
+
+impl Button {
+    pub fn from_code(code: u8) -> Option<Button> {
+        match code {
+            1 => Some(Button::Left),
+            2 => Some(Button::Middle),
+            3 => Some(Button::Right),
+            4 => Some(Button::ScrollUp),
+            5 => Some(Button::ScrollDown),
+
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ButtonEvent {
+    pub button: Button,
+    pub mods: Modifiers,
+}
+
+impl ButtonEvent{ 
+    pub fn new(button: Button, mods: Modifiers) -> ButtonEvent {
+        ButtonEvent {
+            button: button,
+            mods: mods,
+        }
+    }
+
+    pub fn shift(&self) -> bool {
+        self.mods.contains(MOD_SHIFT)
+    }
+}
+
+
 pub enum EventStatus {
     Unhandled,
     Handled,

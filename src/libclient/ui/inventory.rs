@@ -8,7 +8,7 @@ use inventory::Item;
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyEvent, EventStatus};
+use ui::input::{KeyEvent, ButtonEvent, EventStatus};
 use ui::item;
 use ui::widget::*;
 
@@ -179,7 +179,10 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
         EventStatus::Handled
     }
 
-    fn on_mouse_up(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
+    fn on_mouse_up(&mut self,
+                   ctx: &mut Context,
+                   rect: Region<V2>,
+                   evt: ButtonEvent) -> EventStatus {
         let idx = match self.slot_at_offset(ctx.mouse_pos - rect.min) {
             Some(x) => x,
             None => return EventStatus::Unhandled,
