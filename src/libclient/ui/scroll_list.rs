@@ -9,7 +9,7 @@ use inventory::Item;
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyEvent, EventStatus};
+use ui::input::{KeyEvent, ButtonEvent, EventStatus};
 use ui::item;
 use ui::widget::*;
 
@@ -115,6 +115,24 @@ pub trait ScrollListDyn {
     fn len(&self) -> usize;
 }
 
+impl<'a, D: ScrollListDyn> WidgetPack<'a, ScrollList, D> {
+    fn scroll_list(&mut self, amt: usize, up: bool) -> EventStatus {
+        let old_focus = self.state.focus;
+
+        if up {
+            self.state.focus -= cmp::min(amt, self.state.focus);
+        } else {
+            self.state.focus = cmp::min(self.state.focus + amt, self.dyn.len() - 1);
+        }
+
+        if self.state.focus != old_focus {
+            EventStatus::Handled
+        } else {
+            EventStatus::Unhandled
+        }
+    }
+}
+
 impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
     fn size(&mut self) -> V2 {
         self.state.size
@@ -179,24 +197,24 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         use ui::input::KeyAction::*;
 
         let amt = if key.shift() { 10 } else { 1 };
-        let old_focus = self.state.focus;
         match key.code {
-            MoveUp => {
-                self.state.focus -= cmp::min(amt, self.state.focus);
-            },
-
-            MoveDown => {
-                self.state.focus = cmp::min(self.state.focus + amt, self.dyn.len() - 1);
-            },
-
-            _ => {},
+            MoveUp => self.scroll_list(amt, true),
+            MoveDown => self.scroll_list(amt, false),
+            _ => EventStatus::Unhandled,
         }
+    }
 
+    fn on_mouse_down(&mut self,
+                     ctx: &mut Context,
+                     rect: Region<V2>,
+                     evt: ButtonEvent) -> EventStatus {
+        use ui::input::Button::*;
 
-        if self.state.focus != old_focus {
-            EventStatus::Handled
-        } else {
-            EventStatus::Unhandled
+        let amt = if evt.shift() { 10 } else { 1 };
+        match evt.button {
+            WheelUp => self.scroll_list(amt, true),
+            WheelDown => self.scroll_list(amt, false),
+            _ => EventStatus::Unhandled,
         }
     }
 }

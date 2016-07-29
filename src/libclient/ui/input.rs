@@ -72,8 +72,8 @@ pub enum Button {
     Left,
     Middle,
     Right,
-    ScrollUp,
-    ScrollDown,
+    WheelUp,
+    WheelDown,
 }
 
 impl Button {
@@ -82,8 +82,8 @@ impl Button {
             1 => Some(Button::Left),
             2 => Some(Button::Middle),
             3 => Some(Button::Right),
-            4 => Some(Button::ScrollUp),
-            5 => Some(Button::ScrollDown),
+            4 => Some(Button::WheelUp),
+            5 => Some(Button::WheelDown),
 
             _ => None,
         }
