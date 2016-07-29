@@ -226,8 +226,7 @@ impl<'a> ScrollBar<'a> {
         if self.min == self.max {
             return 0;
         }
-        let height = (height - 2 * SCROLL_BAR_CAP_SIZE) as usize;
-        ((*self.cur - self.min) * height / (self.max - self.min)) as i32
+        ((*self.cur - self.min) * height as usize / (self.max - 1 - self.min)) as i32
     }
 }
 
@@ -247,12 +246,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, ScrollBar<'b>, ()> {
         let thumb_offset = self.state.thumb_pos(bar.size().y - THUMB_INNER_HEIGHT);
         let thumb_y = bar.min.y - 1 + thumb_offset;
 
-        geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_ABOVE,
-                           Region::new(V2::new(bar.min.x, bar.min.y - 1),
-                                       V2::new(bar.max.x, thumb_y)));
-        geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_BELOW,
-                           Region::new(V2::new(bar.min.x, thumb_y),
-                                       V2::new(bar.max.x, bar.max.y + 1)));
+        geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_BELOW, bar);
 
         geom.draw_ui(atlas::SCROLL_BAR_CAP, V2::new(rect.min.x + 1, rect.min.y));
         geom.draw_ui(atlas::SCROLL_BAR_CAP, V2::new(rect.min.x + 1, rect.max.y - CAP_SIZE));
