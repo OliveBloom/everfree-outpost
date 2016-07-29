@@ -26,3 +26,7 @@ WEBGL_draw_buffers.prototype.drawBuffersWEBGL;
 
 
 String.prototype.startsWith;
+
+
+Event.prototype.deltaX;
+Event.prototype.deltaY;
