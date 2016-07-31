@@ -29,10 +29,7 @@ extern crate rustc_serialize;
 extern crate time;
 
 extern crate linked_hash_map;
-extern crate lru_cache;
 extern crate vec_map;
-extern crate rusqlite;
-extern crate libsqlite3_sys as rusqlite_ffi;
 extern crate python3_sys;
 
 extern crate common as libcommon;

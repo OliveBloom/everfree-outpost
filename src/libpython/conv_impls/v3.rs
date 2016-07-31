@@ -22,6 +22,7 @@ fn unpack_v3_or_scalar(obj: PyRef) -> PyResult<Option<V3>> {
 }
 
 macro_rules! v3_binop_slot {
+    () => { unsafe extern "C" fn(_, _) -> _ };
     ( $fname:ident,
       $args:tt,
       $ret_ty:ty,

@@ -2,7 +2,7 @@ import os
 
 from configure.checks.context import ConfigError
 
-NEED_RUSTC_HASH = 'a5d1e7a59'
+NEED_RUSTC_HASH = 'cfcb716cf'
 
 NEED_RUST_LIBS = (
     # Keep these in dependency order.  That way necessary --extern flags will already be
@@ -20,10 +20,7 @@ NEED_RUST_LIBS = (
     'rustc_serialize',
     'time',
     'python3_sys',
-    'libsqlite3_sys',
-    'rusqlite',
     'linked_hash_map',
-    'lru_cache',
     'vec_map',
     )
 
@@ -66,7 +63,7 @@ def configure_lib(ctx, crate_name):
     ctx.info.add(key, desc)
 
     if ctx.info.rustc is None:
-        ctx.out_skip(key, 'rustc')
+        ctx.warn_skip(key, 'rustc')
         return
 
     # Set up for the tests

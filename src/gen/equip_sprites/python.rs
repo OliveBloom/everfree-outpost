@@ -131,7 +131,7 @@ unsafe fn init_type() -> *mut PyObject {
             {
                 let m = &mut METHOD_DEFS[i];
                 m.ml_name = concat!(stringify!($name), "\0").as_ptr() as *const c_char;
-                m.ml_meth = Some(mem::transmute($name));
+                m.ml_meth = Some(mem::transmute($name as unsafe extern "C" fn(_, _) -> _));
                 m.ml_flags = METH_VARARGS;
                 i += 1;
             }

@@ -139,7 +139,10 @@ macro_rules! define_python_class_impl {
                     $(
                         TYPE_SLOTS[i] = PyType_Slot {
                             slot: python3_sys::$sname,
-                            pfunc: mem::transmute($sname),
+                            // This is a hack, but it works.  Slot macros, when called with no
+                            // arguments, should produce the type of the function they define, so
+                            // that we can perform the necessary cast here.
+                            pfunc: mem::transmute($sname as $smacro!()),
                         };
                         i += 1;
                     )*
@@ -151,7 +154,8 @@ macro_rules! define_python_class_impl {
                         METHODS[i] = PyMethodDef {
                             ml_name: concat!(stringify!($fname), "\0")
                                     .as_ptr() as *const c_char,
-                            ml_meth: Some(mem::transmute($fname)),
+                            ml_meth: Some(mem::transmute(
+                                    $fname as unsafe extern "C" fn(_, _) -> _)),
                             ml_flags: METH_VARARGS,
                             ml_doc: ptr::null(),
                         };

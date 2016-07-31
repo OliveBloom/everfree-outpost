@@ -223,17 +223,17 @@ pub fn engine_part2(cx: &mut ExtCtxt,
             "<engine_part2!>".to_owned(),
             gen_struct(&name, is_pub, flags),
             cx.cfg.clone(),
-            cx.parse_sess).unwrap());
+            cx.parse_sess).unwrap().unwrap());
     items.push(parse::parse_item_from_source_str(
             "<engine_part2!>".to_owned(),
             gen_coded_impl(&name, flags),
             cx.cfg.clone(),
-            cx.parse_sess).unwrap());
+            cx.parse_sess).unwrap().unwrap());
     items.push(parse::parse_item_from_source_str(
             "<engine_part2!>".to_owned(),
             format!("engine_part2_impl!({});", name),
             cx.cfg.clone(),
-            cx.parse_sess).unwrap());
+            cx.parse_sess).unwrap().unwrap());
 
     MacEager::items(items)
 }

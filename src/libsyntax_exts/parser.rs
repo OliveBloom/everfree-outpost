@@ -85,7 +85,7 @@ impl<'a> Parser<'a> {
         }
 
         match self.peek() {
-            &TokenTree::Token(sp, Token::Ident(ref id, _style)) => {
+            &TokenTree::Token(sp, Token::Ident(ref id)) => {
                 try!(self.take());
                 Ok(((&id.name.as_str() as &str).to_owned(), sp))
             },
@@ -99,7 +99,7 @@ impl<'a> Parser<'a> {
         }
 
         match *self.peek() {
-            TokenTree::Token(_, Token::Ident(ref id, _style))
+            TokenTree::Token(_, Token::Ident(ref id))
                     if id.name.as_str() == word => {
                 try!(self.take());
                 Ok(())

@@ -2,6 +2,7 @@
 #![no_std]
 #![feature(
     alloc,
+    allow_internal_unstable,
     collections,
     collections_bound,
     core_intrinsics,

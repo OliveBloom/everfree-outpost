@@ -25,17 +25,6 @@ extern fn lang_panic_fmt(args: &core::fmt::Arguments,
 }
 
 #[inline(always)] #[cold]
-#[lang = "stack_exhausted"]
-extern fn lang_stack_exhausted() -> ! {
-    unsafe {
-        let s = "task panicked - stack exhausted";
-        write_str(s.as_ptr(), s.len() as i32);
-        flush_str_err();
-    }
-    unsafe { core::intrinsics::abort() };
-}
-
-#[inline(always)] #[cold]
 #[lang = "eh_personality"]
 extern fn lang_eh_personality() -> ! {
     unsafe { core::intrinsics::abort() };

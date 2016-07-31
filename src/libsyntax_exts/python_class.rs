@@ -2,9 +2,9 @@ use std::rc::Rc;
 
 use syntax::ast::DUMMY_NODE_ID;
 use syntax::ast::{TokenTree, Delimited};
-use syntax::ast::{Ty, Ty_, DefaultBlock, SpannedIdent};
+use syntax::ast::{Ty, TyKind, BlockCheckMode, SpannedIdent};
 use syntax::ast::{Expr};
-use syntax::ast::{Item, Item_, Mac_, Visibility};
+use syntax::ast::{Item, ItemKind, Mac_, Visibility};
 use syntax::codemap::{Span, Spanned, DUMMY_SP};
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
@@ -78,7 +78,7 @@ trait ParserExt<'a> {
         } else {
             Ok(P(Ty {
                 id: DUMMY_NODE_ID,
-                node: Ty_::TyTup(Vec::new()),
+                node: TyKind::Tup(Vec::new()),
                 span: DUMMY_SP,
             }))
         }
@@ -199,7 +199,7 @@ fn parse_method<'a>(p: &mut Parser<'a>) -> PResult<'a, MethodDef> {
     let args = try!(p.parse_token_tree());
     let ret_ty = try!(p.parse_ret_ty2());
     let lo = p.span.lo;
-    let body = try!(p.parse_block_expr(lo, DefaultBlock, None));
+    let body = try!(p.parse_block_expr(lo, BlockCheckMode::Default, None));
 
     Ok(MethodDef {
         mac: mac,
@@ -220,7 +220,7 @@ fn parse_slot<'a>(p: &mut Parser<'a>) -> PResult<'a, SlotDef> {
     let args = try!(p.parse_token_tree());
     let ret_ty = try!(p.parse_ret_ty2());
     let lo = p.span.lo;
-    let body = try!(p.parse_block_expr(lo, DefaultBlock, None));
+    let body = try!(p.parse_block_expr(lo, BlockCheckMode::Default, None));
 
     Ok(SlotDef {
         mac: mac,
@@ -280,7 +280,7 @@ impl Builder {
     }
 
     fn ident(&mut self, id: SpannedIdent) {
-        self.token(Token::Ident(id.node, token::IdentStyle::Plain), Some(id.span));
+        self.token(Token::Ident(id.node), Some(id.span));
     }
 
     fn nonterminal(&mut self, nt: Nonterminal, sp: Option<Span>) {
@@ -407,7 +407,7 @@ pub fn define_python_class(cx: &mut ExtCtxt,
         node: mac_,
         span: sp,
     };
-    let item_ = Item_::ItemMac(mac);
+    let item_ = ItemKind::Mac(mac);
     let item = Item {
         ident: cx.ident_of(""),
         attrs: Vec::new(),

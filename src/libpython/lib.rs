@@ -4,6 +4,7 @@
     filling_drop,
     nonzero,
     plugin,
+    type_macros,
     unsafe_no_drop_flag,
 )]
 

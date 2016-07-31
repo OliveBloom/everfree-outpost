@@ -39,6 +39,7 @@ pub fn unpack_rust_val<T: RustValType>(obj: PyRef) -> PyResult<T> {
 
 #[macro_export]
 macro_rules! rust_val_repr_slot {
+    () => { unsafe extern "C" fn(_) -> _ };
     ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject)
                                     -> *mut ::python3_sys::PyObject {
@@ -64,6 +65,7 @@ macro_rules! rust_val_repr_slot {
 /// NB: return type must be identical to the class representation type ($ty)
 #[macro_export]
 macro_rules! rust_val_init_slot {
+    () => { unsafe extern "C" fn(_, _, _) -> _ };
     ( $fname:ident, $args:tt, $ret_ty:ty, $body:expr ) => {
         unsafe extern "C" fn $fname(slf: *mut ::python3_sys::PyObject,
                                     args: *mut ::python3_sys::PyObject,
@@ -99,6 +101,7 @@ macro_rules! rust_val_init_slot {
 /// Ignores all arguments and body, and just calls `PyType_GenericNew`.
 #[macro_export]
 macro_rules! rust_val_new_slot {
+    () => { unsafe extern "C" fn(_, _, _) -> _ };
     ( $fname:ident,
       $args:tt,
       $ret_ty:ty,

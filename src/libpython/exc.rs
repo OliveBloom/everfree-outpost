@@ -193,16 +193,6 @@ impl error::Error for PyExc {
     }
 }
 
-impl error::Error for Box<PyExc> {
-    fn description(&self) -> &str {
-        (&**self).description()
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        (&**self).cause()
-    }
-}
-
 impl From<StrError> for Box<PyExc> {
     fn from(err: StrError) -> Box<PyExc> {
         Box::new(PyExc::new(api::exc::runtime_error(),
