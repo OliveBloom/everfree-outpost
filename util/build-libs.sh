@@ -36,8 +36,6 @@ in_dir libc  build libc \
     --cfg 'feature="use_std"'
 
 in_dir bitflags  build bitflags
-in_dir bitflags-0.1  build bitflags \
-    -o $base/lib/libbitflags-0.1.rlib
 in_dir rand  build rand
 in_dir rust-memchr  build memchr
 in_dir aho-corasick  build aho_corasick
@@ -55,10 +53,5 @@ in_dir rust-cpython/python3-sys  build python3_sys -lpython3.4m \
     --cfg Py_LIMITED_API  --cfg Py_3_4 \
     --cfg 'py_sys_config="WITH_THREAD"'
 
-in_dir rusqlite/libsqlite3-sys  build libsqlite3_sys -lsqlite3
-in_dir rusqlite  build rusqlite \
-    --extern bitflags=$base/lib/libbitflags-0.1.rlib
-
 in_dir linked-hash-map  build linked_hash_map
-in_dir lru-cache  build lru_cache
 in_dir vec-map  build vec_map
