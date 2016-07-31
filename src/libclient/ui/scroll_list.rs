@@ -1,16 +1,13 @@
-use std::prelude::v1::*;
+//use std::prelude::v1::*;
 use std::cmp;
 
-use physics::v3::{V2, Vn, scalar, Region};
+use physics::v3::{V2, Region};
 
-use client::ClientObj;
 use fonts;
-use inventory::Item;
-use ui::{Context, DragData};
+use ui::Context;
 use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyEvent, ButtonEvent, EventStatus};
-use ui::item;
 use ui::widget::*;
 
 
@@ -31,7 +28,7 @@ impl<'a> Widget for WidgetPack<'a, Entry, EntryDyn<'a>> {
         V2::new(self.dyn.width, ENTRY_HEIGHT)
     }
 
-    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
+    fn walk_layout<V: Visitor>(&mut self, _v: &mut V, _pos: V2) {
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
@@ -73,7 +70,7 @@ impl ScrollList {
 
 pub trait ScrollListDyn {
     fn get(&self, idx: usize) -> &str;
-    fn is_enabled(&self, idx: usize) -> bool { true }
+    fn is_enabled(&self, _idx: usize) -> bool { true }
     fn len(&self) -> usize;
 }
 
@@ -135,12 +132,10 @@ impl<'a, D: ScrollListDyn> WidgetPack<'a, ScrollList, D> {
         if !body_bounds.contains(pos) {
             return EventStatus::Unhandled;
         }
-
-        let width = body_bounds.size().x;
         let height = body_bounds.size().y;
 
         let (start, end, base_offset) = self.calc_bounds_and_offset(height);
-        assert!(0 <= start && start <= end && end <= self.dyn.len(),
+        assert!(start <= end && end <= self.dyn.len(),
                 "bad start/end: expected 0 <= {} <= {} <= {}", start, end, self.dyn.len());
 
         let y_off = pos.y - body_bounds.min.y - base_offset;
@@ -172,7 +167,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         let height = body_bounds.size().y;
 
         let (start, end, base_offset) = self.calc_bounds_and_offset(height);
-        assert!(0 <= start && start <= end && end <= self.dyn.len(),
+        assert!(start <= end && end <= self.dyn.len(),
                 "bad start/end: expected 0 <= {} <= {} <= {}", start, end, self.dyn.len());
 
         for idx in start .. end {
@@ -203,7 +198,6 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
         let body = rect.inset(0, 11, 0, 0);
-        let scroll = rect.inset(-10, 0, 1, 1);
 
         geom.draw_ui(atlas::SCROLL_LIST_BORDER_NW, body.inset(0, -3, 0, -3).min);
         geom.draw_ui(atlas::SCROLL_LIST_BORDER_NE, body.inset(-3, 0, 0, -3).min);
@@ -214,8 +208,6 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_S, body.inset(3, 3, -3, 0));
         geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_W, body.inset(0, -3, 3, 3));
         geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_E, body.inset(-3, 0, 3, 3));
-
-        // TODO: fill background
     }
 
     fn on_key(&mut self, key: KeyEvent) -> EventStatus {
@@ -279,7 +271,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, ScrollBar<'b>, ()> {
         self.state.size
     }
 
-    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
+    fn walk_layout<V: Visitor>(&mut self, _v: &mut V, _pos: V2) {
     }
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {

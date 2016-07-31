@@ -1,10 +1,8 @@
 use std::io;
 use std::mem;
-use std::raw;
+use std::slice;
 
 use libserver_types::*;
-
-use ReadExact;
 
 
 /// Marker trait for types that can be safely manipulated as a string of bytes.  This means a type
@@ -81,10 +79,8 @@ pub trait WriteBytes {
 
 impl<W: io::Write> WriteBytes for W {
     unsafe fn write_as_bytes<T: Copy>(&mut self, x: T) -> io::Result<()> {
-        let slice = mem::transmute(raw::Slice {
-            data: &x as *const T as *const u8,
-            len: mem::size_of::<T>(),
-        });
+        let slice = slice::from_raw_parts(&x as *const T as *const u8,
+                                          mem::size_of::<T>());
         self.write_all(slice)
     }
 
@@ -93,13 +89,11 @@ impl<W: io::Write> WriteBytes for W {
     }
 
     fn write_bytes_slice<T: Bytes>(&mut self, x: &[T]) -> io::Result<()> {
-        let slice = unsafe {
-            mem::transmute(raw::Slice {
-                data: x.as_ptr() as *const u8,
-                len: x.len() * mem::size_of::<T>(),
-            })
-        };
-        self.write_all(slice)
+        unsafe {
+            let slice = slice::from_raw_parts(x.as_ptr() as *const u8,
+                                              x.len() * mem::size_of::<T>());
+            self.write_all(slice)
+        }
     }
 }
 
@@ -112,10 +106,8 @@ pub trait ReadBytes {
 impl<R: io::Read> ReadBytes for R {
     unsafe fn read_as_bytes<T: Copy>(&mut self) -> io::Result<T> {
         let mut x = mem::zeroed();
-        let slice = mem::transmute(raw::Slice {
-            data: &mut x as *mut T as *mut u8,
-            len: mem::size_of::<T>(),
-        });
+        let slice = slice::from_raw_parts_mut(&mut x as *mut T as *mut u8,
+                                              mem::size_of::<T>());
         try!(self.read_exact(slice));
         Ok(x)
     }
@@ -125,13 +117,11 @@ impl<R: io::Read> ReadBytes for R {
     }
 
     fn read_bytes_slice<T: Bytes>(&mut self, x: &mut [T]) -> io::Result<()> {
-        let slice = unsafe {
-            mem::transmute(raw::Slice {
-                data: x.as_mut_ptr() as *mut u8,
-                len: x.len() * mem::size_of::<T>(),
-            })
-        };
-        try!(self.read_exact(slice));
+        unsafe {
+            let slice = slice::from_raw_parts_mut(x.as_mut_ptr() as *mut u8,
+                                                  x.len() * mem::size_of::<T>());
+            try!(self.read_exact(slice));
+        }
         Ok(())
     }
 }

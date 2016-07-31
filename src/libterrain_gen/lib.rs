@@ -14,7 +14,7 @@ extern crate physics as libphysics;
 extern crate server_config as libserver_config;
 extern crate server_types as libserver_types;
 #[macro_use] extern crate server_util as libserver_util;
-extern crate terrain_gen_algo as libterrain_gen_algo;
+pub extern crate terrain_gen_algo as libterrain_gen_algo;
 
 use std::collections::HashMap;
 use rand::XorShiftRng;

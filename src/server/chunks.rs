@@ -9,7 +9,6 @@ use std::collections::hash_map::Entry::*;
 use types::*;
 
 use storage::Storage;
-use world::object::*;
 
 
 pub struct Chunks<'d> {

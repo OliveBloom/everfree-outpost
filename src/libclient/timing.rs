@@ -12,19 +12,17 @@
 //! which is the timestamp of the newest state change the client can observe.  This means that
 //! server time can drift due to changes in network conditions.
 
-use std::prelude::v1::*;
-use std::cmp;
+//use std::prelude::v1::*;
 
 use Time;
 use util::{sqrt, round};
 
 
 pub const TICK_MS: Time = 32;
-const TICK_MASK: Time = TICK_MS - 1;
 
-type ClientTime = Time;
-type ServerTime = Time;
-type Delta = Time;
+pub type ClientTime = Time;
+pub type ServerTime = Time;
+pub type Delta = Time;
 
 
 const WHEEL_SIZE: usize = 64;
@@ -59,7 +57,6 @@ impl Wheel {
         let new_mean = self.mean_acc + new - old;
 
         const N: Delta = WHEEL_SIZE as Delta;
-        let old_var = self.var_acc;
         let adj = (new - old) * (N * new - new_mean + N * old - old_mean);
         let new_var = self.var_acc + adj;
 
@@ -129,13 +126,6 @@ impl Timing {
         }
     }
 
-    pub fn record_delta(&mut self, client_recv: ClientTime, server: u16) {
-        let server = self.decode(client_recv, server);
-        let delta = server - client_recv;
-
-        self.delta.set_advance(delta);
-    }
-
 
     /// Decode a message time into a complete server time.
     pub fn decode(&self, client: ClientTime, server: u16) -> ServerTime {
@@ -157,6 +147,7 @@ impl Timing {
     }
 
     /// Predict the server time when a message will arrive, if sent at a given client time.
+    #[allow(dead_code)]
     pub fn predict(&self, client: ClientTime) -> ServerTime {
         self.convert(client) + self.ping.mean()
     }

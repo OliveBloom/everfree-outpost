@@ -19,7 +19,7 @@
 #[macro_use] extern crate bitflags;
 
 extern crate client_fonts;
-extern crate client_ui_atlas;
+pub extern crate client_ui_atlas;
 extern crate common;
 extern crate common_movement;
 extern crate physics;

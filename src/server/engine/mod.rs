@@ -1,4 +1,3 @@
-use std::boxed::FnBox;
 use std::sync::mpsc::{Sender, Receiver};
 
 use types::*;

@@ -52,7 +52,6 @@ macro_rules! define_grid {
             fn size() -> i32 { $SIZE as i32 }
 
             fn get(&self, offset: V2) -> $T {
-                use forest::common::GridLike;
                 self.data[Self::bounds().index(offset)]
             }
         }

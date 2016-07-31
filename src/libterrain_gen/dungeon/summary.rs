@@ -1,10 +1,10 @@
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::mem;
 
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
-use libserver_util::{BitSlice, Convert, ReadExact};
+use libserver_util::{BitSlice, Convert};
 use libserver_util::{write_vec, read_vec};
 use libserver_util::bytes::*;
 

@@ -4,7 +4,6 @@ use types::*;
 
 use data::Data;
 use world::bundle::types as b;
-use world::object::*;
 use world::types::{Item, EntityAttachment, StructureAttachment, InventoryAttachment};
 use world as w;
 use world::World;

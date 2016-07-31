@@ -7,7 +7,6 @@
     filling_drop,
     iter_arith,
     oom,
-    raw,
     unsafe_no_drop_flag,
 )]
 
@@ -22,7 +21,6 @@ extern crate physics;
 
 use std::mem;
 use std::ptr;
-use std::raw;
 use std::slice;
 
 use client::Data;
@@ -337,10 +335,7 @@ unsafe fn make_slice<T>(ptr: *const T, byte_len: usize) -> &'static [T] {
 
 unsafe fn make_boxed_slice<T>(ptr: *mut T, byte_len: usize) -> Box<[T]> {
     assert!(byte_len % mem::size_of::<T>() == 0);
-    let raw: *mut [T] = mem::transmute(raw::Slice {
-        data: ptr,
-        len: byte_len / mem::size_of::<T>(),
-    });
+    let raw: *mut [T] = slice::from_raw_parts_mut(ptr, byte_len / mem::size_of::<T>());
     Box::from_raw(raw)
 }
 

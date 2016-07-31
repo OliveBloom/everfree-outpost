@@ -1,5 +1,4 @@
 use std::prelude::v1::*;
-use std::boxed::FnBox;
 use std::cmp;
 
 use platform::{Platform, PlatformObj};

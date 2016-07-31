@@ -9,7 +9,6 @@ use types::*;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE};
 
 use data::{Data, StructureTemplate, BlockFlags};
-use world::object::*;
 
 
 pub struct TerrainCache {

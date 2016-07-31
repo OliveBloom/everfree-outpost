@@ -3,10 +3,8 @@ use physics::v3::{V2, Region, Align};
 
 use client::ClientObj;
 use data::{Data, RecipeDef};
-use inventory::{Item, InventoryId};
+use inventory::InventoryId;
 use structures::StructureId;
-use ui::Context;
-use ui::atlas;
 use ui::crafting;
 use ui::dialogs;
 use ui::geom::Geom;
@@ -25,7 +23,6 @@ pub struct Crafting {
 
     list: scroll_list::ScrollList,
     grid: inventory::Grid,
-    focus: u8,
 
     cache: CraftingCache,
 }
@@ -39,7 +36,6 @@ impl Crafting {
 
             list: scroll_list::ScrollList::new(V2::new(LIST_WIDTH, 0)),
             grid: inventory::Grid::new(),
-            focus: 0,
 
             cache: CraftingCache::new(),
         }
@@ -69,7 +65,6 @@ impl CraftingCache {
 
     fn update(&mut self,
               dyn: &CraftingDyn,
-              inv_id: InventoryId,
               template: u32) {
         let abilities_hash =
             if let Some(abilities) = dyn.invs.ability_inventory() {
@@ -134,7 +129,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
     }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        self.state.cache.update(&self.dyn, self.state.inv_id, self.state.template);
+        self.state.cache.update(&self.dyn, self.state.template);
 
 
         let ox = LIST_WIDTH + 7;
@@ -179,22 +174,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
         }
     }
 
-    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
-        /*
-        let mut i = 0;
-        let top = rect.min.y + 8;
-        let bottom = rect.max.y - 8;
-        util::RectVisitor::dispatch(self, |r| {
-            if i < 1 {
-                let x = rect.min.x + r.max.x + 2;
-                geom.draw_ui_tiled(atlas::SEPARATOR_VERT,
-                                   Region::new(V2::new(x, top), V2::new(x + 3, bottom)));
-                geom.draw_ui(atlas::SEPARATOR_CAP_N, V2::new(x, top - 1));
-                geom.draw_ui(atlas::SEPARATOR_CAP_S, V2::new(x, bottom));
-            }
-            i += 1;
-        });
-        */
+    fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
     fn on_key(&mut self, key: KeyEvent) -> EventStatus {
@@ -230,26 +210,6 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
 
         status
     }
-
-    /*
-    fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
-        let mut i = 0;
-        let mut hit = None;
-        let pos = ctx.mouse_pos - rect.min;
-        util::RectVisitor::dispatch(self, |r| {
-            if r.contains(pos) {
-                hit = Some(i);
-            }
-            i += 1;
-        });
-
-        if let Some(idx) = hit {
-            self.state.focus = idx;
-        }
-
-        MouseEventVisitor::dispatch(MouseEvent::Move, self, ctx, rect)
-    }
-    */
 }
 
 struct ListDyn<'a> {

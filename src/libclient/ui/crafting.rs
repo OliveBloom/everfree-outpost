@@ -1,15 +1,10 @@
 use std::prelude::v1::*;
-use std::cmp;
 
-use physics::v3::{V2, Vn, scalar, Region, Align};
+use physics::v3::{V2, scalar, Region, Align};
 
-use client::ClientObj;
 use data::{RecipeDef, RecipeItem};
-use inventory::Item;
-use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyEvent, EventStatus};
 use ui::item;
 use ui::widget::*;
 
@@ -38,7 +33,7 @@ impl ArrowDyn {
 impl<'a> Widget for WidgetPack<'a, Arrow, ArrowDyn> {
     fn size(&mut self) -> V2 { Arrow::size() }
 
-    fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {}
+    fn walk_layout<V: Visitor>(&mut self, _v: &mut V, _pos: V2) {}
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
         geom.draw_ui(atlas::CRAFTING_ARROW_EMPTY, rect.min);
@@ -146,16 +141,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Recipe, RecipeDyn<'b>> {
         do_side(right_pos, raw_step * V2::new(-1, 1), self.dyn.recipe.outputs());
     }
 
-    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
-        /*
-        geom.draw_ui(atlas::CRAFTING_ARROW_EMPTY, rect.min);
-
-        if self.dyn.progress > 0 {
-            let width = self.dyn.progress as i32;
-            let rect = Region::new(rect.min, V2::new(rect.min.x + width, rect.max.y));
-            geom.draw_ui_tiled(atlas::CRAFTING_ARROW_FULL, rect);
-        }
-        */
+    fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 }
 

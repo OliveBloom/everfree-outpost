@@ -182,7 +182,7 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
     fn on_mouse_up(&mut self,
                    ctx: &mut Context,
                    rect: Region<V2>,
-                   evt: ButtonEvent) -> EventStatus {
+                   _evt: ButtonEvent) -> EventStatus {
         let idx = match self.slot_at_offset(ctx.mouse_pos - rect.min) {
             Some(x) => x,
             None => return EventStatus::Unhandled,

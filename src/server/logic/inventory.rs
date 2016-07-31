@@ -4,7 +4,6 @@ use engine::Engine;
 use engine::split2::Coded;
 use logic;
 use world::flags::I_HAS_CHANGE_HOOK;
-use world::object::*;
 
 
 engine_part2!(pub EngineLifecycle(world, vision, messages, dialogs));

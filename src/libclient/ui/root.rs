@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use physics::v3::{V2, scalar, Region, Align};
+use physics::v3::{V2, Region, Align};
 use common::Gauge;
 
 use Time;
@@ -16,16 +16,6 @@ use ui::{dialog, dialogs, hotbar, debug, top_bar};
 use ui::widget::*;
 
 use ui::scroll_list;
-
-
-struct DummyListDyn;
-static STRINGS: &'static [&'static str] = &["test", "one", "two", "three"];
-impl scroll_list::ScrollListDyn for DummyListDyn {
-    fn get(&self, idx: usize) -> &str { STRINGS[idx % STRINGS.len()] }
-    fn len(&self) -> usize { 50 }
-}
-
-
 
 
 pub struct Root {

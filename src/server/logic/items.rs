@@ -11,7 +11,6 @@ use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, Dialog};
 use world::Item;
-use world::object::*;
 
 
 pub fn open_inventory(eng: &mut Engine, cid: ClientId, iid: InventoryId) -> StrResult<()> {

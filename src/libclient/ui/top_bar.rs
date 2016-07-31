@@ -1,13 +1,10 @@
-use std::prelude::v1::*;
+//use std::prelude::v1::*;
 
-use physics::v3::{V2, scalar, Region, Align};
+use physics::v3::{V2, Region, Align};
 
-use client::ClientObj;
 use fonts::{self, FontMetricsExt};
-use ui::{Context, DragData};
 use ui::atlas::{self, AtlasEntry};
 use ui::geom::Geom;
-use ui::input::EventStatus;
 use ui::hotbar::{self, Hotbar, HotbarDyn};
 use ui::widget::*;
 
@@ -15,6 +12,7 @@ use ui::widget::*;
 pub struct TopBar;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[allow(dead_code)] // TODO - bar type isn't being set yet
 pub enum Tribe {
     Earth,
     Pegasus,
@@ -69,8 +67,8 @@ impl<'a, D: TopBarDyn> Widget for WidgetPack<'a, TopBar, D> {
 
         geom.draw_ui_tiled(atlas::ENERGY_BAR_BAR,
                            Region::new(V2::new(x0, y0), V2::new(x1, y1)));
-        geom.draw_ui(atlas::ENERGY_BAR_START_E, V2::new(x0, y0 + 2));
-        geom.draw_ui_tiled(atlas::ENERGY_BAR_MID_E,
+        geom.draw_ui(start_entry, V2::new(x0, y0 + 2));
+        geom.draw_ui_tiled(mid_entry,
                            Region::new(V2::new(x0 + 1, y0 + 2),
                                        V2::new(x0 + 1 + bar_len, y1 - 2)));
 

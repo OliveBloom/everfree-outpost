@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use rustc_serialize::json::Json;
 
-use libserver_types::*;
-
 use super::ParseError;
 
 pub struct SpriteLayerData {

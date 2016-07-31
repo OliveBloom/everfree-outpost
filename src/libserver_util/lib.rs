@@ -1,6 +1,5 @@
 #![crate_name = "server_util"]
 #![feature(
-    raw,
     unsafe_no_drop_flag,
     )]
 
@@ -10,7 +9,7 @@ extern crate server_types as libserver_types;
 use std::io;
 use std::iter;
 use std::mem;
-use std::raw;
+use std::slice;
 
 use libserver_types::Time;
 
@@ -64,34 +63,13 @@ pub fn now() -> Time {
 
 
 pub unsafe fn transmute_slice<'a, T, U>(x: &'a [T]) -> &'a [U] {
-    mem::transmute(raw::Slice {
-        data: x.as_ptr() as *const U,
-        len: x.len() * mem::size_of::<T>() / mem::size_of::<U>(),
-    })
+    slice::from_raw_parts(x.as_ptr() as *const U,
+                          x.len() * mem::size_of::<T>() / mem::size_of::<U>())
 }
 
 pub unsafe fn transmute_slice_mut<'a, T, U>(x: &'a mut [T]) -> &'a mut [U] {
-    mem::transmute(raw::Slice {
-        data: x.as_ptr() as *const U,
-        len: x.len() * mem::size_of::<T>() / mem::size_of::<U>(),
-    })
-}
-
-
-pub trait ReadExact {
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()>;
-}
-
-impl<R: io::Read> ReadExact for R {
-    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        let mut base = 0;
-        while base < buf.len() {
-            let n = try!(self.read(&mut buf[base..]));
-            assert!(n > 0 && base + n <= buf.len());
-            base += n;
-        }
-        Ok(())
-    }
+    slice::from_raw_parts_mut(x.as_mut_ptr() as *mut U,
+                              x.len() * mem::size_of::<T>() / mem::size_of::<U>())
 }
 
 
