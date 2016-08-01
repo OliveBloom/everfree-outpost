@@ -55,10 +55,11 @@ mod parts {
             (Di 10) DIALOGS =       ::dialogs::Dialogs;
             (In 11) INPUT =         ::input::Input;
             (En 12) ENERGY =        ::components::energy::Energy;
+            (MP 13) MOTION_PATHS =  ::components::motion_path::MotionPaths;
     }
 }
 
-const NUM_PARTS: usize = 13;
+const NUM_PARTS: usize = 14;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]
@@ -90,12 +91,10 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         dialogs = DIALOGS;
         input = INPUT;
         energy = ENERGY;
+        motion_paths = MOTION_PATHS;
 
         All = EngineParts::all();
-        Components = ENERGY;
-
-        // Example syntax:
-        //VisionHooks = world | messages;
+        Components = ENERGY | MOTION_PATHS;
     );
 
     fm

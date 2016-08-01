@@ -6,6 +6,7 @@ use cache::TerrainCache;
 use chat::Chat;
 use chunks::Chunks;
 use components::energy::Energy;
+use components::motion_path::MotionPaths;
 use data::Data;
 use dialogs::Dialogs;
 use input::{Input, Action};
@@ -53,6 +54,7 @@ pub struct Engine<'d> {
     pub input: Input,
 
     pub energy: Energy,
+    pub motion_paths: MotionPaths,
 }
 
 #[must_use]
@@ -91,6 +93,7 @@ impl<'d> Engine<'d> {
             input: Input::new(),
 
             energy: Energy::new(),
+            motion_paths: MotionPaths::new(),
         }
     }
 

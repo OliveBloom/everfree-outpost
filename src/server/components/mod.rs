@@ -7,6 +7,7 @@ use world::bundle;
 
 
 pub mod energy;
+pub mod motion_path;
 
 
 pub trait ObjectType {
@@ -51,9 +52,9 @@ pub trait Component<Obj: ObjectType> {
     fn get<'a>(eng: &'a EngineComponents) -> &'a Self;
     fn get_mut<'a>(eng: &'a mut EngineComponents) -> &'a mut Self;
 
-    fn export(&self, id: Obj::Id, b: &mut Obj::Bundled, now: Time);
-    fn import(&mut self, id: Obj::Id, b: &Obj::Bundled, now: Time);
-    fn cleanup(&mut self, id: Obj::Id);
+    fn export(&self, _id: Obj::Id, _b: &mut Obj::Bundled, _now: Time) {}
+    fn import(&mut self, _id: Obj::Id, _b: &Obj::Bundled, _now: Time) {}
+    fn cleanup(&mut self, _id: Obj::Id) {}
 }
 
 
@@ -98,6 +99,7 @@ gen_funcs! {
         cleanup cleanup_entity;
         components {
             energy::Energy,
+            motion_path::MotionPaths,
         }
     }
 }
