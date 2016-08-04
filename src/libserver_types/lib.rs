@@ -1,11 +1,12 @@
 #![crate_name = "server_types"]
+#[macro_use] extern crate common_types as libcommon_types;
 extern crate physics as libphysics;
 
-use std::convert::Into;
 use std::marker::PhantomData;
-use std::{i64, u8, u16};
+use std::{i64, u16};
 use libphysics::CHUNK_BITS;
 
+pub use libcommon_types::*;
 pub use libphysics::v3::{V2, V3, Vn, scalar, Region, Region2};
 pub use libphysics::Shape;
 
@@ -50,56 +51,12 @@ impl<Id> Stable<Id> {
 }
 
 
-// Typedef IDs.  These are used to identify game data elements.
-
-pub type AnimId = u16;
-pub type BlockId = u16;
-pub type ItemId = u16;
-pub type RecipeId = u16;
-pub type TileId = u16;
-pub type TemplateId = u32;
-pub type SlotId = u8;
-
-// Well-known typedef ID values.
-pub const EMPTY_BLOCK: BlockId = 0;
-pub const PLACEHOLDER_BLOCK: BlockId = 1;
-pub const NO_SLOT: SlotId = u8::MAX;
-pub const NO_ITEM: ItemId = 0;
-
-
-// Newtype IDs.  These are used to identify game objects (parts of the World).
-
-macro_rules! mk_id_newtypes {
-    ( $($name:ident($inner:ty);)* ) => {
-        $(
-            #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-            pub struct $name(pub $inner);
-
-            impl $name {
-                pub fn unwrap(self) -> $inner {
-                    let $name(x) = self;
-                    x
-                }
-            }
-
-            impl Into<usize> for $name {
-                fn into(self) -> usize {
-                    self.unwrap() as usize
-                }
-            }
-        )*
-    };
-}
+// Other server-only ID types
 
 mk_id_newtypes! {
     WireId(u16);
-    ClientId(u16);
-    EntityId(u32);
-    InventoryId(u32);
-    PlaneId(u32);
-    TerrainChunkId(u32);
-    StructureId(u32);
 }
+
 
 // Well-known newtype ID values.
 pub const PLANE_LIMBO: PlaneId = PlaneId(0);
