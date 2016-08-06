@@ -46,7 +46,6 @@ macro_rules! bytes_impls {
     };
 }
 
-
 bytes_impls! {
     u8, u16, u32, u64, usize,
     i8, i16, i32, i64, isize,
@@ -62,6 +61,53 @@ bytes_impls! {
 
     V2, V3, Region<V2>, Region<V3>,
     LocalPos, LocalOffset, LocalTime,
+}
+
+
+macro_rules! tuple_impls {
+    ($( ($($name:ident),*), )*) => {
+        $(
+            impl<$($name: ReadFrom,)*> ReadFrom for ($($name,)*) {
+                fn read_from<R: Read>(r: &mut R) -> io::Result<($($name,)*)> {
+                    #![allow(non_snake_case)]
+                    $( let $name = try!(ReadFrom::read_from(r)); )*
+                    Ok(($($name,)*))
+                }
+            }
+
+            impl<$($name: WriteTo,)*> WriteTo for ($($name,)*) {
+                fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+                    #![allow(non_snake_case)]
+                    let ($(ref $name,)*) = *self;
+                    $( try!(WriteTo::write_to($name, w)); )*
+                    Ok(())
+                }
+            }
+
+            impl<$($name: Size,)*> Size for ($($name,)*) {
+                fn size(&self) -> usize {
+                    #![allow(non_snake_case)]
+                    let ($(ref $name,)*) = *self;
+                    let mut sum = 0;
+                    $( sum += Size::size($name); )*
+                    sum
+                }
+            }
+        )*
+    };
+}
+
+tuple_impls! {
+    (A),
+    (A,B),
+    (A,B,C),
+    (A,B,C,D),
+    (A,B,C,D,E),
+    (A,B,C,D,E,F),
+    (A,B,C,D,E,F,G),
+    (A,B,C,D,E,F,G,H),
+    (A,B,C,D,E,F,G,H,I),
+    (A,B,C,D,E,F,G,H,I,J),
 }
 
 
@@ -153,5 +199,18 @@ impl WriteTo for String {
 impl Size for String {
     fn size(&self) -> usize {
         (self as &str).size()
+    }
+}
+
+
+impl<'a, T: WriteTo> WriteTo for &'a T {
+    fn write_to<W: Write>(&self, w: &mut W) -> io::Result<()> {
+        WriteTo::write_to(*self, w)
+    }
+}
+
+impl<'a, T: Size> Size for &'a T {
+    fn size(&self) -> usize {
+        Size::size(*self)
     }
 }
