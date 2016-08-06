@@ -6,5 +6,6 @@ extern crate physics;
 
 pub mod types;
 pub mod wire;
+pub mod extra_arg;
 
 pub mod game;

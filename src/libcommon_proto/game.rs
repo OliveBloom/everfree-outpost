@@ -1,5 +1,6 @@
 use common_types::*;
 
+use extra_arg::ExtraArg;
 use types::*;
 
 
@@ -115,7 +116,6 @@ macro_rules! protocol_enum {
 
 protocol! {
     protocol Request [request_op::Opcode = u16] {
-        // Ordinary requests
         [0x0003] Ping { cookie: u16 },
         [0x0004] Input { when: LocalTime, bits: u16 },
         [0x0009] CraftRecipe {
@@ -124,9 +124,9 @@ protocol! {
         [0x000c] Interact { when: LocalTime },
         [0x000d] UseItem { when: LocalTime, item: ItemId },
         [0x000e] UseAbility { when: LocalTime, ability: ItemId },
-        //[0x0010] InteractWithArgs { when: LocalTime, arg: ExtraArg },
-        //[0x0011] UseItemWithArgs { when: LocalTime, ability: ItemId, arg: ExtraArg },
-        //[0x0012] UseAbilityWithArgs { when: LocalTime, ability: ItemId, arg: ExtraArg },
+        [0x0010] InteractWithArgs { when: LocalTime, arg: ExtraArg },
+        [0x0011] UseItemWithArgs { when: LocalTime, ability: ItemId, arg: ExtraArg },
+        [0x0012] UseAbilityWithArgs { when: LocalTime, ability: ItemId, arg: ExtraArg },
         [0x0013] MoveItem {
             inv1: InventoryId, slot1: SlotId, inv2: InventoryId, slot2: SlotId, count: u8 },
         [0x0015] CreateCharacter { appearance: u32 },
@@ -153,9 +153,9 @@ protocol! {
         [0x8011] MainInventory { id: InventoryId },
         [0x8012] AbilityInventory { id: InventoryId },
         [0x8013] PlaneFlags { flags: u32 },
-        //[0x8014] GetInteractArgs { dialog: u32, arg: ExtraArg },
-        //[0x8015] GetUseItemArgs { item: ItemId, dialog: u32, arg: ExtraArg },
-        //[0x8016] GetUseAbilityArgs { ability: ItemId, dialog: u32, arg: ExtraArg },
+        [0x8014] GetInteractArgs { dialog: u32, arg: ExtraArg },
+        [0x8015] GetUseItemArgs { item: ItemId, dialog: u32, arg: ExtraArg },
+        [0x8016] GetUseAbilityArgs { ability: ItemId, dialog: u32, arg: ExtraArg },
         [0x8017] SyncStatus { status: u8 },
         [0x8018] StructureReplace { id: StructureId, template: TemplateId },
         [0x8019] InventoryUpdate { id: InventoryId, slot: u8, item: (u8, u8, ItemId) },
