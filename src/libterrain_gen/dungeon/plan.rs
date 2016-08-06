@@ -4,10 +4,10 @@ use std::mem;
 use std::slice;
 use rand::Rng;
 
+use libcommon_util::SmallVec;
+use libcommon_util::{make_array, make_array_with};
 use libserver_types::*;
 use libserver_config::Data;
-use libserver_util::SmallVec;
-use libserver_util::{make_array, make_array_with};
 
 use StdRng;
 use algo::disk_sampler::DiskSampler;

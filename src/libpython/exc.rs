@@ -7,7 +7,7 @@ use std::ptr;
 
 use python3_sys::*;
 
-use server_util::StrError;
+use common_util::StrError;
 
 use api;
 use ptr::{PyBox, PyRef};

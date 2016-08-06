@@ -1,8 +1,8 @@
 use rand::Rng;
 
+use libcommon_util::bytes::Bytes;
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
-use libserver_util::bytes::Bytes;
 use libterrain_gen_algo::disk_sampler::DiskSampler;
 
 use forest::common::HasPos;

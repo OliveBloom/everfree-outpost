@@ -1,10 +1,12 @@
 #![crate_name = "server_types"]
 #[macro_use] extern crate common_types as libcommon_types;
+extern crate common_util as libcommon_util;
 extern crate physics as libphysics;
 
 use std::marker::PhantomData;
 use std::{i64, u16};
 use libphysics::CHUNK_BITS;
+use libcommon_util::Bytes;
 
 pub use libcommon_types::*;
 pub use libphysics::v3::{V2, V3, Vn, scalar, Region, Region2};
@@ -49,6 +51,9 @@ impl<Id> Stable<Id> {
         self.val
     }
 }
+
+unsafe impl<Id: Copy> Bytes for Stable<Id> {}
+
 
 
 // Other server-only ID types

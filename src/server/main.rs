@@ -34,6 +34,7 @@ extern crate python3_sys;
 
 extern crate common as libcommon;
 extern crate common_movement as libcommon_movement;
+#[macro_use] extern crate common_util as libcommon_util;
 extern crate physics as libphysics;
 #[macro_use] extern crate python as libpython;
 extern crate terrain_gen as libterrain_gen;
@@ -41,7 +42,6 @@ extern crate server_config as libserver_config;
 extern crate server_bundle as libserver_bundle;
 pub extern crate server_extra as libserver_extra;
 extern crate server_types as libserver_types;
-#[macro_use] extern crate server_util as libserver_util;
 extern crate server_world_types as libserver_world_types;
 
 use std::fs::File;

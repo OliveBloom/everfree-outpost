@@ -30,9 +30,9 @@ use std::mem;
 use std::slice;
 use std::str;
 
+use common_util::Convert;
+use common_util::{StrError, StrResult};
 use server_types::*;
-use server_util::Convert;
-use server_util::{StrError, StrResult};
 
 use server_world_types::{Motion, Item};
 use server_world_types::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};

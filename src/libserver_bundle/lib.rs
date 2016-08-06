@@ -1,12 +1,12 @@
 #![crate_name = "server_bundle"]
 
-#[cfg(ffi)] extern crate libc;
+#[macro_use] extern crate common_util;
 extern crate physics;
 extern crate server_config;
 extern crate server_extra;
 extern crate server_types;
-#[macro_use] extern crate server_util;
 extern crate server_world_types;
+#[cfg(ffi)] extern crate libc;
 
 pub mod builder;
 pub mod error;

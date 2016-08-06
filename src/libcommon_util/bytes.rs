@@ -2,7 +2,8 @@ use std::io;
 use std::mem;
 use std::slice;
 
-use libserver_types::*;
+use common_types::*;
+use physics::v3::{V2, V3, Region};
 
 
 /// Marker trait for types that can be safely manipulated as a string of bytes.  This means a type
@@ -58,8 +59,9 @@ bytes_tuple_impl!(A B C D E F G H I J);
 bytes_tuple_impl!(A B C D E F G H I J K);
 bytes_tuple_impl!(A B C D E F G H I J K L);
 
-unsafe impl Bytes for V2 { }
-unsafe impl Bytes for V3 { }
+unsafe impl Bytes for V2 {}
+unsafe impl Bytes for V3 {}
+unsafe impl<V: Bytes> Bytes for Region<V> {}
 
 unsafe impl Bytes for ClientId {}
 unsafe impl Bytes for EntityId {}
@@ -67,8 +69,6 @@ unsafe impl Bytes for InventoryId {}
 unsafe impl Bytes for PlaneId {}
 unsafe impl Bytes for TerrainChunkId {}
 unsafe impl Bytes for StructureId {}
-
-unsafe impl<Id: Copy> Bytes for Stable<Id> {}
 
 
 pub trait WriteBytes {

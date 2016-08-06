@@ -11,9 +11,9 @@ extern crate rand;
 extern crate time;
 
 extern crate physics as libphysics;
+#[macro_use] extern crate common_util as libcommon_util;
 extern crate server_config as libserver_config;
 extern crate server_types as libserver_types;
-#[macro_use] extern crate server_util as libserver_util;
 pub extern crate terrain_gen_algo as libterrain_gen_algo;
 
 use std::collections::HashMap;

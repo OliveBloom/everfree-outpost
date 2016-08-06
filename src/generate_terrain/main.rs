@@ -5,12 +5,12 @@ extern crate env_logger;
 extern crate rand;
 extern crate rustc_serialize;
 
+extern crate common_util;
 extern crate physics;
 extern crate server_bundle;
 extern crate server_config;
 extern crate server_extra;
 extern crate server_types;
-extern crate server_util;
 extern crate server_world_types;
 extern crate terrain_gen;
 
@@ -30,7 +30,7 @@ use std::u32;
 use rand::{XorShiftRng, Rng};
 use rustc_serialize::json;
 
-use server_util::bytes::{ReadBytes, WriteBytes};
+use common_util::bytes::{ReadBytes, WriteBytes};
 
 
 mod adapter;

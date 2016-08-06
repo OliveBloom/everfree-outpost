@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
+use time;
 
-pub use libserver_util::*;
+use types::Time;
+
+pub use libcommon_util::*;
 
 pub use self::cursor::Cursor;
 pub use self::id_map::IdMap;
@@ -12,6 +15,12 @@ pub mod cursor;
 pub mod id_map;
 pub mod refcount;
 #[macro_use] pub mod stable_id_map;
+
+
+pub fn now() -> Time {
+    let timespec = time::get_time();
+    (timespec.sec as Time * 1000) + (timespec.nsec / 1000000) as Time
+}
 
 
 pub fn multimap_insert<K, V>(map: &mut HashMap<K, HashSet<V>>, k: K, v: V)

@@ -15,11 +15,11 @@ extern crate libc;
 #[macro_use] extern crate log;
 extern crate python3_sys;
 
+#[macro_use] extern crate common_util;
 extern crate physics;
 extern crate server_config;
 extern crate server_extra;
 extern crate server_types;
-#[macro_use] extern crate server_util;
 extern crate server_world_types;
 
 

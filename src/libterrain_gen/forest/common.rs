@@ -33,12 +33,12 @@ macro_rules! define_grid {
             }
 
             fn write_to(&self, mut f: ::std::fs::File) -> ::std::io::Result<()> {
-                use libserver_util::bytes::WriteBytes;
+                use libcommon_util::bytes::WriteBytes;
                 f.write_bytes_slice(&self.data)
             }
 
             fn read_from(mut f: ::std::fs::File) -> ::std::io::Result<Box<$Grid>> {
-                use libserver_util::bytes::ReadBytes;
+                use libcommon_util::bytes::ReadBytes;
                 let mut result = $Grid::alloc();
                 try!(f.read_bytes_slice(&mut result.data));
                 Ok(result)
@@ -94,7 +94,7 @@ macro_rules! define_points {
             }
 
             fn write_to(&self, mut f: ::std::fs::File) -> ::std::io::Result<()> {
-                use libserver_util::bytes::WriteBytes;
+                use libcommon_util::bytes::WriteBytes;
                 try!(f.write_bytes(self.data.len() as u32));
                 try!(f.write_bytes_slice(&self.data));
                 Ok(())
@@ -102,7 +102,7 @@ macro_rules! define_points {
 
             fn read_from(mut f: ::std::fs::File) -> ::std::io::Result<Box<$Points>> {
                 use std::vec::Vec;
-                use libserver_util::bytes::ReadBytes;
+                use libcommon_util::bytes::ReadBytes;
 
                 let len = try!(f.read_bytes::<u32>()) as usize;
                 let mut result = $Points::alloc();

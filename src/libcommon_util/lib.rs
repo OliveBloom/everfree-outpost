@@ -1,17 +1,19 @@
-#![crate_name = "server_util"]
+#![crate_name = "common_util"]
 #![feature(
     unsafe_no_drop_flag,
     )]
 
-extern crate time;
-extern crate server_types as libserver_types;
+#![cfg_attr(asmjs, no_std)]
+#[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
+#[cfg(asmjs)] use std::prelude::v1::*;
+
+extern crate common_types;
+extern crate physics;
 
 use std::io;
 use std::iter;
 use std::mem;
 use std::slice;
-
-use libserver_types::Time;
 
 pub use self::bit_slice::BitSlice;
 pub use self::bytes::Bytes;
@@ -53,12 +55,6 @@ macro_rules! err_on_err {
                              ::std::error::Error::description(&e)),
         }
     };
-}
-
-
-pub fn now() -> Time {
-    let timespec = time::get_time();
-    (timespec.sec as Time * 1000) + (timespec.nsec / 1000000) as Time
 }
 
 

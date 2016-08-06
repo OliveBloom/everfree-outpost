@@ -3,10 +3,10 @@ use std::io;
 use std::mem;
 use rand::Rng;
 
+use libcommon_util::BitSlice;
+use libcommon_util::bytes::{ReadBytes, WriteBytes};
 use libphysics::CHUNK_SIZE;
 use libserver_types::*;
-use libserver_util::BitSlice;
-use libserver_util::bytes::{ReadBytes, WriteBytes};
 use libterrain_gen_algo::cellular::CellularGrid;
 
 use cache::Summary;
