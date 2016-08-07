@@ -39,6 +39,14 @@ impl LocalPos {
             z: base.z + dz as i16 as i32,
         }
     }
+
+    pub fn unwrap(self) -> V3 {
+        V3 {
+            x: self.x as i32,
+            y: self.y as i32,
+            z: self.z as i32,
+        }
+    }
 }
 
 impl LocalOffset {
@@ -55,6 +63,14 @@ impl LocalOffset {
             x: base.x as i32,
             y: base.y as i32,
             z: base.z as i32,
+        }
+    }
+
+    pub fn unwrap(self) -> V3 {
+        V3 {
+            x: self.x as i32,
+            y: self.y as i32,
+            z: self.z as i32,
         }
     }
 }
@@ -76,6 +92,10 @@ impl LocalTime {
     pub fn to_global_64(self, base: i64) -> i64 {
         let delta = self.0.wrapping_sub(base as u16);
         base + delta as i16 as i64
+    }
+
+    pub fn unwrap(self) -> u16 {
+        self.0
     }
 }
 

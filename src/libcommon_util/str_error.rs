@@ -1,7 +1,9 @@
+use std::borrow::ToOwned;
 use std::convert::From;
 use std::error::Error;
 use std::fmt;
 use std::io;
+use std::string::String;
 
 
 #[derive(Clone, Copy, Debug)]
@@ -31,7 +33,7 @@ impl From<&'static str> for StrError {
 
 impl From<StrError> for io::Error {
     fn from(s: StrError) -> io::Error {
-        io::Error::new(io::ErrorKind::Other, s)
+        io::Error::new(io::ErrorKind::Other, s.msg)
     }
 }
 
@@ -71,7 +73,7 @@ impl<'a> From<&'a str> for StringError {
 
 impl From<StringError> for io::Error {
     fn from(s: StringError) -> io::Error {
-        io::Error::new(io::ErrorKind::Other, s)
+        io::Error::new(io::ErrorKind::Other, s.msg)
     }
 }
 

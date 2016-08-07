@@ -1,5 +1,7 @@
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::prelude::v1::*;
+use std::collections::BTreeMap;
+#[cfg(not(asmjs))] use std::collections::HashMap;
+#[cfg(not(asmjs))] use std::hash::Hash;
 use std::io::{self, Read, Write};
 use std::mem;
 use std::u16;
@@ -218,6 +220,7 @@ impl<'a, T: Size> Size for &'a T {
 }
 
 
+#[cfg(not(asmjs))]
 impl<K: ReadFrom+Eq+Hash, V: ReadFrom> ReadFrom for HashMap<K, V> {
     fn read_from<R: Read>(r: &mut R) -> io::Result<HashMap<K, V>> {
         let count = try!(u16::read_from(r)) as usize;
@@ -231,6 +234,7 @@ impl<K: ReadFrom+Eq+Hash, V: ReadFrom> ReadFrom for HashMap<K, V> {
     }
 }
 
+#[cfg(not(asmjs))]
 impl<K: WriteTo+Eq+Hash, V: WriteTo> WriteTo for HashMap<K, V> {
     fn write_to<W: Write>(&self, w: &mut W) -> ::std::io::Result<()> {
         assert!(self.len() <= u16::MAX as usize);
@@ -243,7 +247,45 @@ impl<K: WriteTo+Eq+Hash, V: WriteTo> WriteTo for HashMap<K, V> {
     }
 }
 
+#[cfg(not(asmjs))]
 impl<K: Size+Eq+Hash, V: Size> Size for HashMap<K, V> {
+    fn size(&self) -> usize {
+        let mut sum = 0_u16.size();
+        for (k, v) in self {
+            sum += k.size();
+            sum += v.size();
+        }
+        sum
+    }
+}
+
+
+impl<K: ReadFrom+Ord, V: ReadFrom> ReadFrom for BTreeMap<K, V> {
+    fn read_from<R: Read>(r: &mut R) -> io::Result<BTreeMap<K, V>> {
+        let count = try!(u16::read_from(r)) as usize;
+        let mut h = BTreeMap::new();
+        for _ in 0 .. count {
+            let k = try!(K::read_from(r));
+            let v = try!(V::read_from(r));
+            h.insert(k, v);
+        }
+        Ok(h)
+    }
+}
+
+impl<K: WriteTo+Ord, V: WriteTo> WriteTo for BTreeMap<K, V> {
+    fn write_to<W: Write>(&self, w: &mut W) -> ::std::io::Result<()> {
+        assert!(self.len() <= u16::MAX as usize);
+        try!((self.len() as u16).write_to(w));
+        for (k, v) in self {
+            try!(k.write_to(w));
+            try!(v.write_to(w));
+        }
+        Ok(())
+    }
+}
+
+impl<K: Size+Ord, V: Size> Size for BTreeMap<K, V> {
     fn size(&self) -> usize {
         let mut sum = 0_u16.size();
         for (k, v) in self {

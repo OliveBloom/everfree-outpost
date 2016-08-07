@@ -20,7 +20,7 @@ pub use self::bytes::Bytes;
 pub use self::convert::Convert;
 pub use self::coroutine::Coroutine;
 pub use self::small_vec::SmallVec;
-pub use self::small_set::SmallSet;
+#[cfg(not(asmjs))] pub use self::small_set::SmallSet;
 pub use self::str_error::{StrError, StrResult};
 pub use self::str_error::{StringError, StringResult};
 
@@ -29,7 +29,7 @@ pub use self::str_error::{StringError, StringResult};
 pub mod bit_slice;
 pub mod bytes;
 pub mod convert;
-pub mod small_set;
+#[cfg(not(asmjs))] pub mod small_set;
 pub mod small_vec;
 
 

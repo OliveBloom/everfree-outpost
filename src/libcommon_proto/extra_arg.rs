@@ -1,11 +1,14 @@
-use std::collections::HashMap;
+use std::prelude::v1::*;
+#[cfg(asmjs)] use std::collections::BTreeMap;
+#[cfg(not(asmjs))] use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::mem;
 
 use wire::{ReadFrom, WriteTo, Size};
 
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[cfg_attr(not(asmjs), derive(Hash))]
 pub enum SimpleArg {
     Int(i32),
     Str(String),
@@ -20,12 +23,15 @@ impl SimpleArg {
     }
 }
 
+#[cfg(asmjs)] pub type Map<K, V> = BTreeMap<K, V>;
+#[cfg(not(asmjs))] pub type Map<K, V> = HashMap<K, V>;
+
 #[derive(Clone, Debug)]
 pub enum ExtraArg {
     Int(i32),
     Str(String),
     List(Vec<ExtraArg>),
-    Map(HashMap<SimpleArg, ExtraArg>),
+    Map(Map<SimpleArg, ExtraArg>),
 }
 
 impl ExtraArg {
@@ -90,7 +96,7 @@ impl ReadFrom for ExtraArg {
                 Ok(ExtraArg::List(v))
             },
             ArgTag::Map => {
-                let h = try!(HashMap::<SimpleArg, ExtraArg>::read_from(r));
+                let h = try!(Map::<SimpleArg, ExtraArg>::read_from(r));
                 Ok(ExtraArg::Map(h))
             },
         }

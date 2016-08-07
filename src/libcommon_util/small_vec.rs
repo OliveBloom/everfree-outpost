@@ -3,6 +3,7 @@ use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::slice;
+use std::vec::Vec;
 
 
 const SMALL_VEC_WORDS: usize = 3;

@@ -8,6 +8,7 @@
     core_intrinsics,
     macro_reexport,
     raw,
+    reflect_marker,
     slice_concat_ext,
     unicode,
 )]
@@ -122,3 +123,6 @@ pub mod prelude {
 //  select!     (depends on libstd multithreading features)
 //
 // print! and println! are reexported from libasmrt.  The others are not needed.
+
+pub mod error;
+pub mod io;
