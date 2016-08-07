@@ -12,7 +12,7 @@ def rules(i):
             '--out-dir $b_asmjs',
             '--cfg asmjs',
             '--cfg \'feature="no_std"\'',
-            '--target=i686-unknown-linux-gnu',
+            '--target=$root/util/rustc-target.json',
             '-L $b_asmjs -L $b_native',
             # -C opt-level=3 is mandatory because it eliminates some constructs that cause problems
             # for emscripten-fastcomp.
