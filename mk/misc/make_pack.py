@@ -27,17 +27,8 @@ def main(src_dir, build_dir, out_file):
 
     add('image', 'tiles',       build('tiles.png'))
     add('image', 'fonts',       build('fonts.png'))
-    add('url',   'items',       build('items.png'))
     add('image', 'items_img',   build('items.png'))
     add('image', 'ui_atlas',    build('ui_atlas.png'))
-
-    add('json', 'item_defs',            build('items_client.json'))
-    add('json', 'recipe_defs',          build('recipes_client.json'))
-    add('json', 'animation_defs',       build('animations_client.json'))
-    add('json', 'extra_defs',           build('extras_client.json'))
-    add('json', 'fonts_metrics',        build('fonts_metrics.json'))
-    add('json', 'day_night',            build('day_night.json'))
-    add('json', 'ui_atlas_parts',       build('ui_atlas.json'))
 
     add('binary', 'client_data',        build('client_data.bin'))
 
