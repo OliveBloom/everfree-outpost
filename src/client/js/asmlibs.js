@@ -457,37 +457,6 @@ DynAsm.prototype.handleMessage = function(msg) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.inventoryAppear = function(id, items) {
-    var item_arr = this._heapAlloc(Uint8Array, items.length * this.SIZEOF.Item);
-    var view = new DataView(item_arr.buffer, item_arr.byteOffset, item_arr.byteLength);
-
-    for (var i = 0; i < items.length; ++i) {
-        var base = i * this.SIZEOF.Item;
-        var item = items[i];
-        view.setUint16( base +  0,  item.item_id, true);
-        view.setUint8(  base +  2,  item.count);
-    }
-
-    // Takes ownership of `items`.
-    this._raw['inventory_appear'](this.client, id, item_arr.byteOffset, item_arr.byteLength);
-};
-
-DynAsm.prototype.inventoryGone = function(id) {
-    this._raw['inventory_gone'](this.client, id);
-};
-
-DynAsm.prototype.inventoryUpdate = function(id, slot, item) {
-    this._raw['inventory_update'](this.client, id, slot, item.item_id, item.count);
-};
-
-DynAsm.prototype.inventoryMainId = function(id) {
-    this._raw['inventory_main_id'](this.client, id);
-};
-
-DynAsm.prototype.inventoryAbilityId = function(id) {
-    this._raw['inventory_ability_id'](this.client, id);
-};
-
 DynAsm.prototype.inputKey = function(code, shift) {
     return this._raw['input_key'](this.client, code, shift);
 };

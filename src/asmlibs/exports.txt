@@ -12,11 +12,6 @@ client_init
 client_reset
 client_reset_renderer
 handle_message
-inventory_appear
-inventory_gone
-inventory_update
-inventory_main_id
-inventory_ability_id
 input_key
 input_mouse_move
 input_mouse_down

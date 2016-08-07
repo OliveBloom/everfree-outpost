@@ -25,7 +25,6 @@ use std::mem;
 use std::ptr;
 use std::slice;
 use common_proto::wire::ReadFrom;
-use common_types::InventoryId;
 
 use client::Data;
 
@@ -90,44 +89,6 @@ pub unsafe extern fn client_reset(client: &mut Client) {
 #[no_mangle]
 pub unsafe extern fn client_reset_renderer(client: &mut Client) {
     client.reset_renderer();
-}
-
-// Inventories
-
-#[no_mangle]
-pub unsafe extern fn inventory_appear(client: &mut Client,
-                                      id: u32,
-                                      items_ptr: *mut u8,
-                                      items_byte_len: usize) {
-    let items = make_boxed_slice(items_ptr as *mut inventory::Item, items_byte_len);
-    client.inventory_appear(InventoryId(id), items);
-}
-
-#[no_mangle]
-pub unsafe extern fn inventory_gone(client: &mut Client,
-                                    id: u32) {
-    client.inventory_gone(InventoryId(id));
-}
-
-#[no_mangle]
-pub unsafe extern fn inventory_update(client: &mut Client,
-                                      inv_id: u32,
-                                      slot: usize,
-                                      item_id: u16,
-                                      quantity: u8) {
-    client.inventory_update(InventoryId(inv_id), slot, inventory::Item::new(item_id, quantity));
-}
-
-#[no_mangle]
-pub unsafe extern fn inventory_main_id(client: &mut Client,
-                                       inv_id: u32) {
-    client.set_main_inventory_id(InventoryId(inv_id));
-}
-
-#[no_mangle]
-pub unsafe extern fn inventory_ability_id(client: &mut Client,
-                                          inv_id: u32) {
-    client.set_ability_inventory_id(InventoryId(inv_id));
 }
 
 // Inputs
