@@ -17,6 +17,7 @@ use physics::Shape;
 use physics::v3::{V3, V2, Vn, scalar, Region};
 use common::Gauge;
 use common_movement::InputBits;
+use common_proto::game::Response;
 
 use Time;
 use data::Data;
@@ -104,6 +105,146 @@ impl<'d, P: Platform> Client<'d, P> {
         c
     }
 
+
+    // Main entry point
+
+    pub fn handle_message(&mut self, resp: Response) {
+        match resp {
+            Response::TerrainChunk(idx, data) => {
+                let cpos = V2::new(idx as i32 % LOCAL_SIZE,
+                                   idx as i32 / LOCAL_SIZE);
+                self.load_terrain_chunk(cpos, &data);
+            },
+
+            Response::Pong(_cookie, _now) => error!("NYI: libclient Pong"),
+
+            Response::Init(pawn_id, now, day_night_base, day_night_ms) => {
+                self.set_pawn_id(pawn_id.unwrap());
+                self.init_timing(now.unwrap());
+                self.init_day_night(now.unwrap(), day_night_base as Time, day_night_ms as Time);
+            },
+
+            Response::KickReason(_msg) => error!("NYI: libclient KickReason"),
+
+            Response::UnloadChunk(_idx) => {},   // TODO (currently no-op)
+
+            Response::OpenCrafting(_kind, station, inventory) =>
+                self.open_crafting_dialog(inventory.unwrap(), station.unwrap()),
+
+            Response::OpenDialog(which, args) => match which {
+                1 => {
+                    assert!(args.len() == 2);
+                    // TODO: use real InventoryId
+                    self.open_container_dialog(args[0], args[1]);
+                },
+                _ => error!("NYI: libclient OpenDialog({})", which),
+            },
+
+            Response::ChatUpdate(_msg) => error!("NYI: libclient ChatUpdate"),
+
+            Response::EntityAppear(id, appearance, name) => {
+                let opt_name = if name != "" { Some(name) } else { None };
+                self.entity_appear(id.unwrap(), appearance, opt_name);
+            },
+
+            Response::EntityGone(id, time) =>
+                self.entity_gone(id.unwrap(), time.unwrap()),
+
+            Response::StructureAppear(id, template, pos) =>
+                self.structure_appear(id.unwrap(), pos.unwrap(), template),
+
+            Response::StructureGone(id) =>
+                self.structure_gone(id.unwrap()),
+
+            Response::MainInventory(id) =>
+                self.inventories.set_main_id(id.unwrap()),
+
+            Response::AbilityInventory(id) =>
+                self.inventories.set_ability_id(id.unwrap()),
+
+            Response::PlaneFlags(flags) =>
+                self.set_plane_flags(flags),
+
+            Response::GetInteractArgs(_dialog, _arg) =>
+                error!("NYI: libclient GetInteractArgs"),
+
+            Response::GetUseItemArgs(_item, _dialog, _arg) =>
+                error!("NYI: libclient GetUseItemArgs"),
+
+            Response::GetUseAbilityArgs(_ability, _dialog, _arg) =>
+                error!("NYI: libclient GetUseAbilityArgs"),
+
+            Response::SyncStatus(_status) => error!("NYI: libclient SyncStatus"),
+
+            Response::StructureReplace(id, template) =>
+                self.structure_replace(id.unwrap(), template),
+
+            Response::InventoryUpdate(id, slot, raw_item) => {
+                let (_, qty, item_id) = raw_item;
+                let item = Item::new(item_id, qty);
+                self.inventory_update(id.unwrap(), slot as usize, item);
+            },
+
+            Response::InventoryAppear(id, raw_items) => {
+                let items = raw_items.into_iter()
+                    .map(|(_, qty, item_id)| Item::new(item_id, qty))
+                    .collect::<Vec<_>>().into_boxed_slice();
+                self.inventory_appear(id.unwrap(), items);
+            },
+
+            Response::InventoryGone(id) =>
+                self.inventory_gone(id.unwrap()),
+
+            Response::EntityMotionStart(id, start_pos, start_time, velocity, anim) =>
+                self.entity_motion_start(id.unwrap(),
+                                         start_time.unwrap(),
+                                         start_pos.unwrap(),
+                                         velocity.unwrap(),
+                                         anim),
+
+            Response::EntityMotionEnd(id, end_time) =>
+                self.entity_motion_end(id.unwrap(),
+                                       end_time.unwrap()),
+
+            Response::EntityMotionStartEnd(
+                    id, start_pos, start_time, velocity, anim, end_time) => {
+                self.entity_motion_start(id.unwrap(),
+                                         start_time.unwrap(),
+                                         start_pos.unwrap(),
+                                         velocity.unwrap(),
+                                         anim);
+                self.entity_motion_end(id.unwrap(),
+                                       end_time.unwrap());
+            },
+
+            Response::ProcessedInputs(now, count) =>
+                self.processed_inputs(now.unwrap(), count),
+
+            Response::ActivityChange(activity) =>
+                self.activity_change(activity),
+
+            Response::InitNoPawn(camera_pos, now, day_night_base, day_night_ms) => {
+                self.set_default_camera_pos(camera_pos.unwrap());
+                self.init_timing(now.unwrap());
+                self.init_day_night(now.unwrap(), day_night_base as Time, day_night_ms as Time);
+            },
+
+            Response::OpenPonyEdit(_name) => error!("NYI: libclient OpenPonyEdit"),
+
+            Response::EntityActivityIcon(id, icon) =>
+                self.entity_activity_icon(id.unwrap(), icon),
+
+            Response::CancelDialog(()) =>
+                self.close_dialog(),
+
+            Response::EnergyUpdate(cur, max, rate, time) =>
+                self.energy_update(cur as i32, max as i32, rate, time.unwrap()),
+
+            Response::BadMessage(opcode) => error!("bad opcode from server: {:?}", opcode),
+        }
+    }
+
+    // Resetting client state
 
     pub fn reset_all(&mut self) {
         for chunk in self.chunks.iter_mut() {
@@ -610,6 +751,7 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Misc
 
+    // TODO: use LocalTime
     fn decode_time(&self, server: u16) -> Time {
         let client = self.platform.get_time();
         self.timing.decode(client, server)
