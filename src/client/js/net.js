@@ -110,15 +110,10 @@ function Connection(x) {
     this.onClose = null;
     this.onPong = null;
     this.onChatUpdate = null;
-    this.onMainInventory = null;
-    this.onAbilityInventory = null;
     this.onGetInteractArgs = null;
     this.onGetUseItemArgs = null;
     this.onGetUseAbilityArgs = null;
     this.onSyncStatus = null;
-    this.onInventoryUpdate = null;
-    this.onInventoryAppear = null;
-    this.onInventoryGone = null;
     this.onOpenPonyEdit = null;
 
     this._asm = null;
@@ -225,20 +220,6 @@ Connection.prototype._handleMessage = function(evt) {
             }
             break;
 
-        case OP_MAIN_INVENTORY:
-            if (this.onMainInventory != null) {
-                var inventory_id = get32();
-                this.onMainInventory(inventory_id);
-            }
-            break;
-
-        case OP_ABILITY_INVENTORY:
-            if (this.onAbilityInventory != null) {
-                var inventory_id = get32();
-                this.onAbilityInventory(inventory_id);
-            }
-            break;
-
         case OP_GET_INTERACT_ARGS:
             if (this.onGetInteractArgs != null) {
                 var dialog_id = get32();
@@ -270,47 +251,6 @@ Connection.prototype._handleMessage = function(evt) {
                 var synced = get8();
                 this.onSyncStatus(synced);
             }
-            break;
-
-        case OP_INVENTORY_UPDATE:
-            if (this.onInventoryUpdate != null) {
-                var inventory_id = get32();
-                var slot_idx = get8();
-                var tag = get8();
-                var count = get8();
-                var item_id = get16();
-                this.onInventoryUpdate(inventory_id, slot_idx, {
-                    tag: tag,
-                    count: count,
-                    item_id: item_id,
-                });
-            };
-            break;
-
-        case OP_INVENTORY_APPEAR:
-            if (this.onInventoryAppear != null) {
-                var inventory_id = get32();
-                var len = get16();
-                var slots = [];
-                for (var i = 0; i < len; ++i) {
-                    var tag = get8();
-                    var count = get8();
-                    var item_id = get16();
-                    slots.push({
-                        tag: tag,
-                        count: count,
-                        item_id: item_id,
-                    });
-                }
-                this.onInventoryAppear(inventory_id, slots);
-            };
-            break;
-
-        case OP_INVENTORY_GONE:
-            if (this.onInventoryGone != null) {
-                var inventory_id = get32();
-                this.onInventoryGone(inventory_id);
-            };
             break;
 
         case OP_OPEN_PONYEDIT:

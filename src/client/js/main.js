@@ -6,8 +6,6 @@ var Config = require('config').Config;
 
 var handleResize = require('resize').handleResize;
 
-var InventoryTracker = require('inventory').InventoryTracker;
-
 var Keyboard = require('keyboard').Keyboard;
 var Dialog = require('ui/dialog').Dialog;
 var Banner = require('ui/banner').Banner;
@@ -21,12 +19,9 @@ var PonyEditor = require('ui/ponyedit').PonyEditor;
 var KeybindingEditor = require('ui/keybinding').KeybindingEditor;
 var widget = require('ui/widget');
 var ErrorList = require('ui/errorlist').ErrorList;
-var InventoryUpdateList = require('ui/invupdate').InventoryUpdateList;
 var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 
 var Input = require('input').Input;
-
-var ItemDef = require('data/items').ItemDef;
 
 var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
@@ -54,7 +49,6 @@ var banner;
 var keyboard;
 var chat;
 var error_list;
-var inv_update_list;
 var music_test;
 
 var input;
@@ -63,10 +57,7 @@ var main_menu;
 var debug_menu;
 
 var timing;
-var inv_tracker;
 var synced = net.SYNC_LOADING;
-var item_inv;
-var ability_inv;
 
 
 /** @constructor */
@@ -90,7 +81,6 @@ OutpostClient.prototype._init = function() {
     keyboard = new Keyboard(asm_client);
     dialog = new Dialog(keyboard);
     chat = new ChatWindow();
-    inv_update_list = new InventoryUpdateList();
     music_test = new MusicTest();
 
     input = new Input();
@@ -101,26 +91,12 @@ OutpostClient.prototype._init = function() {
 
     conn = null;    // Initialized after assets are loaded.
     timing = null;  // Initialized after connection is opened.
-
-    item_inv = null;
-    ability_inv = null;
 };
 
 OutpostClient.prototype['loadData'] = function(blob, next) {
     var this_ = this;
     loader.loadPack(blob, function(assets_) {
         assets = assets_;
-
-        var items = assets['item_defs'];
-        for (var i = 0; i < items.length; ++i) {
-            ItemDef.register(i, items[i]);
-        }
-
-        var css = '.item-icon {' +
-            'background-image: url("' + assets['items'] + '");' +
-        '}';
-        util.element('style', ['type=text/css', 'text=' + css], document.head);
-
         next();
     });
 };
@@ -157,8 +133,6 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     //conn.onOpen = next;   // TODO - probably remove?
     conn.onClose = handleClose;
     conn.onChatUpdate = handleChatUpdate;
-    conn.onMainInventory = handleMainInventory;
-    conn.onAbilityInventory = handleAbilityInventory;
     conn.onGetInteractArgs = handleGetInteractArgs;
     conn.onGetUseItemArgs = handleGetUseItemArgs;
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
@@ -182,7 +156,6 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     // the slight delay of loading chunks won't impact the initial ping time.
     timing = new Timing(asm_client, conn);
     timing.scheduleUpdates(2, 5);
-    inv_tracker = new InventoryTracker(conn, asm_client);
     asm_client.conn = conn;
     conn._asm = asm_client;
 
@@ -208,7 +181,6 @@ function buildUI() {
 
     ui_div.appendChild(key_list);
     ui_div.appendChild(chat.container);
-    //ui_div.appendChild(inv_update_list.container);
     ui_div.appendChild(banner.container);
     ui_div.appendChild(dialog.container);
 
@@ -364,16 +336,10 @@ function setupKeyHandler() {
                     break;
 
                 case 'inventory':
-                    if (item_inv == null) {
-                        break;
-                    }
                     asm_client.openInventoryDialog();
                     break;
 
                 case 'abilities':
-                    if (ability_inv == null) {
-                        break;
-                    }
                     asm_client.openAbilityDialog();
                     break;
 
@@ -460,23 +426,10 @@ function handleChatUpdate(msg) {
 }
 
 function handleMainInventory(iid) {
-    if (item_inv != null) {
-        item_inv.unsubscribe();
-    }
-    item_inv = inv_tracker.get(iid);
-    if (Config.show_inventory_updates.get()) {
-        inv_update_list.attach(item_inv.clone());
-    }
-
     asm_client.inventoryMainId(iid);
 }
 
 function handleAbilityInventory(iid) {
-    if (ability_inv != null) {
-        ability_inv.unsubscribe();
-    }
-    ability_inv = inv_tracker.get(iid);
-
     asm_client.inventoryAbilityId(iid);
 }
 
@@ -544,10 +497,6 @@ function handleOpenPonyEdit(name) {
 
 // Reset (nearly) all client-side state to pre-login conditions.
 function resetAll() {
-    inv_tracker.reset();
-    item_inv = null;
-    ability_inv = null;
-
     if (dialog.isVisible()) {
         dialog.hide();
     }
