@@ -1,15 +1,17 @@
 use std::cmp;
 use std::error::Error;
-use std::mem;
 use std::sync::mpsc::{Sender, Receiver};
 
 use types::*;
 use util::StringResult;
 use util::now;
+use libcommon_proto::{game, control};
+use libcommon_proto::ExtraArg;
+use libcommon_proto::types::{LocalOffset, LocalTime};
 use libphysics::TILE_SIZE;
 
 use input::InputBits;
-use msg::{Request, Response, ExtraArg};
+use tasks::{Input, Output};
 use world::{self, Activity};
 
 use self::clients::Clients;
@@ -19,8 +21,8 @@ mod clients;
 
 
 pub struct Messages {
-    send: Sender<(WireId, Response)>,
-    recv: Receiver<(WireId, Request)>,
+    send: Sender<Output>,
+    recv: Receiver<Input>,
     clients: Clients,
     time_base: Time,
 }
@@ -131,17 +133,12 @@ pub enum Dialog {
 }
 
 
-/// Opaque wrapper around the low-level event type.
-pub struct MessageEvent((WireId, Request));
-
-fn cast_receiver(recv: &Receiver<(WireId, Request)>) -> &Receiver<MessageEvent> {
-    unsafe { mem::transmute(recv) }
-}
+pub type MessageEvent = Input;
 
 
 impl Messages {
-    pub fn new(recv: Receiver<(WireId, Request)>,
-               send: Sender<(WireId, Response)>) -> Messages {
+    pub fn new(recv: Receiver<Input>,
+               send: Sender<Output>) -> Messages {
         Messages {
             send: send,
             recv: recv,
@@ -207,59 +204,65 @@ impl Messages {
     // Event processing
 
     pub fn receiver(&self) -> &Receiver<MessageEvent> {
-        cast_receiver(&self.recv)
+        &self.recv
     }
 
     pub fn process(&mut self, evt: MessageEvent) -> Option<(Event, Time)> {
-        let (wire_id, req) = evt.0;
         let now = self.world_now();
-        self.handle_req(now, wire_id, req)
+        self.handle_input(now, evt)
             .map(|evt| (evt, now))
     }
 
-    fn handle_req(&mut self, now: Time, wire_id: WireId, req: Request) -> Option<Event> {
-        if wire_id == CONTROL_WIRE_ID {
-            self.handle_control_req(now, req)
-        } else {
-            if let Some(cid) = self.clients.wire_to_client(wire_id) {
-                self.handle_client_req(now, wire_id, cid, req)
-            } else {
-                self.handle_pre_login_req(now, wire_id, req)
-            }
+    fn handle_input(&mut self, now: Time, input: Input) -> Option<Event> {
+        match input {
+            Input::Control(req) => self.handle_control_req(now, req),
+            Input::Game(wire_id, req) => {
+                if let Some(cid) = self.clients.wire_to_client(wire_id) {
+                    self.handle_client_req(now, wire_id, cid, req)
+                } else {
+                    self.handle_pre_login_req(now, wire_id, req)
+                }
+            },
         }
     }
 
-    fn handle_control_req(&mut self, _now: Time, req: Request) -> Option<Event> {
+    fn handle_control_req(&mut self, _now: Time, req: control::Request) -> Option<Event> {
+        use libcommon_proto::control::Request;
         match req {
-            Request::AddClient(wire_id, uid, name) =>
+            Request::AddClient(raw_id, uid, name) =>
                 // Let the caller decide when to actually add the client.
-                Some(Event::Control(ControlEvent::OpenWire(wire_id, uid, name))),
-            Request::RemoveClient(wire_id) => {
+                Some(Event::Control(ControlEvent::OpenWire(WireId(raw_id), uid, name))),
+            Request::RemoveClient(raw_id) => {
+                let wire_id = WireId(raw_id);
                 // Let the caller decide when to actually remove the client.
                 let opt_cid = self.clients.wire_to_client(wire_id);
                 Some(Event::Control(ControlEvent::CloseWire(wire_id, opt_cid)))
             },
             Request::ReplCommand(cookie, cmd) =>
                 Some(Event::Control(ControlEvent::ReplCommand(cookie, cmd))),
-            Request::Shutdown =>
+            Request::Shutdown(()) =>
                 Some(Event::Control(ControlEvent::Shutdown)),
-            Request::Restart(server, client) =>
-                Some(Event::Control(ControlEvent::Restart(server, client))),
-
-            _ => {
-                warn!("bad control request: {:?}", req);
-                None
-            },
+            Request::RestartServer(()) =>
+                Some(Event::Control(ControlEvent::Restart(true, false))),
+            Request::RestartClient(()) =>
+                Some(Event::Control(ControlEvent::Restart(false, true))),
+            Request::RestartBoth(()) =>
+                Some(Event::Control(ControlEvent::Restart(true, true))),
         }
     }
 
-    fn handle_pre_login_req(&mut self, now: Time, wire_id: WireId, req: Request) -> Option<Event> {
+    fn handle_pre_login_req(&mut self,
+                            now: Time,
+                            wire_id: WireId,
+                            req: game::Request) -> Option<Event> {
+        use libcommon_proto::game::Request;
         match req {
             Request::Ping(cookie) => {
-                self.send_raw(wire_id, Response::Pong(cookie, now.to_local()));
+                self.send_raw(wire_id, game::Response::Pong(
+                        cookie, LocalTime::from_global_64(now)));
                 None
             },
-            Request::Ready =>
+            Request::Ready(()) =>
                 Some(Event::Wire(wire_id, WireEvent::Ready)),
             _ => {
                 warn!("bad pre-login request from {:?}: {:?}", wire_id, req);
@@ -272,7 +275,7 @@ impl Messages {
                          now: Time,
                          wire_id: WireId,
                          cid: ClientId,
-                         req: Request) -> Option<Event> {
+                         req: game::Request) -> Option<Event> {
         match self.try_handle_client_req(now, wire_id, req) {
             Ok(evt) => evt.map(|e| Event::Client(cid, e)),
             Err(e) => {
@@ -285,20 +288,22 @@ impl Messages {
     fn try_handle_client_req(&mut self,
                              now: Time,
                              wire_id: WireId,
-                             req: Request) -> StringResult<Option<ClientEvent>> {
+                             req: game::Request) -> StringResult<Option<ClientEvent>> {
+        use libcommon_proto::game::Request;
         match req {
             Request::Ping(cookie) => {
-                self.send_raw(wire_id, Response::Pong(cookie, now.to_local()));
+                self.send_raw(wire_id, game::Response::Pong(
+                        cookie, LocalTime::from_global_64(now)));
                 Ok(None)
             },
 
             Request::Input(time, input) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 let input = unwrap!(InputBits::from_bits(input));
                 Ok(Some(ClientEvent::Input(time, input)))
             },
 
-            Request::CloseDialog =>
+            Request::CloseDialog(()) =>
                 Ok(Some(ClientEvent::CloseDialog)),
 
             Request::MoveItem(from_iid, from_slot, to_iid, to_slot, count) =>
@@ -312,33 +317,33 @@ impl Messages {
 
 
             Request::Interact(time) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 Ok(Some(ClientEvent::Interact(time, None)))
             },
 
             Request::UseItem(time, item_id) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 Ok(Some(ClientEvent::UseItem(time, item_id, None)))
             },
 
             Request::UseAbility(time, item_id) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 Ok(Some(ClientEvent::UseAbility(time, item_id, None)))
             },
 
 
             Request::InteractWithArgs(time, args) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 Ok(Some(ClientEvent::Interact(time, Some(args))))
             },
 
             Request::UseItemWithArgs(time, item_id, args) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 Ok(Some(ClientEvent::UseItem(time, item_id, Some(args))))
             },
 
             Request::UseAbilityWithArgs(time, item_id, args) => {
-                let time = cmp::max(time.to_global(now), now);
+                let time = cmp::max(time.to_global_64(now), now);
                 Ok(Some(ClientEvent::UseAbility(time, item_id, Some(args))))
             },
 
@@ -354,28 +359,35 @@ impl Messages {
 
     // Response sending
 
-    fn send_raw(&self, wire_id: WireId, msg: Response) {
+    fn send_raw(&self, wire_id: WireId, msg: game::Response) {
         trace!("{:?}: {:?}", wire_id, msg);
-        self.send.send((wire_id, msg)).unwrap();
+        self.send.send(Output::Game(wire_id, msg)).unwrap();
+    }
+
+    fn send_raw_control(&self, msg: control::Response) {
+        trace!("[control]: {:?}", msg);
+        self.send.send(Output::Control(msg)).unwrap();
     }
 
     pub fn send_control(&self, resp: ControlResponse) {
         match resp {
             ControlResponse::WireClosed(wire_id) =>
-                self.send_raw(CONTROL_WIRE_ID, Response::ClientRemoved(wire_id)),
+                self.send_raw_control(control::Response::ClientRemoved(wire_id.unwrap())),
             ControlResponse::ReplResult(cookie, msg) =>
-                self.send_raw(CONTROL_WIRE_ID, Response::ReplResult(cookie, msg)),
+                self.send_raw_control(control::Response::ReplResult(cookie, msg)),
         }
     }
 
     pub fn send_wire(&self, wire_id: WireId, resp: WireResponse) {
         match resp {
             WireResponse::KickReason(msg) =>
-                self.send_raw(wire_id, Response::KickReason(msg)),
+                self.send_raw(wire_id, game::Response::KickReason(msg)),
         }
     }
 
     pub fn send_client(&self, cid: ClientId, resp: ClientResponse) {
+        use libcommon_proto::game::Response;
+
         let client = match self.clients.get(cid) {
             Some(x) => x,
             None => {
@@ -388,14 +400,14 @@ impl Messages {
         match resp {
             ClientResponse::Init(eid, time, cycle_base, cycle_ms) => {
                 self.send_raw(wire_id, Response::Init(eid,
-                                                      time.to_local(),
+                                                      LocalTime::from_global_64(time),
                                                       cycle_base,
                                                       cycle_ms));
             },
 
             ClientResponse::InitNoPawn(pos, time, cycle_base, cycle_ms) => {
-                self.send_raw(wire_id, Response::InitNoPawn(client.local_pos_tuple(pos),
-                                                            time.to_local(),
+                self.send_raw(wire_id, Response::InitNoPawn(client.local_pos(pos),
+                                                            LocalTime::from_global_64(time),
                                                             cycle_base,
                                                             cycle_ms));
             },
@@ -415,25 +427,26 @@ impl Messages {
                 self.send_raw(wire_id, Response::EntityAppear(eid, appear, name)),
 
             ClientResponse::EntityMotionStart(eid, pos, time, velocity, anim) => {
-                let pos16 = client.local_pos_tuple(pos);
-                let v16 = (velocity.x as i16, velocity.y as i16, velocity.z as i16);
+                let pos16 = client.local_pos(pos);
+                let v16 = LocalOffset::from_global(velocity);
                 self.send_raw(wire_id, Response::EntityMotionStart(
-                        eid, pos16, time.to_local(), v16, anim));
+                        eid, pos16, LocalTime::from_global_64(time), v16, anim));
             },
 
             ClientResponse::EntityMotionStartEnd(eid, pos, time, velocity, anim, end_time) => {
-                let pos16 = client.local_pos_tuple(pos);
-                let v16 = (velocity.x as i16, velocity.y as i16, velocity.z as i16);
+                let pos16 = client.local_pos(pos);
+                let v16 = LocalOffset::from_global(velocity);
                 self.send_raw(wire_id, Response::EntityMotionStartEnd(
-                        eid, pos16, time.to_local(), v16, anim, end_time.to_local()));
+                        eid, pos16, LocalTime::from_global_64(time), v16, anim,
+                        LocalTime::from_global_64(end_time)));
             },
 
             ClientResponse::EntityMotionEnd(eid, time) =>
-                self.send_raw(wire_id, Response::EntityMotionEnd(eid, time.to_local())),
+                self.send_raw(wire_id, Response::EntityMotionEnd(
+                        eid, LocalTime::from_global_64(time))),
 
             ClientResponse::EntityGone(eid, time) => {
-                let time = time.to_local();
-                self.send_raw(wire_id, Response::EntityGone(eid, time));
+                self.send_raw(wire_id, Response::EntityGone(eid, LocalTime::from_global_64(time)));
             },
 
             ClientResponse::EntityActivityIcon(eid, anim_id) => {
@@ -452,7 +465,7 @@ impl Messages {
 
 
             ClientResponse::StructureAppear(sid, template_id, pos) => {
-                let local_pos = client.local_pos_tuple(pos * scalar(TILE_SIZE));
+                let local_pos = client.local_pos(pos * scalar(TILE_SIZE));
                 self.send_raw(wire_id, Response::StructureAppear(sid, template_id, local_pos));
             },
 
@@ -520,7 +533,7 @@ impl Messages {
             },
 
             ClientResponse::CancelDialog =>
-                self.send_raw(wire_id, Response::CancelDialog),
+                self.send_raw(wire_id, Response::CancelDialog(())),
 
             ClientResponse::MainInventory(iid) =>
                 self.send_raw(wire_id, Response::MainInventory(iid)),
@@ -530,10 +543,11 @@ impl Messages {
 
             ClientResponse::EnergyUpdate(cur, max, rate, time) =>
                 self.send_raw(wire_id, Response::EnergyUpdate(
-                        cur as u16, max as u16, rate, time.to_local())),
+                        cur as u16, max as u16, rate, LocalTime::from_global_64(time))),
 
             ClientResponse::ProcessedInputs(time, count) =>
-                self.send_raw(wire_id, Response::ProcessedInputs(time.to_local(), count)),
+                self.send_raw(wire_id, Response::ProcessedInputs(
+                        LocalTime::from_global_64(time), count)),
 
             ClientResponse::ChatUpdate(msg) =>
                 self.send_raw(wire_id, Response::ChatUpdate(msg)),

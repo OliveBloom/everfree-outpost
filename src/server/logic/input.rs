@@ -1,7 +1,7 @@
 use types::*;
+use libcommon_proto::ExtraArg;
 
 use engine::Engine;
-use msg::ExtraArg;
 
 
 pub fn interact(eng: &mut Engine, cid: ClientId, args: Option<ExtraArg>) {

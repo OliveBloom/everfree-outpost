@@ -2,6 +2,7 @@ use std::collections::{HashMap, hash_map};
 use rand::{self, Rng};
 
 use libphysics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
+use libcommon_proto::types::LocalPos;
 
 use types::*;
 
@@ -93,7 +94,7 @@ impl ClientInfo {
         (cy * LOCAL_SIZE + cx) as u16
     }
 
-    pub fn local_pos(&self, pos: V3) -> V3 {
+    pub fn local_pos_v3(&self, pos: V3) -> V3 {
         const BASE: i32 = TILE_SIZE * CHUNK_SIZE * (LOCAL_SIZE / 2);
         const MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
         let chunk_off = V2::new(self.chunk_offset.0 as i32,
@@ -107,10 +108,8 @@ impl ClientInfo {
         local_pos.extend(pos.z)
     }
 
-    pub fn local_pos_tuple(&self, pos: V3) -> (u16, u16, u16) {
-        let local = self.local_pos(pos);
-        (local.x as u16,
-         local.y as u16,
-         local.z as u16)
+    pub fn local_pos(&self, pos: V3) -> LocalPos {
+        let local = self.local_pos_v3(pos);
+        LocalPos::from_global(local)
     }
 }

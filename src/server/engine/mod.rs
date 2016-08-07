@@ -16,10 +16,10 @@ use messages::{Messages, MessageEvent};
 use messages::{Event, ControlEvent, WireEvent, ClientEvent};
 use messages::SyncKind;
 use messages::{ControlResponse, WireResponse, ClientResponse};
-use msg::{Request, Response};
 use physics::Physics;
 use script::ScriptHooks;
 use storage::Storage;
+use tasks;
 use terrain_gen::{TerrainGen, TerrainGenEvent};
 use timer::{Timer, TimerEvent};
 use timing::*;
@@ -69,8 +69,8 @@ impl<'d> Engine<'d> {
     pub fn new(data: &'d Data,
                storage: &'d Storage,
                script_hooks: &'d ScriptHooks,
-               receiver: Receiver<(WireId, Request)>,
-               sender: Sender<(WireId, Response)>) -> Engine<'d> {
+               receiver: Receiver<tasks::Input>,
+               sender: Sender<tasks::Output>) -> Engine<'d> {
         Engine {
             data: data,
             storage: storage,

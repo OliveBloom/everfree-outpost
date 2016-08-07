@@ -2,9 +2,11 @@ use std::cmp;
 use std::collections::hash_map::{self, HashMap};
 use std::mem;
 use std::ptr;
+
+use libcommon_proto::ExtraArg;
+
 use types::*;
 
-use msg::ExtraArg;
 
 pub use libcommon_movement::{
     InputBits,

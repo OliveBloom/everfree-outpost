@@ -1,8 +1,8 @@
-use msg::{SimpleArg, ExtraArg};
-use python::api as py;
-use python::api::{PyBox, PyRef, PyResult};
+use common_proto::extra_arg::{SimpleArg, ExtraArg};
 
-use super::{Pack, Unpack};
+use api as py;
+use api::{PyBox, PyRef, PyResult};
+use conv::{Pack, Unpack};
 
 
 impl<'a> Unpack<'a> for SimpleArg {

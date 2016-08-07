@@ -15,3 +15,5 @@ pub mod extra_arg;
 
 pub mod game;
 pub mod control;
+
+pub use self::extra_arg::ExtraArg;

@@ -2,11 +2,11 @@ use std::fs::File;
 
 use types::*;
 use util::now;
+use libcommon_proto::wire::{ReadFrom, WriteTo};
 
 use engine::Engine;
 use logic;
 use messages::{ClientResponse, SyncKind};
-use wire::{WireWriter, WireReader};
 use world::bundle;
 use world::object::*;
 
@@ -86,8 +86,7 @@ pub fn pre_restart(eng: &mut Engine) {
 
     {
         info!("recording clients to file...");
-        let file = eng.storage.create_restart_file();
-        let mut ww = WireWriter::new(file);
+        let mut file = eng.storage.create_restart_file();
         for c in eng.world.clients() {
             let wire_id = match eng.messages.client_to_wire(c.id()) {
                 Some(x) => x,
@@ -97,24 +96,25 @@ pub fn pre_restart(eng: &mut Engine) {
                 },
             };
             let uid = match eng.extra.client_uid.get(&c.id()) {
-                Some(x) => x,
+                Some(&x) => x,
                 None => {
                     warn!("no user ID for client {:?}", c.id());
                     continue;
                 },
             };
-            ww.write_msg(wire_id, (uid, c.name())).unwrap();
+
+            (wire_id.unwrap(), uid).write_to(&mut file).unwrap();
+            // TODO: putting c.name() into the tuple makes trait resolution fail - unclear why
+            c.name().write_to(&mut file).unwrap();
         }
     }
 }
 
-pub fn post_restart(eng: &mut Engine, file: File) {
+pub fn post_restart(eng: &mut Engine, mut file: File) {
     info!("retrieving clients from file...");
 
-    let mut wr = WireReader::new(file);
-    while let Ok(wire_id) = wr.read_header() {
-        let (uid, name) = wr.read::<(u32, String)>().unwrap();
-        warn_on_err!(logic::client::login(eng, wire_id, uid, name));
+    while let Ok((raw_id, uid, name)) = ReadFrom::read_from(&mut file) {
+        warn_on_err!(logic::client::login(eng, WireId(raw_id), uid, name));
     }
 
     // TODO: call into eng.chat instead

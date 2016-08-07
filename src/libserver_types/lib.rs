@@ -73,7 +73,7 @@ pub const CONTROL_WIRE_ID: WireId = WireId(0);
 
 // Time and space
 
-pub type LocalTime = u16;
+//pub type LocalTime = u16;
 pub type LocalCoord = u16;
 
 pub type Time = i64;

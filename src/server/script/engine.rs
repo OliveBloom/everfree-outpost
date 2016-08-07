@@ -2,6 +2,7 @@ use std::mem;
 use std::ptr;
 use python3_sys::*;
 
+use libcommon_proto::ExtraArg;
 use libphysics::CHUNK_SIZE;
 
 use types::*;
@@ -9,7 +10,6 @@ use types::*;
 use engine::Engine;
 use engine::split2::{Coded, BitList};
 use logic;
-use msg::ExtraArg;
 use python::api as py;
 use python::api::{PyBox, PyRef, PyResult};
 use python::conv::Pack;

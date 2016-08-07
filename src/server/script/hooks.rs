@@ -1,7 +1,7 @@
 use types::*;
+use libcommon_proto::ExtraArg;
 
 use engine::split2::Coded;
-use msg::ExtraArg;
 use python::api as py;
 use python::api::{PyBox, PyRef, PyResult};
 use python::conv::{Pack, Unpack};
