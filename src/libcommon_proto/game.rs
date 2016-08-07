@@ -71,7 +71,6 @@ macro_rules! protocol_enum {
         #[derive(Debug)]
         pub enum $Proto {
             $( $Op($($argty,)*), )*
-            BadMessage($op::$Opcode),
         }
 
         impl $crate::wire::ReadFrom for $Proto {
@@ -84,7 +83,7 @@ macro_rules! protocol_enum {
                             Ok($Proto::$Op($($argname,)*))
                         },
                     )*
-                    _ => Ok($Proto::BadMessage(op)),
+                    _ => fail!("unrecognized opcode: {:?}", op),
                 }
             }
         }
@@ -96,7 +95,6 @@ macro_rules! protocol_enum {
                         $Proto::$Op($(ref $argname,)*) =>
                             $crate::wire::WriteTo::write_to(&($op::$Op, $($argname,)*), w),
                     )*
-                    $Proto::BadMessage(op) => panic!("tried to write BadMessage({:?})", op),
                 }
             }
         }
@@ -108,7 +106,6 @@ macro_rules! protocol_enum {
                         $Proto::$Op($(ref $argname,)*) =>
                             $crate::wire::Size::size(&($op::$Op, $($argname,)*)),
                     )*
-                    $Proto::BadMessage(op) => panic!("tried to get size of BadMessage({:?})", op),
                 }
             }
         }
