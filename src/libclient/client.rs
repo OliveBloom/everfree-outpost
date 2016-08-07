@@ -472,7 +472,7 @@ impl<'d, P: Platform> Client<'d, P> {
             if let Some(inv) = self.inventories.main_inventory() {
                 if slot < inv.len() {
                     let old = inv.items[slot];
-                    let now = self.platform.get_time();
+                    let now = self.now();
                     if old.id == item.id {
                         let delta = item.quantity as i16 - old.quantity as i16;
                         self.misc.inv_changes.add(now, item.id, delta);
@@ -519,9 +519,8 @@ impl<'d, P: Platform> Client<'d, P> {
                            self.now(),
                            &self.data,
                            &self.inventories,
-                           &self.misc.hotbar,
-                           &self.debug,
-                           &self.misc.energy);
+                           &self.misc,
+                           &self.debug);
         f(&mut self.ui, &dyn)
     }
 

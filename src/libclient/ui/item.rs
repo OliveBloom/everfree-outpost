@@ -55,7 +55,7 @@ impl<'a> Widget for WidgetPack<'a, ItemDisplay, ItemDyn> {
     }
 }
 
-fn quantity_string(quantity: u16) -> String {
+pub fn quantity_string(quantity: u16) -> String {
     if quantity < 1000 {
         format!("{}", quantity)
     } else if quantity < 10000 {

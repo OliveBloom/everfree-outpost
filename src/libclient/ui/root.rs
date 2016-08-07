@@ -9,10 +9,11 @@ use data::Data;
 use debug::Debug as DebugDyn;
 use hotbar::Hotbar;
 use inventory::{Inventory, Inventories};
+use misc::Misc;
 use platform::Config;
 use ui::geom::Geom;
 use ui::input::{KeyAction, KeyEvent, EventStatus};
-use ui::{dialog, dialogs, hotbar, debug, top_bar};
+use ui::{dialog, dialogs, hotbar, debug, top_bar, inv_changes};
 use ui::widget::*;
 
 use ui::scroll_list;
@@ -44,9 +45,8 @@ pub struct RootDyn<'a> {
     pub now: Time,
     pub data: &'a Data,
     pub inventories: &'a Inventories,
-    pub hotbar: &'a Hotbar,
+    pub misc: &'a Misc,
     pub debug: &'a DebugDyn,
-    pub energy: &'a Gauge,
 }
 
 impl<'a> RootDyn<'a> {
@@ -54,18 +54,16 @@ impl<'a> RootDyn<'a> {
                now: Time,
                data: &'a Data,
                inventories: &'a Inventories,
-               hotbar: &'a Hotbar,
-               debug: &'a DebugDyn,
-               energy: &'a Gauge) -> RootDyn<'a> {
+               misc: &'a Misc,
+               debug: &'a DebugDyn) -> RootDyn<'a> {
         RootDyn {
             screen_size: V2::new(screen_size.0 as i32,
                                  screen_size.1 as i32),
             now: now,
             data: data,
             inventories: inventories,
-            hotbar: hotbar,
+            misc: misc,
             debug: debug,
-            energy: energy,
         }
     }
 }
@@ -80,8 +78,8 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             // Hotbar
             let dyn = TopBarDyn::new(self.dyn.now,
                                      self.dyn.inventories.main_inventory(),
-                                     self.dyn.hotbar,
-                                     self.dyn.energy);
+                                     &self.dyn.misc.hotbar,
+                                     &self.dyn.misc.energy);
             let mut child = WidgetPack::stateless(top_bar::TopBar, &dyn);
             let rect = Region::sized(child.size()) + pos;
             v.visit(&mut child, rect);
@@ -101,6 +99,17 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             // Debug pane
             let mut child = WidgetPack::new(&mut self.state.debug, &self.dyn.debug);
             let base = pos + V2::new(self.dyn.screen_size.x - child.size().x, 0);
+            let rect = Region::sized(child.size()) + base;
+            v.visit(&mut child, rect);
+        }
+
+        {
+            // Inventory change display
+            let dyn = inv_changes::InvChangesDyn::new(self.dyn.now,
+                                                      self.dyn.data,
+                                                      &self.dyn.misc.inv_changes);
+            let mut child = WidgetPack::stateless(inv_changes::InvChanges, &dyn);
+            let base = pos + self.dyn.screen_size - child.size();
             let rect = Region::sized(child.size()) + base;
             v.visit(&mut child, rect);
         }

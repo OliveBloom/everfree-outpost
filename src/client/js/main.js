@@ -208,7 +208,7 @@ function buildUI() {
 
     ui_div.appendChild(key_list);
     ui_div.appendChild(chat.container);
-    ui_div.appendChild(inv_update_list.container);
+    //ui_div.appendChild(inv_update_list.container);
     ui_div.appendChild(banner.container);
     ui_div.appendChild(dialog.container);
 

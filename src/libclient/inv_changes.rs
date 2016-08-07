@@ -123,6 +123,7 @@ impl InvChanges {
             let idx = self.len;
             *self.get_mut(idx) = Entry::new(item, count, now);
             self.len += 1;
+            self.in_use += 1;
         }
     }
 
