@@ -7,8 +7,8 @@ use Time;
 use client::ClientObj;
 use data::Data;
 use debug::Debug as DebugDyn;
+use hotbar::Hotbar;
 use inventory::{Inventory, Inventories};
-use misc;
 use platform::Config;
 use ui::geom::Geom;
 use ui::input::{KeyAction, KeyEvent, EventStatus};
@@ -44,7 +44,7 @@ pub struct RootDyn<'a> {
     pub now: Time,
     pub data: &'a Data,
     pub inventories: &'a Inventories,
-    pub hotbar: &'a misc::Hotbar,
+    pub hotbar: &'a Hotbar,
     pub debug: &'a DebugDyn,
     pub energy: &'a Gauge,
 }
@@ -54,7 +54,7 @@ impl<'a> RootDyn<'a> {
                now: Time,
                data: &'a Data,
                inventories: &'a Inventories,
-               hotbar: &'a misc::Hotbar,
+               hotbar: &'a Hotbar,
                debug: &'a DebugDyn,
                energy: &'a Gauge) -> RootDyn<'a> {
         RootDyn {
@@ -165,14 +165,14 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 struct TopBarDyn<'a> {
     now: Time,
     inv: Option<&'a Inventory>,
-    hotbar: &'a misc::Hotbar,
+    hotbar: &'a Hotbar,
     energy: &'a Gauge,
 }
 
 impl<'a> TopBarDyn<'a> {
     fn new(now: Time,
            inv: Option<&'a Inventory>,
-           hotbar: &'a misc::Hotbar,
+           hotbar: &'a Hotbar,
            energy: &'a Gauge) -> TopBarDyn<'a> {
         TopBarDyn {
             now: now,
