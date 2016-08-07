@@ -32,6 +32,8 @@ pub use data::Data;
 
 #[macro_use] pub mod platform;
 
+mod types;
+
 pub mod client;
 pub mod data;
 mod fonts;
@@ -40,7 +42,7 @@ mod util;
 
 mod terrain;
 // TODO: move Id typedefs into a common pub mod and make these non-pub
-pub mod structures;
+mod structures;
 pub mod entity;
 pub mod inventory;
 mod day_night;

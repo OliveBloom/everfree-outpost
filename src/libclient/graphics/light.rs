@@ -1,9 +1,9 @@
 use std::prelude::v1::*;
-
+use types::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
-use entity::{Entities, Entity, EntityId};
+use entity::{Entities, Entity};
 use platform::gl;
 use predict::Predictor;
 use structures::Structures;
@@ -69,7 +69,7 @@ pub struct StructureGeomGen<'a> {
     structures: &'a Structures,
     templates: &'a [StructureTemplate],
     bounds: Region<V2>,
-    next: u32,
+    next: StructureId,
 }
 
 impl<'a> StructureGeomGen<'a> {
@@ -80,7 +80,7 @@ impl<'a> StructureGeomGen<'a> {
             structures: structures,
             templates: templates,
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
-            next: 0,
+            next: StructureId(0),
         }
     }
 
@@ -174,7 +174,7 @@ pub struct EntityGeomGen<'a> {
     now: Time,
     future: Time,
     pawn_id: Option<EntityId>,
-    next: u32,
+    next: EntityId,
 }
 
 impl<'a> EntityGeomGen<'a> {
@@ -191,7 +191,7 @@ impl<'a> EntityGeomGen<'a> {
             now: now,
             future: future,
             pawn_id: pawn_id,
-            next: 0,
+            next: EntityId(0),
         }
     }
 

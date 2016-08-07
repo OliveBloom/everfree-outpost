@@ -1,10 +1,10 @@
 use std::prelude::v1::*;
-
+use types::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
-use entity::{Entities, Entity, EntityId};
+use entity::{Entities, Entity};
 use fonts::{self, FontMetricsExt};
 use platform::gl;
 use predict::Predictor;
@@ -81,7 +81,7 @@ pub struct GeomGen<'a> {
     now: i32,
     future: i32,
     pawn_id: Option<EntityId>,
-    next: Option<u32>,
+    next: Option<EntityId>,
 }
 
 const LOCAL_PX_MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;

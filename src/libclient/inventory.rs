@@ -1,18 +1,17 @@
+use types::*;
 use std::prelude::v1::*;
 use std::collections::btree_map::BTreeMap;
 use std::ops::Index;
 
 
-pub type InventoryId = u32;
-
 #[derive(Clone, Copy, Debug, Hash)]
 pub struct Item {
-    pub id: u16,
+    pub id: ItemId,
     pub quantity: u8,
 }
 
 impl Item {
-    pub fn new(id: u16, quantity: u8) -> Item {
+    pub fn new(id: ItemId, quantity: u8) -> Item {
         Item {
             id: id,
             quantity: quantity,
@@ -37,7 +36,7 @@ impl Inventory {
         self.items.len()
     }
 
-    pub fn count(&self, item_id: u16) -> u16 {
+    pub fn count(&self, item_id: ItemId) -> u16 {
         let mut count = 0;
         for i in &*self.items {
             if i.id == item_id {

@@ -1,10 +1,10 @@
 #[allow(unused_imports)] use std::prelude::v1::*;
+use types::*;
 use std::mem;
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
-use inventory::{Inventories, InventoryId};
-use structures::StructureId;
+use inventory::Inventories;
 use ui::dialog;
 use ui::geom::Geom;
 use ui::input::{KeyAction, KeyEvent, EventStatus};

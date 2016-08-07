@@ -1,5 +1,5 @@
 //use std::prelude::v1::*;
-
+use types::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
@@ -78,7 +78,7 @@ pub struct GeomGen<'a> {
     structures: &'a Structures,
     data: &'a Data,
     bounds: Region<V2>,
-    next: u32,
+    next: StructureId,
 }
 
 impl<'a> GeomGen<'a> {
@@ -89,7 +89,7 @@ impl<'a> GeomGen<'a> {
             structures: structures,
             data: data,
             bounds: bounds * scalar(CHUNK_SIZE),
-            next: 0,
+            next: StructureId(0),
         }
     }
 

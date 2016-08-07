@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use types::*;
 use std::cmp;
 
 use platform::{Platform, PlatformObj};
@@ -22,14 +23,14 @@ use common_proto::game::Response;
 use Time;
 use data::Data;
 use debug::Debug;
-use entity::{self, Entities, EntityId};
+use entity::{self, Entities};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
-use inventory::{Inventories, Item, InventoryId};
+use inventory::{Inventories, Item};
 use misc::Misc;
 use predict::{Predictor, Activity};
-use structures::{Structures, StructureId};
+use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
@@ -119,7 +120,7 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::Pong(_cookie, _now) => error!("NYI: libclient Pong"),
 
             Response::Init(pawn_id, now, day_night_base, day_night_ms) => {
-                self.set_pawn_id(pawn_id.unwrap());
+                self.set_pawn_id(pawn_id);
                 self.init_timing(now.unwrap());
                 self.init_day_night(now.unwrap(), day_night_base as Time, day_night_ms as Time);
             },
@@ -129,13 +130,14 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::UnloadChunk(_idx) => {},   // TODO (currently no-op)
 
             Response::OpenCrafting(_kind, station, inventory) =>
-                self.open_crafting_dialog(inventory.unwrap(), station.unwrap()),
+                self.open_crafting_dialog(inventory, station),
 
             Response::OpenDialog(which, args) => match which {
                 1 => {
                     assert!(args.len() == 2);
-                    // TODO: use real InventoryId
-                    self.open_container_dialog(args[0], args[1]);
+                    let iid1 = InventoryId(args[0]);
+                    let iid2 = InventoryId(args[1]);
+                    self.open_container_dialog(iid1, iid2);
                 },
                 _ => error!("NYI: libclient OpenDialog({})", which),
             },
@@ -144,23 +146,23 @@ impl<'d, P: Platform> Client<'d, P> {
 
             Response::EntityAppear(id, appearance, name) => {
                 let opt_name = if name != "" { Some(name) } else { None };
-                self.entity_appear(id.unwrap(), appearance, opt_name);
+                self.entity_appear(id, appearance, opt_name);
             },
 
             Response::EntityGone(id, time) =>
-                self.entity_gone(id.unwrap(), time.unwrap()),
+                self.entity_gone(id, time.unwrap()),
 
             Response::StructureAppear(id, template, pos) =>
-                self.structure_appear(id.unwrap(), pos.unwrap(), template),
+                self.structure_appear(id, pos.unwrap(), template),
 
             Response::StructureGone(id) =>
-                self.structure_gone(id.unwrap()),
+                self.structure_gone(id),
 
             Response::MainInventory(id) =>
-                self.inventories.set_main_id(id.unwrap()),
+                self.inventories.set_main_id(id),
 
             Response::AbilityInventory(id) =>
-                self.inventories.set_ability_id(id.unwrap()),
+                self.inventories.set_ability_id(id),
 
             Response::PlaneFlags(flags) =>
                 self.set_plane_flags(flags),
@@ -177,43 +179,43 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::SyncStatus(_status) => error!("NYI: libclient SyncStatus"),
 
             Response::StructureReplace(id, template) =>
-                self.structure_replace(id.unwrap(), template),
+                self.structure_replace(id, template),
 
             Response::InventoryUpdate(id, slot, raw_item) => {
                 let (_, qty, item_id) = raw_item;
                 let item = Item::new(item_id, qty);
-                self.inventory_update(id.unwrap(), slot as usize, item);
+                self.inventory_update(id, slot as usize, item);
             },
 
             Response::InventoryAppear(id, raw_items) => {
                 let items = raw_items.into_iter()
                     .map(|(_, qty, item_id)| Item::new(item_id, qty))
                     .collect::<Vec<_>>().into_boxed_slice();
-                self.inventory_appear(id.unwrap(), items);
+                self.inventory_appear(id, items);
             },
 
             Response::InventoryGone(id) =>
-                self.inventory_gone(id.unwrap()),
+                self.inventory_gone(id),
 
             Response::EntityMotionStart(id, start_pos, start_time, velocity, anim) =>
-                self.entity_motion_start(id.unwrap(),
+                self.entity_motion_start(id,
                                          start_time.unwrap(),
                                          start_pos.unwrap(),
                                          velocity.unwrap(),
                                          anim),
 
             Response::EntityMotionEnd(id, end_time) =>
-                self.entity_motion_end(id.unwrap(),
+                self.entity_motion_end(id,
                                        end_time.unwrap()),
 
             Response::EntityMotionStartEnd(
                     id, start_pos, start_time, velocity, anim, end_time) => {
-                self.entity_motion_start(id.unwrap(),
+                self.entity_motion_start(id,
                                          start_time.unwrap(),
                                          start_pos.unwrap(),
                                          velocity.unwrap(),
                                          anim);
-                self.entity_motion_end(id.unwrap(),
+                self.entity_motion_end(id,
                                        end_time.unwrap());
             },
 
@@ -232,7 +234,7 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::OpenPonyEdit(_name) => error!("NYI: libclient OpenPonyEdit"),
 
             Response::EntityActivityIcon(id, icon) =>
-                self.entity_activity_icon(id.unwrap(), icon),
+                self.entity_activity_icon(id, icon),
 
             Response::CancelDialog(()) =>
                 self.close_dialog(),
@@ -317,9 +319,9 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn structure_appear(&mut self,
-                            id: u32,
+                            id: StructureId,
                             pixel_pos: V3,
-                            template_id: u32) {
+                            template_id: TemplateId) {
         // Update self.structures
         const MASK: i32 = LOCAL_SIZE * CHUNK_SIZE - 1;
         let tile_pos = pixel_pos.div_floor(scalar(TILE_SIZE)) & scalar(MASK);
@@ -342,7 +344,7 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn structure_gone(&mut self,
-                          id: u32) {
+                          id: StructureId) {
         // Update self.structures
         let s = self.structures.remove(id);
 
@@ -358,8 +360,8 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn structure_replace(&mut self,
-                             id: u32,
-                             template_id: u32) {
+                             id: StructureId,
+                             template_id: TemplateId) {
         let (pos, old_t) = {
             let s = &self.structures[id];
             (s.pos,
@@ -842,9 +844,10 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn ponyedit_render(&mut self, appearance: u32) {
         let mut entities = Entities::new();
-        entities.insert(0, appearance, None);
+        let zero_id = EntityId(0);
+        entities.insert(zero_id, appearance, None);
         let anim = self.data().editor_anim();
-        entities.ponyedit_hack(0, anim, self.default_camera_pos);
+        entities.ponyedit_hack(zero_id, anim, self.default_camera_pos);
         println!("created entity hack with app {:x}", appearance);
 
         let scene = Scene::new(0,
@@ -889,7 +892,7 @@ pub trait ClientObj {
     fn platform(&mut self) -> &mut PlatformObj;
     fn ui(&mut self) -> &mut UI;
 
-    fn handle_hotbar_assign(&mut self, idx: u8, item_id: u16, is_ability: bool);
+    fn handle_hotbar_assign(&mut self, idx: u8, item_id: ItemId, is_ability: bool);
     fn handle_hotbar_drop(&mut self,
                           src_inv: InventoryId,
                           src_slot: usize,

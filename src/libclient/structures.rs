@@ -1,8 +1,7 @@
+use types::*;
 use std::collections::btree_map::{self, BTreeMap};
 use std::collections::Bound;
 use std::ops::Index;
-
-pub type StructureId = u32;
 
 
 #[derive(Clone, Copy)]
@@ -10,7 +9,7 @@ pub struct Structure {
     /// Structure position in tiles.  u8 is enough to cover the entire local region.
     pub pos: (u8, u8, u8),
 
-    pub template_id: u32,
+    pub template_id: TemplateId,
 
     /// Timestamp indicating when to start the structure's one-shot animation.  This field is only
     /// relevant if the structure's template defines such an animation.

@@ -1,17 +1,15 @@
 use std::prelude::v1::*;
+use types::*;
 use std::collections::btree_map::{self, BTreeMap};
 use std::collections::VecDeque;
 use std::collections::Bound;
 use std::marker::PhantomData;
 use std::ops::Index;
 use std::ptr;
-
 use physics::v3::{V3, scalar};
 
 use Time;
 
-
-pub type EntityId = u32;
 
 #[derive(Clone, Debug)]
 pub struct Motion {
@@ -19,7 +17,7 @@ pub struct Motion {
     pub velocity: V3,
     pub start_time: Time,
     pub end_time: Option<Time>,
-    pub anim_id: u16,
+    pub anim_id: AnimId,
 }
 
 impl Motion {
@@ -56,7 +54,7 @@ impl Motion {
         }
     }
 
-    pub fn apply_start(&mut self, start_time: Time, start_pos: V3, velocity: V3, anim: u16) {
+    pub fn apply_start(&mut self, start_time: Time, start_pos: V3, velocity: V3, anim: AnimId) {
         *self = Motion {
             start_pos: start_pos,
             velocity: velocity,
@@ -77,7 +75,7 @@ pub struct Entity {
     pub motion: Motion,
     pub appearance: u32,
     pub name: Option<String>,
-    pub activity_anim: Option<u16>,
+    pub activity_anim: Option<AnimId>,
 
     z_next: *mut Entity,
 }
@@ -87,14 +85,14 @@ impl Entity {
         self.motion.pos(now)
     }
 
-    pub fn anim(&self) -> u16 {
+    pub fn anim(&self) -> AnimId {
         self.motion.anim_id
     }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Update {
-    MotionStart(Time, V3, V3, u16),
+    MotionStart(Time, V3, V3, AnimId),
     MotionEnd(Time),
 }
 
@@ -177,7 +175,7 @@ impl Entities {
                                  start_time: Time,
                                  start_pos: V3,
                                  velocity: V3,
-                                 anim: u16) {
+                                 anim: AnimId) {
         if self.map.contains_key(&id) {
             let update = Update::MotionStart(start_time, start_pos, velocity, anim);
             self.updates.push_back((id, update));
@@ -205,13 +203,13 @@ impl Entities {
 
     pub fn set_activity_anim(&mut self,
                              id: EntityId,
-                             anim: Option<u16>) {
+                             anim: Option<AnimId>) {
         if let Some(e) = self.map.get_mut(&id) {
             e.activity_anim = anim;
         }
     }
 
-    pub fn ponyedit_hack(&mut self, id: EntityId, anim: u16, pos: V3) {
+    pub fn ponyedit_hack(&mut self, id: EntityId, anim: AnimId, pos: V3) {
         let e = self.map.get_mut(&id).unwrap();
         e.motion.anim_id = anim;
         e.motion.start_pos = pos;

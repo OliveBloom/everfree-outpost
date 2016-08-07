@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use types::*;
 
 use physics::v3::{V2, scalar, Region};
 
@@ -159,7 +160,7 @@ pub struct Context {
 
 #[derive(Clone, Debug)]
 pub struct DragData {
-    src_inv: u32,
+    src_inv: InventoryId,
     src_slot: usize,
 }
 
@@ -181,7 +182,7 @@ impl Context {
         self.drag_data.is_some()
     }
 
-    pub fn drag_item(&mut self, src_inv: u32, src_slot: usize) {
+    pub fn drag_item(&mut self, src_inv: InventoryId, src_slot: usize) {
         let data = DragData {
             src_inv: src_inv,
             src_slot: src_slot,

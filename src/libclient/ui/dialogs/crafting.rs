@@ -1,12 +1,10 @@
 use std::prelude::v1::*;
+use types::*;
 use common_proto::game::Request;
-use common_types;
 use physics::v3::{V2, Region, Align};
 
 use client::ClientObj;
 use data::{Data, RecipeDef};
-use inventory::InventoryId;
-use structures::StructureId;
 use ui::crafting;
 use ui::dialogs;
 use ui::geom::Geom;
@@ -201,8 +199,8 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
 
                     status = EventStatus::Action(box move |c: &mut ClientObj| {
                         c.platform().send_message(
-                            Request::CraftRecipe(common_types::StructureId(station_id),
-                                                 common_types::InventoryId(inv_id),
+                            Request::CraftRecipe(station_id,
+                                                 inv_id,
                                                  recipe_id,
                                                  count));
                     });

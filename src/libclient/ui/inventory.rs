@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
+use types::*;
 use std::cmp;
 use common_proto::game::Request;
-use common_types;
 use physics::v3::{V2, Vn, scalar, Region};
 
 use client::ClientObj;
@@ -86,7 +86,7 @@ pub trait GridDyn {
     fn len(&self) -> usize;
     fn item(&self, i: usize) -> Item;
     fn active(&self) -> bool;
-    fn inv_id(&self) -> Option<u32>;
+    fn inv_id(&self) -> Option<InventoryId>;
 }
 
 impl<'a, D: GridDyn> WidgetPack<'a, Grid, D> {
@@ -214,9 +214,9 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
 
         EventStatus::Action(box move |c: &mut ClientObj| {
             c.platform().send_message(
-                Request::MoveItem(common_types::InventoryId(src_inv),
+                Request::MoveItem(src_inv,
                                   src_slot as u8,
-                                  common_types::InventoryId(dest_inv),
+                                  dest_inv,
                                   dest_slot as u8,
                                   amount));
         })

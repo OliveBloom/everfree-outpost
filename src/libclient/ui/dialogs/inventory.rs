@@ -1,10 +1,10 @@
 use std::prelude::v1::*;
+use types::*;
 use common_proto::game::Request;
-use common_types;
 use physics::v3::{V2, Region};
 
 use client::ClientObj;
-use inventory::{Item, InventoryId};
+use inventory::Item;
 use ui::Context;
 use ui::atlas;
 use ui::geom::Geom;
@@ -108,7 +108,7 @@ impl<'a> inventory::GridDyn for GridDyn<'a> {
         self.active
     }
 
-    fn inv_id(&self) -> Option<u32> {
+    fn inv_id(&self) -> Option<InventoryId> {
         self.inv.map(|i| i.id)
     }
 }
@@ -207,15 +207,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
                     let src_inv = self.state.inv_id[idx];
                     let src_slot = self.state.grid[idx].focus as u8;
                     let dest_inv = self.state.inv_id[1 - idx];
-                    let dest_slot = common_types::NO_SLOT;  // place items automatically
+                    let dest_slot = NO_SLOT;    // place items automatically
 
                     let amount = if key.shift() { 10 } else { 1 };
 
                     status = EventStatus::Action(box move |c: &mut ClientObj| {
                         c.platform().send_message(
-                            Request::MoveItem(common_types::InventoryId(src_inv),
+                            Request::MoveItem(src_inv,
                                               src_slot,
-                                              common_types::InventoryId(dest_inv),
+                                              dest_inv,
                                               dest_slot,
                                               amount));
                     });
