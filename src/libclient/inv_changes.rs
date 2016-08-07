@@ -88,6 +88,10 @@ impl InvChanges {
     }
 
     pub fn add(&mut self, now: Time, item: ItemId, count: i16) {
+        if item == NO_ITEM {
+            return;
+        }
+
         // First, collect any existing entries for this item.
         let mut count = count;
         for entry in &mut self.buf {
@@ -99,6 +103,10 @@ impl InvChanges {
                 *entry = Entry::empty();
                 self.in_use -= 1;
             }
+        }
+
+        if count == 0 {
+            return;
         }
 
         // Now add the new entry.

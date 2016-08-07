@@ -259,6 +259,8 @@ impl<'d, P: Platform> Client<'d, P> {
 
         self.pawn_id = None;
 
+        self.misc.reset();
+
         // TODO: close any open dialog
 
         self.renderer.invalidate_terrain_geometry();
@@ -466,6 +468,22 @@ impl<'d, P: Platform> Client<'d, P> {
                             id: InventoryId,
                             slot: usize,
                             item: Item) {
+        if self.inventories.main_id() == Some(id) {
+            if let Some(inv) = self.inventories.main_inventory() {
+                if slot < inv.len() {
+                    let old = inv.items[slot];
+                    let now = self.platform.get_time();
+                    if old.id == item.id {
+                        let delta = item.quantity as i16 - old.quantity as i16;
+                        self.misc.inv_changes.add(now, item.id, delta);
+                    } else {
+                        self.misc.inv_changes.add(now, old.id, -(old.quantity as i16));
+                        self.misc.inv_changes.add(now, item.id, item.quantity as i16);
+                    }
+                }
+            }
+        }
+
         self.inventories.update(id, slot, item);
     }
 
