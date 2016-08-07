@@ -2,7 +2,6 @@ var $ = document.getElementById.bind(document);
 
 
 var loader = require('loader');
-var Vec = require('util/vec').Vec;
 var Config = require('config').Config;
 
 var handleResize = require('resize').handleResize;
@@ -13,7 +12,6 @@ var Keyboard = require('keyboard').Keyboard;
 var Dialog = require('ui/dialog').Dialog;
 var Banner = require('ui/banner').Banner;
 var ChatWindow = require('ui/chat').ChatWindow;
-var CraftingUI = require('ui/crafting').CraftingUI;
 var Iframe = require('ui/iframe').Iframe;
 var KeyDisplay = require('ui/keydisplay').KeyDisplay;
 var Menu = require('ui/menu').Menu;
@@ -29,7 +27,6 @@ var DIALOG_TYPES = require('ui/dialogs').DIALOG_TYPES;
 var Input = require('input').Input;
 
 var ItemDef = require('data/items').ItemDef;
-var RecipeDef = require('data/recipes').RecipeDef;
 
 var LOCAL_SIZE = require('consts').LOCAL_SIZE;
 
@@ -117,11 +114,6 @@ OutpostClient.prototype['loadData'] = function(blob, next) {
         var items = assets['item_defs'];
         for (var i = 0; i < items.length; ++i) {
             ItemDef.register(i, items[i]);
-        }
-
-        var recipes = assets['recipe_defs'];
-        for (var i = 0; i < recipes.length; ++i) {
-            RecipeDef.register(i, recipes[i]);
         }
 
         var css = '.item-icon {' +
@@ -408,31 +400,23 @@ function setupKeyHandler() {
 
     function updateWalkDir() {
         var bits = 0;
-        var target_velocity = new Vec(0, 0, 0);
 
         if (dirs_held['move_left']) {
             bits |= INPUT_LEFT;
-            target_velocity.x -= 1;
         }
         if (dirs_held['move_right']) {
             bits |= INPUT_RIGHT;
-            target_velocity.x += 1;
         }
 
         if (dirs_held['move_up']) {
             bits |= INPUT_UP;
-            target_velocity.y -= 1;
         }
         if (dirs_held['move_down']) {
             bits |= INPUT_DOWN;
-            target_velocity.y += 1;
         }
 
         if (dirs_held['run']) {
             bits |= INPUT_RUN;
-            target_velocity = target_velocity.mulScalar(150);
-        } else {
-            target_velocity = target_velocity.mulScalar(50);
         }
 
         var arrival = asm_client.predictArrival(Config.input_delay.get());

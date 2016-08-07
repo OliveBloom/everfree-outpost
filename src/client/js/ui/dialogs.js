@@ -1,8 +1,4 @@
-var Config = require('config').Config;
-var ItemDef = require('data/items').ItemDef;
-var RecipeDef = require('data/recipes').RecipeDef;
 var fromTemplate = require('util/misc').fromTemplate;
-var InventoryTracker = require('inventory').InventoryTracker;
 var widget = require('ui/widget');
 var util = require('util/misc');
 

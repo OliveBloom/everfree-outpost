@@ -3,7 +3,6 @@ var static_data = window['asmlibs_data'];
 var static_size = window['asmlibs_data_size'];
 
 var config = require('config');
-var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
 var encodeUtf8 = require('util/misc').encodeUtf8;
 

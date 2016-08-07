@@ -1,5 +1,4 @@
 var Config = require('config').Config;
-var Vec = require('util/vec').Vec;
 var decodeUtf8 = require('util/misc').decodeUtf8;
 
 // DEPRECATED                   0x0001;
