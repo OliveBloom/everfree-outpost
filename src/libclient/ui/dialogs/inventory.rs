@@ -1,4 +1,6 @@
 use std::prelude::v1::*;
+use common_proto::game::Request;
+use common_types;
 use physics::v3::{V2, Region};
 
 use client::ClientObj;
@@ -131,7 +133,7 @@ impl Container {
 
     pub fn on_close(self) -> EventStatus {
         EventStatus::Action(box move |c: &mut ClientObj| {
-            c.platform().send_close_dialog();
+            c.platform().send_message(Request::CloseDialog(()));
         })
     }
 }
@@ -203,18 +205,19 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
                 },
                 KeyAction::Select => {
                     let src_inv = self.state.inv_id[idx];
-                    let src_slot = self.state.grid[idx].focus;
+                    let src_slot = self.state.grid[idx].focus as u8;
                     let dest_inv = self.state.inv_id[1 - idx];
-                    let dest_slot = 255;    // NO_SLOT - place items automatically
+                    let dest_slot = common_types::NO_SLOT;  // place items automatically
 
                     let amount = if key.shift() { 10 } else { 1 };
 
                     status = EventStatus::Action(box move |c: &mut ClientObj| {
-                        c.platform().send_move_item(src_inv,
-                                                    src_slot,
-                                                    dest_inv,
-                                                    dest_slot,
-                                                    amount);
+                        c.platform().send_message(
+                            Request::MoveItem(common_types::InventoryId(src_inv),
+                                              src_slot,
+                                              common_types::InventoryId(dest_inv),
+                                              dest_slot,
+                                              amount));
                     });
                 },
                 _ => {},

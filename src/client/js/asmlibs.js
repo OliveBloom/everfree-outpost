@@ -255,16 +255,9 @@ var module_env = function(asm) {
             document.body.style.cursor = str;
         },
 
-        'ap_send_move_item': function(src_inv, src_slot, dest_inv, dest_slot, amount) {
-            asm.conn.sendMoveItem(src_inv, src_slot, dest_inv, dest_slot, amount);
-        },
-
-        'ap_send_craft_recipe': function(inventory_id, station_id, recipe_id, count) {
-            asm.conn.sendCraftRecipe(station_id, inventory_id, recipe_id, count);
-        },
-
-        'ap_send_close_dialog': function() {
-            asm.conn.sendCloseDialog();
+        'ap_send_message': function(ptr, len) {
+            var view = asm._makeView(Uint8Array, ptr, len);
+            asm.conn._send(view);
         },
 
         'ap_get_time': function() {

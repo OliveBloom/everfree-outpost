@@ -1,8 +1,7 @@
 use std::prelude::v1::*;
+use common_proto::game::Request;
 
 use Time;
-use inventory::InventoryId;
-use structures::StructureId;
 
 #[macro_use] pub mod gl;
 
@@ -17,18 +16,7 @@ pub trait Platform {
 
     fn set_cursor(&mut self, cursor: Cursor);
 
-    fn send_move_item(&mut self,
-                      src_inv: InventoryId,
-                      src_slot: usize,
-                      dest_inv: InventoryId,
-                      dest_slot: usize,
-                      amount: u8);
-    fn send_craft_recipe(&mut self,
-                         inventory_id: InventoryId,
-                         station_id: StructureId,
-                         recipe_id: u16,
-                         count: u16);
-    fn send_close_dialog(&mut self);
+    fn send_message(&mut self, msg: Request);
 
     fn get_time(&self) -> Time;
 }
@@ -53,18 +41,7 @@ pub trait PlatformObj {
 
     fn set_cursor(&mut self, cursor: Cursor);
 
-    fn send_move_item(&mut self,
-                      src_inv: InventoryId,
-                      src_slot: usize,
-                      dest_inv: InventoryId,
-                      dest_slot: usize,
-                      amount: u8);
-    fn send_craft_recipe(&mut self,
-                         inventory_id: InventoryId,
-                         station_id: StructureId,
-                         recipe_id: u16,
-                         count: u16);
-    fn send_close_dialog(&mut self);
+    fn send_message(&mut self, msg: Request);
 
     fn get_time(&self) -> Time;
 }
@@ -83,25 +60,8 @@ impl<P: Platform> PlatformObj for P {
         Platform::set_cursor(self, cursor);
     }
 
-    fn send_move_item(&mut self,
-                      src_inv: InventoryId,
-                      src_slot: usize,
-                      dest_inv: InventoryId,
-                      dest_slot: usize,
-                      amount: u8) {
-        Platform::send_move_item(self, src_inv, src_slot, dest_inv, dest_slot, amount);
-    }
-
-    fn send_craft_recipe(&mut self,
-                         inventory_id: InventoryId,
-                         station_id: StructureId,
-                         recipe_id: u16,
-                         count: u16) {
-        Platform::send_craft_recipe(self, inventory_id, station_id, recipe_id, count);
-    }
-
-    fn send_close_dialog(&mut self) {
-        Platform::send_close_dialog(self);
+    fn send_message(&mut self, msg: Request) {
+        Platform::send_message(self, msg);
     }
 
     fn get_time(&self) -> Time {

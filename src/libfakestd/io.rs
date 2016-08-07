@@ -204,3 +204,20 @@ pub trait Write {
 }
 
 // End of copied libstd code.
+
+
+impl Write for Vec<u8> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        self.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> Result<()> {
+        self.extend_from_slice(buf);
+        Ok(())
+    }
+}

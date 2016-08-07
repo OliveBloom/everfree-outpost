@@ -1,9 +1,9 @@
 use std::prelude::v1::*;
+use common_proto::game::Request;
+use common_proto::wire::{WriteTo, Size};
 
-use client::inventory::InventoryId;
 use client::platform;
 use client::platform::{ConfigKey, Cursor};
-use client::structures::StructureId;
 
 use gl::GL;
 
@@ -24,16 +24,7 @@ mod ffi {
 
         pub fn ap_set_cursor(cursor: u8);
 
-        pub fn ap_send_move_item(src_inv: u32,
-                                 src_slot: usize,
-                                 dest_inv: u32,
-                                 dest_slot: usize,
-                                 amount: u8);
-        pub fn ap_send_craft_recipe(inventory_id: u32,
-                                    station_id: u32,
-                                    recipe_id: u16,
-                                    count: u16);
-        pub fn ap_send_close_dialog();
+        pub fn ap_send_message(ptr: *const u8, len: usize);
 
         pub fn ap_get_time() -> i32;
     }
@@ -67,30 +58,12 @@ impl platform::Platform for Platform {
         unsafe { ffi::ap_set_cursor(cursor as u8) };
     }
 
-    fn send_move_item(&mut self,
-                      src_inv: InventoryId,
-                      src_slot: usize,
-                      dest_inv: InventoryId,
-                      dest_slot: usize,
-                      amount: u8) {
+    fn send_message(&mut self, msg: Request) {
+        let mut buf = Vec::with_capacity(msg.size());
+        msg.write_to(&mut buf)
+            .unwrap_or_else(|e| panic!("error encoding msg {:?}: {}", msg, e));
         unsafe {
-            ffi::ap_send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
-        }
-    }
-
-    fn send_craft_recipe(&mut self,
-                         inventory_id: InventoryId,
-                         station_id: StructureId,
-                         recipe_id: u16,
-                         count: u16) {
-        unsafe {
-            ffi::ap_send_craft_recipe(inventory_id, station_id, recipe_id, count);
-        }
-    }
-
-    fn send_close_dialog(&mut self) {
-        unsafe {
-            ffi::ap_send_close_dialog();
+            ffi::ap_send_message(buf.as_ptr(), buf.len());
         }
     }
 

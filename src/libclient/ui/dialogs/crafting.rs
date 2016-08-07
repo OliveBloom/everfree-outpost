@@ -1,4 +1,6 @@
 use std::prelude::v1::*;
+use common_proto::game::Request;
+use common_types;
 use physics::v3::{V2, Region, Align};
 
 use client::ClientObj;
@@ -43,7 +45,7 @@ impl Crafting {
 
     pub fn on_close(self) -> EventStatus {
         EventStatus::Action(box move |c: &mut ClientObj| {
-            c.platform().send_close_dialog();
+            c.platform().send_message(Request::CloseDialog(()));
         })
     }
 }
@@ -198,10 +200,11 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
                     let count = if key.shift() { 10 } else { 1 };
 
                     status = EventStatus::Action(box move |c: &mut ClientObj| {
-                        c.platform().send_craft_recipe(inv_id,
-                                                       station_id,
-                                                       recipe_id,
-                                                       count);
+                        c.platform().send_message(
+                            Request::CraftRecipe(common_types::StructureId(station_id),
+                                                 common_types::InventoryId(inv_id),
+                                                 recipe_id,
+                                                 count));
                     });
                 },
                 _ => {},

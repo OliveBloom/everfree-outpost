@@ -1,6 +1,7 @@
 use std::prelude::v1::*;
 use std::cmp;
-
+use common_proto::game::Request;
+use common_types;
 use physics::v3::{V2, Vn, scalar, Region};
 
 use client::ClientObj;
@@ -212,7 +213,12 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
         let amount = 255;
 
         EventStatus::Action(box move |c: &mut ClientObj| {
-            c.platform().send_move_item(src_inv, src_slot, dest_inv, dest_slot, amount);
+            c.platform().send_message(
+                Request::MoveItem(common_types::InventoryId(src_inv),
+                                  src_slot as u8,
+                                  common_types::InventoryId(dest_inv),
+                                  dest_slot as u8,
+                                  amount));
         })
     }
 
