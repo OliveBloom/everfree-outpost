@@ -26,7 +26,7 @@ use std::slice;
 
 use client::Data;
 
-use physics::v3::{V3, V2};
+use physics::v3::V2;
 
 use client::inventory;
 use client::graphics::light;
@@ -75,7 +75,7 @@ pub unsafe extern fn client_init(data_ptr: *const Data,
 pub unsafe extern fn handle_message(client: &mut Client,
                                     ptr: *const u8,
                                     len: usize) {
-    let buf = unsafe { make_slice(ptr, len) };
+    let buf = make_slice(ptr, len);
     let msg = common_proto::game::Response::read_from(&mut io::Cursor::new(buf))
         .unwrap_or_else(|e| panic!("error parsing message ({:x}): {}", buf[0], e));
     client.handle_message(msg);

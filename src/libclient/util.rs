@@ -1,8 +1,6 @@
 use std::prelude::v1::*;
-use std::cmp;
 use std::hash::{Hash, Hasher, SipHasher};
 use std::intrinsics;
-use std::io;
 use physics::v3::{V3, V2, Vn, Region, scalar};
 
 pub fn unpack_v3(v: (u8, u8, u8)) -> V3 {
