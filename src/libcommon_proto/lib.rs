@@ -11,4 +11,7 @@ pub mod types;
 pub mod wire;
 pub mod extra_arg;
 
+#[macro_use] mod protocol;
+
 pub mod game;
+pub mod control;
