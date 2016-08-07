@@ -6,7 +6,6 @@ use physics::floodfill;
 use physics::TILE_SIZE;
 use physics::v3::{V3, V2, Vn, scalar, Region};
 
-use Time;
 use data::Data;
 use debug;
 use entity::Entities;

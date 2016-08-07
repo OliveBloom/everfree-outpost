@@ -8,8 +8,6 @@ use std::ops::Index;
 use std::ptr;
 use physics::v3::{V3, scalar};
 
-use Time;
-
 
 #[derive(Clone, Debug)]
 pub struct Motion {

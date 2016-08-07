@@ -20,7 +20,6 @@ use common::Gauge;
 use common_movement::InputBits;
 use common_proto::game::Response;
 
-use Time;
 use data::Data;
 use debug::Debug;
 use entity::{self, Entities};

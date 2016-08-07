@@ -46,6 +46,7 @@ mod entity;
 pub mod inventory;
 mod day_night;
 mod hotbar;
+mod inv_changes;
 mod misc;
 mod predict;
 mod debug;

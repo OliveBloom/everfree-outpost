@@ -9,7 +9,6 @@ use predict::Predictor;
 use structures::Structures;
 use util;
 
-use Time;
 use graphics::{IntrusiveCorner, GeometryGenerator};
 use graphics::{emit_quad, remaining_quads};
 use graphics::entity;
