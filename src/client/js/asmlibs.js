@@ -458,56 +458,11 @@ DynAsm.prototype.resetClient = function() {
     this._raw['client_reset'](this.client);
 };
 
-DynAsm.prototype.structureAppear = function(id, x, y, z, template_id) {
-    this._raw['structure_appear'](this.client, id, x, y, z, template_id);
-};
-
-DynAsm.prototype.structureGone = function(id) {
-    this._raw['structure_gone'](this.client, id);
-};
-
-DynAsm.prototype.structureReplace = function(id, template_id) {
-    this._raw['structure_replace'](this.client, id, template_id);
-};
-
-DynAsm.prototype.entityAppear = function(id, appearance, name) {
-    var name_ptr = 0;
-    var name_len = 0;
-    if (name != null && name.length > 0) {
-        var name_view = this._allocString(name);
-        name_ptr = name_view.byteOffset;
-        name_len = name_view.byteLength;
-    }
-
-    // Library takes ownership of the name allocation.
-    this._raw['entity_appear'](this.client, id, appearance, name_ptr, name_len);
-};
-
-DynAsm.prototype.entityGone = function(id, time) {
-    this._raw['entity_gone'](this.client, id, time);
-};
-
-DynAsm.prototype.entityMotionStart = function(id, time, pos, velocity, anim) {
-    this._raw['entity_motion_start'](this.client, id, time,
-            pos.x, pos.y, pos.z,
-            velocity.x, velocity.y, velocity.z,
-            anim);
-};
-
-DynAsm.prototype.entityMotionEnd = function(id, time) {
-    this._raw['entity_motion_end'](this.client, id, time);
-};
-
-DynAsm.prototype.entityActivityIcon = function(id, anim) {
-    this._raw['entity_activity_icon'](this.client, id, anim);
-};
-
-DynAsm.prototype.setPawnId = function(entity_id) {
-    this._raw['set_pawn_id'](this.client, entity_id);
-};
-
-DynAsm.prototype.setDefaultCameraPos = function(x, y, z) {
-    this._raw['set_default_camera_pos'](this.client, x, y, z);
+DynAsm.prototype.handleMessage = function(msg) {
+    var buf = this._heapAlloc(Uint8Array, msg.length);
+    buf.set(msg);
+    this._raw['handle_message'](this.client, buf.byteOffset, buf.length);
+    this._heapFree(buf);
 };
 
 DynAsm.prototype.inventoryAppear = function(id, items) {
@@ -565,18 +520,6 @@ DynAsm.prototype.openAbilityDialog = function() {
     return this._raw['open_ability_dialog'](this.client);
 };
 
-DynAsm.prototype.openContainerDialog = function(inv_id0, inv_id1) {
-    return this._raw['open_container_dialog'](this.client, inv_id0, inv_id1);
-};
-
-DynAsm.prototype.openCraftingDialog = function(inv_id, station_id) {
-    return this._raw['open_crafting_dialog'](this.client, inv_id, station_id);
-};
-
-DynAsm.prototype.closeDialog = function() {
-    return this._raw['close_dialog'](this.client);
-};
-
 DynAsm.prototype.getActiveItem = function() {
     return this._raw['get_active_item'](this.client);
 };
@@ -585,75 +528,8 @@ DynAsm.prototype.getActiveAbility = function() {
     return this._raw['get_active_ability'](this.client);
 };
 
-DynAsm.prototype.setRegionShape = function(base, size, layer, shape) {
-    var region = this._stackAlloc(Int32Array, 6);
-    store_vec(region, 0, base);
-    store_vec(region, 3, size);
-
-    var buf = this._heapAlloc(Uint8Array, shape.length);
-    buf.set(shape);
-    this._raw['set_region_shape'](this.client,
-            region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
-    this._heapFree(buf);
-
-    this._stackFree(region);
-};
-
-DynAsm.prototype.clearRegionShape = function(base, size, layer) {
-    var region = this._stackAlloc(Int32Array, 6);
-    store_vec(region, 0, base);
-    store_vec(region, 3, size);
-
-    var buf = this._heapAlloc(Uint8Array, size.x * size.y * size.z);
-    buf.fill(0);
-    this._raw['set_region_shape'](this.client,
-            region.byteOffset, layer + 1, buf.byteOffset, buf.byteLength);
-    this._heapFree(buf);
-
-    this._stackFree(region);
-};
-
-DynAsm.prototype.collide = function(pos, size, velocity) {
-    var input = this._stackAlloc(Int32Array, 9);
-    var output = this._stackAlloc(Int32Array, 4);
-
-    store_vec(input, 0, pos);
-    store_vec(input, 3, size);
-    store_vec(input, 6, velocity);
-
-    this._raw['collide'](this.client, input.byteOffset, output.byteOffset);
-
-    var result = ({
-        x: output[0],
-        y: output[1],
-        z: output[2],
-        t: output[3],
-    });
-
-    this._stackFree(output);
-    this._stackFree(input);
-
-    return result;
-};
-
 DynAsm.prototype.feedInput = function(time, bits) {
     this._raw['feed_input'](this.client, time, bits);
-};
-
-DynAsm.prototype.processedInputs = function(time, count) {
-    this._raw['processed_inputs'](this.client, time, count);
-};
-
-DynAsm.prototype.activityChange = function(activity) {
-    this._raw['activity_change'](this.client, activity);
-};
-
-DynAsm.prototype.loadTerrainChunk = function(cx, cy, data) {
-    var buf = this._heapAlloc(Uint16Array, data.length);
-    buf.set(data);
-    this._raw['load_terrain_chunk'](this.client,
-            cx, cy, buf.byteOffset, buf.byteLength);
-    this._heapFree(buf);
 };
 
 DynAsm.prototype.renderFrame = function() {
@@ -664,18 +540,6 @@ DynAsm.prototype.debugRecord = function(frame_time, ping) {
     this._raw['debug_record'](this.client, frame_time, ping);
 };
 
-DynAsm.prototype.initDayNight = function(time, base_offset, cycle_ms) {
-    this._raw['init_day_night'](this.client, time, base_offset, cycle_ms);
-};
-
-DynAsm.prototype.setPlaneFlags = function(flags) {
-    this._raw['set_plane_flags'](this.client, flags);
-};
-
-DynAsm.prototype.initTiming = function(server_now) {
-    this._raw['init_timing'](this.client, server_now);
-};
-
 DynAsm.prototype.handlePong = function(client_send, client_recv, server_now) {
     client_send -= this._time_base;
     client_recv -= this._time_base;
@@ -684,10 +548,6 @@ DynAsm.prototype.handlePong = function(client_send, client_recv, server_now) {
 
 DynAsm.prototype.predictArrival = function(extra_delay) {
     return this._raw['predict_arrival'](this.client, extra_delay);
-};
-
-DynAsm.prototype.energyUpdate = function(cur, max, rate_n, rate_d, time) {
-    this._raw['energy_update'](this.client, cur, max, rate_n, rate_d, time);
 };
 
 DynAsm.prototype.toggleCursor = function() {

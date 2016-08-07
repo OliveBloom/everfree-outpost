@@ -1,12 +1,11 @@
 //! Stub implementation of `std::io`.  Includes mostly-compatible `Read` and `Write` traits, along
 //! with a stripped-down definition of `Error`.
 
+use prelude::v1::*;
 use error;
 use fmt;
 use result;
 use str;
-use string::String;
-use vec::Vec;
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]

@@ -164,33 +164,13 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     conn = new net.Connection(ws);
     //conn.onOpen = next;   // TODO - probably remove?
     conn.onClose = handleClose;
-    conn.onInit = handleInit;
-    conn.onTerrainChunk = handleTerrainChunk;
-    conn.onUnloadChunk = handleUnloadChunk;
-    conn.onOpenDialog = handleOpenDialog;
-    conn.onOpenCrafting = handleOpenCrafting;
     conn.onChatUpdate = handleChatUpdate;
-    conn.onEntityAppear = handleEntityAppear;
-    conn.onEntityGone = handleEntityGone;
-    conn.onStructureAppear = handleStructureAppear;
-    conn.onStructureGone = handleStructureGone;
     conn.onMainInventory = handleMainInventory;
     conn.onAbilityInventory = handleAbilityInventory;
-    conn.onPlaneFlags = handlePlaneFlags;
     conn.onGetInteractArgs = handleGetInteractArgs;
     conn.onGetUseItemArgs = handleGetUseItemArgs;
     conn.onGetUseAbilityArgs = handleGetUseAbilityArgs;
-    conn.onStructureReplace = handleStructureReplace;
-    conn.onEntityMotionStart = handleEntityMotionStart;
-    conn.onEntityMotionEnd = handleEntityMotionEnd;
-    conn.onEntityMotionStartEnd = handleEntityMotionStartEnd;
-    conn.onProcessedInputs = handleProcessedInputs;
-    conn.onActivityChange = handleActivityChange;
-    conn.onInitNoPawn = handleInitNoPawn;
     conn.onOpenPonyEdit = handleOpenPonyEdit;
-    conn.onEntityActivityIcon = handleEntityActivityIcon;
-    conn.onCancelDialog = handleCancelDialog;
-    conn.onEnergyUpdate = handleEnergyUpdate;
 
     conn.onSyncStatus = function(new_synced) {
         // The first time the status becomes SYNC_OK, swap out the canvas and
@@ -212,6 +192,7 @@ OutpostClient.prototype['handoff'] = function(old_canvas, ws) {
     timing.scheduleUpdates(2, 5);
     inv_tracker = new InventoryTracker(conn, asm_client);
     asm_client.conn = conn;
+    conn._asm = asm_client;
 
     conn.sendReady();
 
@@ -490,66 +471,8 @@ function handleClose(evt, reason) {
     dialog.show(f);
 }
 
-function handleInit(entity_id, now, cycle_base, cycle_ms) {
-    asm_client.setPawnId(entity_id);
-    asm_client.initTiming(now);
-    asm_client.initDayNight(now, cycle_base, cycle_ms);
-}
-
-function handleInitNoPawn(x, y, z, now, cycle_base, cycle_ms) {
-    asm_client.setDefaultCameraPos(x, y, z);
-    asm_client.initTiming(now);
-    asm_client.initDayNight(now, cycle_base, cycle_ms);
-}
-
-function handleTerrainChunk(i, data) {
-    var cx = (i % LOCAL_SIZE)|0;
-    var cy = (i / LOCAL_SIZE)|0;
-    asm_client.loadTerrainChunk(cx, cy, data);
-}
-
-function handleUnloadChunk(idx) {
-}
-
-function handleOpenDialog(idx, args) {
-    if (idx == 0) {
-        // Cancel server-side subscription.
-        inv_tracker.unsubscribe(args[0]);
-    } else if (idx == 1) {
-        asm_client.openContainerDialog(args[0], args[1]);
-    }
-}
-
-function handleOpenCrafting(station_type, station_id, inventory_id) {
-    asm_client.openCraftingDialog(inventory_id, station_id);
-}
-
-function handleCancelDialog() {
-    asm_client.closeDialog();
-}
-
 function handleChatUpdate(msg) {
     chat.addMessage(msg);
-}
-
-function handleEntityAppear(id, appearance_bits, name) {
-    asm_client.entityAppear(id, appearance_bits, name);
-}
-
-function handleEntityGone(id, time) {
-    asm_client.entityGone(id, time);
-}
-
-function handleStructureAppear(id, template_id, x, y, z) {
-    asm_client.structureAppear(id, x, y, z, template_id);
-}
-
-function handleStructureGone(id, time) {
-    asm_client.structureGone(id, time);
-}
-
-function handleStructureReplace(id, template_id) {
-    asm_client.structureReplace(id, template_id);
 }
 
 function handleMainInventory(iid) {
@@ -571,14 +494,6 @@ function handleAbilityInventory(iid) {
     ability_inv = inv_tracker.get(iid);
 
     asm_client.inventoryAbilityId(iid);
-}
-
-function handleEnergyUpdate(cur, max, rate_n, rate_d, time) {
-    asm_client.energyUpdate(cur, max, rate_n, rate_d, time);
-}
-
-function handlePlaneFlags(flags) {
-    asm_client.setPlaneFlags(flags);
 }
 
 function handleGetInteractArgs(dialog_id, parts) {
@@ -626,27 +541,6 @@ function handleSyncStatus(new_synced) {
     }
 }
 
-function handleEntityMotionStart(id, m, anim) {
-    asm_client.entityMotionStart(id, m.start_time, m.start_pos, m.velocity, anim);
-}
-
-function handleEntityMotionEnd(id, end_time) {
-    asm_client.entityMotionEnd(id, end_time);
-}
-
-function handleEntityMotionStartEnd(id, m, anim) {
-    handleEntityMotionStart(id, m, anim);
-    handleEntityMotionEnd(id, m.end_time);
-}
-
-function handleProcessedInputs(time, count) {
-    asm_client.processedInputs(time, count);
-}
-
-function handleActivityChange(activity) {
-    asm_client.activityChange(activity);
-}
-
 function handleOpenPonyEdit(name) {
     var editor = new PonyEditor(name, drawPony);
 
@@ -662,10 +556,6 @@ function handleOpenPonyEdit(name) {
     editor.onsubmit = send_register;
     editor.oncancel = function() { handleOpenPonyEdit(name); };
     dialog.show(editor);
-}
-
-function handleEntityActivityIcon(id, anim) {
-    asm_client.entityActivityIcon(id, anim);
 }
 
 // Reset (nearly) all client-side state to pre-login conditions.

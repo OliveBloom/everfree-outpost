@@ -109,38 +109,20 @@ function Connection(x) {
 
     this.onOpen = null;
     this.onClose = null;
-    this.onTerrainChunk = null;
     this.onPong = null;
-    this.onInit = null;
-    this.onUnloadChunk = null;
-    this.onOpenDialog = null;
     this.onChatUpdate = null;
-    this.onEntityAppear = null;
-    this.onEntityGone = null;
-    this.onRegisterResult = null;
-    this.onStructureAppear = null;
-    this.onStructureGone = null;
     this.onMainInventory = null;
     this.onAbilityInventory = null;
-    this.onPlaneFlags = null;
     this.onGetInteractArgs = null;
     this.onGetUseItemArgs = null;
     this.onGetUseAbilityArgs = null;
     this.onSyncStatus = null;
-    this.onStructureReplace = null;
     this.onInventoryUpdate = null;
     this.onInventoryAppear = null;
     this.onInventoryGone = null;
-    this.onEntityMotionStart = null;
-    this.onEntityMotionEnd = null;
-    this.onEntityMotionStartEnd = null;
-    this.onProcessedInputs = null;
-    this.onActivityChange = null;
-    this.onInitNoPawn = null;
     this.onOpenPonyEdit = null;
-    this.onEntityActivityIcon = null;
-    this.onCancelDialog = null;
-    this.onEnergyUpdate = null;
+
+    this._asm = null;
 }
 exports.Connection = Connection;
 
@@ -224,17 +206,6 @@ Connection.prototype._handleMessage = function(evt) {
     var opcode = get16();
 
     switch (opcode) {
-        case OP_TERRAIN_CHUNK:
-            if (this.onTerrainChunk != null) {
-                var chunk_idx = get16();
-                // TODO: byte order in the Uint16Array will be wrong on
-                // big-endian systems.
-                var len = get16();
-                this.onTerrainChunk(chunk_idx, new Uint16Array(view.buffer, offset, len));
-                offset += 2 * len;
-            }
-            break;
-
         case OP_PONG:
             if (this.onPong != null) {
                 var msg = get16();
@@ -243,96 +214,15 @@ Connection.prototype._handleMessage = function(evt) {
             }
             break;
 
-        case OP_INIT:
-            if (this.onInit != null) {
-                var entity_id = get32();
-                var now = get16();
-                var cycle_base = get32();
-                var cycle_ms = get32();
-                this.onInit(entity_id, now, cycle_base, cycle_ms);
-            }
-            break;
-
         case OP_KICK_REASON:
             var msg = getString();
             this._last_kick_reason = msg;
-            break;
-
-        case OP_UNLOAD_CHUNK:
-            if (this.onUnloadChunk != null) {
-                var idx = get16();
-                this.onUnloadChunk(idx);
-            };
-            break;
-
-        case OP_OPEN_DIALOG:
-            if (this.onOpenDialog != null) {
-                var idx = get32();
-                var len = get16();
-                var args = [];
-                for (var i = 0; i < len; ++i) {
-                    args.push(get32());
-                }
-                this.onOpenDialog(idx, args);
-            };
-            break;
-
-        case OP_OPEN_CRAFTING:
-            if (this.onOpenCrafting != null) {
-                var station_type = get32();
-                var station_id = get32();
-                var inventory_id = get32();
-                this.onOpenCrafting(station_type, station_id, inventory_id);
-            }
             break;
 
         case OP_CHAT_UPDATE:
             if (this.onChatUpdate != null) {
                 var msg = getString();
                 this.onChatUpdate(msg);
-            }
-            break;
-
-        case OP_ENTITY_APPEAR:
-            if (this.onEntityAppear != null) {
-                var entity_id = get32();
-                var appearance = get32();
-                var name = getString();
-                this.onEntityAppear(entity_id, appearance, name);
-            }
-            break;
-
-        case OP_ENTITY_GONE:
-            if (this.onEntityGone != null) {
-                var entity_id = get32();
-                var time = get16();
-                this.onEntityGone(entity_id, time);
-            }
-            break;
-
-        case OP_REGISTER_RESULT:
-            if (this.onRegisterResult != null) {
-                var code = get32();
-                var msg = getString();
-                this.onRegisterResult(code, msg);
-            }
-            break;
-
-        case OP_STRUCTURE_APPEAR:
-            if (this.onStructureAppear != null) {
-                var structure_id = get32();
-                var template_id = get32();
-                var x = get16();
-                var y = get16();
-                var z = get16();
-                this.onStructureAppear(structure_id, template_id, x, y, z);
-            }
-            break;
-
-        case OP_STRUCTURE_GONE:
-            if (this.onStructureGone != null) {
-                var structure_id = get32();
-                this.onStructureGone(structure_id);
             }
             break;
 
@@ -347,13 +237,6 @@ Connection.prototype._handleMessage = function(evt) {
             if (this.onAbilityInventory != null) {
                 var inventory_id = get32();
                 this.onAbilityInventory(inventory_id);
-            }
-            break;
-
-        case OP_PLANE_FLAGS:
-            if (this.onPlaneFlags != null) {
-                var flags = get32();
-                this.onPlaneFlags(flags);
             }
             break;
 
@@ -387,14 +270,6 @@ Connection.prototype._handleMessage = function(evt) {
             if (this.onSyncStatus != null) {
                 var synced = get8();
                 this.onSyncStatus(synced);
-            }
-            break;
-
-        case OP_STRUCTURE_REPLACE:
-            if (this.onStructureReplace != null) {
-                var structure_id = get32();
-                var template_id = get32();
-                this.onStructureReplace(structure_id, template_id);
             }
             break;
 
@@ -439,84 +314,6 @@ Connection.prototype._handleMessage = function(evt) {
             };
             break;
 
-        case OP_ENTITY_MOTION_START:
-            if (this.onEntityMotionStart != null) {
-                var id =            get32();
-                var start_x =       get16();
-                var start_y =       get16();
-                var start_z =       get16();
-                var start_time =    get16();
-                var velocity_x =    getI16();
-                var velocity_y =    getI16();
-                var velocity_z =    getI16();
-                var anim =          get16();
-                var motion = {
-                    start_pos:  new Vec(start_x, start_y, start_z),
-                    velocity:   new Vec(velocity_x, velocity_y, velocity_z),
-                    start_time: start_time,
-                    end_time:   null,
-                };
-                this.onEntityMotionStart(id, motion, anim);
-            }
-            break;
-
-        case OP_ENTITY_MOTION_END:
-            if (this.onEntityMotionEnd != null) {
-                var id =            get32();
-                var end_time =      get16();
-                this.onEntityMotionEnd(id, end_time);
-            }
-            break;
-
-        case OP_ENTITY_MOTION_START_END:
-            if (this.onEntityMotionStartEnd != null) {
-                var id =            get32();
-                var start_x =       get16();
-                var start_y =       get16();
-                var start_z =       get16();
-                var start_time =    get16();
-                var velocity_x =    getI16();
-                var velocity_y =    getI16();
-                var velocity_z =    getI16();
-                var anim =          get16();
-                var end_time =      get16();
-                var motion = {
-                    start_pos:  new Vec(start_x, start_y, start_z),
-                    velocity:   new Vec(velocity_x, velocity_y, velocity_z),
-                    start_time: start_time,
-                    end_time:   end_time,
-                };
-                this.onEntityMotionStartEnd(id, motion, anim);
-            }
-            break;
-
-        case OP_PROCESSED_INPUTS:
-            if (this.onProcessedInputs != null) {
-                var time =          get16();
-                var count =         get16();
-                this.onProcessedInputs(time, count);
-            }
-            break;
-
-        case OP_ACTIVITY_CHANGE:
-            if (this.onActivityChange != null) {
-                var activity = get8();
-                this.onActivityChange(activity);
-            }
-            break;
-
-        case OP_INIT_NO_PAWN:
-            if (this.onInitNoPawn != null) {
-                var x = get16();
-                var y = get16();
-                var z = get16();
-                var now = get16();
-                var cycle_base = get32();
-                var cycle_ms = get32();
-                this.onInitNoPawn(x, y, z, now, cycle_base, cycle_ms);
-            };
-            break;
-
         case OP_OPEN_PONYEDIT:
             if (this.onOpenPonyEdit != null) {
                 var name = getString();
@@ -525,34 +322,9 @@ Connection.prototype._handleMessage = function(evt) {
             };
             break;
 
-        case OP_ENTITY_ACTIVITY_ICON:
-            if (this.onEntityActivityIcon != null) {
-                var id = get32();
-                var anim = get16();
-                this.onEntityActivityIcon(id, anim);
-            };
-            break;
-
-        case OP_CANCEL_DIALOG:
-            if (this.onCancelDialog != null) {
-                this.onCancelDialog();
-            };
-            break;
-
-        case OP_ENERGY_UPDATE:
-            if (this.onEnergyUpdate != null) {
-                var cur = get16();
-                var max = get16();
-                var rate_n = getI16();
-                var rate_d = get16();
-                var time = get16();
-                this.onEnergyUpdate(cur, max, rate_n, rate_d, time);
-            };
-            break;
-
         default:
-            console.assert(false, 'received invalid opcode:', opcode.toString(16));
-            break;
+            this._asm.handleMessage(new Uint8Array(evt.data));
+            return;
     }
 
     console.assert(offset == view.buffer.byteLength,

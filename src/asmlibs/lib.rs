@@ -17,6 +17,7 @@ extern crate alloc;
 #[macro_use] extern crate bitflags;
 
 extern crate client;
+extern crate common_proto;
 extern crate physics;
 
 use std::mem;
@@ -33,8 +34,11 @@ use client::graphics::structure;
 use client::graphics::terrain;
 use client::ui;
 
-mod gl;
+use common_proto::wire::ReadFrom;
+
 mod platform;
+mod gl;
+mod io;
 
 
 pub type Client<'d> = client::Client<'d, platform::Platform>;
@@ -68,6 +72,16 @@ pub unsafe extern fn client_init(data_ptr: *const Data,
 }
 
 #[no_mangle]
+pub unsafe extern fn handle_message(client: &mut Client,
+                                    ptr: *const u8,
+                                    len: usize) {
+    let buf = unsafe { make_slice(ptr, len) };
+    let msg = common_proto::game::Response::read_from(&mut io::Cursor::new(buf))
+        .unwrap_or_else(|e| panic!("error parsing message ({:x}): {}", buf[0], e));
+    client.handle_message(msg);
+}
+
+#[no_mangle]
 pub unsafe extern fn client_reset(client: &mut Client) {
     client.reset_all();
 }
@@ -75,120 +89,6 @@ pub unsafe extern fn client_reset(client: &mut Client) {
 #[no_mangle]
 pub unsafe extern fn client_reset_renderer(client: &mut Client) {
     client.reset_renderer();
-}
-
-// Chunks
-
-#[no_mangle]
-pub unsafe extern fn load_terrain_chunk(client: &mut Client,
-                                        cx: i32,
-                                        cy: i32,
-                                        data_ptr: *const u16,
-                                        data_byte_len: usize) {
-    let data = make_slice(data_ptr, data_byte_len);
-    client.load_terrain_chunk(V2::new(cx, cy), data);
-}
-
-// Structures
-
-#[no_mangle]
-pub unsafe extern fn structure_appear(client: &mut Client,
-                                      id: u32,
-                                      pos_x: i32,
-                                      pos_y: i32,
-                                      pos_z: i32,
-                                      template_id: u32) {
-    client.structure_appear(id,
-                            V3::new(pos_x, pos_y, pos_z),
-                            template_id);
-}
-
-#[no_mangle]
-pub unsafe extern fn structure_gone(client: &mut Client,
-                                    id: u32) {
-    client.structure_gone(id);
-}
-
-#[no_mangle]
-pub unsafe extern fn structure_replace(client: &mut Client,
-                                       id: u32,
-                                       template_id: u32) {
-    client.structure_replace(id, template_id);
-}
-
-// Entities
-
-#[no_mangle]
-pub unsafe extern fn entity_appear(client: &mut Client,
-                                   id: u32,
-                                   appearance: u32,
-                                   name_ptr: *mut u8,
-                                   name_len: usize) {
-    let name =
-        if name_ptr.is_null() {
-            None
-        } else {
-            let name_bytes = make_boxed_slice(name_ptr, name_len).into_vec();
-            Some(String::from_utf8(name_bytes).unwrap())
-        };
-    client.entity_appear(id, appearance, name);
-}
-
-#[no_mangle]
-pub unsafe extern fn entity_gone(client: &mut Client,
-                                 id: u32,
-                                 time: u16) {
-    client.entity_gone(id, time);
-}
-
-#[no_mangle]
-pub unsafe extern fn entity_motion_start(client: &mut Client,
-                                         id: u32,
-                                         start_time: u16,
-                                         pos_x: i32,
-                                         pos_y: i32,
-                                         pos_z: i32,
-                                         velocity_x: i32,
-                                         velocity_y: i32,
-                                         velocity_z: i32,
-                                         anim: u16) {
-    client.entity_motion_start(id,
-                               start_time,
-                               V3::new(pos_x, pos_y, pos_z),
-                               V3::new(velocity_x, velocity_y, velocity_z),
-                               anim);
-}
-
-#[no_mangle]
-pub unsafe extern fn entity_motion_end(client: &mut Client,
-                                       id: u32,
-                                       end_time: u16) {
-    client.entity_motion_end(id, end_time);
-}
-
-#[no_mangle]
-pub unsafe extern fn entity_activity_icon(client: &mut Client,
-                                          id: u32,
-                                          anim_id: u16) {
-    client.entity_activity_icon(id, anim_id);
-}
-
-#[no_mangle]
-pub unsafe extern fn set_pawn_id(client: &mut Client,
-                                 pawn_id: u32) {
-    if pawn_id == -1_i32 as u32 {
-        client.clear_pawn_id();
-    } else {
-        client.set_pawn_id(pawn_id);
-    }
-}
-
-#[no_mangle]
-pub unsafe extern fn set_default_camera_pos(client: &mut Client,
-                                            x: i32,
-                                            y: i32,
-                                            z: i32) {
-    client.set_default_camera_pos(V3::new(x, y, z));
 }
 
 // Inventories
@@ -229,6 +129,8 @@ pub unsafe extern fn inventory_ability_id(client: &mut Client,
     client.set_ability_inventory_id(inv_id);
 }
 
+// Inputs
+
 #[no_mangle]
 pub unsafe extern fn input_key(client: &mut Client,
                                code: u8,
@@ -263,6 +165,8 @@ pub unsafe extern fn input_mouse_up(client: &mut Client,
     client.input_mouse_up(V2::new(x, y), button, mods) as u8
 }
 
+// UI
+
 #[no_mangle]
 pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
     client.open_inventory_dialog();
@@ -271,25 +175,6 @@ pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
 #[no_mangle]
 pub unsafe extern fn open_ability_dialog(client: &mut Client) {
     client.open_ability_dialog();
-}
-
-#[no_mangle]
-pub unsafe extern fn open_container_dialog(client: &mut Client,
-                                           inv_id0: u32,
-                                           inv_id1: u32) {
-    client.open_container_dialog(inv_id0, inv_id1);
-}
-
-#[no_mangle]
-pub unsafe extern fn open_crafting_dialog(client: &mut Client,
-                                          inv_id: u32,
-                                          station_id: u32) {
-    client.open_crafting_dialog(inv_id, station_id);
-}
-
-#[no_mangle]
-pub unsafe extern fn close_dialog(client: &mut Client) {
-    client.close_dialog();
 }
 
 #[no_mangle]
@@ -311,19 +196,6 @@ pub extern fn feed_input(client: &mut Client,
                          time: i32,
                          bits: u16) {
     client.feed_input(time, bits);
-}
-
-#[no_mangle]
-pub extern fn processed_inputs(client: &mut Client,
-                               time: u16,
-                               count: u16) {
-    client.processed_inputs(time, count);
-}
-
-#[no_mangle]
-pub extern fn activity_change(client: &mut Client,
-                              activity: u8) {
-    client.activity_change(activity);
 }
 
 
@@ -354,26 +226,6 @@ pub unsafe extern fn debug_record(client: &mut Client,
 }
 
 #[no_mangle]
-pub unsafe extern fn init_day_night(client: &mut Client,
-                                    time: u16,
-                                    base_offset: i32,
-                                    cycle_ms: i32) {
-    client.init_day_night(time, base_offset, cycle_ms);
-}
-
-#[no_mangle]
-pub unsafe extern fn set_plane_flags(client: &mut Client,
-                                     flags: u32) {
-    client.set_plane_flags(flags);
-}
-
-#[no_mangle]
-pub unsafe extern fn init_timing(client: &mut Client,
-                                 time: u16) {
-    client.init_timing(time);
-}
-
-#[no_mangle]
 pub unsafe extern fn handle_pong(client: &mut Client,
                                  client_send: i32,
                                  client_recv: i32,
@@ -385,16 +237,6 @@ pub unsafe extern fn handle_pong(client: &mut Client,
 pub unsafe extern fn predict_arrival(client: &mut Client,
                                      extra_delay: i32) -> i32 {
     client.predict_arrival(extra_delay)
-}
-
-#[no_mangle]
-pub unsafe extern fn energy_update(client: &mut Client,
-                                   cur: i32,
-                                   max: i32,
-                                   rate_n: i16,
-                                   rate_d: u16,
-                                   time: u16) {
-    client.energy_update(cur, max, (rate_n, rate_d), time);
 }
 
 #[no_mangle]
