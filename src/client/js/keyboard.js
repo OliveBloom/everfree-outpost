@@ -37,12 +37,16 @@ function asmEncodeKey(code) {
     }
 }
 
-function asmDispatchKey(asm_client, code, shift) {
+function asmDispatchKey(asm_client, dir, code, shift) {
     var asm_code = asmEncodeKey(code, shift);
     if (asm_code == null) {
         return false;
     }
-    return asm_client.inputKey(asm_code, shift);
+    if (dir) {
+        return asm_client.inputKeyDown(asm_code, shift);
+    } else {
+        return asm_client.inputKeyUp(asm_code, shift);
+    }
 }
 
 
@@ -80,8 +84,7 @@ function Keyboard(asm_client) {
 
         var active_tag = document.activeElement.tagName.toLowerCase();
         var typing = active_tag == 'input' || active_tag == 'textarea';
-        if (!typing && asmDispatchKey(asm_client, evt.keyCode, evt.shiftKey)) {
-            asm_handled[evt.keyCode] = true;
+        if (!typing && asmDispatchKey(asm_client, true, evt.keyCode, evt.shiftKey)) {
             evt.preventDefault();
             evt.stopPropagation();
             return;
@@ -109,8 +112,9 @@ function Keyboard(asm_client) {
             return;
         }
 
-        if (asm_handled[evt.keyCode]) {
-            delete asm_handled[evt.keyCode];
+        var active_tag = document.activeElement.tagName.toLowerCase();
+        var typing = active_tag == 'input' || active_tag == 'textarea';
+        if (!typing && asmDispatchKey(asm_client, false, evt.keyCode, evt.shiftKey)) {
             evt.preventDefault();
             evt.stopPropagation();
             return;

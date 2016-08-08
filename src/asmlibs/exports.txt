@@ -12,7 +12,8 @@ client_init
 client_reset
 client_reset_renderer
 handle_message
-input_key
+input_key_down
+input_key_up
 input_mouse_move
 input_mouse_down
 input_mouse_up

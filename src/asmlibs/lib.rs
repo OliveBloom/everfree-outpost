@@ -94,12 +94,21 @@ pub unsafe extern fn client_reset_renderer(client: &mut Client) {
 // Inputs
 
 #[no_mangle]
-pub unsafe extern fn input_key(client: &mut Client,
-                               code: u8,
-                               shift: u8) -> u8 {
+pub unsafe extern fn input_key_down(client: &mut Client,
+                                    code: u8,
+                                    shift: u8) -> u8 {
     let mods =
         if shift != 0 { 0x01 } else { 0 };
-    client.input_key(code, mods) as u8
+    client.input_key_down(code, mods) as u8
+}
+
+#[no_mangle]
+pub unsafe extern fn input_key_up(client: &mut Client,
+                                  code: u8,
+                                  shift: u8) -> u8 {
+    let mods =
+        if shift != 0 { 0x01 } else { 0 };
+    client.input_key_up(code, mods) as u8
 }
 
 #[no_mangle]

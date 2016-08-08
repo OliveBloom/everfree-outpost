@@ -18,7 +18,8 @@ use physics::Shape;
 use physics::v3::{V3, V2, Vn, scalar, Region};
 use common::Gauge;
 use common_movement::InputBits;
-use common_proto::game::Response;
+use common_proto::game::{Request, Response};
+use common_proto::types::LocalTime;
 
 use data::Data;
 use debug::Debug;
@@ -60,7 +61,21 @@ pub struct Client<'d, P: Platform> {
     ui_scale: u16,
 
     last_cursor: Cursor,
+    cur_input: InputBits,
 }
+
+// Helper macro for chaining event handlers.
+macro_rules! try_handle {
+    ($slf:ident, $e:expr) => {
+        let status = $e;
+        if let EventStatus::Unhandled = status {
+            // Do nothing
+        } else {
+            return $slf.process_event_status(status);
+        }
+    };
+}
+
 
 impl<'d, P: Platform> Client<'d, P> {
     pub fn new(data: &'d Data, platform: P) -> Client<'d, P> {
@@ -94,6 +109,7 @@ impl<'d, P: Platform> Client<'d, P> {
             ui_scale: 1,
 
             last_cursor: Cursor::Normal,
+            cur_input: InputBits::empty(),
         };
 
         c.misc.hotbar.init(c.platform.config(), &c.data);
@@ -514,25 +530,97 @@ impl<'d, P: Platform> Client<'d, P> {
         f(&mut self.ui, &dyn)
     }
 
-    pub fn input_key(&mut self, code: u8, mods: u8) -> bool {
-        macro_rules! handle {
-            ($e:expr) => {
-                let status = $e;
-                if let EventStatus::Unhandled = status {
-                    // Do nothing
-                } else {
-                    return self.process_event_status(status);
-                }
-            };
-        }
-
+    pub fn input_key_down(&mut self, code: u8, mods: u8) -> bool {
         if let Some(key) = Key::from_code(code) {
             let mods = Modifiers::from_bits_truncate(mods);
             let evt = KeyEvent::new(key, mods);
-            handle!(self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn)));
+            try_handle!(self, self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn)));
+            try_handle!(self, self.handle_key_down(evt));
         }
 
         self.process_event_status(EventStatus::Unhandled)
+    }
+
+    pub fn input_key_up(&mut self, code: u8, mods: u8) -> bool {
+        if let Some(key) = Key::from_code(code) {
+            let mods = Modifiers::from_bits_truncate(mods);
+            let evt = KeyEvent::new(key, mods);
+            try_handle!(self, self.handle_key_up(evt));
+        }
+
+        self.process_event_status(EventStatus::Unhandled)
+    }
+
+    fn handle_key_down(&mut self, evt: KeyEvent) -> EventStatus {
+        use common_movement::*;
+        use input::Key::*;
+
+        let old_input = self.cur_input;
+        let bits =
+            match evt.code {
+                MoveLeft =>     INPUT_LEFT,
+                MoveRight =>    INPUT_RIGHT,
+                MoveUp =>       INPUT_UP,
+                MoveDown =>     INPUT_DOWN,
+                Run =>          INPUT_RUN,
+                Interact |
+                UseItem |
+                UseAbility =>   INPUT_HOLD,
+                _ => return EventStatus::Unhandled,
+            };
+        self.cur_input.insert(bits);
+        self.send_input(old_input);
+
+        EventStatus::Handled
+    }
+
+    fn handle_key_up(&mut self, evt: KeyEvent) -> EventStatus {
+        use common_movement::*;
+        use input::Key::*;
+
+        let old_input = self.cur_input;
+        let bits =
+            match evt.code {
+                MoveLeft =>     INPUT_LEFT,
+                MoveRight =>    INPUT_RIGHT,
+                MoveUp =>       INPUT_UP,
+                MoveDown =>     INPUT_DOWN,
+                Run =>          INPUT_RUN,
+                Interact |
+                UseItem |
+                UseAbility =>   INPUT_HOLD,
+                _ => return EventStatus::Unhandled,
+            };
+        self.cur_input.remove(bits);
+        self.send_input(old_input);
+
+        let time = self.predict_arrival(0);
+        match evt.code {
+            Interact =>
+                self.platform.send_message(
+                    Request::Interact(LocalTime::from_global_32(time))),
+            UseItem =>
+                self.platform.send_message(
+                    Request::UseItem(LocalTime::from_global_32(time),
+                                     self.misc.hotbar.active_item().unwrap_or(0))),
+            UseAbility =>
+                self.platform.send_message(
+                    Request::UseAbility(LocalTime::from_global_32(time),
+                                        self.misc.hotbar.active_ability().unwrap_or(0))),
+            _ => {},
+        }
+
+        EventStatus::Handled
+    }
+
+    fn send_input(&mut self, old: InputBits) {
+        let new = self.cur_input;
+        use common_movement::INPUT_DIR_MASK;
+        if new != old && !((new | old) & INPUT_DIR_MASK).is_empty() {
+            let time = self.predict_arrival(0);
+            self.platform.send_message(Request::Input(LocalTime::from_global_32(time),
+                                                      new.bits()));
+        }
     }
 
     fn convert_mouse_pos(&self, pos: V2) -> V2 {

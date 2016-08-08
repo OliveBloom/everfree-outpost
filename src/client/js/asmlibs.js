@@ -457,8 +457,12 @@ DynAsm.prototype.handleMessage = function(msg) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.inputKey = function(code, shift) {
-    return this._raw['input_key'](this.client, code, shift);
+DynAsm.prototype.inputKeyDown = function(code, shift) {
+    return this._raw['input_key_down'](this.client, code, shift);
+};
+
+DynAsm.prototype.inputKeyUp = function(code, shift) {
+    return this._raw['input_key_up'](this.client, code, shift);
 };
 
 DynAsm.prototype.inputMouseMove = function(x, y) {
