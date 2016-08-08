@@ -317,18 +317,6 @@ function setupKeyHandler() {
                     dialog.show(main_menu);
                     break;
 
-                // TODO: move these three into libclient
-                case 'toggle_cursor':
-                    asm_client.toggleCursor();
-                    break;
-                case 'inventory':
-                    asm_client.openInventoryDialog();
-                    break;
-
-                case 'abilities':
-                    asm_client.openAbilityDialog();
-                    break;
-
                 default:
                     return shouldStop;
             }

@@ -35,6 +35,7 @@ use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
 use ui::{UI, Dyn};
+use ui::dialogs::AnyDialog;
 
 
 pub struct Client<'d, P: Platform> {
@@ -535,6 +536,7 @@ impl<'d, P: Platform> Client<'d, P> {
             let mods = Modifiers::from_bits_truncate(mods);
             let evt = KeyEvent::new(key, mods);
             try_handle!(self, self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn)));
+            try_handle!(self, self.handle_ui_key(evt));
             try_handle!(self, self.handle_key_down(evt));
         }
 
@@ -551,10 +553,30 @@ impl<'d, P: Platform> Client<'d, P> {
         self.process_event_status(EventStatus::Unhandled)
     }
 
+    fn handle_ui_key(&mut self, evt: KeyEvent) -> EventStatus {
+        use input::Key::*;
+
+        match evt.code {
+            ToggleCursor => {
+                self.misc.show_cursor = !self.misc.show_cursor;
+            },
+            OpenInventory => {
+                self.ui.root.dialog.inner = AnyDialog::inventory();
+            },
+            OpenAbilities => {
+                self.ui.root.dialog.inner = AnyDialog::ability();
+            },
+            _ => return EventStatus::Unhandled,
+        }
+
+        EventStatus::Handled
+    }
+
     fn handle_key_down(&mut self, evt: KeyEvent) -> EventStatus {
         use common_movement::*;
         use input::Key::*;
 
+        // Update input bits
         let old_input = self.cur_input;
         let bits =
             match evt.code {
@@ -565,7 +587,8 @@ impl<'d, P: Platform> Client<'d, P> {
                 Run =>          INPUT_RUN,
                 Interact |
                 UseItem |
-                UseAbility =>   INPUT_HOLD,
+                UseAbility |
+                Cancel =>       INPUT_HOLD,
                 _ => return EventStatus::Unhandled,
             };
         self.cur_input.insert(bits);
@@ -578,6 +601,7 @@ impl<'d, P: Platform> Client<'d, P> {
         use common_movement::*;
         use input::Key::*;
 
+        // Update input bits
         let old_input = self.cur_input;
         let bits =
             match evt.code {
@@ -588,12 +612,14 @@ impl<'d, P: Platform> Client<'d, P> {
                 Run =>          INPUT_RUN,
                 Interact |
                 UseItem |
-                UseAbility =>   INPUT_HOLD,
+                UseAbility |
+                Cancel =>       INPUT_HOLD,
                 _ => return EventStatus::Unhandled,
             };
         self.cur_input.remove(bits);
         self.send_input(old_input);
 
+        // Also send action command, if needed
         let time = self.predict_arrival(0);
         match evt.code {
             Interact =>
@@ -662,13 +688,9 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn open_inventory_dialog(&mut self) {
-        use ui::dialogs::AnyDialog;
-        self.ui.root.dialog.inner = AnyDialog::inventory();
     }
 
     pub fn open_ability_dialog(&mut self) {
-        use ui::dialogs::AnyDialog;
-        self.ui.root.dialog.inner = AnyDialog::ability();
     }
 
     pub fn open_container_dialog(&mut self, inv0: InventoryId, inv1: InventoryId) {
