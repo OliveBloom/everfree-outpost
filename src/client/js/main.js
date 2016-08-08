@@ -281,14 +281,6 @@ var ACTION_INVENTORY =  2;
 var ACTION_USE_ITEM =   3;
 
 function setupKeyHandler() {
-    var dirs_held = {
-        'move_up': false,
-        'move_down': false,
-        'move_left': false,
-        'move_right': false,
-        'run': false,
-    };
-
     keyboard.pushHandler(function(down, evt) {
         if (down && evt.repeat) {
             return true;
@@ -301,14 +293,7 @@ function setupKeyHandler() {
             return shouldStop;
         }
 
-        if (dirs_held.hasOwnProperty(binding)) {
-            dirs_held[binding] = down;
-            updateWalkDir();
-            return true;
-        } else if (down) {
-            // TODO: actions don't get predicted, so time shouldn't matter
-            var time = timing.encodeSend(asm_client.predictArrival(0));
-
+        if (down) {
             switch (binding) {
                 // UI actions
                 case 'show_controls':
@@ -331,27 +316,17 @@ function setupKeyHandler() {
                 case 'show_menu':
                     dialog.show(main_menu);
                     break;
+
+                // TODO: move these three into libclient
                 case 'toggle_cursor':
                     asm_client.toggleCursor();
                     break;
-
                 case 'inventory':
                     asm_client.openInventoryDialog();
                     break;
 
                 case 'abilities':
                     asm_client.openAbilityDialog();
-                    break;
-
-                // Commands to the server
-                case 'interact':
-                    conn.sendInteract(time);
-                    break;
-                case 'use_item':
-                    conn.sendUseItem(time, asm_client.getActiveItem());
-                    break;
-                case 'use_ability':
-                    conn.sendUseAbility(time, asm_client.getActiveAbility());
                     break;
 
                 default:
@@ -363,33 +338,6 @@ function setupKeyHandler() {
             return shouldStop;
         }
     });
-
-    function updateWalkDir() {
-        var bits = 0;
-
-        if (dirs_held['move_left']) {
-            bits |= INPUT_LEFT;
-        }
-        if (dirs_held['move_right']) {
-            bits |= INPUT_RIGHT;
-        }
-
-        if (dirs_held['move_up']) {
-            bits |= INPUT_UP;
-        }
-        if (dirs_held['move_down']) {
-            bits |= INPUT_DOWN;
-        }
-
-        if (dirs_held['run']) {
-            bits |= INPUT_RUN;
-        }
-
-        var arrival = asm_client.predictArrival(Config.input_delay.get());
-        conn.sendInput(timing.encodeSend(arrival), bits);
-
-        asm_client.feedInput(arrival, bits);
-    }
 
     function alwaysStop(evt) {
         // Allow Ctrl + anything
