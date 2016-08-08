@@ -26,6 +26,7 @@ use entity::{self, Entity, Entities};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
+use input::{Key, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 use inventory::{Inventories, Item};
 use misc::Misc;
 use structures::Structures;
@@ -33,7 +34,6 @@ use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
 use ui::{UI, Dyn};
-use ui::input::{KeyAction, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 
 
 pub struct Client<'d, P: Platform> {
@@ -515,15 +515,24 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn input_key(&mut self, code: u8, mods: u8) -> bool {
-        let status =
-            if let Some(key) = KeyAction::from_code(code) {
-                let mods = Modifiers::from_bits_truncate(mods);
-                let evt = KeyEvent::new(key, mods);
-                self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn))
-            } else {
-                EventStatus::Unhandled
+        macro_rules! handle {
+            ($e:expr) => {
+                let status = $e;
+                if let EventStatus::Unhandled = status {
+                    // Do nothing
+                } else {
+                    return self.process_event_status(status);
+                }
             };
-        self.process_event_status(status)
+        }
+
+        if let Some(key) = Key::from_code(code) {
+            let mods = Modifiers::from_bits_truncate(mods);
+            let evt = KeyEvent::new(key, mods);
+            handle!(self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn)));
+        }
+
+        self.process_event_status(EventStatus::Unhandled)
     }
 
     fn convert_mouse_pos(&self, pos: V2) -> V2 {

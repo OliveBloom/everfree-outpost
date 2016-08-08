@@ -8,23 +8,30 @@ function asmEncodeKey(code) {
         case 'move_right':  return 1;
         case 'move_up':     return 2;
         case 'move_down':   return 3;
+        case 'run':         return 4;
+
+        case 'interact':    return 10;
+        case 'use_item':    return 11;
+        case 'use_ability': return 12;
+        case 'inventory':   return 13;
+        case 'abilities':   return 14;
+
+        case 'debug_show_panel':    return 20;
+        case 'toggle_cursor':       return 21;
 
         // TODO: enter key handling is a hack
-        case 'chat':        return 20;
-        case 'interact':    return 20;
-        case 'cancel':      return 21;
+        case 'chat':        return 30;
+        case 'cancel':      return 31;
 
-        case 'hotbar_1':    return 31;
-        case 'hotbar_2':    return 32;
-        case 'hotbar_3':    return 33;
-        case 'hotbar_4':    return 34;
-        case 'hotbar_5':    return 35;
-        case 'hotbar_6':    return 36;
-        case 'hotbar_7':    return 37;
-        case 'hotbar_8':    return 38;
-        case 'hotbar_9':    return 39;
-
-        case 'debug_show_panel': return 114;
+        case 'hotbar_1':    return 41;
+        case 'hotbar_2':    return 42;
+        case 'hotbar_3':    return 43;
+        case 'hotbar_4':    return 44;
+        case 'hotbar_5':    return 45;
+        case 'hotbar_6':    return 46;
+        case 'hotbar_7':    return 47;
+        case 'hotbar_8':    return 48;
+        case 'hotbar_9':    return 49;
 
         default:            return null;
     }

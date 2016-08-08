@@ -8,11 +8,12 @@ use client::ClientObj;
 use data::Data;
 use debug::Debug as DebugDyn;
 use hotbar::Hotbar;
+use input::EventStatus;
 use inventory::{Inventory, Inventories};
 use misc::Misc;
 use platform::Config;
 use ui::geom::Geom;
-use ui::input::{KeyAction, KeyEvent, EventStatus};
+use ui::input::{KeyAction, ActionEvent};
 use ui::{dialog, dialogs, hotbar, debug, top_bar, inv_changes};
 use ui::widget::*;
 
@@ -118,7 +119,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         use ui::dialogs::AnyDialog::{self, Inventory, Ability};
 
         let status = OnKeyVisitor::dispatch(self, key);

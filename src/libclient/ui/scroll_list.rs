@@ -4,10 +4,11 @@ use std::cmp;
 use physics::v3::{V2, Region};
 
 use fonts;
+use input::{ButtonEvent, EventStatus};
 use ui::Context;
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyEvent, ButtonEvent, EventStatus};
+use ui::input::ActionEvent;
 use ui::widget::*;
 
 
@@ -210,7 +211,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
         geom.draw_ui_tiled(atlas::SCROLL_LIST_BORDER_E, body.inset(-3, 0, 3, 3));
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         use ui::input::KeyAction::*;
 
         let amt = if key.shift() { 10 } else { 1 };
@@ -225,7 +226,7 @@ impl<'a, D: ScrollListDyn> Widget for WidgetPack<'a, ScrollList, D> {
                      ctx: &mut Context,
                      rect: Region<V2>,
                      evt: ButtonEvent) -> EventStatus {
-        use ui::input::Button::*;
+        use input::Button::*;
 
         let amt = if evt.shift() { 10 } else { 1 };
         match evt.button {

@@ -50,6 +50,7 @@ mod inv_changes;
 mod misc;
 mod debug;
 mod timing;
+mod input;
 
 pub mod graphics;
 pub mod ui;

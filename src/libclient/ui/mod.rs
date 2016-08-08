@@ -3,6 +3,7 @@ use types::*;
 
 use physics::v3::{V2, scalar, Region};
 
+use input::{KeyEvent, ButtonEvent, EventStatus};
 use platform::Cursor;
 
 use self::widget::{Widget, Visitor};
@@ -69,25 +70,29 @@ impl UI {
     }
 
     pub fn handle_key(&mut self,
-                      key: input::KeyEvent,
-                      dyn: &Dyn) -> input::EventStatus {
+                      key: KeyEvent,
+                      dyn: &Dyn) -> EventStatus {
+        let action =
+            if let Some(action) = input::ActionEvent::from_key_event(key) { action }
+            else { return EventStatus::Unhandled; };
+
         if !self.context.dragging() {
             let mut root = widget::WidgetPack::new(&mut self.root, dyn);
-            root.on_key(key)
+            root.on_key(action)
         } else {
-            match key.code {
+            match action.code {
                 input::KeyAction::Cancel => {
                     self.context.drag_data = None;
                 },
                 _ => {},
             }
-            input::EventStatus::Handled
+            EventStatus::Handled
         }
     }
 
     pub fn handle_mouse_move(&mut self,
                              pos: V2,
-                             dyn: &Dyn) -> input::EventStatus {
+                             dyn: &Dyn) -> EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -97,8 +102,8 @@ impl UI {
 
     pub fn handle_mouse_down(&mut self,
                              pos: V2,
-                             evt: input::ButtonEvent,
-                             dyn: &Dyn) -> input::EventStatus {
+                             evt: ButtonEvent,
+                             dyn: &Dyn) -> EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 
@@ -109,14 +114,14 @@ impl UI {
         if !self.context.dragging() {
             root.on_mouse_down(&mut self.context, rect, evt)
         } else {
-            input::EventStatus::Handled
+            EventStatus::Handled
         }
     }
 
     pub fn handle_mouse_up(&mut self,
                            pos: V2,
-                           evt: input::ButtonEvent,
-                           dyn: &Dyn) -> input::EventStatus {
+                           evt: ButtonEvent,
+                           dyn: &Dyn) -> EventStatus {
         let mut root = widget::WidgetPack::new(&mut self.root, dyn);
         let rect = Region::sized(root.size());
 

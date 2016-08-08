@@ -5,11 +5,12 @@ use common_proto::game::Request;
 use physics::v3::{V2, Vn, scalar, Region};
 
 use client::ClientObj;
+use input::{ButtonEvent, EventStatus};
 use inventory::Item;
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyEvent, ButtonEvent, EventStatus};
+use ui::input::ActionEvent;
 use ui::item;
 use ui::widget::*;
 
@@ -143,7 +144,7 @@ impl<'a, D: GridDyn> Widget for WidgetPack<'a, Grid, D> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         use ui::input::KeyAction::*;
         let amt = if key.shift() { 10 } else { 1 };
         let dir =
