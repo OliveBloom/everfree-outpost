@@ -240,6 +240,8 @@ impl<'d, P: Platform> Client<'d, P> {
 
             Response::EnergyUpdate(cur, max, rate, time) =>
                 self.energy_update(cur as i32, max as i32, rate, time.unwrap()),
+
+            Response::ResetMotion(()) => error!("NYI: libclient ResetMotion"),
         }
     }
 

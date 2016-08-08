@@ -23,6 +23,13 @@ protocol! {
         [0x0015] CreateCharacter { appearance: u32 },
         [0x0016] Ready {__: ()},
         [0x0017] CloseDialog {__: ()},
+        [0x0018] PathStart { pos: LocalPos, delay: u16 },
+        [0x0019] PathUpdate {
+            // Truncated version of the delta between the last Start/Update and this one
+            rel_time: LocalTime,
+            pos: LocalPos, velocity: LocalOffset, 
+            input_bits: u16 },
+        [0x001a] PathBlocked { rel_time: LocalTime },
     }
 }
 
@@ -66,6 +73,7 @@ protocol! {
         [0x8025] EntityActivityIcon { id: EntityId, icon: AnimId },
         [0x8026] CancelDialog { __: () },
         [0x8027] EnergyUpdate { cur: u16, max: u16, rate: (i16, u16), time: LocalTime },
+        [0x8028] ResetMotion { __: () },
     }
 }
 
