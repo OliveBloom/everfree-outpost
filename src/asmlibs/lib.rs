@@ -136,39 +136,6 @@ pub unsafe extern fn input_mouse_up(client: &mut Client,
     client.input_mouse_up(V2::new(x, y), button, mods) as u8
 }
 
-// UI
-
-#[no_mangle]
-pub unsafe extern fn open_inventory_dialog(client: &mut Client) {
-    client.open_inventory_dialog();
-}
-
-#[no_mangle]
-pub unsafe extern fn open_ability_dialog(client: &mut Client) {
-    client.open_ability_dialog();
-}
-
-#[no_mangle]
-pub unsafe extern fn get_active_item(client: &mut Client) -> u16 {
-    client.get_active_item()
-}
-
-#[no_mangle]
-pub unsafe extern fn get_active_ability(client: &mut Client) -> u16 {
-    client.get_active_ability()
-}
-
-
-
-// Physics
-
-#[no_mangle]
-pub extern fn feed_input(client: &mut Client,
-                         time: i32,
-                         bits: u16) {
-    client.feed_input(time, bits);
-}
-
 
 // Graphics
 
@@ -208,11 +175,6 @@ pub unsafe extern fn handle_pong(client: &mut Client,
 pub unsafe extern fn predict_arrival(client: &mut Client,
                                      extra_delay: i32) -> i32 {
     client.predict_arrival(extra_delay)
-}
-
-#[no_mangle]
-pub unsafe extern fn toggle_cursor(client: &mut Client) {
-    client.toggle_cursor();
 }
 
 #[no_mangle]

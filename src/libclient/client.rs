@@ -687,12 +687,6 @@ impl<'d, P: Platform> Client<'d, P> {
         self.process_event_status(status)
     }
 
-    pub fn open_inventory_dialog(&mut self) {
-    }
-
-    pub fn open_ability_dialog(&mut self) {
-    }
-
     pub fn open_container_dialog(&mut self, inv0: InventoryId, inv1: InventoryId) {
         use ui::dialogs::AnyDialog;
         self.ui.root.dialog.inner = AnyDialog::container(inv0, inv1);
@@ -709,20 +703,8 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::none();
     }
 
-    pub fn get_active_item(&self) -> u16 {
-        self.misc.hotbar.active_item().unwrap_or(0)
-    }
-
-    pub fn get_active_ability(&self) -> u16 {
-        self.misc.hotbar.active_ability().unwrap_or(0)
-    }
-
 
     // Physics
-
-    pub fn feed_input(&mut self, time: Time, bits: u16) {
-        // TODO
-    }
 
     pub fn processed_inputs(&mut self, time: u16, count: u16) {
         let time = self.decode_time(time);
@@ -911,10 +893,6 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn energy_update(&mut self, cur: i32, max: i32, rate: (i16, u16), time: u16) {
         let time = self.decode_time(time);
         self.misc.energy = Gauge::new(cur, rate, time, 0, max);
-    }
-
-    pub fn toggle_cursor(&mut self) {
-        self.misc.show_cursor = !self.misc.show_cursor;
     }
 
     pub fn calc_scale(&self, size: (u16, u16)) -> i16 {
