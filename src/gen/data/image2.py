@@ -185,6 +185,13 @@ class Image(object):
         img = self.extract((x0, y0), size=(x1 - x0, y1 - y0), unit=1)
         return (img, (x0, y0))
 
+    def get_pixel(self, pos):
+        def get_pixel_inner(raw):
+            return raw.getpixel(pos)
+        return self.raw().compute(get_pixel_inner,
+                (__name__, 'get_pixel', pos))
+
+
 class Anim(object):
     def __init__(self, frames, rate, oneshot=False):
         self._frames = frames

@@ -15,3 +15,9 @@ day_night_pixels.*:
         suitable for multiplying rather than alpha blending, and to make the
         nights darker.
 
+metal-palettes.png:
+    author: Stuart Pernsteiner
+    derived-from: williamson-roguelike-items, lpc-base-tiles
+    attribution:
+        Stone colors are from the base LPC rock.  Copper, silver, and T2
+        pegasus colors are from Williamson's roguelike items.
