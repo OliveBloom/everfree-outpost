@@ -22,7 +22,7 @@ use common_proto::game::Response;
 
 use data::Data;
 use debug::Debug;
-use entity::{self, Entities};
+use entity::{self, Entity, Entities};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
@@ -663,14 +663,8 @@ impl<'d, P: Platform> Client<'d, P> {
         // Entities can extend in any direction from their reference point.
         {
             let pawn_id = self.pawn_id;
-            let predictor = &self.predictor;
             self.entities.update_z_order(|e| {
-                let mut pos =
-                    if Some(e.id) == pawn_id {
-                        predictor.motion().pos(future)
-                    } else {
-                        e.pos(scene.now)
-                    };
+                let mut pos = e.pos(scene.now);
                 if pos.y < scene.camera_pos.y - CHUNK_SIZE * TILE_SIZE {
                     pos.y += CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
                 }
@@ -681,11 +675,8 @@ impl<'d, P: Platform> Client<'d, P> {
                                         chunk_bounds.max + V2::new(1, 1));
         self.renderer.update_entity_geometry(&self.data,
                                              &self.entities,
-                                             &self.predictor,
                                              entity_bounds,
-                                             scene.now,
-                                             future,
-                                             self.pawn_id);
+                                             scene.now);
 
         // Also refresh the UI buffer.
         let (geom, special, cursor) = self.with_ui_dyn(|ui, dyn| {
@@ -733,12 +724,8 @@ impl<'d, P: Platform> Client<'d, P> {
         self.predictor.update(future, &*self.terrain_shape, &self.data);
 
         let pos =
-            if self.pawn_id.is_some() {
-                // TODO: hardcoded constant based on entity size
-                self.predictor.motion().pos(future) + V3::new(16, 16, 0)
-            } else {
-                self.default_camera_pos
-            };
+            if let Some(pawn) = self.pawn() { pawn.pos(now) }
+            else { self.default_camera_pos };
         // Wrap `pos` to 2k .. 6k region
         let pos = util::wrap_base(pos, V3::new(2048, 2048, 0));
         self.debug.pos = pos;
@@ -747,8 +734,8 @@ impl<'d, P: Platform> Client<'d, P> {
             if self.misc.plane_is_dark { (0, 0, 0, 0) }
             else { self.misc.day_night.ambient_light(&self.data, now) };
         let cursor_pos =
-            if self.misc.show_cursor && self.pawn_id.is_some() {
-                calc_cursor_pos(&self.data, pos, self.predictor.motion().anim_id)
+            if self.misc.show_cursor {
+                self.pawn().and_then(|pawn| calc_cursor_pos(&self.data, pos, pawn.motion.anim_id))
             } else {
                 None
             };
@@ -778,6 +765,10 @@ impl<'d, P: Platform> Client<'d, P> {
     fn now(&self) -> Time {
         let client = self.platform.get_time();
         self.timing.convert(client)
+    }
+
+    fn pawn(&self) -> Option<&Entity> {
+        self.pawn_id.and_then(|eid| self.entities.get(eid))
     }
 
     pub fn debug_record(&mut self, frame_time: Time) {
@@ -881,11 +872,8 @@ impl<'d, P: Platform> Client<'d, P> {
         entities.update_z_order(|_| 0);
         self.renderer.update_entity_geometry(&self.data,
                                              &entities,
-                                             &self.predictor,
                                              Region::new(scalar(-1), scalar(1)) + cpos,
-                                             0,
-                                             0,
-                                             None);
+                                             0);
         self.renderer.render_ponyedit_hack(&scene);
     }
 

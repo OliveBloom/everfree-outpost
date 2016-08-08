@@ -5,7 +5,6 @@ use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
 use entity::{Entities, Entity};
 use platform::gl;
-use predict::Predictor;
 use structures::Structures;
 use util;
 
@@ -167,39 +166,26 @@ impl<'a> GeometryGenerator for StructureGeomGen<'a> {
 
 
 pub struct EntityGeomGen<'a> {
-    predictor: &'a Predictor,
     entities: &'a Entities,
     bounds: Region<V2>,
     now: Time,
-    future: Time,
-    pawn_id: Option<EntityId>,
     next: EntityId,
 }
 
 impl<'a> EntityGeomGen<'a> {
     pub fn new(entities: &'a Entities,
-               predictor: &'a Predictor,
                bounds: Region<V2>,
-               now: Time,
-               future: Time,
-               pawn_id: Option<EntityId>) -> EntityGeomGen<'a> {
+               now: Time) -> EntityGeomGen<'a> {
         EntityGeomGen {
             entities: entities,
-            predictor: predictor,
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
             now: now,
-            future: future,
-            pawn_id: pawn_id,
             next: EntityId(0),
         }
     }
 
     fn entity_pos(&self, id: EntityId, e: &Entity) -> V3 {
-        if Some(id) != self.pawn_id {
-            e.pos(self.now)
-        } else {
-            self.predictor.motion().pos(self.future)
-        }
+        e.pos(self.now)
     }
 
     pub fn count_verts(&self) -> usize {
