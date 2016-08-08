@@ -59,7 +59,6 @@ def recolor(img, palette, base_palette=None):
         for i in range(0, len(pal), 3):
             k = tuple(pal[i : i + 3])
             if k in dct:
-                print(pal[i : i + 3], k, dct[k])
                 pal[i : i + 3] = dct[k]
 
         quant.putpalette(pal)

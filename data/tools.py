@@ -19,7 +19,7 @@ def init():
 
 
     def metal_tool(x, metal, offset=0):
-        base = tools.extract((3, 0))
+        base = tools.extract((x, 0))
         pal = METAL_PALETTES[metal][offset:]
         return recolor(base, pal)
 
