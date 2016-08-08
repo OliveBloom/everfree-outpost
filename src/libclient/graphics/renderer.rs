@@ -13,7 +13,6 @@ use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
 use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, DepthMode, Feature, FeatureStatus};
-use predict::Predictor;
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;

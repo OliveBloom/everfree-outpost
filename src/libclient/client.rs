@@ -28,7 +28,6 @@ use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
 use inventory::{Inventories, Item};
 use misc::Misc;
-use predict::{Predictor, Activity};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -46,7 +45,6 @@ pub struct Client<'d, P: Platform> {
     structures: Structures,
     entities: Entities,
     inventories: Inventories,
-    predictor: Predictor,
     misc: Misc,
     debug: Debug,
     timing: Timing,
@@ -81,7 +79,6 @@ impl<'d, P: Platform> Client<'d, P> {
             structures: Structures::new(),
             entities: Entities::new(),
             inventories: Inventories::new(),
-            predictor: Predictor::new(),
             misc: Misc::new(),
             debug: Debug::new(),
             timing: Timing::new(),
@@ -412,11 +409,6 @@ impl<'d, P: Platform> Client<'d, P> {
                                anim: u16) {
         let start_time = self.decode_time(start_time);
         self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
-
-        if Some(id) == self.pawn_id {
-            self.predictor.canonical_motion_update(entity::Update::MotionStart(
-                    start_time, start_pos, velocity, anim));
-        }
     }
 
     pub fn entity_motion_end(&mut self,
@@ -424,10 +416,6 @@ impl<'d, P: Platform> Client<'d, P> {
                              end_time: u16) {
         let end_time = self.decode_time(end_time);
         self.entities.schedule_motion_end(id, end_time);
-
-        if Some(id) == self.pawn_id {
-            self.predictor.canonical_motion_update(entity::Update::MotionEnd(end_time));
-        }
     }
 
     pub fn entity_activity_icon(&mut self,
@@ -614,16 +602,16 @@ impl<'d, P: Platform> Client<'d, P> {
     // Physics
 
     pub fn feed_input(&mut self, time: Time, bits: u16) {
-        println!("predicted input at {}", time);
-        self.predictor.input(time, InputBits::from_bits(bits).expect("invalid input bits"));
+        // TODO
     }
 
     pub fn processed_inputs(&mut self, time: u16, count: u16) {
         let time = self.decode_time(time);
-        self.predictor.processed_inputs(time, count as usize);
+        // TODO
     }
 
     pub fn activity_change(&mut self, activity: u8) {
+        /*
         let activity = match activity {
             0 => Activity::Walk,
             //1 => Activity::Fly,
@@ -631,7 +619,8 @@ impl<'d, P: Platform> Client<'d, P> {
             3 => Activity::Work,
             _ => panic!("invalid activity value: {}", activity),
         };
-        self.predictor.activity_update(activity);
+        */
+        // TODO
     }
 
 
@@ -720,8 +709,6 @@ impl<'d, P: Platform> Client<'d, P> {
         let day_time = self.misc.day_night.time_of_day(now);
         self.debug.day_time = day_time;
         self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
-
-        self.predictor.update(future, &*self.terrain_shape, &self.data);
 
         let pos =
             if let Some(pawn) = self.pawn() { pawn.pos(now) }

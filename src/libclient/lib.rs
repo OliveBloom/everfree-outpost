@@ -48,7 +48,6 @@ mod day_night;
 mod hotbar;
 mod inv_changes;
 mod misc;
-mod predict;
 mod debug;
 mod timing;
 
