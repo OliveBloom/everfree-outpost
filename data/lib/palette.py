@@ -32,7 +32,9 @@ METAL_PALETTES = dict(zip(METALS,
 
 def collect_mask_colors(img):
     def collect_mask_colors_inner(raw):
-        quant = raw.quantize()
+        # Converting to RGB before quantizing seems to give better results.  On
+        # RGBA it unnecessarily reduced the number of colors in the image.
+        quant = raw.convert('RGB').quantize()
         pal = quant.getpalette()
         levels = []
         for i in range(0, len(pal), 3):
@@ -51,7 +53,10 @@ def recolor(img, palette, base_palette=None):
     dct = dict(zip(base_palette, palette))
 
     def recolor_inner(raw):
-        quant = raw.quantize()
+        if raw.mode == 'P':
+            quant = raw.copy()
+        else:
+            quant = raw.convert('RGB').quantize()
         if raw.mode == 'RGBA':
             alpha = raw.split()[3]
 
