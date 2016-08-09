@@ -30,6 +30,7 @@ use graphics::types::StructureTemplate;
 use input::{Key, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 use inventory::{Inventories, Item};
 use misc::Misc;
+use pawn::PawnInfo;
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -50,12 +51,12 @@ pub struct Client<'d, P: Platform> {
     misc: Misc,
     debug: Debug,
     timing: Timing,
+    pawn: PawnInfo,
 
     ui: UI,
 
     renderer: Renderer<P::GL>,
 
-    pawn_id: Option<EntityId>,
     default_camera_pos: V3,
     window_size: (u16, u16),
     view_size: (u16, u16),
@@ -98,12 +99,12 @@ impl<'d, P: Platform> Client<'d, P> {
             misc: Misc::new(),
             debug: Debug::new(),
             timing: Timing::new(),
+            pawn: PawnInfo::new(),
 
             ui: UI::new(),
 
             renderer: renderer,
 
-            pawn_id: None,
             default_camera_pos: V3::new(4096, 4096, 0),
             window_size: (640, 480),
             view_size: (640, 480),
@@ -273,7 +274,7 @@ impl<'d, P: Platform> Client<'d, P> {
         self.entities.clear();
         self.inventories.clear();
 
-        self.pawn_id = None;
+        self.pawn.clear_id(&mut self.entities);
 
         self.misc.reset();
 
@@ -409,6 +410,9 @@ impl<'d, P: Platform> Client<'d, P> {
                          appearance: u32,
                          name: Option<String>) {
         self.entities.insert(id, appearance, name);
+        if self.pawn.is(id) {
+            self.pawn.on_create(&mut self.entities);
+        }
     }
 
     pub fn entity_gone(&mut self,
@@ -447,11 +451,11 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn set_pawn_id(&mut self,
                        id: EntityId) {
-        self.pawn_id = Some(id);
+        self.pawn.set_id(id, &mut self.entities);
     }
 
     pub fn clear_pawn_id(&mut self) {
-        self.pawn_id = None;
+        self.pawn.clear_id(&mut self.entities);
     }
 
     pub fn set_default_camera_pos(&mut self, pos: V3) {
@@ -752,7 +756,6 @@ impl<'d, P: Platform> Client<'d, P> {
 
         // Entities can extend in any direction from their reference point.
         {
-            let pawn_id = self.pawn_id;
             self.entities.update_z_order(|e| {
                 let mut pos = e.pos(scene.now);
                 if pos.y < scene.camera_pos.y - CHUNK_SIZE * TILE_SIZE {
@@ -856,7 +859,7 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     fn pawn(&self) -> Option<&Entity> {
-        self.pawn_id.and_then(|eid| self.entities.get(eid))
+        self.pawn.get(&self.entities)
     }
 
     pub fn debug_record(&mut self, frame_time: Time) {

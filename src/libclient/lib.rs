@@ -51,6 +51,7 @@ mod misc;
 mod debug;
 mod timing;
 mod input;
+mod pawn;
 
 pub mod graphics;
 pub mod ui;
