@@ -117,6 +117,10 @@ impl MovingEntity {
         }
     }
 
+    pub fn input(&self) -> InputBits {
+        self.input
+    }
+
     pub fn set_input(&mut self, input: InputBits) {
         if input != self.input {
             self.input = input;

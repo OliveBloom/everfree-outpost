@@ -256,7 +256,8 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::EnergyUpdate(cur, max, rate, time) =>
                 self.energy_update(cur as i32, max as i32, rate, time.unwrap()),
 
-            Response::ResetMotion(()) => error!("NYI: libclient ResetMotion"),
+            Response::ResetMotion(()) =>
+                self.pawn.reset_motion(),
         }
     }
 
@@ -429,14 +430,23 @@ impl<'d, P: Platform> Client<'d, P> {
                                velocity: V3,
                                anim: u16) {
         let start_time = self.decode_time(start_time);
-        self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
+        if self.pawn.is(id) {
+            self.pawn.server_update(entity::Update::MotionStart(
+                    start_time, start_pos, velocity, anim));
+        } else {
+            self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
+        }
     }
 
     pub fn entity_motion_end(&mut self,
                              id: EntityId,
                              end_time: u16) {
         let end_time = self.decode_time(end_time);
-        self.entities.schedule_motion_end(id, end_time);
+        if self.pawn.is(id) {
+            self.pawn.server_update(entity::Update::MotionEnd(end_time));
+        } else {
+            self.entities.schedule_motion_end(id, end_time);
+        }
     }
 
     pub fn entity_activity_icon(&mut self,
@@ -650,6 +660,7 @@ impl<'d, P: Platform> Client<'d, P> {
             let time = self.predict_arrival(0);
             self.platform.send_message(Request::Input(LocalTime::from_global_32(time),
                                                       new.bits()));
+            self.pawn.set_input(new);
         }
     }
 
@@ -737,6 +748,13 @@ impl<'d, P: Platform> Client<'d, P> {
         let bounds = Region::sized(scene.camera_size) + scene.camera_pos;
         let tile_bounds = bounds.div_round_signed(TILE_SIZE);
         let chunk_bounds = bounds.div_round_signed(CHUNK_SIZE * TILE_SIZE);
+
+        // Update player position
+        self.pawn.update_movement(scene.now,
+                                  self.data,
+                                  &*self.terrain_shape,
+                                  &mut self.platform,
+                                  &mut self.entities);
 
         // Terrain from the chunk below can cover the current one.
         let terrain_bounds = Region::new(chunk_bounds.min - V2::new(0, 0),
@@ -881,6 +899,7 @@ impl<'d, P: Platform> Client<'d, P> {
         self.timing.init(client, server);
 
         self.misc.energy = Gauge::new(0, (1, 6), server as Time, 0, 240);
+        self.pawn.init_time(server as Time);
     }
 
     pub fn handle_pong(&mut self, client_send: Time, client_recv: Time, server: u16) {
