@@ -760,13 +760,6 @@ impl<'d, P: Platform> Client<'d, P> {
         let tile_bounds = bounds.div_round_signed(TILE_SIZE);
         let chunk_bounds = bounds.div_round_signed(CHUNK_SIZE * TILE_SIZE);
 
-        // Update player position
-        self.pawn.update_movement(scene.now,
-                                  self.data,
-                                  &*self.terrain_shape,
-                                  &mut self.platform,
-                                  &mut self.entities);
-
         // Terrain from the chunk below can cover the current one.
         let terrain_bounds = Region::new(chunk_bounds.min - V2::new(0, 0),
                                          chunk_bounds.max + V2::new(0, 1));
@@ -844,6 +837,15 @@ impl<'d, P: Platform> Client<'d, P> {
         let day_time = self.misc.day_night.time_of_day(now);
         self.debug.day_time = day_time;
         self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
+
+        // Update player position
+        // This needs to happen before the camera position is set, in case the motion changed
+        // between the previous frame and now.
+        self.pawn.update_movement(now,
+                                  self.data,
+                                  &*self.terrain_shape,
+                                  &mut self.platform,
+                                  &mut self.entities);
 
         let pos =
             if let Some(pawn) = self.pawn() { pawn.pos(now) }

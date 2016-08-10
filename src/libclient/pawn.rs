@@ -31,6 +31,7 @@ pub struct PawnInfo {
     // here, so we can overwrite the data in Entities but still restore it if the pawn changes.
     name: Option<String>, 
     motion: Motion,
+    // TODO: should really keep a queue of pending updates, like Entities does
 
     energy: Gauge,
     activity: Activity,
@@ -125,7 +126,7 @@ impl PawnInfo {
                                  entities: &mut Entities) 
             where S: ShapeSource,
                   P: Platform {
-        while self.movement.last_tick() <= now - TICK_MS {
+        while self.movement.last_tick() <= now {
             self.movement.run_physics(data, shape, &mut self.activity);
             let changed = self.movement.process_changes(platform);
             if changed {
