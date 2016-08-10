@@ -139,7 +139,7 @@ impl PawnInfo {
     }
 
     pub fn init_time(&mut self, now: Time) {
-        self.movement.last_tick = now;
+        self.movement.init_time(now);
     }
 
     pub fn set_input(&mut self, bits: InputBits) {
@@ -184,6 +184,10 @@ impl Movement {
 
     pub fn last_tick(&self) -> Time {
         self.last_tick
+    }
+
+    pub fn init_time(&mut self, now: Time) {
+        self.last_tick = now & !(TICK_MS - 1);
     }
 
     pub fn set_input(&mut self, bits: InputBits) {
