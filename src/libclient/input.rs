@@ -25,6 +25,8 @@ pub enum Key {
     Cancel,
 
     Hotbar(i8),
+
+    DebugLogSwitch,
 }
 
 impl Key {
@@ -50,6 +52,8 @@ impl Key {
             31 => Some(Cancel),
 
             41 ... 49 => Some(Hotbar(code as i8 - 41)),
+
+            99 => Some(DebugLogSwitch),
 
             _ => None,
         }

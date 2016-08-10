@@ -129,6 +129,7 @@ impl PawnInfo {
             self.movement.run_physics(data, shape, &mut self.activity);
             let changed = self.movement.process_changes(platform);
             if changed {
+                trace!("changed pawn motion @ {}", self.movement.last_tick());
                 if let Some(e) = self.id.and_then(|id| entities.get_mut(id)) {
                     e.motion = self.movement.motion.clone();
                 }

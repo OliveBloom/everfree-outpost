@@ -561,6 +561,7 @@ impl<'d, P: Platform> Client<'d, P> {
         if let Some(key) = Key::from_code(code) {
             let mods = Modifiers::from_bits_truncate(mods);
             let evt = KeyEvent::new(key, mods);
+            // TODO: block key if the down event was handled by ui
             try_handle!(self, self.handle_key_up(evt));
         }
 
@@ -603,6 +604,11 @@ impl<'d, P: Platform> Client<'d, P> {
                 UseItem |
                 UseAbility |
                 Cancel =>       INPUT_HOLD,
+                DebugLogSwitch => {
+                    ::std::log_level(5);
+                    trace!("\n\n\n === TRACING ENABLED ===");
+                    return EventStatus::Unhandled;
+                },
                 _ => return EventStatus::Unhandled,
             };
         self.cur_input.insert(bits);
@@ -628,6 +634,11 @@ impl<'d, P: Platform> Client<'d, P> {
                 UseItem |
                 UseAbility |
                 Cancel =>       INPUT_HOLD,
+                DebugLogSwitch => {
+                    trace!(" === TRACING DISABLED ===\n\n\n");
+                    ::std::log_level(2);
+                    return EventStatus::Unhandled;
+                },
                 _ => return EventStatus::Unhandled,
             };
         self.cur_input.remove(bits);
@@ -824,6 +835,8 @@ impl<'d, P: Platform> Client<'d, P> {
         let now = self.timing.convert_confidence(client_now, -200);
         let future = self.timing.predict_confidence(client_now, 200);
 
+        trace!(" --- begin frame @ {} ---", now);
+
         self.debug.record_interval(now);
         self.debug.ping = self.timing.get_ping() as u32;
         self.debug.ping_dev = self.timing.get_ping_dev() as u32;
@@ -838,6 +851,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Wrap `pos` to 2k .. 6k region
         let pos = util::wrap_base(pos, V3::new(2048, 2048, 0));
         self.debug.pos = pos;
+        trace!("camera pos: {:?}", pos);
 
         let ambient_light =
             if self.misc.plane_is_dark { (0, 0, 0, 0) }

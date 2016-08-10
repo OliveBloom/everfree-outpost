@@ -33,6 +33,8 @@ function asmEncodeKey(code) {
         case 'hotbar_8':    return 48;
         case 'hotbar_9':    return 49;
 
+        case 'debug_log_switch':    return 99;
+
         default:            return null;
     }
 }
