@@ -261,7 +261,7 @@ impl Movement {
                     let velocity = LocalOffset::from_global(velocity);
                     if self.path_active {
                         platform.send_message(Request::PathUpdate(
-                                rel_time, pos, velocity, input.bits()));
+                                rel_time, velocity, input.bits()));
                     }
 
                     // If the player has stopped moving, that's the end of the path.

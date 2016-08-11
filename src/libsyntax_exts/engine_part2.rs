@@ -55,7 +55,7 @@ mod parts {
             (Di 10) DIALOGS =       ::dialogs::Dialogs;
             (In 11) INPUT =         ::input::Input;
             (En 12) ENERGY =        ::components::energy::Energy;
-            (MP 13) MOTION_PATHS =  ::components::motion_path::MotionPaths;
+            (MP 13) MOVEMENT =      ::components::movement::Movement;
     }
 }
 
@@ -91,10 +91,10 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         dialogs = DIALOGS;
         input = INPUT;
         energy = ENERGY;
-        motion_paths = MOTION_PATHS;
+        movement = MOVEMENT;
 
         All = EngineParts::all();
-        Components = ENERGY | MOTION_PATHS;
+        Components = ENERGY | MOVEMENT;
     );
 
     fm

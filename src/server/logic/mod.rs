@@ -11,6 +11,7 @@ pub mod tick;
 pub mod terrain_gen;
 pub mod dialogs;
 pub mod energy;
+pub mod movement;
 
 pub mod entity;
 pub mod inventory;

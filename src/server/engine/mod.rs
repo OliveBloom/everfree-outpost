@@ -6,7 +6,7 @@ use cache::TerrainCache;
 use chat::Chat;
 use chunks::Chunks;
 use components::energy::Energy;
-use components::motion_path::MotionPaths;
+use components::movement::Movement;
 use data::Data;
 use dialogs::Dialogs;
 use input::{Input, Action};
@@ -54,7 +54,7 @@ pub struct Engine<'d> {
     pub input: Input,
 
     pub energy: Energy,
-    pub motion_paths: MotionPaths,
+    pub movement: Movement,
 }
 
 #[must_use]
@@ -93,7 +93,7 @@ impl<'d> Engine<'d> {
             input: Input::new(),
 
             energy: Energy::new(),
-            motion_paths: MotionPaths::new(),
+            movement: Movement::new(),
         }
     }
 
@@ -271,6 +271,18 @@ impl<'d> Engine<'d> {
 
             CreateCharacter(appearance) => {
                 warn_on_err!(logic::client::create_character(self, cid, appearance));
+            },
+
+            PathStart(pos, delay) => {
+                warn_on_err!(logic::movement::path_start(self, cid, pos, delay));
+            },
+
+            PathUpdate(rel_time, velocity, input) => {
+                warn_on_err!(logic::movement::path_update(self, cid, rel_time, velocity, input));
+            },
+
+            PathBlocked(rel_time) => {
+                warn_on_err!(logic::movement::path_blocked(self, cid, rel_time));
             },
 
             BadRequest => {
