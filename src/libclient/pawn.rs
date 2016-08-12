@@ -191,6 +191,7 @@ impl Movement {
     }
 
     pub fn set_input(&mut self, bits: InputBits) {
+        println!("set input to {:?}", bits);
         self.me.set_input(bits);
     }
 
@@ -243,10 +244,14 @@ impl Movement {
             self.server_controlled = false;
             match up {
                 entity::Update::MotionStart(time, pos, velocity, anim) => {
-                    let dir_input = (input & INPUT_DIR_MASK).is_empty();
+                    let dir_input = !(input & INPUT_DIR_MASK).is_empty();
+                    println!("START: {:?}, {:?}, {:?}, active {}",
+                             pos, velocity, input, self.path_active);
 
                     // Maybe start a path
+                    let old_pos = pos;
                     let pos = LocalPos::from_global(pos);
+                    info!("convert pos: {:?} -> {:?}", old_pos, pos);
                     if !self.path_active {
                         // Don't start a new path if the player isn't actually moving somewhere.
                         if dir_input {

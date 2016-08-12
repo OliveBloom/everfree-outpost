@@ -37,6 +37,14 @@ impl Activity {
             Activity::Work(_, _) => false,
         }
     }
+
+    pub fn icon(&self, default: AnimId) -> AnimId {
+        match *self {
+            Activity::Walk |
+            Activity::Emote(_) => default,
+            Activity::Work(_, icon) => icon,
+        }
+    }
 }
 
 

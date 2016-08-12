@@ -100,8 +100,6 @@ pub struct ObjectRef<'a, 'd: 'a, O: Object> {
     pub obj: &'a O,
 }
 // TODO: should really be able to just derive Copy, but it tries O: Copy instead of O::Id: Copy
-// TODO: turns out you can write this copy impl, but actually using it zeroes out the original
-// (memory corruption, null &s)
 impl<'a, 'd, O: Object> Clone for ObjectRef<'a, 'd, O> {
     fn clone(&self) -> ObjectRef<'a, 'd, O> {
         ObjectRef {
@@ -131,6 +129,13 @@ impl<'a, 'd, O: Object> ObjectRefMut<'a, 'd, O> {
             world: self.world(),
             id: self.id,
             obj: self.obj(),
+        }
+    }
+
+    pub fn borrow_mut<'b>(&'b mut self) -> ObjectRefMut<'b, 'd, O> {
+        ObjectRefMut {
+            world: self.world,
+            id: self.id,
         }
     }
 }

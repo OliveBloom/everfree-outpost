@@ -102,8 +102,8 @@ impl ClientInfo {
         const SCALE: u16 = (TILE_SIZE * CHUNK_SIZE) as u16;
         const MASK: u16 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
         LocalPos {
-            x: pos.x.wrapping_sub(SCALE) & MASK,
-            y: pos.y.wrapping_sub(SCALE) & MASK,
+            x: pos.x.wrapping_sub(self.chunk_offset.0 as u16 * SCALE) & MASK,
+            y: pos.y.wrapping_sub(self.chunk_offset.1 as u16 * SCALE) & MASK,
             z: pos.z,
         }
     }

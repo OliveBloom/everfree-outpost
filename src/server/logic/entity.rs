@@ -3,9 +3,10 @@ use libphysics::{CHUNK_SIZE, TILE_SIZE};
 use util::StrResult;
 
 use engine::Engine;
+use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, SyncKind};
-use world::{Activity, Motion};
+use world::{Activity, Motion, Entity};
 use world::object::*;
 
 
@@ -94,60 +95,72 @@ pub fn set_appearance(eng: &mut PartialEngine,
 }
 
 
+engine_part2!(OnlyWorld(world));
+engine_part2!(pub EngineVision(vision, messages));
+
+/// Set the entity's activity, overriding any planned movements.
 pub fn set_activity(eng: &mut Engine,
                     eid: EntityId,
                     activity: Activity) -> bool {
+    let (w, eng): (&mut OnlyWorld, &mut EngineVision) = eng.split();
+    let mut e = unwrap_or!(w.world.get_entity_mut(eid), return false);
+    set_activity_internal(eng, e, activity);
+    // TODO: logic::movement::reset(...);
+    true
+}
+
+/// Set the entity's activity, and update motion and animation accordingly.
+pub fn set_activity_internal(eng: &mut EngineVision,
+                             mut e: ObjectRefMut<Entity>,
+                             activity: Activity) {
     let now = eng.now();
+    info!("{:?}: set activity to {:?} at {}", e.id(), activity, now);
 
-    let mut e = unwrap_or!(eng.world.get_entity_mut(eid), return false);
-
-    info!("{:?}: set activity to {:?} at {}", eid, activity, now);
-
-    if e.activity() == activity {
-        return true;
+    let old_activity = e.activity();
+    if activity == old_activity {
+        return;
     }
 
     e.set_activity(activity);
-    eng.physics.force_update(eid);
 
     if let Some(c) = e.pawn_owner() {
         eng.messages.send_client(c.id(), ClientResponse::ActivityChange(activity));
     }
 
-    // FIXME: need to send "activity icon = none" when changing back to walk/emote
-    // Currently this is handled explicitly on the python side, which is very ugly.
 
+    // Send messages
+
+    let data = eng.data();
     let messages = &mut eng.messages;
-    match activity {
-        Activity::Walk => {
-            // Let physics handle the message.  Otherwise we'll just send one made-up motion
-            // followed by another correct one.
-        },
-        Activity::Emote(anim) => {
-            let pos = e.pos(now);
-            e.set_motion(Motion::stationary(pos, now));
-            e.set_anim(anim);
 
-            let msg = logic::vision::entity_motion_message(e.borrow());
-            eng.vision.entity_update(eid, |cid| {
-                messages.send_client(cid, msg.clone());
-            });
-        },
-        Activity::Work(anim, icon) => {
-            let pos = e.pos(now);
-            e.set_motion(Motion::stationary(pos, now));
-            e.set_anim(anim);
-
-            let msg_motion = logic::vision::entity_motion_message(e.borrow());
-            let msg_icon = logic::vision::entity_activity_icon_message(e.borrow(), icon);
-            eng.vision.entity_update(eid, |cid| {
-                messages.send_client(cid, msg_motion.clone());
-                messages.send_client(cid, msg_icon.clone());
-            });
-        },
+    // Activity bubble update
+    let no_icon = data.animations.get_id("activity//none");
+    if activity.icon(no_icon) != old_activity.icon(no_icon) {
+        let icon = activity.icon(no_icon);
+        let msg = logic::vision::entity_activity_icon_message(e.borrow(), icon);
+        eng.vision.entity_update(e.id(), |cid| {
+            messages.send_client(cid, msg.clone());
+        });
     }
 
-    true
+    // Motion update
+    let anim = match activity {
+        // For `Walk`, let logic::movement set the motion and animation.
+        Activity::Walk => None,
+        Activity::Emote(anim) => Some(anim),
+        Activity::Work(anim, _) => Some(anim),
+    };
+
+    if let Some(anim) = anim {
+        let pos = e.pos(now);
+        e.set_motion(Motion::stationary(pos, now));
+        e.set_anim(anim);
+
+        let msg = logic::vision::entity_motion_message(e.borrow());
+        eng.vision.entity_update(e.id(), |cid| {
+            messages.send_client(cid, msg.clone());
+        });
+    }
 }
 
 

@@ -39,6 +39,9 @@ pub fn tick(eng: &mut Engine) {
         }
     }
 
+    logic::movement::update(eng);
+
+    /*
     for (cid, (input, count)) in eng.input.inputs() {
         let opt_eid = if let Some(c) = eng.world.get_client(cid) {
             if let Some(e) = c.pawn() {
@@ -99,4 +102,5 @@ pub fn tick(eng: &mut Engine) {
             });
         }
     });
+    */
 }
