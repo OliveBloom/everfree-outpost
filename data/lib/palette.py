@@ -29,6 +29,21 @@ METALS = (
 METAL_PALETTES = dict(zip(METALS,
     load_palettes(load('misc/metal-palettes.png'))))
 
+METAL_NAMES = {
+        'stone': 'Stone',
+        'copper': 'Copper',
+        'bronze': 'Bronze',
+        'iron': 'Iron',
+        'silver': 'Silver',
+        'gold': 'Gold',
+        't1_earth': 'Titanium',
+        't2_earth': 'Adamantium',
+        't1_pegasus': 'Iridium',
+        't2_pegasus': 'Aetherium',
+        't1_unicorn': 'Palladium',
+        't2_unicorn': 'Scintillium',
+        }
+
 
 def collect_mask_colors(img):
     def collect_mask_colors_inner(raw):

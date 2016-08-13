@@ -91,6 +91,18 @@ def do_floor_variant(image, idx, color, disp_base):
             .input('gem/' + color, 1) \
             .output('wood_floor/' + color, 20)
 
+def do_furnace(image):
+    s = STRUCTURE.new('furnace') \
+            .shape(structure.solid(1, 1, 1)) \
+            .mesh(meshes.solid(1, 1, 1)) \
+            .image(image.extract((0, 0), size=(1, 2))) \
+            .layer(1)
+    i = ITEM.from_structure(s).display_name('Furnace')
+    r = RECIPE.from_item(i) \
+            .station('workbench') \
+            .input('stone', 10)
+
+
 def init():
     icons = loader('icons', unit=ICON_SIZE)
     structures = loader('structures', unit=TILE_SIZE)
@@ -130,3 +142,5 @@ def init():
             )
     for i, (color, desc) in enumerate(COLORS):
         do_floor_variant(structures('floor-%s.png' % color), i, color, desc)
+
+    do_furnace(structures('furnace.png'))

@@ -26,3 +26,12 @@ lpc-doors-animated:
     attribution: >
         Original wood and dungeon doors by Lanea Zimmerman (AKA Sharm).
 
+lpc-dungeon-elements:
+    title: "[LPC] Dungeon Elements"
+    author: Lanea Zimmerman (AKA Sharm), William Thompson
+    license: CC-BY 3.0 / GPL 3.0 / GPL 2.0 / OGA-BY 3.0
+    url: http://opengameart.org/content/lpc-dungeon-elements
+    attribution:
+        Please link this page (if reasonable), attribute Sharm as graphic
+        artist, and me [William Thompson] as contributor. credit.txt included
+        for convenience.

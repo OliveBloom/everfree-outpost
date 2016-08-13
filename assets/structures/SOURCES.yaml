@@ -152,3 +152,19 @@ gem-puzzle-parts.png:
 chest-celestial.png:
     author: Stuart Pernsteiner
     derived-from: lpc-base-tiles
+
+ore-vein.png:
+    author: Stuart Pernsteiner
+    derived-from: williamson-roguelike-items, lpc-base-tiles
+    attribution:
+        LPC rock, with bits of ore added.  Ore color/design is based on ore
+        icons from Williamson's roguelike items.
+
+furnace.png: *lpc-base
+
+workbench.png:
+    author: Stuart Pernsteiner
+    derived-from: lpc-dungeon-elements, daneeklu-farming-tilesets
+    attribution:
+        A table from Sharm's LPC Dungeon Elements, plus tools from Daneeklu's
+        farming tilesets.

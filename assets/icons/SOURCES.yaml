@@ -54,3 +54,6 @@ remove-socks.png: *socks
 
 activity-kick.png:
     author: Stuart Pernsteiner
+
+metal-bar.png:
+    derived-from: williamson-roguelike-items

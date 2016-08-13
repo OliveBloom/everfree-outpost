@@ -15,6 +15,22 @@ station: anvil
 input: 5 stone
 
 
+[structure workbench]
+image: "structures/workbench.png"
+mesh: `meshes.solid(1, 1, 1)`
+shape: solid(1, 1, 1)
+layer: 1
+
+[item workbench]
+from_structure: workbench
+display_name: "Workbench"
+
+[recipe workbench]
+from_item: workbench
+station: workbench
+input: 10 wood
+
+
 [structure anvil]
 image: "structures/anvil.png"
 mesh: `meshes.front(1, 1, 1)`
@@ -27,9 +43,10 @@ display_name: "Anvil"
 
 [recipe anvil]
 from_item: anvil
-station: anvil
-input: 10 wood
-input: 10 stone
+station: workbench
+input: 5 wood
+input: 5 stone
+input: 5 bar/iron
 
 
 [structure chest]
