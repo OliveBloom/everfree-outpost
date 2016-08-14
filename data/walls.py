@@ -77,14 +77,14 @@ def wall_items_recipes(wall, basename, desc, material, icon_offset=(0, 10)):
             .display_name(wall_name)
     recipe = RECIPE.from_item(item) \
             .input(material, 5) \
-            .station('anvil')
+            .station('workbench')
 
     item = ITEM.from_structure(wall['door/closed'],
             name='%s_door' % basename) \
             .display_name(door_name)
     recipe = RECIPE.from_item(item) \
             .input(material, 15) \
-            .station('anvil')
+            .station('workbench')
 
 def init():
     structures = loader('structures', unit=TILE_SIZE)

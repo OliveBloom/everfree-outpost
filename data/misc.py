@@ -14,7 +14,7 @@ def do_teleporter(image):
             .light((16, 16, 16), (48, 48, 96), 50)
     i = ITEM.from_structure(s).display_name('Teleporter')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('crystal', 50)
 
 def do_dungeon_entrance(image):
@@ -36,7 +36,7 @@ def do_ward(image):
             .light((16, 16, 32), (48, 48, 96), 50)
     i = ITEM.from_structure(s, extract_offset=(0, 10)).display_name('Ward')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 10) \
             .input('crystal', 1)
 
@@ -48,7 +48,7 @@ def do_sign(image):
             .layer(1)
     i = ITEM.from_structure(s).display_name('Sign')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 5)
 
 def do_pillar(image, kind, desc):
@@ -59,7 +59,7 @@ def do_pillar(image, kind, desc):
             .layer(1)
     i = ITEM.from_structure(s, name=kind + '_pillar').display_name(desc + ' Pillar')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input(kind, 5)
 
 def do_floor_structure(image, basename):
@@ -76,7 +76,7 @@ def do_floor(image):
     s = do_floor_structure(image, 'wood_floor')
     i = ITEM.from_structure(s['center/v0'], name='house_floor').display_name('House Floor')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 5)
 
 def do_floor_variant(image, idx, color, disp_base):
@@ -85,22 +85,11 @@ def do_floor_variant(image, idx, color, disp_base):
             .display_name(disp_base + ' Floor')
     r = RECIPE.new('floor/%d/%s' % (idx, color)) \
             .display_name(disp_base + ' Floor') \
-            .station('anvil') \
+            .station('workbench') \
             .ability('blueprint/colored_floors') \
             .input('house_floor', 20) \
             .input('gem/' + color, 1) \
             .output('wood_floor/' + color, 20)
-
-def do_furnace(image):
-    s = STRUCTURE.new('furnace') \
-            .shape(structure.solid(1, 1, 1)) \
-            .mesh(meshes.solid(1, 1, 1)) \
-            .image(image.extract((0, 0), size=(1, 2))) \
-            .layer(1)
-    i = ITEM.from_structure(s).display_name('Furnace')
-    r = RECIPE.from_item(i) \
-            .station('workbench') \
-            .input('stone', 10)
 
 
 def init():
@@ -142,5 +131,3 @@ def init():
             )
     for i, (color, desc) in enumerate(COLORS):
         do_floor_variant(structures('floor-%s.png' % color), i, color, desc)
-
-    do_furnace(structures('furnace.png'))

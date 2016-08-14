@@ -29,7 +29,7 @@ def init():
     s = sb.new('crate').image(crate_sheet.extract((0, 0), size=(1, 2)))
     i = ITEM.from_structure(s).display_name('Crate')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 20)
 
     sb = sb.prefixed('crate')

@@ -11,42 +11,8 @@ display_name: "Road"
 
 [recipe road]
 from_item: road
-station: anvil
-input: 5 stone
-
-
-[structure workbench]
-image: "structures/workbench.png"
-mesh: `meshes.solid(1, 1, 1)`
-shape: solid(1, 1, 1)
-layer: 1
-
-[item workbench]
-from_structure: workbench
-display_name: "Workbench"
-
-[recipe workbench]
-from_item: workbench
 station: workbench
-input: 10 wood
-
-
-[structure anvil]
-image: "structures/anvil.png"
-mesh: `meshes.front(1, 1, 1)`
-shape: solid(1, 1, 1)
-layer: 1
-
-[item anvil]
-from_structure: anvil
-display_name: "Anvil"
-
-[recipe anvil]
-from_item: anvil
-station: workbench
-input: 5 wood
 input: 5 stone
-input: 5 bar/iron
 
 
 [structure chest]
@@ -61,7 +27,7 @@ display_name: "Chest"
 
 [recipe chest]
 from_item: chest
-station: anvil
+station: workbench
 input: 20 wood
 
 
@@ -77,7 +43,7 @@ display_name: "Celestial Chest"
 
 [recipe chest/celestial]
 from_item: chest/celestial
-station: anvil
+station: workbench
 input: 20 wood
 input: 10 bar/copper
 input: 200 crystal
@@ -95,7 +61,7 @@ display_name: "Barrel"
 
 [recipe barrel]
 from_item: barrel
-station: anvil
+station: workbench
 input: 20 wood
 
 
@@ -109,5 +75,5 @@ display_name: "Skeleton Key"
 
 [recipe key/master]
 from_item: key/master
-station: anvil
+station: workbench
 input: 100 key

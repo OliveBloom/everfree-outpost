@@ -1,38 +1,45 @@
 from outpost_data.core.consts import *
 from outpost_data.core.builder2 import *
 from outpost_data.core.image2 import load
-from outpost_data.outpost.lib.palette import METAL_PALETTES, recolor
+from outpost_data.outpost.lib.palette import recolor, \
+        METAL_PALETTES, METAL_STATIONS, METAL_NAMES
 
+def do_tools(materials):
+    base_pal = METAL_PALETTES['_base']
+
+    icons = load('icons/tools.png', unit=ICON_SIZE)
+    pick_icon = icons.extract((1, 0))
+    axe_icon = icons.extract((3, 0))
+
+    for material in materials:
+        pal = METAL_PALETTES[material][2:]
+        bar = 'bar/%s' % material if material != 'stone' else 'stone'
+
+        pick = ITEM.new('pick/%s' % material) \
+                .display_name('%s Pick' % METAL_NAMES[material]) \
+                .icon(recolor(pick_icon, pal))
+        RECIPE.from_item(pick) \
+                .station(METAL_STATIONS[material]) \
+                .inputs({'wood': 5, bar: 5})
+
+        axe = ITEM.new('axe/%s' % material) \
+                .display_name('%s Axe' % METAL_NAMES[material]) \
+                .icon(recolor(axe_icon, pal))
+        RECIPE.from_item(axe) \
+                .station(METAL_STATIONS[material]) \
+                .inputs({'wood': 5, bar: 5})
 
 def init():
     tools = load('icons/tools.png', unit=ICON_SIZE)
 
     shovel = ITEM.new('shovel').display_name('Shovel').icon(tools.extract((0, 0)))
     RECIPE.from_item(shovel) \
-            .station('anvil') \
+            .station('workbench') \
             .inputs({'wood': 10, 'stone': 10})
 
     mallet = ITEM.new('mallet').display_name('Mallet').icon(tools.extract((2, 0)))
     RECIPE.from_item(mallet) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 20)
 
-
-    def metal_tool(x, metal, offset=0):
-        base = tools.extract((x, 0))
-        pal = METAL_PALETTES[metal][offset:]
-        return recolor(base, pal)
-
-    pick = ITEM.new('pick').display_name('Pickaxe') \
-            .icon(metal_tool(1, 'stone', 2))
-    RECIPE.new('pick') \
-            .display_name('Pickaxe') \
-            .station('anvil') \
-            .inputs({'wood': 10, 'stone': 10}) \
-            .output('pick', 5)
-
-    axe = ITEM.new('axe').display_name('Axe') \
-            .icon(metal_tool(3, 'stone', 2))
-    RECIPE.from_item(axe) \
-            .station('anvil') \
-            .inputs({'wood': 10, 'stone': 10})
+    do_tools(('stone', 'copper', 'iron'))

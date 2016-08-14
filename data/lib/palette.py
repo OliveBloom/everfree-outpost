@@ -44,6 +44,13 @@ METAL_NAMES = {
         't2_unicorn': 'Scintillium',
         }
 
+METAL_STATIONS = {
+        'stone': 'workbench',
+        'copper': 'anvil',
+        'iron': 'anvil',
+        }
+
+
 
 def collect_mask_colors(img):
     def collect_mask_colors_inner(raw):

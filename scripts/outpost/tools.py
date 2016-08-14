@@ -4,11 +4,11 @@ from outpost_server.core.data import DATA
 from outpost_server.outpost import cave
 from outpost_server.outpost.lib import mallet, tool, ward
 
-@use.item('axe')
+@use.item('axe/stone')
 def axe(e, args):
     tool.use(e, 'axe')
 
-@use.item('pick')
+@use.item('pick/stone')
 def pickaxe(e, args):
     if util.hit_structure(e) is None:
         cave.mine_wall(e, args)

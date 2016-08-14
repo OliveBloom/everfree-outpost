@@ -29,7 +29,7 @@ def do_bed(image):
             .image(image)
     i = ITEM.from_structure(s).display_name('Bed')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 20)
 
 def do_table(image):
@@ -40,7 +40,7 @@ def do_table(image):
             .image(image)
     i = ITEM.from_structure(s).display_name('Table')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 20)
 
 def do_statue(image):
@@ -57,7 +57,7 @@ def do_statue(image):
 
     i = ITEM.from_structure(s['e'], name='statue').display_name('Statue')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('stone', 50)
 
 def do_shelves(image):
@@ -71,7 +71,7 @@ def do_shelves(image):
     s = s_base.new('cabinets').image(image.extract((0, 0)))
     i = ITEM.from_structure(s, extract_offset=(0, 16)).display_name('Cabinets')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 20)
 
     s = s_base.prefixed('bookshelf')
@@ -81,7 +81,7 @@ def do_shelves(image):
     i = ITEM.from_structure(s['0'], name='bookshelf', extract_offset=(0, 16)) \
             .display_name('Bookshelves')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 20)
 
 def do_trophy(image):
@@ -108,7 +108,7 @@ def do_stair(image):
             .image(image)
     i = ITEM.from_structure(s, name='stair').display_name('Stairs')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 10)
 
 TORCH_VARIANTS = (
@@ -130,7 +130,7 @@ def do_torch(image):
             .light((16, 16, 32), (255, 230, 200), 300)
     i = ITEM.from_structure(s).display_name('Torch')
     r = RECIPE.from_item(i) \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 2) \
             .input('stone', 1)
 
@@ -147,7 +147,7 @@ def do_torch_variant(image, idx, v):
     i = ITEM.from_structure(s).display_name(disp_base + ' Torch')
     r = RECIPE.new('torch/%d/%s' % (idx, color)) \
             .display_name(disp_base + ' Torch') \
-            .station('anvil') \
+            .station('workbench') \
             .ability('blueprint/colored_torches') \
             .input('torch', 10) \
             .input('gem/' + color, 1) \

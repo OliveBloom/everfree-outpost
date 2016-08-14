@@ -37,7 +37,7 @@ def init():
     s_open.new('gate/closing').image(Image(size=(1, 2), unit=TILE_SIZE))
 
     r = RECIPE.prefixed('fence') \
-            .station('anvil') \
+            .station('workbench') \
             .input('wood', 5)
     for (name, display_name, struct_name) in FENCE_ITEMS:
         i = ITEM.from_structure(s[struct_name], name=name).display_name(display_name)

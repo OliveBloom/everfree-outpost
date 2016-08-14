@@ -21,7 +21,7 @@ class RecipePrototype(PrototypeBase):
     def instantiate(self):
         self.name = self.require('name') or '_%x' % id(self)
         display_name = self.require('display_name', default=self.name)
-        station = self.require('station', default='anvil')
+        station = self.require('station', default='workbench')
         ability = self.ability or 'none'
         return RecipeDef(self.name, display_name, station, ability, self.inputs, self.outputs)
 
