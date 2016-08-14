@@ -96,7 +96,7 @@ impl CraftingCache {
             }
 
             // Check station filter
-            if r.station != 0 && template != r.station {
+            if template != r.station {
                 continue;
             }
 
