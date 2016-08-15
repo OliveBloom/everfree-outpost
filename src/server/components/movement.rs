@@ -15,6 +15,7 @@ use world::{Entity, Motion};
 use world::object::*;
 
 
+#[derive(Clone, Debug)]
 enum Event {
     Start(V3),
     Update(LocalOffset, InputBits),
@@ -85,7 +86,11 @@ impl EntityMovement {
     /// Apply queued changes with timestamps prior to `now`.
     pub fn process(&mut self, now: Time, pos: V3) -> Change {
         let mut change = Change::None;
-        while self.buf.front().map_or(false, |e| e.time <= now) {
+        // About the timing: we may process some events that happen after this tick but before the
+        // next tick.  This means we process PathBlocked events in time for the update() that
+        // detects the obstacle server-side.  PathStart/PathUpdate events only happen on exact
+        // tick boundaries, so we'll still never process one of those early.
+        while self.buf.front().map_or(false, |e| e.time < now + TICK_MS) {
             let Entry { time, event } = self.buf.pop_front().unwrap();
             match event {
                 Event::Start(expect_pos) => {
@@ -293,7 +298,7 @@ impl Movement {
         let target = now + delay as Time;
         let time = em.buf.back().map_or(target, |e| cmp::max(e.time, target));
         let time = (time + TICK_MS - 1) & !(TICK_MS - 1);
-        info!("record queue_start at {}", time);
+        trace!("record queue_start at {}", time);
 
         // Keep a bound on the size of the queue.  Anything past the bound will be dropped.  This
         // is okay since it will just turn into a desync and the client will get a ResetMotion.
@@ -315,7 +320,7 @@ impl Movement {
                         input: InputBits) {
         let em = unwrap_or!(self.map.get_mut(&id));
         let time = em.time_base + rel_time.to_global_64(now - em.time_base);
-        info!("record queue_update at {}", time);
+        trace!("record queue_update at {}", time);
 
         if em.buf.len() < QUEUE_SIZE {
             em.buf.push_back(Entry {
@@ -331,7 +336,7 @@ impl Movement {
                          rel_time: LocalTime) {
         let em = unwrap_or!(self.map.get_mut(&id));
         let time = em.time_base + rel_time.to_global_64(now - em.time_base);
-        info!("record queue_blocked at {}", time);
+        trace!("record queue_blocked at {}", time);
 
         if em.buf.len() < QUEUE_SIZE {
             em.buf.push_back(Entry {

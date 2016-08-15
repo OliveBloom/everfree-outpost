@@ -27,10 +27,7 @@ pub fn path_start(eng: &mut Engine,
     let old_pos = pos;
     let pos = pos.to_global_bits(e.pos(eng.now),
                                  TILE_BITS + CHUNK_BITS + LOCAL_BITS);
-    info!("decode: {:?} -> {:?}, base = {:?}, bits = {}",
-          old_pos, pos, e.pos(eng.now), TILE_BITS + CHUNK_BITS + LOCAL_BITS);
-
-    info!("record start: {:?}, {:?}", e.id(), pos);
+    trace!("record start: {:?}, {:?}", e.id(), pos);
     eng.movement.queue_start(eng.now, e.id, pos, delay);
     Ok(())
 }
@@ -42,7 +39,7 @@ pub fn path_update(eng: &mut Engine,
                    input: InputBits) -> StrResult<()> {
     let c = unwrap!(eng.world.get_client(cid));
     let e = unwrap!(c.pawn());
-    info!("record update: {:?}, {:?}, {:?}, {:?}", e.id(), rel_time, velocity, input);
+    trace!("record update: {:?}, {:?}, {:?}, {:?}", e.id(), rel_time, velocity, input);
     eng.movement.queue_update(eng.now, e.id, rel_time, velocity, input);
     Ok(())
 }
@@ -52,7 +49,7 @@ pub fn path_blocked(eng: &mut Engine,
                     rel_time: LocalTime) -> StrResult<()> {
     let c = unwrap!(eng.world.get_client(cid));
     let e = unwrap!(c.pawn());
-    info!("record block: {:?}, {:?}", e.id(), rel_time);
+    trace!("record block: {:?}, {:?}", e.id(), rel_time);
     eng.movement.queue_blocked(eng.now, e.id, rel_time);
     Ok(())
 }
@@ -110,7 +107,6 @@ pub fn update(eng: &mut Engine) {
         };
 
         let upd = em.update(e.borrow_mut(), now, data, &s);
-        info!("got update {:?} for {:?} at {}", upd, eid, now);
 
         if upd != movement::Update::None {
             let m = e.motion();
@@ -133,6 +129,10 @@ pub fn update(eng: &mut Engine) {
             eng.vision.entity_update(eid, |cid| {
                 messages.send_client(cid, msg.clone());
             });
+        }
+
+        if em.done() {
+            to_remove.push(eid);
         }
     }
 
