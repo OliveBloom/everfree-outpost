@@ -45,9 +45,11 @@ pub struct EntityMovement {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Change {
+    /// Nothing interesting happened.
     None,
-    Motion,
-    Input,
+    /// The entity started a new motion.  It should be switched to `Activity::Walk` if possible.
+    Start,
+    /// There was a conflict.  The client issued a `Start` event with the wrong position.
     Conflict,
 }
 
@@ -101,6 +103,8 @@ impl EntityMovement {
                     self.cur_motion = Motion::stationary(pos, now);
                     self.me.set_input(InputBits::empty());
                     // time_base is set when the event is queued, not when it's processed.
+
+                    change = Change::Start;
                 },
 
                 Event::Update(vel16, input) => {
@@ -112,13 +116,10 @@ impl EntityMovement {
                         end_time: None,
                     };
                     self.me.set_input(input);
-
-                    change = cmp::max(change, Change::Input);
                 },
 
                 Event::Blocked => {
                     self.cur_motion.end_time = Some(time);
-                    change = cmp::max(change, Change::Motion);
                 },
             }
         }

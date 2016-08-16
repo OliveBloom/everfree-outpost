@@ -149,6 +149,7 @@ pub fn set_activity_internal(eng: &mut EngineVision,
         Activity::Walk => None,
         Activity::Emote(anim) => Some(anim),
         Activity::Work(anim, _) => Some(anim),
+        Activity::Teleport => None,
     };
 
     if let Some(anim) = anim {

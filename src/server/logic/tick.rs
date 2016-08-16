@@ -40,6 +40,7 @@ pub fn tick(eng: &mut Engine) {
     }
 
     logic::movement::update(eng);
+    // Call other systems that update motions here
 
     /*
     for (cid, (input, count)) in eng.input.inputs() {

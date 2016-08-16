@@ -98,7 +98,8 @@ impl<'a, 'd> movement::Entity for EntityWrapper<'a, 'd> {
         match self.entity.activity() {
             Activity::Walk => movement::Activity::Walk,
             Activity::Emote(_) |
-            Activity::Work(_, _) => movement::Activity::Busy,
+            Activity::Work(_, _) |
+            Activity::Teleport => movement::Activity::Busy,
         }
     }
 

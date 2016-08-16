@@ -102,6 +102,7 @@ pub enum ClientResponse {
     EntityGone(EntityId, Time),
     EntityActivityIcon(EntityId, AnimId),
     ActivityChange(Activity),
+    ResetMotion,
 
     StructureAppear(StructureId, TemplateId, V3),
     StructureGone(StructureId),
@@ -480,10 +481,14 @@ impl Messages {
                     Activity::Walk => 0,
                     // fly => 1
                     Activity::Emote(_) => 2,    // interruptible
-                    Activity::Work(_, _) => 3,   // uninterruptible
+                    Activity::Work(_, _) |
+                    Activity::Teleport => 3,   // uninterruptible
                 };
                 self.send_raw(wire_id, Response::ActivityChange(code));
             },
+
+            ClientResponse::ResetMotion =>
+                self.send_raw(wire_id, Response::ResetMotion(())),
 
 
             ClientResponse::StructureAppear(sid, template_id, pos) => {

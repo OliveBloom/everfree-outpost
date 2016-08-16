@@ -30,7 +30,7 @@ use graphics::types::StructureTemplate;
 use input::{Key, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 use inventory::{Inventories, Item};
 use misc::Misc;
-use pawn::PawnInfo;
+use pawn::{PawnInfo, Activity};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
@@ -276,6 +276,7 @@ impl<'d, P: Platform> Client<'d, P> {
         self.inventories.clear();
 
         self.pawn.clear_id(&mut self.entities);
+        self.pawn = PawnInfo::new();
 
         self.misc.reset();
 
@@ -738,7 +739,6 @@ impl<'d, P: Platform> Client<'d, P> {
     }
 
     pub fn activity_change(&mut self, activity: u8) {
-        /*
         let activity = match activity {
             0 => Activity::Walk,
             //1 => Activity::Fly,
@@ -746,8 +746,7 @@ impl<'d, P: Platform> Client<'d, P> {
             3 => Activity::Work,
             _ => panic!("invalid activity value: {}", activity),
         };
-        */
-        // TODO
+        self.pawn.set_activity(activity);
     }
 
 

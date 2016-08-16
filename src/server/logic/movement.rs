@@ -14,7 +14,7 @@ use engine::split2::Coded;
 use input::{InputBits, INPUT_DIR_MASK};
 use logic;
 use messages::ClientResponse;
-use world::{Activity, Motion};
+use world::{Activity, Motion, Entity};
 use world::object::*;
 
 
@@ -56,88 +56,136 @@ pub fn path_blocked(eng: &mut Engine,
 
 
 engine_part2!(MovementParts(world, movement, cache));
+engine_part2!(EngineVision(vision, messages));
 
 pub fn update(eng: &mut Engine) {
     let now = eng.now;
     let data = eng.data;
-    let mut to_remove = SmallVec::new();
+    let mut eids_started = SmallVec::new();
+    let mut eids_finished = SmallVec::new();
 
-    let (eng_m, eng): (&mut MovementParts, &mut logic::entity::EngineVision) = eng.split();
+    {
+        let (eng_m, eng): (&mut MovementParts, &mut EngineVision) = eng.split();
 
-    for (&eid, em) in eng_m.movement.iter() {
-        let mut e = unwrap_or!(eng_m.world.get_entity_mut(eid),
-                               { error!("{:?} has EntityMovement but no Entity", eid);
-                                 continue; });
+        for (&eid, em) in eng_m.movement.iter() {
+            let mut e = unwrap_or!(eng_m.world.get_entity_mut(eid),
+                                   { error!("{:?} has EntityMovement but no Entity", eid);
+                                     continue; });
 
-        match em.process(now, e.pos(now)) {
-            movement::Change::None |
-            movement::Change::Motion => {},
-            movement::Change::Input => {
-                if !(em.cur_input() & INPUT_DIR_MASK).is_empty() &&
-                   e.activity().interruptible() {
-                    logic::entity::set_activity_internal(eng, e.borrow_mut(), Activity::Walk);
-                }
-            },
-            movement::Change::Conflict => {
-                // TODO: duplicated code
-                let pos = e.pos(now);
-                let anim = movement::facing_anim(data, e.facing(), 0);
-                e.set_motion(Motion::stationary(pos, now));
-                e.set_anim(anim);
-                let msg = ClientResponse::EntityMotionStart(
-                    eid, pos, now, scalar(0), anim);
-                let messages = &mut eng.messages;
-                eng.vision.entity_update(eid, |cid| {
-                    messages.send_client(cid, msg.clone());
-                });
-                to_remove.push(eid);
-                continue;
-            },
-        }
-
-        if e.activity() != Activity::Walk {
-            continue;
-        }
-
-
-        let s = ChunksSource {
-            cache: &eng_m.cache,
-            base_tile: scalar(0),
-            plane: e.plane_id(),
-        };
-
-        let upd = em.update(e.borrow_mut(), now, data, &s);
-
-        if upd != movement::Update::None {
-            let m = e.motion();
-            let anim = e.anim();
-            let msg = match upd {
-                movement::Update::None => unreachable!(),
-                movement::Update::Start => ClientResponse::EntityMotionStart(
-                    eid, m.start_pos, m.start_time, m.velocity, anim),
-                movement::Update::End => ClientResponse::EntityMotionEnd(
-                    eid, m.end_time.unwrap()),
-                movement::Update::StartEnd => ClientResponse::EntityMotionStartEnd(
-                    eid, m.start_pos, m.start_time, m.velocity, anim, m.end_time.unwrap()),
-                movement::Update::Conflict => {
-                    to_remove.push(eid);
-                    ClientResponse::EntityMotionStart(
-                        eid, m.start_pos, m.start_time, m.velocity, anim)
+            match em.process(now, e.pos(now)) {
+                movement::Change::None => {},
+                movement::Change::Start => {
+                    // Needs special handling, outside the main loop.
+                    eids_started.push(eid);
+                    continue;
                 },
-            };
-            let messages = &mut eng.messages;
-            eng.vision.entity_update(eid, |cid| {
-                messages.send_client(cid, msg.clone());
-            });
-        }
+                movement::Change::Conflict => {
+                    if e.activity() == Activity::Walk {
+                        handle_conflict(eng, e);
+                    }
+                    eids_finished.push(eid);
+                    continue;
+                },
+            }
 
-        if em.done() {
-            to_remove.push(eid);
+            if e.activity() != Activity::Walk {
+                continue;
+            }
+
+
+            let ok = update_inner(&eng_m.cache, eng, e, em);
+            if !ok || em.done() {
+                eids_finished.push(eid);
+            }
         }
     }
 
-    for &eid in to_remove.iter() {
-        eng_m.movement.clear(eid);
+    for &eid in eids_started.iter() {
+        // If `eid` is in `eids_started`, then the entity must exist - it was checked at the top of
+        // the previous loop.
+        let ok = logic::activity::interrupt(eng, eid, Activity::Walk);
+        if !ok {
+            // Don't report a conflict - some other system is in control of the entity's motion.
+            eids_finished.push(eid);
+            continue;
+        }
+
+        // Now run the tail of the loop above.
+        let (eng_m, eng): (&mut MovementParts, &mut EngineVision) = eng.split();
+        let mut e = eng_m.world.entity_mut(eid);
+        let em = eng_m.movement.get(eid);
+
+        let ok = update_inner(&eng_m.cache, eng, e, em);
+        if !ok || em.done() {
+            eids_finished.push(eid);
+        }
+    }
+
+    for &eid in eids_finished.iter() {
+        eng.movement.clear(eid);
+    }
+}
+
+fn update_inner(cache: &TerrainCache,
+                eng: &mut EngineVision,
+                mut e: ObjectRefMut<Entity>,
+                em: &mut movement::EntityMovement) -> bool {
+    let now = eng.now();
+    let data = eng.data();
+    let eid = e.id();
+
+    let s = ChunksSource {
+        cache: &cache,
+        base_tile: scalar(0),
+        plane: e.plane_id(),
+    };
+
+    let upd = em.update(e.borrow_mut(), now, data, &s);
+
+    if upd != movement::Update::None {
+        let m = e.motion().clone();
+        let anim = e.anim();
+        let msg = match upd {
+            movement::Update::None => unreachable!(),
+            movement::Update::Start => ClientResponse::EntityMotionStart(
+                eid, m.start_pos, m.start_time, m.velocity, anim),
+            movement::Update::End => ClientResponse::EntityMotionEnd(
+                eid, m.end_time.unwrap()),
+            movement::Update::StartEnd => ClientResponse::EntityMotionStartEnd(
+                eid, m.start_pos, m.start_time, m.velocity, anim, m.end_time.unwrap()),
+            movement::Update::Conflict => {
+                handle_conflict(eng, e);
+                return false;
+            },
+        };
+
+        let messages = &mut eng.messages;
+        eng.vision.entity_update(eid, |cid| {
+            messages.send_client(cid, msg.clone());
+        });
+    }
+
+    true
+}
+
+fn handle_conflict(eng: &mut EngineVision,
+                   mut e: ObjectRefMut<Entity>) {
+    let now = eng.now();
+    let data = eng.data();
+    let pos = e.pos(now);
+    let anim = movement::facing_anim(data, e.facing(), 0);
+
+    e.set_motion(Motion::stationary(pos, now));
+    e.set_anim(anim);
+
+    let msg = logic::vision::entity_motion_message(e.borrow());
+    let messages = &mut eng.messages;
+    eng.vision.entity_update(e.id(), |cid| {
+        messages.send_client(cid, msg.clone());
+    });
+
+    if let Some(c) = e.pawn_owner() {
+        messages.send_client(c.id(), ClientResponse::ResetMotion);
     }
 }
 

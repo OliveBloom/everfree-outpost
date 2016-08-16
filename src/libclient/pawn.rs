@@ -146,6 +146,12 @@ impl PawnInfo {
         self.movement.set_input(bits);
     }
 
+    pub fn set_activity(&mut self, activity: Activity) {
+        let sc = activity != Activity::Walk;
+        self.movement.set_server_controlled(sc);
+        self.activity = activity;
+    }
+
     pub fn reset_motion(&mut self) {
         self.movement.reset_motion(&self.motion);
     }
@@ -195,11 +201,14 @@ impl Movement {
         self.me.set_input(bits);
     }
 
+    pub fn set_server_controlled(&mut self, flag: bool) {
+        self.server_controlled = flag;
+    }
+
     pub fn reset_motion(&mut self, motion: &Motion) {
         self.motion = motion.clone();
         self.motion_changed = true;
         self.path_active = false;
-        self.server_controlled = true;
         self.me.force_update();
     }
 
