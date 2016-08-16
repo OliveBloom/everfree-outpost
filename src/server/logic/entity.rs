@@ -10,14 +10,12 @@ use world::{Activity, Motion, Entity};
 use world::object::*;
 
 
-engine_part2!(pub PartialEngine(world, physics, vision, messages));
+engine_part2!(pub PartialEngine(world, vision, messages));
 
 
 /// Handler to be called just after creating an entity.
 pub fn on_create(eng: &mut PartialEngine, eid: EntityId) {
     let e = eng.world.entity(eid);
-
-    eng.physics.add_entity(eid);
 
     let msg_appear = logic::vision::entity_appear_message(e);
     let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now());
@@ -33,8 +31,6 @@ pub fn on_create(eng: &mut PartialEngine, eid: EntityId) {
 /// Handler to be called just before destroying an entity.
 pub fn on_destroy(eng: &mut PartialEngine, eid: EntityId) {
     let e = eng.world.entity(eid);
-
-    eng.physics.remove_entity(eid);
 
     let msg_gone = logic::vision::entity_gone_message(e);
     let plane = e.plane_id();

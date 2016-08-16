@@ -16,7 +16,6 @@ use messages::{Messages, MessageEvent};
 use messages::{Event, ControlEvent, WireEvent, ClientEvent};
 use messages::SyncKind;
 use messages::{ControlResponse, WireResponse, ClientResponse};
-use physics::Physics;
 use script::ScriptHooks;
 use storage::Storage;
 use tasks;
@@ -44,7 +43,6 @@ pub struct Engine<'d> {
     pub extra: Extra,
     pub messages: Messages,
     pub timer: Timer,
-    pub physics: Physics<'d>,
     pub vision: Vision,
     pub chunks: Chunks<'d>,
     pub cache: TerrainCache,
@@ -83,7 +81,6 @@ impl<'d> Engine<'d> {
             extra: Extra::new(),
             messages: Messages::new(receiver, sender),
             timer: Timer::new(),
-            physics: Physics::new(data),
             vision: Vision::new(),
             chunks: Chunks::new(storage),
             cache: TerrainCache::new(),

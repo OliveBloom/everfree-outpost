@@ -64,7 +64,6 @@ mod chat;
 mod timing;
 
 mod messages;
-mod physics;
 mod chunks;
 mod terrain_gen;
 mod vision;
