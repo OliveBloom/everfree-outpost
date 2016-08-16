@@ -103,7 +103,7 @@ pub fn update(eng: &mut Engine) {
     for &eid in eids_started.iter() {
         // If `eid` is in `eids_started`, then the entity must exist - it was checked at the top of
         // the previous loop.
-        let ok = logic::activity::interrupt(eng, eid, Activity::Walk);
+        let ok = logic::activity::interrupt(eng, eid, Activity::Walk).unwrap();
         if !ok {
             // Don't report a conflict - some other system is in control of the entity's motion.
             eids_finished.push(eid);

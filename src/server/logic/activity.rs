@@ -1,4 +1,5 @@
 use types::*;
+use util::StrResult;
 
 use engine::Engine;
 use logic;
@@ -9,10 +10,10 @@ use world::object::*;
 
 pub fn set(eng: &mut Engine,
            eid: EntityId,
-           activity: Activity) {
-    let old_activity = unwrap_or!(eng.world.get_entity(eid)).activity();
+           activity: Activity) -> StrResult<()> {
+    let old_activity = unwrap!(eng.world.get_entity(eid)).activity();
     if activity == old_activity {
-        return;
+        return Ok(());
     }
 
     match old_activity {
@@ -40,18 +41,20 @@ pub fn set(eng: &mut Engine,
         },
         Activity::Teleport => {},
     }
+
+    Ok(())
 }
 
 pub fn interrupt(eng: &mut Engine,
                  eid: EntityId,
-                 activity: Activity) -> bool {
-    let old_activity = unwrap_or!(eng.world.get_entity(eid), return false).activity();
+                 activity: Activity) -> StrResult<bool> {
+    let old_activity = unwrap!(eng.world.get_entity(eid)).activity();
     if !old_activity.interruptible() {
-        return false;
+        return Ok(false);
     }
 
     set(eng, eid, activity);
-    true
+    Ok(true)
 }
 
 fn set_stationary_anim(eng: &mut Engine,
