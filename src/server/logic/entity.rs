@@ -131,6 +131,8 @@ fn teleport_impl(eng: &mut Engine,
         }
     }
 
+    logic::activity::set(eng, eid, Activity::Teleport);
+
     // Actually move the entity.
     {
         // These operations should never fail, since the values were either checked or known-good.
@@ -161,6 +163,8 @@ fn teleport_impl(eng: &mut Engine,
     if let Some(cid) = cid {
         logic::client::update_view(eng, cid, old_plane, old_cpos, new_plane, new_cpos);
     }
+
+    logic::activity::set(eng, eid, Activity::Walk);
 
     Ok(())
 }

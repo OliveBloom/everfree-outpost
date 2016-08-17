@@ -35,11 +35,7 @@ pub struct PawnInfo {
 
     energy: Gauge,
     activity: Activity,
-
     movement: Movement,
-    last_tick: Time,
-    motion_changed: bool,
-    path_active: bool,
 }
 
 impl PawnInfo {
@@ -52,11 +48,7 @@ impl PawnInfo {
 
             energy: Gauge::new(0, (0, 1), 0, 0, 1),
             activity: Activity::Walk,
-
             movement: Movement::new(),
-            last_tick: 0,
-            motion_changed: false,
-            path_active: false,
         }
     }
 
@@ -239,8 +231,8 @@ impl Movement {
             let now = self.last_tick;
             let next = now + TICK_MS;
             self.me.update(&mut e, shape, now, next);
-            self.last_tick = next;
         }
+        self.last_tick += TICK_MS;
     }
 
     pub fn process_changes<P>(&mut self,
