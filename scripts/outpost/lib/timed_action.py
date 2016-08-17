@@ -11,7 +11,6 @@ def refresh(eng, x):
     else:
         return x
 
-NO_ICON = DATA.animation_id('activity//none')
 def timed_action(delay, icon, check=None):
     icon = DATA.animation_id(icon)
 
@@ -45,7 +44,6 @@ def timed_action(delay, icon, check=None):
                 try:
                     f(e_, *args_)
                 finally:
-                    e_.set_activity(Work(anim, NO_ICON))
                     e_.set_activity(Walk())
 
             cookie = timer.schedule(e.engine, e.engine.now() + delay, callback)
