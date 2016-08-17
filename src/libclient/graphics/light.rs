@@ -1,9 +1,9 @@
-use std::prelude::v1::*;
+//use std::prelude::v1::*;
 use types::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::{CHUNK_BITS, CHUNK_SIZE, TILE_BITS, TILE_SIZE};
 
-use entity::{Entities, Entity};
+use entity::Entities;
 use platform::gl;
 use structures::Structures;
 use util;
@@ -184,18 +184,14 @@ impl<'a> EntityGeomGen<'a> {
         }
     }
 
-    fn entity_pos(&self, id: EntityId, e: &Entity) -> V3 {
-        e.pos(self.now)
-    }
-
     pub fn count_verts(&self) -> usize {
         let mut count = 0;
-        for (&id, e) in self.entities.iter() {
+        for (_, e) in self.entities.iter() {
             if e.appearance & entity::LIGHT == 0 {
                 continue;
             }
 
-            let pos = self.entity_pos(id, e);
+            let pos = e.pos(self.now);
             // TODO: hard-coded constant based on entity size
             let center = pos + V3::new(16, 16, 48);
 
@@ -222,7 +218,7 @@ impl<'a> GeometryGenerator for EntityGeomGen<'a> {
                 continue;
             }
 
-            let pos = self.entity_pos(id, e);
+            let pos = e.pos(self.now);
             // TODO: hard-coded constant based on entity size
             let center = pos + V3::new(16, 16, 48);
 

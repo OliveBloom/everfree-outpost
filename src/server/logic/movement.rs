@@ -8,10 +8,9 @@ use libphysics::ShapeSource;
 
 use cache::TerrainCache;
 use components::movement;
-use data::Data;
 use engine::Engine;
 use engine::split2::Coded;
-use input::{InputBits, INPUT_DIR_MASK};
+use input::InputBits;
 use logic;
 use messages::ClientResponse;
 use world::{Activity, Motion, Entity};
@@ -24,7 +23,6 @@ pub fn path_start(eng: &mut Engine,
                   delay: u16) -> StrResult<()> {
     let c = unwrap!(eng.world.get_client(cid));
     let e = unwrap!(c.pawn());
-    let old_pos = pos;
     let pos = pos.to_global_bits(e.pos(eng.now),
                                  TILE_BITS + CHUNK_BITS + LOCAL_BITS);
     trace!("record start: {:?}, {:?}", e.id(), pos);
@@ -60,7 +58,6 @@ engine_part2!(EngineVision(vision, messages));
 
 pub fn update(eng: &mut Engine) {
     let now = eng.now;
-    let data = eng.data;
     let mut eids_started = SmallVec::new();
     let mut eids_finished = SmallVec::new();
 
@@ -68,9 +65,9 @@ pub fn update(eng: &mut Engine) {
         let (eng_m, eng): (&mut MovementParts, &mut EngineVision) = eng.split();
 
         for (&eid, em) in eng_m.movement.iter() {
-            let mut e = unwrap_or!(eng_m.world.get_entity_mut(eid),
-                                   { error!("{:?} has EntityMovement but no Entity", eid);
-                                     continue; });
+            let e = unwrap_or!(eng_m.world.get_entity_mut(eid),
+                               { error!("{:?} has EntityMovement but no Entity", eid);
+                                 continue; });
 
             match em.process(now, e.pos(now)) {
                 movement::Change::None => {},
@@ -112,7 +109,7 @@ pub fn update(eng: &mut Engine) {
 
         // Now run the tail of the loop above.
         let (eng_m, eng): (&mut MovementParts, &mut EngineVision) = eng.split();
-        let mut e = eng_m.world.entity_mut(eid);
+        let e = eng_m.world.entity_mut(eid);
         let em = eng_m.movement.get(eid);
 
         let ok = update_inner(&eng_m.cache, eng, e, em);

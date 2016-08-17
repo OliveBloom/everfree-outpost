@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 use types::*;
-use physics::v3::{V3, V2, scalar, Region};
+use physics::v3::{V2, scalar, Region};
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
 
 use data::Data;
@@ -103,14 +103,10 @@ impl<'a> GeomGen<'a> {
         }
     }
 
-    fn entity_pos(&self, id: EntityId, e: &Entity) -> V3 {
-        e.pos(self.now)
-    }
-
     pub fn count_verts(&self) -> usize {
         let mut count = 0;
-        for (&id, e) in self.entities.iter() {
-            let pos = self.entity_pos(id, e);
+        for (_, e) in self.entities.iter() {
+            let pos = e.pos(self.now);
             if !util::contains_wrapped(self.bounds, pos.reduce(), scalar(LOCAL_PX_MASK)) {
                 // Not visible
                 continue;
@@ -137,7 +133,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
             let id = e.id;
             self.next = Some(id);
 
-            let pos = self.entity_pos(id, e);
+            let pos = e.pos(self.now);
             let pos = util::wrap_base(pos, self.bounds.min.extend(0));
             if !self.bounds.contains(pos.reduce()) {
                 // Not visible

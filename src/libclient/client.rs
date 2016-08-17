@@ -233,8 +233,7 @@ impl<'d, P: Platform> Client<'d, P> {
                                        end_time.unwrap());
             },
 
-            Response::ProcessedInputs(now, count) =>
-                self.processed_inputs(now.unwrap(), count),
+            Response::ProcessedInputs(_now, _count) => error!("NYI: libclient ProcessedInputs"),
 
             Response::ActivityChange(activity) =>
                 self.activity_change(activity),
@@ -736,11 +735,6 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Physics
 
-    pub fn processed_inputs(&mut self, time: u16, count: u16) {
-        let time = self.decode_time(time);
-        // TODO
-    }
-
     pub fn activity_change(&mut self, activity: u8) {
         let activity = match activity {
             0 => Activity::Walk,
@@ -755,7 +749,7 @@ impl<'d, P: Platform> Client<'d, P> {
 
     // Graphics
 
-    fn prepare(&mut self, scene: &Scene, future: Time) {
+    fn prepare(&mut self, scene: &Scene) {
         self.renderer.update_framebuffers(self.platform.gl(), &scene);
 
         let bounds = Region::sized(scene.camera_size) + scene.camera_pos;
@@ -828,7 +822,6 @@ impl<'d, P: Platform> Client<'d, P> {
         let client_now = self.platform.get_time();
         // Only render ticks that are very likely to lie fully in the past.
         let now = self.timing.convert_confidence(client_now, -200);
-        let future = self.timing.predict_confidence(client_now, 200);
 
         trace!(" --- begin frame @ {} ---", now);
 
@@ -875,7 +868,7 @@ impl<'d, P: Platform> Client<'d, P> {
                                cursor_pos);
 
         self.entities.apply_updates(scene.now);
-        self.prepare(&scene, future);
+        self.prepare(&scene);
 
         self.renderer.render(&scene);
     }

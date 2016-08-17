@@ -1,13 +1,12 @@
 use std::prelude::v1::*;
 use std::mem;
 use types::*;
-use common::Gauge;
 use common_movement::{InputBits, INPUT_DIR_MASK};
 use common_movement::{self, MovingEntity};
 use common_proto::types::{LocalPos, LocalOffset, LocalTime};
 use common_proto::game::Request;
 use physics::ShapeSource;
-use physics::v3::{V3, scalar};
+use physics::v3::V3;
 
 use data::Data;
 use entity::{self, Entity, Entities, Motion};
@@ -33,7 +32,6 @@ pub struct PawnInfo {
     motion: Motion,
     // TODO: should really keep a queue of pending updates, like Entities does
 
-    energy: Gauge,
     activity: Activity,
     movement: Movement,
 }
@@ -46,12 +44,12 @@ impl PawnInfo {
             name: None,
             motion: Motion::new(),
 
-            energy: Gauge::new(0, (0, 1), 0, 0, 1),
             activity: Activity::Walk,
             movement: Movement::new(),
         }
     }
 
+    #[allow(dead_code)]
     pub fn id(&self) -> Option<EntityId> {
         self.id
     }
@@ -250,7 +248,7 @@ impl Movement {
             changed = true;
             self.server_controlled = false;
             match up {
-                entity::Update::MotionStart(time, pos, velocity, anim) => {
+                entity::Update::MotionStart(time, pos, velocity, _anim) => {
                     let dir_input = !(input & INPUT_DIR_MASK).is_empty();
                     println!("START: {:?}, {:?}, {:?}, active {}",
                              pos, velocity, input, self.path_active);

@@ -53,7 +53,7 @@ pub fn interrupt(eng: &mut Engine,
         return Ok(false);
     }
 
-    set(eng, eid, activity);
+    try!(set(eng, eid, activity));
     Ok(true)
 }
 
