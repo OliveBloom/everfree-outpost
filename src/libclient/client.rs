@@ -604,7 +604,10 @@ impl<'d, P: Platform> Client<'d, P> {
                 Interact |
                 UseItem |
                 UseAbility |
-                Cancel =>       INPUT_HOLD,
+                Cancel =>
+                    // Don't hold if the character is already moving
+                    if (old_input & INPUT_DIR_MASK).is_empty() { INPUT_HOLD }
+                    else { InputBits::empty() },
                 DebugLogSwitch => {
                     ::std::log_level(5);
                     trace!("\n\n\n === TRACING ENABLED ===");

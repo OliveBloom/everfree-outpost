@@ -141,6 +141,9 @@ impl PawnInfo {
     pub fn set_activity(&mut self, activity: Activity) {
         let sc = activity != Activity::Walk;
         self.movement.set_server_controlled(sc);
+        if sc {
+            self.movement.reset_motion(&self.motion);
+        }
         self.activity = activity;
     }
 
@@ -195,6 +198,9 @@ impl Movement {
 
     pub fn set_server_controlled(&mut self, flag: bool) {
         self.server_controlled = flag;
+        if flag {
+            self.path_active = false;
+        }
     }
 
     pub fn reset_motion(&mut self, motion: &Motion) {
