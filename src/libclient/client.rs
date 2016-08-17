@@ -18,23 +18,25 @@ use physics::Shape;
 use physics::v3::{V3, V2, Vn, scalar, Region};
 use common::Gauge;
 use common_movement::InputBits;
-use common_proto::game::Response;
+use common_proto::game::{Request, Response};
+use common_proto::types::LocalTime;
 
 use data::Data;
 use debug::Debug;
-use entity::{self, Entities};
+use entity::{self, Entity, Entities};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
 use graphics::types::StructureTemplate;
+use input::{Key, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 use inventory::{Inventories, Item};
 use misc::Misc;
-use predict::{Predictor, Activity};
+use pawn::{PawnInfo, Activity};
 use structures::Structures;
 use terrain::TerrainShape;
 use terrain::{LOCAL_SIZE, LOCAL_BITS};
 use timing::{Timing, TICK_MS};
 use ui::{UI, Dyn};
-use ui::input::{KeyAction, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
+use ui::dialogs::AnyDialog;
 
 
 pub struct Client<'d, P: Platform> {
@@ -46,23 +48,36 @@ pub struct Client<'d, P: Platform> {
     structures: Structures,
     entities: Entities,
     inventories: Inventories,
-    predictor: Predictor,
     misc: Misc,
     debug: Debug,
     timing: Timing,
+    pawn: PawnInfo,
 
     ui: UI,
 
     renderer: Renderer<P::GL>,
 
-    pawn_id: Option<EntityId>,
     default_camera_pos: V3,
     window_size: (u16, u16),
     view_size: (u16, u16),
     ui_scale: u16,
 
     last_cursor: Cursor,
+    cur_input: InputBits,
 }
+
+// Helper macro for chaining event handlers.
+macro_rules! try_handle {
+    ($slf:ident, $e:expr) => {
+        let status = $e;
+        if let EventStatus::Unhandled = status {
+            // Do nothing
+        } else {
+            return $slf.process_event_status(status);
+        }
+    };
+}
+
 
 impl<'d, P: Platform> Client<'d, P> {
     pub fn new(data: &'d Data, platform: P) -> Client<'d, P> {
@@ -81,22 +96,22 @@ impl<'d, P: Platform> Client<'d, P> {
             structures: Structures::new(),
             entities: Entities::new(),
             inventories: Inventories::new(),
-            predictor: Predictor::new(),
             misc: Misc::new(),
             debug: Debug::new(),
             timing: Timing::new(),
+            pawn: PawnInfo::new(),
 
             ui: UI::new(),
 
             renderer: renderer,
 
-            pawn_id: None,
             default_camera_pos: V3::new(4096, 4096, 0),
             window_size: (640, 480),
             view_size: (640, 480),
             ui_scale: 1,
 
             last_cursor: Cursor::Normal,
+            cur_input: InputBits::empty(),
         };
 
         c.misc.hotbar.init(c.platform.config(), &c.data);
@@ -241,7 +256,8 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::EnergyUpdate(cur, max, rate, time) =>
                 self.energy_update(cur as i32, max as i32, rate, time.unwrap()),
 
-            Response::ResetMotion(()) => error!("NYI: libclient ResetMotion"),
+            Response::ResetMotion(()) =>
+                self.pawn.reset_motion(),
         }
     }
 
@@ -259,7 +275,8 @@ impl<'d, P: Platform> Client<'d, P> {
         self.entities.clear();
         self.inventories.clear();
 
-        self.pawn_id = None;
+        self.pawn.clear_id(&mut self.entities);
+        self.pawn = PawnInfo::new();
 
         self.misc.reset();
 
@@ -395,6 +412,9 @@ impl<'d, P: Platform> Client<'d, P> {
                          appearance: u32,
                          name: Option<String>) {
         self.entities.insert(id, appearance, name);
+        if self.pawn.is(id) {
+            self.pawn.on_create(&mut self.entities);
+        }
     }
 
     pub fn entity_gone(&mut self,
@@ -411,11 +431,11 @@ impl<'d, P: Platform> Client<'d, P> {
                                velocity: V3,
                                anim: u16) {
         let start_time = self.decode_time(start_time);
-        self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
-
-        if Some(id) == self.pawn_id {
-            self.predictor.canonical_motion_update(entity::Update::MotionStart(
+        if self.pawn.is(id) {
+            self.pawn.server_update(entity::Update::MotionStart(
                     start_time, start_pos, velocity, anim));
+        } else {
+            self.entities.schedule_motion_start(id, start_time, start_pos, velocity, anim);
         }
     }
 
@@ -423,10 +443,10 @@ impl<'d, P: Platform> Client<'d, P> {
                              id: EntityId,
                              end_time: u16) {
         let end_time = self.decode_time(end_time);
-        self.entities.schedule_motion_end(id, end_time);
-
-        if Some(id) == self.pawn_id {
-            self.predictor.canonical_motion_update(entity::Update::MotionEnd(end_time));
+        if self.pawn.is(id) {
+            self.pawn.server_update(entity::Update::MotionEnd(end_time));
+        } else {
+            self.entities.schedule_motion_end(id, end_time);
         }
     }
 
@@ -442,11 +462,11 @@ impl<'d, P: Platform> Client<'d, P> {
 
     pub fn set_pawn_id(&mut self,
                        id: EntityId) {
-        self.pawn_id = Some(id);
+        self.pawn.set_id(id, &mut self.entities);
     }
 
     pub fn clear_pawn_id(&mut self) {
-        self.pawn_id = None;
+        self.pawn.clear_id(&mut self.entities);
     }
 
     pub fn set_default_camera_pos(&mut self, pos: V3) {
@@ -526,16 +546,137 @@ impl<'d, P: Platform> Client<'d, P> {
         f(&mut self.ui, &dyn)
     }
 
-    pub fn input_key(&mut self, code: u8, mods: u8) -> bool {
-        let status =
-            if let Some(key) = KeyAction::from_code(code) {
-                let mods = Modifiers::from_bits_truncate(mods);
-                let evt = KeyEvent::new(key, mods);
-                self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn))
-            } else {
-                EventStatus::Unhandled
+    pub fn input_key_down(&mut self, code: u8, mods: u8) -> bool {
+        if let Some(key) = Key::from_code(code) {
+            let mods = Modifiers::from_bits_truncate(mods);
+            let evt = KeyEvent::new(key, mods);
+            try_handle!(self, self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn)));
+            try_handle!(self, self.handle_ui_key(evt));
+            try_handle!(self, self.handle_key_down(evt));
+        }
+
+        self.process_event_status(EventStatus::Unhandled)
+    }
+
+    pub fn input_key_up(&mut self, code: u8, mods: u8) -> bool {
+        if let Some(key) = Key::from_code(code) {
+            let mods = Modifiers::from_bits_truncate(mods);
+            let evt = KeyEvent::new(key, mods);
+            // TODO: block key if the down event was handled by ui
+            try_handle!(self, self.handle_key_up(evt));
+        }
+
+        self.process_event_status(EventStatus::Unhandled)
+    }
+
+    fn handle_ui_key(&mut self, evt: KeyEvent) -> EventStatus {
+        use input::Key::*;
+
+        match evt.code {
+            ToggleCursor => {
+                self.misc.show_cursor = !self.misc.show_cursor;
+            },
+            OpenInventory => {
+                self.ui.root.dialog.inner = AnyDialog::inventory();
+            },
+            OpenAbilities => {
+                self.ui.root.dialog.inner = AnyDialog::ability();
+            },
+            _ => return EventStatus::Unhandled,
+        }
+
+        EventStatus::Handled
+    }
+
+    fn handle_key_down(&mut self, evt: KeyEvent) -> EventStatus {
+        use common_movement::*;
+        use input::Key::*;
+
+        // Update input bits
+        let old_input = self.cur_input;
+        let bits =
+            match evt.code {
+                MoveLeft =>     INPUT_LEFT,
+                MoveRight =>    INPUT_RIGHT,
+                MoveUp =>       INPUT_UP,
+                MoveDown =>     INPUT_DOWN,
+                Run =>          INPUT_RUN,
+                Interact |
+                UseItem |
+                UseAbility |
+                Cancel =>
+                    // Don't hold if the character is already moving
+                    if (old_input & INPUT_DIR_MASK).is_empty() { INPUT_HOLD }
+                    else { InputBits::empty() },
+                DebugLogSwitch => {
+                    ::std::log_level(5);
+                    trace!("\n\n\n === TRACING ENABLED ===");
+                    return EventStatus::Unhandled;
+                },
+                _ => return EventStatus::Unhandled,
             };
-        self.process_event_status(status)
+        self.cur_input.insert(bits);
+        self.send_input(old_input);
+
+        EventStatus::Handled
+    }
+
+    fn handle_key_up(&mut self, evt: KeyEvent) -> EventStatus {
+        use common_movement::*;
+        use input::Key::*;
+
+        // Update input bits
+        let old_input = self.cur_input;
+        let bits =
+            match evt.code {
+                MoveLeft =>     INPUT_LEFT,
+                MoveRight =>    INPUT_RIGHT,
+                MoveUp =>       INPUT_UP,
+                MoveDown =>     INPUT_DOWN,
+                Run =>          INPUT_RUN,
+                Interact |
+                UseItem |
+                UseAbility |
+                Cancel =>       INPUT_HOLD,
+                DebugLogSwitch => {
+                    trace!(" === TRACING DISABLED ===\n\n\n");
+                    ::std::log_level(2);
+                    return EventStatus::Unhandled;
+                },
+                _ => return EventStatus::Unhandled,
+            };
+        self.cur_input.remove(bits);
+        self.send_input(old_input);
+
+        // Also send action command, if needed
+        let time = self.predict_arrival(0);
+        match evt.code {
+            Interact =>
+                self.platform.send_message(
+                    Request::Interact(LocalTime::from_global_32(time))),
+            UseItem =>
+                self.platform.send_message(
+                    Request::UseItem(LocalTime::from_global_32(time),
+                                     self.misc.hotbar.active_item().unwrap_or(0))),
+            UseAbility =>
+                self.platform.send_message(
+                    Request::UseAbility(LocalTime::from_global_32(time),
+                                        self.misc.hotbar.active_ability().unwrap_or(0))),
+            _ => {},
+        }
+
+        EventStatus::Handled
+    }
+
+    fn send_input(&mut self, old: InputBits) {
+        let new = self.cur_input;
+        use common_movement::INPUT_DIR_MASK;
+        if new != old && !((new | old) & INPUT_DIR_MASK).is_empty() {
+            let time = self.predict_arrival(0);
+            self.platform.send_message(Request::Input(LocalTime::from_global_32(time),
+                                                      new.bits()));
+            self.pawn.set_input(new);
+        }
     }
 
     fn convert_mouse_pos(&self, pos: V2) -> V2 {
@@ -576,16 +717,6 @@ impl<'d, P: Platform> Client<'d, P> {
         self.process_event_status(status)
     }
 
-    pub fn open_inventory_dialog(&mut self) {
-        use ui::dialogs::AnyDialog;
-        self.ui.root.dialog.inner = AnyDialog::inventory();
-    }
-
-    pub fn open_ability_dialog(&mut self) {
-        use ui::dialogs::AnyDialog;
-        self.ui.root.dialog.inner = AnyDialog::ability();
-    }
-
     pub fn open_container_dialog(&mut self, inv0: InventoryId, inv1: InventoryId) {
         use ui::dialogs::AnyDialog;
         self.ui.root.dialog.inner = AnyDialog::container(inv0, inv1);
@@ -602,25 +733,12 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::none();
     }
 
-    pub fn get_active_item(&self) -> u16 {
-        self.misc.hotbar.active_item().unwrap_or(0)
-    }
-
-    pub fn get_active_ability(&self) -> u16 {
-        self.misc.hotbar.active_ability().unwrap_or(0)
-    }
-
 
     // Physics
 
-    pub fn feed_input(&mut self, time: Time, bits: u16) {
-        println!("predicted input at {}", time);
-        self.predictor.input(time, InputBits::from_bits(bits).expect("invalid input bits"));
-    }
-
     pub fn processed_inputs(&mut self, time: u16, count: u16) {
         let time = self.decode_time(time);
-        self.predictor.processed_inputs(time, count as usize);
+        // TODO
     }
 
     pub fn activity_change(&mut self, activity: u8) {
@@ -631,7 +749,7 @@ impl<'d, P: Platform> Client<'d, P> {
             3 => Activity::Work,
             _ => panic!("invalid activity value: {}", activity),
         };
-        self.predictor.activity_update(activity);
+        self.pawn.set_activity(activity);
     }
 
 
@@ -662,15 +780,8 @@ impl<'d, P: Platform> Client<'d, P> {
 
         // Entities can extend in any direction from their reference point.
         {
-            let pawn_id = self.pawn_id;
-            let predictor = &self.predictor;
             self.entities.update_z_order(|e| {
-                let mut pos =
-                    if Some(e.id) == pawn_id {
-                        predictor.motion().pos(future)
-                    } else {
-                        e.pos(scene.now)
-                    };
+                let mut pos = e.pos(scene.now);
                 if pos.y < scene.camera_pos.y - CHUNK_SIZE * TILE_SIZE {
                     pos.y += CHUNK_SIZE * TILE_SIZE * LOCAL_SIZE;
                 }
@@ -681,11 +792,8 @@ impl<'d, P: Platform> Client<'d, P> {
                                         chunk_bounds.max + V2::new(1, 1));
         self.renderer.update_entity_geometry(&self.data,
                                              &self.entities,
-                                             &self.predictor,
                                              entity_bounds,
-                                             scene.now,
-                                             future,
-                                             self.pawn_id);
+                                             scene.now);
 
         // Also refresh the UI buffer.
         let (geom, special, cursor) = self.with_ui_dyn(|ui, dyn| {
@@ -722,6 +830,8 @@ impl<'d, P: Platform> Client<'d, P> {
         let now = self.timing.convert_confidence(client_now, -200);
         let future = self.timing.predict_confidence(client_now, 200);
 
+        trace!(" --- begin frame @ {} ---", now);
+
         self.debug.record_interval(now);
         self.debug.ping = self.timing.get_ping() as u32;
         self.debug.ping_dev = self.timing.get_ping_dev() as u32;
@@ -730,25 +840,29 @@ impl<'d, P: Platform> Client<'d, P> {
         self.debug.day_time = day_time;
         self.debug.day_phase = self.misc.day_night.phase_delta(&self.data, day_time).0;
 
-        self.predictor.update(future, &*self.terrain_shape, &self.data);
+        // Update player position
+        // This needs to happen before the camera position is set, in case the motion changed
+        // between the previous frame and now.
+        self.pawn.update_movement(now,
+                                  self.data,
+                                  &*self.terrain_shape,
+                                  &mut self.platform,
+                                  &mut self.entities);
 
         let pos =
-            if self.pawn_id.is_some() {
-                // TODO: hardcoded constant based on entity size
-                self.predictor.motion().pos(future) + V3::new(16, 16, 0)
-            } else {
-                self.default_camera_pos
-            };
+            if let Some(pawn) = self.pawn() { pawn.pos(now) }
+            else { self.default_camera_pos };
         // Wrap `pos` to 2k .. 6k region
         let pos = util::wrap_base(pos, V3::new(2048, 2048, 0));
         self.debug.pos = pos;
+        trace!("camera pos: {:?}", pos);
 
         let ambient_light =
             if self.misc.plane_is_dark { (0, 0, 0, 0) }
             else { self.misc.day_night.ambient_light(&self.data, now) };
         let cursor_pos =
-            if self.misc.show_cursor && self.pawn_id.is_some() {
-                calc_cursor_pos(&self.data, pos, self.predictor.motion().anim_id)
+            if self.misc.show_cursor {
+                self.pawn().and_then(|pawn| calc_cursor_pos(&self.data, pos, pawn.motion.anim_id))
             } else {
                 None
             };
@@ -780,6 +894,10 @@ impl<'d, P: Platform> Client<'d, P> {
         self.timing.convert(client)
     }
 
+    fn pawn(&self) -> Option<&Entity> {
+        self.pawn.get(&self.entities)
+    }
+
     pub fn debug_record(&mut self, frame_time: Time) {
         self.debug.record_frame_time(frame_time);
     }
@@ -799,6 +917,7 @@ impl<'d, P: Platform> Client<'d, P> {
         self.timing.init(client, server);
 
         self.misc.energy = Gauge::new(0, (1, 6), server as Time, 0, 240);
+        self.pawn.init_time(server as Time);
     }
 
     pub fn handle_pong(&mut self, client_send: Time, client_recv: Time, server: u16) {
@@ -814,10 +933,6 @@ impl<'d, P: Platform> Client<'d, P> {
     pub fn energy_update(&mut self, cur: i32, max: i32, rate: (i16, u16), time: u16) {
         let time = self.decode_time(time);
         self.misc.energy = Gauge::new(cur, rate, time, 0, max);
-    }
-
-    pub fn toggle_cursor(&mut self) {
-        self.misc.show_cursor = !self.misc.show_cursor;
     }
 
     pub fn calc_scale(&self, size: (u16, u16)) -> i16 {
@@ -881,11 +996,8 @@ impl<'d, P: Platform> Client<'d, P> {
         entities.update_z_order(|_| 0);
         self.renderer.update_entity_geometry(&self.data,
                                              &entities,
-                                             &self.predictor,
                                              Region::new(scalar(-1), scalar(1)) + cpos,
-                                             0,
-                                             0,
-                                             None);
+                                             0);
         self.renderer.render_ponyedit_hack(&scene);
     }
 

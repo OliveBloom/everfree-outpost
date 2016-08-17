@@ -3,10 +3,10 @@ use std::prelude::v1::*;
 use physics::v3::{V2, scalar, Region, Align};
 
 use client::ClientObj;
+use input::EventStatus;
 use ui::{Context, DragData};
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::EventStatus;
 use ui::item;
 use ui::widget::*;
 

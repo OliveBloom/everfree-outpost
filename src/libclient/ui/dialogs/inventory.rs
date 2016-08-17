@@ -4,11 +4,12 @@ use common_proto::game::Request;
 use physics::v3::{V2, Region};
 
 use client::ClientObj;
+use input::EventStatus;
 use inventory::Item;
 use ui::Context;
 use ui::atlas;
 use ui::geom::Geom;
-use ui::input::{KeyAction, KeyEvent, EventStatus};
+use ui::input::{KeyAction, ActionEvent};
 use ui::inventory;
 use ui::util;
 use ui::widget::*;
@@ -184,7 +185,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Container, ContainerDyn<'b>> {
         });
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         let idx = self.state.focus as usize;
         let mut status = {
             let inv = self.dyn.invs.get(self.state.inv_id[idx]);

@@ -17,16 +17,21 @@ pub use libserver_world_types::{
 };
 
 
+/// The `activity` field describes what an entity is currently doing.  This in turn decides which
+/// system controls the entity's current `Motion` and animation.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Activity {
-    /// Walking.  The motion and animation are determined by physics.
+    /// Walking.  The motion and animation are determined by the movement system.
     Walk,
     /// Playing the indicated animation, and otherwise stationary.  Can be interrupted by user
-    /// input.
+    /// input to switch back to `Walk`.
     Emote(AnimId),
     /// Playing the indicated animation, with the indicated activity bubble, and otherwise
     /// stationary.  Not interruptible.
     Work(AnimId, AnimId),
+    /// Entity is teleporting.  This activity is used temporarily during the teleport, then it's
+    /// switched back to `Walk`.
+    Teleport,
 }
 
 impl Activity {
@@ -34,7 +39,17 @@ impl Activity {
         match *self {
             Activity::Walk |
             Activity::Emote(_) => true,
-            Activity::Work(_, _) => false,
+            Activity::Work(_, _) |
+            Activity::Teleport => false,
+        }
+    }
+
+    pub fn icon(&self, default: AnimId) -> AnimId {
+        match *self {
+            Activity::Walk |
+            Activity::Emote(_) |
+            Activity::Teleport => default,
+            Activity::Work(_, icon) => icon,
         }
     }
 }

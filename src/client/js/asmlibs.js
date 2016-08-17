@@ -457,8 +457,12 @@ DynAsm.prototype.handleMessage = function(msg) {
     this._heapFree(buf);
 };
 
-DynAsm.prototype.inputKey = function(code, shift) {
-    return this._raw['input_key'](this.client, code, shift);
+DynAsm.prototype.inputKeyDown = function(code, shift) {
+    return this._raw['input_key_down'](this.client, code, shift);
+};
+
+DynAsm.prototype.inputKeyUp = function(code, shift) {
+    return this._raw['input_key_up'](this.client, code, shift);
 };
 
 DynAsm.prototype.inputMouseMove = function(x, y) {
@@ -471,26 +475,6 @@ DynAsm.prototype.inputMouseDown = function(x, y, button, shift) {
 
 DynAsm.prototype.inputMouseUp = function(x, y, button, shift) {
     return this._raw['input_mouse_up'](this.client, x, y, button, shift);
-};
-
-DynAsm.prototype.openInventoryDialog = function() {
-    return this._raw['open_inventory_dialog'](this.client);
-};
-
-DynAsm.prototype.openAbilityDialog = function() {
-    return this._raw['open_ability_dialog'](this.client);
-};
-
-DynAsm.prototype.getActiveItem = function() {
-    return this._raw['get_active_item'](this.client);
-};
-
-DynAsm.prototype.getActiveAbility = function() {
-    return this._raw['get_active_ability'](this.client);
-};
-
-DynAsm.prototype.feedInput = function(time, bits) {
-    this._raw['feed_input'](this.client, time, bits);
 };
 
 DynAsm.prototype.renderFrame = function() {
@@ -509,10 +493,6 @@ DynAsm.prototype.handlePong = function(client_send, client_recv, server_now) {
 
 DynAsm.prototype.predictArrival = function(extra_delay) {
     return this._raw['predict_arrival'](this.client, extra_delay);
-};
-
-DynAsm.prototype.toggleCursor = function() {
-    this._raw['toggle_cursor'](this.client);
 };
 
 DynAsm.prototype.calcScale = function(width, height) {

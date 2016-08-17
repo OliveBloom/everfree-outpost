@@ -46,6 +46,7 @@ var DEFAULT_CONFIG = {
         113: 'show_menu',   // F2
         114: 'debug_show_panel', // F3
         115: 'debug_test',  // F4
+        17: 'debug_log_switch', // Right Ctrl
         67: 'toggle_cursor', // C
 
         27: 'cancel',       // Esc

@@ -5,10 +5,11 @@ use physics::v3::{V2, Region, Align};
 
 use client::ClientObj;
 use data::{Data, RecipeDef};
+use input::EventStatus;
 use ui::crafting;
 use ui::dialogs;
 use ui::geom::Geom;
-use ui::input::{KeyAction, KeyEvent, EventStatus};
+use ui::input::{KeyAction, ActionEvent};
 use ui::inventory;
 use ui::scroll_list;
 use ui::util;
@@ -177,7 +178,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Crafting, CraftingDyn<'b>> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         // TODO: make the inventory display "disabled", then use the normal key visitor first.
         let mut status = {
             let dyn = ListDyn {

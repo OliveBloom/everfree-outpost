@@ -69,6 +69,18 @@ pub fn raw_print(args: fmt::Arguments) {
 }
 
 
+static mut LOG_LEVEL: u8 = 2;
+
+#[inline(always)]
+pub fn should_log(level: u8) -> bool {
+    unsafe { level < LOG_LEVEL }
+}
+
+pub fn log_level(level: u8) {
+    unsafe { LOG_LEVEL = level; }
+}
+
+
 #[macro_export]
 macro_rules! print {
     ($str:expr) => {
@@ -92,44 +104,58 @@ macro_rules! println {
 #[macro_export]
 macro_rules! log {
     ($level:expr, $str:expr) => {
-        println!($str)
+        if $crate::should_log($level) {
+            println!($str)
+        }
     };
     ($level:expr, $str:expr, $($rest:tt)*) => {
-        println!($str, $($rest)*)
+        if $crate::should_log($level) {
+            println!($str, $($rest)*)
+        }
     };
 }
 
 #[macro_export]
+macro_rules! trace {
+    ($($args:tt)*) => { log!(4, $($args)*) };
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($($args:tt)*) => { log!(3, $($args)*) };
+}
+
+#[macro_export]
 macro_rules! info {
-    ($($args:tt)*) => {
-        println!($($args)*)
-    };
+    ($($args:tt)*) => { log!(2, $($args)*) };
 }
 
 #[macro_export]
 macro_rules! warn {
     ($str:expr) => {
-        $crate::raw_println_warn(format_args!($str))
+        if $crate::should_log(1) {
+            $crate::raw_println_warn(format_args!($str))
+        }
     };
     ($str:expr, $($rest:tt)*) => {
-        $crate::raw_println_warn(format_args!($str, $($rest)*))
+        if $crate::should_log(1) {
+            $crate::raw_println_warn(format_args!($str, $($rest)*))
+        }
     };
 }
 
 #[macro_export]
 macro_rules! error {
     ($str:expr) => {
-        $crate::raw_println_err(format_args!($str))
+        if $crate::should_log(0) {
+            $crate::raw_println_err(format_args!($str))
+        }
     };
     ($str:expr, $($rest:tt)*) => {
-        $crate::raw_println_err(format_args!($str, $($rest)*))
+        if $crate::should_log(0) {
+            $crate::raw_println_err(format_args!($str, $($rest)*))
+        }
     };
-}
-
-#[macro_export]
-macro_rules! debug {
-    ($str:expr) => { () };
-    ($str:expr, $($rest:tt)*) => { () };
 }
 
 

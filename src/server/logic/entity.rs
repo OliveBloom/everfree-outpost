@@ -3,20 +3,19 @@ use libphysics::{CHUNK_SIZE, TILE_SIZE};
 use util::StrResult;
 
 use engine::Engine;
+use engine::split2::Coded;
 use logic;
 use messages::{ClientResponse, SyncKind};
-use world::{Activity, Motion};
+use world::{Activity, Motion, Entity};
 use world::object::*;
 
 
-engine_part2!(pub PartialEngine(world, physics, vision, messages));
+engine_part2!(pub PartialEngine(world, vision, messages));
 
 
 /// Handler to be called just after creating an entity.
 pub fn on_create(eng: &mut PartialEngine, eid: EntityId) {
     let e = eng.world.entity(eid);
-
-    eng.physics.add_entity(eid);
 
     let msg_appear = logic::vision::entity_appear_message(e);
     let msg_motion = logic::vision::entity_motion_message_adjusted(e, eng.now());
@@ -32,8 +31,6 @@ pub fn on_create(eng: &mut PartialEngine, eid: EntityId) {
 /// Handler to be called just before destroying an entity.
 pub fn on_destroy(eng: &mut PartialEngine, eid: EntityId) {
     let e = eng.world.entity(eid);
-
-    eng.physics.remove_entity(eid);
 
     let msg_gone = logic::vision::entity_gone_message(e);
     let plane = e.plane_id();
@@ -94,63 +91,8 @@ pub fn set_appearance(eng: &mut PartialEngine,
 }
 
 
-pub fn set_activity(eng: &mut Engine,
-                    eid: EntityId,
-                    activity: Activity) -> bool {
-    let now = eng.now();
-
-    let mut e = unwrap_or!(eng.world.get_entity_mut(eid), return false);
-
-    info!("{:?}: set activity to {:?} at {}", eid, activity, now);
-
-    if e.activity() == activity {
-        return true;
-    }
-
-    e.set_activity(activity);
-    eng.physics.force_update(eid);
-
-    if let Some(c) = e.pawn_owner() {
-        eng.messages.send_client(c.id(), ClientResponse::ActivityChange(activity));
-    }
-
-    // FIXME: need to send "activity icon = none" when changing back to walk/emote
-    // Currently this is handled explicitly on the python side, which is very ugly.
-
-    let messages = &mut eng.messages;
-    match activity {
-        Activity::Walk => {
-            // Let physics handle the message.  Otherwise we'll just send one made-up motion
-            // followed by another correct one.
-        },
-        Activity::Emote(anim) => {
-            let pos = e.pos(now);
-            e.set_motion(Motion::stationary(pos, now));
-            e.set_anim(anim);
-
-            let msg = logic::vision::entity_motion_message(e.borrow());
-            eng.vision.entity_update(eid, |cid| {
-                messages.send_client(cid, msg.clone());
-            });
-        },
-        Activity::Work(anim, icon) => {
-            let pos = e.pos(now);
-            e.set_motion(Motion::stationary(pos, now));
-            e.set_anim(anim);
-
-            let msg_motion = logic::vision::entity_motion_message(e.borrow());
-            let msg_icon = logic::vision::entity_activity_icon_message(e.borrow(), icon);
-            eng.vision.entity_update(eid, |cid| {
-                messages.send_client(cid, msg_motion.clone());
-                messages.send_client(cid, msg_icon.clone());
-            });
-        },
-    }
-
-    true
-}
-
-
+engine_part2!(OnlyWorld(world));
+engine_part2!(pub EngineVision(vision, messages));
 
 fn teleport_impl(eng: &mut Engine,
                  eid: EntityId,
@@ -189,6 +131,8 @@ fn teleport_impl(eng: &mut Engine,
         }
     }
 
+    logic::activity::set(eng, eid, Activity::Teleport);
+
     // Actually move the entity.
     {
         // These operations should never fail, since the values were either checked or known-good.
@@ -219,6 +163,8 @@ fn teleport_impl(eng: &mut Engine,
     if let Some(cid) = cid {
         logic::client::update_view(eng, cid, old_plane, old_cpos, new_plane, new_cpos);
     }
+
+    logic::activity::set(eng, eid, Activity::Walk);
 
     Ok(())
 }

@@ -27,7 +27,7 @@ protocol! {
         [0x0019] PathUpdate {
             // Truncated version of the delta between the last Start/Update and this one
             rel_time: LocalTime,
-            pos: LocalPos, velocity: LocalOffset, 
+            velocity: LocalOffset, 
             input_bits: u16 },
         [0x001a] PathBlocked { rel_time: LocalTime },
     }

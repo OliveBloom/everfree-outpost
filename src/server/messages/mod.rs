@@ -7,7 +7,7 @@ use util::StringResult;
 use util::now;
 use libcommon_proto::{game, control};
 use libcommon_proto::ExtraArg;
-use libcommon_proto::types::{LocalOffset, LocalTime};
+use libcommon_proto::types::{LocalPos, LocalOffset, LocalTime};
 use libphysics::TILE_SIZE;
 
 use input::InputBits;
@@ -60,6 +60,10 @@ pub enum ClientEvent {
 
     CreateCharacter(u32),
 
+    PathStart(LocalPos, u16),
+    PathUpdate(LocalTime, V3, InputBits),
+    PathBlocked(LocalTime),
+
     BadRequest,
 }
 
@@ -98,6 +102,7 @@ pub enum ClientResponse {
     EntityGone(EntityId, Time),
     EntityActivityIcon(EntityId, AnimId),
     ActivityChange(Activity),
+    ResetMotion,
 
     StructureAppear(StructureId, TemplateId, V3),
     StructureGone(StructureId),
@@ -290,6 +295,10 @@ impl Messages {
                              wire_id: WireId,
                              req: game::Request) -> StringResult<Option<ClientEvent>> {
         use libcommon_proto::game::Request;
+
+        let opt_client = self.clients.wire_to_client(wire_id)
+                             .and_then(|cid| self.clients.get(cid));
+
         match req {
             Request::Ping(cookie) => {
                 self.send_raw(wire_id, game::Response::Pong(
@@ -350,6 +359,20 @@ impl Messages {
 
             Request::CreateCharacter(appearance) =>
                 Ok(Some(ClientEvent::CreateCharacter(appearance))),
+
+
+            Request::PathStart(pos, delay) => {
+                let pos = unwrap!(opt_client).unoffset_pos(pos);
+                Ok(Some(ClientEvent::PathStart(pos, delay)))
+            },
+
+            Request::PathUpdate(rel_time, velocity, input) => {
+                let input = unwrap!(InputBits::from_bits(input));
+                Ok(Some(ClientEvent::PathUpdate(rel_time, velocity.to_global(), input)))
+            },
+
+            Request::PathBlocked(rel_time) =>
+                Ok(Some(ClientEvent::PathBlocked(rel_time))),
 
 
             _ => fail!("bad request: {:?}", req),
@@ -458,10 +481,14 @@ impl Messages {
                     Activity::Walk => 0,
                     // fly => 1
                     Activity::Emote(_) => 2,    // interruptible
-                    Activity::Work(_, _) => 3,   // uninterruptible
+                    Activity::Work(_, _) |
+                    Activity::Teleport => 3,   // uninterruptible
                 };
                 self.send_raw(wire_id, Response::ActivityChange(code));
             },
+
+            ClientResponse::ResetMotion =>
+                self.send_raw(wire_id, Response::ResetMotion(())),
 
 
             ClientResponse::StructureAppear(sid, template_id, pos) => {

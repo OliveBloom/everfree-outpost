@@ -5,9 +5,10 @@ use physics::v3::{V2, scalar, Region};
 use client::ClientObj;
 use debug;
 use fonts::{self, FontMetricsExt};
+use input::EventStatus;
 use platform::{Config, ConfigKey};
 use ui::geom::{Geom, Special};
-use ui::input::{EventStatus, KeyAction, KeyEvent};
+use ui::input::{KeyAction, ActionEvent};
 use ui::widget::*;
 
 
@@ -111,7 +112,7 @@ impl<'a> Widget for WidgetPack<'a, Debug, &'a debug::Debug> {
         }
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         if key.code == KeyAction::ToggleDebugPanel {
             self.state.mode = match self.state.mode {
                 Mode::Nothing => Mode::Framerate,

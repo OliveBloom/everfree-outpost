@@ -4,10 +4,11 @@ use std::mem;
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
+use input::EventStatus;
 use inventory::Inventories;
 use ui::dialog;
 use ui::geom::Geom;
-use ui::input::{KeyAction, KeyEvent, EventStatus};
+use ui::input::{KeyAction, ActionEvent};
 use ui::widget::*;
 
 
@@ -140,7 +141,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
     fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
     }
 
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         let status = OnKeyVisitor::dispatch(self, key);
         if status.is_handled() {
             return status;

@@ -27,6 +27,11 @@ pub const CHUNK_BITS: usize = 4;
 pub const CHUNK_SIZE: i32 = 1 << CHUNK_BITS;    // 16
 pub const CHUNK_MASK: i32 = CHUNK_SIZE - 1;
 
+// Doesn't quite belong here, but it's good enough
+pub const LOCAL_BITS: usize = 3;
+pub const LOCAL_SIZE: i32 = 1 << LOCAL_BITS;
+pub const LOCAL_MASK: i32 = LOCAL_SIZE - 1;
+
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]

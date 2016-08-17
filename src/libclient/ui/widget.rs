@@ -3,9 +3,10 @@ use std::mem;
 
 use physics::v3::{V2, scalar, Region};
 
+use input::{ButtonEvent, EventStatus};
 use ui::{Context, DragData};
 use ui::geom::Geom;
-use ui::input::{KeyEvent, ButtonEvent, EventStatus};
+use ui::input::ActionEvent;
 
 
 pub trait Widget: Sized {
@@ -25,7 +26,7 @@ pub trait Widget: Sized {
     ///
     /// The default implementation calls `OnKeyVisitor::dispatch` to dispatch the event to each
     /// child in turn until one reports that the event has been handled.
-    fn on_key(&mut self, key: KeyEvent) -> EventStatus {
+    fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         OnKeyVisitor::dispatch(self, key)
     }
 
@@ -109,19 +110,19 @@ impl<'a, W, D> WidgetPack<'a, W, D> {
 
 
 pub struct OnKeyVisitor {
-    key: KeyEvent,
+    key: ActionEvent,
     result: EventStatus,
 }
 
 impl OnKeyVisitor {
-    pub fn new(key: KeyEvent) -> OnKeyVisitor {
+    pub fn new(key: ActionEvent) -> OnKeyVisitor {
         OnKeyVisitor {
             key: key,
             result: EventStatus::Unhandled,
         }
     }
 
-    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: KeyEvent) -> EventStatus {
+    pub fn dispatch<W: ?Sized + Widget>(w: &mut W, key: ActionEvent) -> EventStatus {
         let mut v = OnKeyVisitor::new(key);
         w.walk_layout(&mut v, scalar(0));
         v.result

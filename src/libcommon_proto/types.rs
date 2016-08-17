@@ -4,20 +4,20 @@ use physics::v3::V3;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct LocalPos {
-    x: u16,
-    y: u16,
-    z: u16,
+    pub x: u16,
+    pub y: u16,
+    pub z: u16,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct LocalOffset {
-    x: i16,
-    y: i16,
-    z: i16,
+    pub x: i16,
+    pub y: i16,
+    pub z: i16,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub struct LocalTime(u16);
+pub struct LocalTime(pub u16);
 
 
 impl LocalPos {
@@ -40,6 +40,44 @@ impl LocalPos {
         }
     }
 
+    pub fn from_global_bits(pos: V3, bits: usize) -> LocalPos {
+        assert!(bits < 16);
+        let mask = (1 << bits) - 1;
+        LocalPos {
+            x: pos.x as u16 & mask,
+            y: pos.y as u16 & mask,
+            z: pos.z as u16 & mask,
+        }
+    }
+
+    pub fn to_global_bits(self, base: V3, bits: usize) -> V3 {
+        assert!(bits < 16);
+        let mask = (1 << bits) - 1;
+        let dx = self.x.wrapping_sub(base.x as u16) & mask;
+        let dy = self.y.wrapping_sub(base.y as u16) & mask;
+        let dz = self.z.wrapping_sub(base.z as u16) & mask;
+
+        // Sign-extend from `b` bits.  Use a macro to capture `bits` with guaranteed inlining.
+        macro_rules! adj {
+            ($x:expr) => {
+                {
+                    let x = $x as i16;
+                    // Take the sign bit and shift it over by one.  In a `b`-bit signed integer,
+                    // the top bit has value `-(1 << (b - 1))` rather than `1 << (b - 1)`.  We
+                    // subtract the difference, `(1 << b)`, to convert unsigned to signed.
+                    let adj = (x << 1) & (1 << bits);
+                    x - adj
+                }
+            };
+        }
+
+        V3 {
+            x: base.x + adj!(dx) as i32,
+            y: base.y + adj!(dy) as i32,
+            z: base.z + adj!(dz) as i32,
+        }
+    }
+
     pub fn unwrap(self) -> V3 {
         V3 {
             x: self.x as i32,
@@ -58,11 +96,11 @@ impl LocalOffset {
         }
     }
 
-    pub fn to_global(self, base: V3) -> V3 {
+    pub fn to_global(self) -> V3 {
         V3 {
-            x: base.x as i32,
-            y: base.y as i32,
-            z: base.z as i32,
+            x: self.x as i32,
+            y: self.y as i32,
+            z: self.z as i32,
         }
     }
 

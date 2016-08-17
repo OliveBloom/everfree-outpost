@@ -46,20 +46,19 @@ mod parts {
             (Ex  1) EXTRA =         ::logic::extra::Extra;
             (Ms  2) MESSAGES =      ::messages::Messages;
             (Ti  3) TIMER =         ::timer::Timer;
-            (Ph  4) PHYSICS =       ::physics::Physics<'d>;
-            (Vi  5) VISION =        ::vision::Vision;
-            (Ch  6) CHUNKS =        ::chunks::Chunks<'d>;
-            (Ca  7) CACHE =         ::cache::TerrainCache;
-            (Tg  8) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
-            (Ct  9) CHAT =          ::chat::Chat;
-            (Di 10) DIALOGS =       ::dialogs::Dialogs;
-            (In 11) INPUT =         ::input::Input;
-            (En 12) ENERGY =        ::components::energy::Energy;
-            (MP 13) MOTION_PATHS =  ::components::motion_path::MotionPaths;
+            (Vi  4) VISION =        ::vision::Vision;
+            (Ch  5) CHUNKS =        ::chunks::Chunks<'d>;
+            (Ca  6) CACHE =         ::cache::TerrainCache;
+            (Tg  7) TERRAIN_GEN =   ::terrain_gen::TerrainGen;
+            (Ct  8) CHAT =          ::chat::Chat;
+            (Di  9) DIALOGS =       ::dialogs::Dialogs;
+            (In 10) INPUT =         ::input::Input;
+            (En 11) ENERGY =        ::components::energy::Energy;
+            (MP 12) MOVEMENT =      ::components::movement::Movement;
     }
 }
 
-const NUM_PARTS: usize = 14;
+const NUM_PARTS: usize = 13;
 
 fn build_flag_map() -> HashMap<&'static str, EngineParts> {
     #![allow(non_snake_case, unused_variables)]
@@ -82,7 +81,6 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         extra = EXTRA;
         messages = MESSAGES;
         timer = TIMER;
-        physics = PHYSICS;
         vision = VISION;
         chunks = CHUNKS;
         cache = CACHE;
@@ -91,10 +89,10 @@ fn build_flag_map() -> HashMap<&'static str, EngineParts> {
         dialogs = DIALOGS;
         input = INPUT;
         energy = ENERGY;
-        motion_paths = MOTION_PATHS;
+        movement = MOVEMENT;
 
         All = EngineParts::all();
-        Components = ENERGY | MOTION_PATHS;
+        Components = ENERGY | MOVEMENT;
     );
 
     fm

@@ -2,6 +2,7 @@ use std::collections::{HashMap, hash_map};
 use rand::{self, Rng};
 
 use libphysics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
+use libphysics::{LOCAL_SIZE, LOCAL_BITS, LOCAL_MASK};
 use libcommon_proto::types::LocalPos;
 
 use types::*;
@@ -68,10 +69,6 @@ impl Clients {
     }
 }
 
-const LOCAL_BITS: usize = 3;
-const LOCAL_SIZE: i32 = 1 << LOCAL_BITS;
-const LOCAL_MASK: i32 = LOCAL_SIZE - 1;
-
 impl ClientInfo {
     pub fn new(wire_id: WireId, name: &str) -> ClientInfo {
         let mut rng = rand::thread_rng();
@@ -94,22 +91,26 @@ impl ClientInfo {
         (cy * LOCAL_SIZE + cx) as u16
     }
 
-    pub fn local_pos_v3(&self, pos: V3) -> V3 {
-        const BASE: i32 = TILE_SIZE * CHUNK_SIZE * (LOCAL_SIZE / 2);
-        const MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
-        let chunk_off = V2::new(self.chunk_offset.0 as i32,
-                                self.chunk_offset.1 as i32);
-        let adj_pos = pos.reduce() + chunk_off * scalar(CHUNK_SIZE * TILE_SIZE);
+    pub fn offset_pos(&self, pos: V3) -> V3 {
+        const SCALE: i32 = TILE_SIZE * CHUNK_SIZE;
+        pos + V3::new(self.chunk_offset.0 as i32 * SCALE, 
+                      self.chunk_offset.1 as i32 * SCALE,
+                      0)
+    }
 
-        let delta = adj_pos - scalar(BASE);
-        let masked = delta & scalar(MASK);
-        let local_pos = masked + scalar(BASE);
-
-        local_pos.extend(pos.z)
+    pub fn unoffset_pos(&self, pos: LocalPos) -> LocalPos {
+        const SCALE: u16 = (TILE_SIZE * CHUNK_SIZE) as u16;
+        const MASK: u16 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
+        LocalPos {
+            x: pos.x.wrapping_sub(self.chunk_offset.0 as u16 * SCALE) & MASK,
+            y: pos.y.wrapping_sub(self.chunk_offset.1 as u16 * SCALE) & MASK,
+            z: pos.z,
+        }
     }
 
     pub fn local_pos(&self, pos: V3) -> LocalPos {
-        let local = self.local_pos_v3(pos);
-        LocalPos::from_global(local)
+        LocalPos::from_global(self.offset_pos(pos))
     }
+
+    // Can't compute global_pos without a reference point (current entity position)
 }

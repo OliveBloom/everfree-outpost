@@ -217,6 +217,10 @@ impl Entities {
         self.map.get(&id)
     }
 
+    pub fn get_mut(&mut self, id: EntityId) -> Option<&mut Entity> {
+        self.map.get_mut(&id)
+    }
+
     pub fn iter(&self) -> Iter {
         self.map.iter()
     }

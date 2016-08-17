@@ -7,7 +7,6 @@ use data::Data;
 use entity::{Entities, Entity};
 use fonts::{self, FontMetricsExt};
 use platform::gl;
-use predict::Predictor;
 use terrain::LOCAL_BITS;
 use util;
 
@@ -74,13 +73,10 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
 
 pub struct GeomGen<'a> {
     entities: &'a Entities,
-    predictor: &'a Predictor,
     data: &'a Data,
     render_names: bool,
     bounds: Region<V2>,
     now: i32,
-    future: i32,
-    pawn_id: Option<EntityId>,
     next: Option<EntityId>,
 }
 
@@ -88,37 +84,27 @@ const LOCAL_PX_MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
 
 impl<'a> GeomGen<'a> {
     pub fn new(entities: &'a Entities,
-               predictor: &'a Predictor,
                data: &'a Data,
                render_names: bool,
                chunk_bounds: Region<V2>,
-               now: i32,
-               future: i32,
-               pawn_id: Option<EntityId>) -> GeomGen<'a> {
+               now: i32) -> GeomGen<'a> {
         let bounds = chunk_bounds * scalar(CHUNK_SIZE * TILE_SIZE);
         let bounds = Region::new(bounds.min - scalar(128),
                                  bounds.max);
 
         GeomGen {
             entities: entities,
-            predictor: predictor,
             data: data,
             render_names: render_names,
 
             bounds: bounds,
             now: now,
-            future: future,
-            pawn_id: pawn_id,
             next: None,
         }
     }
 
     fn entity_pos(&self, id: EntityId, e: &Entity) -> V3 {
-        if Some(id) != self.pawn_id {
-            e.pos(self.now)
-        } else {
-            self.predictor.motion().pos(self.future)
-        }
+        e.pos(self.now)
     }
 
     pub fn count_verts(&self) -> usize {
@@ -130,8 +116,7 @@ impl<'a> GeomGen<'a> {
                 continue;
             }
 
-            let is_pawn = Some(id) == self.pawn_id;
-            count += 6 * count_quads_one(e, is_pawn);
+            count += 6 * count_quads_one(e);
         }
         count
     }
@@ -151,7 +136,6 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
         for e in iter {
             let id = e.id;
             self.next = Some(id);
-            let is_pawn = Some(id) == self.pawn_id;
 
             let pos = self.entity_pos(id, e);
             let pos = util::wrap_base(pos, self.bounds.min.extend(0));
@@ -160,15 +144,12 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 continue;
             }
 
-            let num_quads = count_quads_one(e, is_pawn);
+            let num_quads = count_quads_one(e);
             if idx + 6 * num_quads >= buf.len() {
                 return (idx, true);
             }
 
-            let anim_id =
-                if !is_pawn { e.motion.anim_id }
-                else { self.predictor.motion().anim_id };
-            let a = self.data.animation(anim_id);
+            let a = self.data.animation(e.motion.anim_id);
 
             // Top-left corner of the output rect
             let dest_x = (pos.x - 32) as u16;
@@ -216,7 +197,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                 }
             });
 
-            let should_render_name = self.render_names && !is_pawn;
+            let should_render_name = self.render_names;
             if let (true, &Some(ref name)) = (should_render_name, &e.name) {
                 let name_center_x = dest_x + 48;
                 let name_y = dest_y + 12;
@@ -339,9 +320,9 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
 }
 
 
-fn count_quads_one(e: &Entity, is_pawn: bool) -> usize {
+fn count_quads_one(e: &Entity) -> usize {
     count_layers(e.appearance) +
-    if !is_pawn { name_len(&e.name) } else { 0 } +
+    name_len(&e.name) +
     if e.activity_anim.is_some() { 2 } else { 0 }
 }
 

@@ -486,18 +486,14 @@ define_python_class! {
 
         fn world_entity_set_activity_walk(eng: &mut Engine,
                                           eid: EntityId) -> PyResult<()> {
-            let ok = logic::entity::set_activity(eng.refine(), eid, Activity::Walk);
-            // Bad eid is currently the only possible failure mode
-            pyassert!(ok, runtime_error, "no entity with that ID");
+            try!(logic::activity::set(eng, eid, Activity::Walk));
             Ok(())
         }
 
         fn world_entity_set_activity_emote(eng: &mut Engine,
                                            eid: EntityId,
                                            anim: AnimId) -> PyResult<()> {
-            let ok = logic::entity::set_activity(eng.refine(), eid, Activity::Emote(anim));
-            // Bad eid is currently the only possible failure mode
-            pyassert!(ok, runtime_error, "no entity with that ID");
+            try!(logic::activity::set(eng, eid, Activity::Emote(anim)));
             Ok(())
         }
 
@@ -505,9 +501,7 @@ define_python_class! {
                                           eid: EntityId,
                                           anim: AnimId,
                                           icon: AnimId) -> PyResult<()> {
-            let ok = logic::entity::set_activity(eng.refine(), eid, Activity::Work(anim, icon));
-            // Bad eid is currently the only possible failure mode
-            pyassert!(ok, runtime_error, "no entity with that ID");
+            try!(logic::activity::set(eng, eid, Activity::Work(anim, icon)));
             Ok(())
         }
 

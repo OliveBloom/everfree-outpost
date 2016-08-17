@@ -7,7 +7,7 @@ use world::bundle;
 
 
 pub mod energy;
-pub mod motion_path;
+pub mod movement;
 
 
 pub trait ObjectType {
@@ -99,7 +99,7 @@ gen_funcs! {
         cleanup cleanup_entity;
         components {
             energy::Energy,
-            motion_path::MotionPaths,
+            movement::Movement,
         }
     }
 }

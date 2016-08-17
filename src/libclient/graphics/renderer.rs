@@ -13,7 +13,6 @@ use graphics::GeometryGenerator;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
 use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, DepthMode, Feature, FeatureStatus};
-use predict::Predictor;
 use structures::Structures;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
 use ui;
@@ -431,14 +430,11 @@ impl<GL: Context> Renderer<GL> {
     pub fn update_entity_geometry(&mut self,
                                   data: &Data,
                                   entities: &Entities,
-                                  predictor: &Predictor,
                                   bounds: Region<V2>,
-                                  now: Time,
-                                  future: Time,
-                                  pawn_id: Option<EntityId>) {
+                                  now: Time) {
         {
-            let mut gen = entity::GeomGen::new(entities, predictor, data, self.render_names,
-                                               bounds, now, future, pawn_id);
+            let mut gen = entity::GeomGen::new(entities, data, self.render_names,
+                                               bounds, now);
             let expected = gen.count_verts();
             self.entity_buffer.alloc(expected * mem::size_of::<entity::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
@@ -448,8 +444,7 @@ impl<GL: Context> Renderer<GL> {
         }
 
         {
-            let mut gen = light::EntityGeomGen::new(entities, predictor,
-                                                    bounds, now, future, pawn_id);
+            let mut gen = light::EntityGeomGen::new(entities, bounds, now);
             self.entity_light_buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
             let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
             load_buffer::<GL, _>(&mut self.entity_light_buffer, &mut gen, &mut tmp, &mut 0);

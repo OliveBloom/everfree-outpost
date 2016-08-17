@@ -54,7 +54,7 @@ impl Item {
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Motion {
     pub start_pos: V3,
     pub velocity: V3,
