@@ -1,4 +1,5 @@
 use types::*;
+use util::SmallVec;
 use libphysics::{TILE_SIZE, CHUNK_SIZE};
 
 use engine::Engine;
@@ -41,4 +42,34 @@ pub fn tick(eng: &mut Engine) {
 
     logic::movement::update(eng);
     // Call other systems that update motions here
+
+    
+    // TODO: kind of a hack, make this nicer & more efficient
+    let mut eids_crossing = SmallVec::new();
+    let chunk_px = scalar(TILE_SIZE * CHUNK_SIZE);
+    for e in eng.world.entities() {
+        let old_chunk = e.pos(now).reduce().div_floor(chunk_px);
+        let new_chunk = e.pos(next).reduce().div_floor(chunk_px);
+
+        if new_chunk != old_chunk {
+            eids_crossing.push(e.id());
+        }
+    }
+
+    for &eid in eids_crossing.iter() {
+        let (plane, old_chunk, new_chunk, owner) = {
+            let e = eng.world.entity(eid);
+            (e.plane_id(),
+             e.pos(now).reduce().div_floor(chunk_px),
+             e.pos(next).reduce().div_floor(chunk_px),
+             e.pawn_owner().map(|c| c.id()))
+        };
+        logic::entity::on_chunk_crossing(eng.refine(), eid,
+                                         plane, old_chunk,
+                                         plane, new_chunk);
+
+        if let Some(cid) = owner {
+            logic::client::update_view(eng, cid, plane, old_chunk, plane, new_chunk);
+        }
+    }
 }
