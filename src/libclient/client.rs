@@ -233,8 +233,6 @@ impl<'d, P: Platform> Client<'d, P> {
                                        end_time.unwrap());
             },
 
-            Response::ProcessedInputs(_now, _count) => error!("NYI: libclient ProcessedInputs"),
-
             Response::ActivityChange(activity) =>
                 self.activity_change(activity),
 
@@ -671,9 +669,6 @@ impl<'d, P: Platform> Client<'d, P> {
         let new = self.cur_input;
         use common_movement::INPUT_DIR_MASK;
         if new != old && !((new | old) & INPUT_DIR_MASK).is_empty() {
-            let time = self.predict_arrival(0);
-            self.platform.send_message(Request::Input(LocalTime::from_global_32(time),
-                                                      new.bits()));
             self.pawn.set_input(new);
         }
     }

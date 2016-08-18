@@ -8,7 +8,6 @@ use types::*;
 protocol! {
     protocol Request [request_op::Opcode = u16] {
         [0x0003] Ping { cookie: u16 },
-        [0x0004] Input { when: LocalTime, bits: u16 },
         [0x0009] CraftRecipe {
             station: StructureId, inventory: InventoryId, recipe: RecipeId, count: u16 },
         [0x000a] Chat { msg: String },
@@ -65,7 +64,6 @@ protocol! {
         [0x801e] EntityMotionStartEnd { id: EntityId,
             pos: LocalPos, start_time: LocalTime, velocity: LocalOffset, anim: AnimId,
             end_time: LocalTime },
-        [0x801f] ProcessedInputs { when: LocalTime, count: u16 },
         [0x8020] ActivityChange { activity: u8 },
         [0x8023] InitNoPawn {
             pos: LocalPos, now: LocalTime, day_night_base: u32, day_night_ms: u32 },

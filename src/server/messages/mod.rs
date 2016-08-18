@@ -48,7 +48,6 @@ pub enum WireEvent {
 }
 
 pub enum ClientEvent {
-    Input(Time, InputBits),
     CloseDialog,
     MoveItem(InventoryId, SlotId, InventoryId, SlotId, u8),
     CraftRecipe(StructureId, InventoryId, RecipeId, u16),
@@ -124,7 +123,6 @@ pub enum ClientResponse {
     MainInventory(InventoryId),
     AbilityInventory(InventoryId),
     EnergyUpdate(i32, i32, (i16, u16), Time),
-    ProcessedInputs(Time, u16),
     ChatUpdate(String),
     KickReason(String),
 }
@@ -304,12 +302,6 @@ impl Messages {
                 self.send_raw(wire_id, game::Response::Pong(
                         cookie, LocalTime::from_global_64(now)));
                 Ok(None)
-            },
-
-            Request::Input(time, input) => {
-                let time = cmp::max(time.to_global_64(now), now);
-                let input = unwrap!(InputBits::from_bits(input));
-                Ok(Some(ClientEvent::Input(time, input)))
             },
 
             Request::CloseDialog(()) =>
@@ -571,10 +563,6 @@ impl Messages {
             ClientResponse::EnergyUpdate(cur, max, rate, time) =>
                 self.send_raw(wire_id, Response::EnergyUpdate(
                         cur as u16, max as u16, rate, LocalTime::from_global_64(time))),
-
-            ClientResponse::ProcessedInputs(time, count) =>
-                self.send_raw(wire_id, Response::ProcessedInputs(
-                        LocalTime::from_global_64(time), count)),
 
             ClientResponse::ChatUpdate(msg) =>
                 self.send_raw(wire_id, Response::ChatUpdate(msg)),

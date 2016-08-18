@@ -227,11 +227,6 @@ impl<'d> Engine<'d> {
                      evt: ClientEvent) -> HandlerResult {
         use messages::ClientEvent::*;
         match evt {
-            Input(time, input) => {
-                let tick = (time - next_tick(self.last_tick)) / TICK_MS;
-                self.input.schedule_input(cid, tick as i32, input);
-            },
-
             CloseDialog => {
                 logic::dialogs::close_dialog(self.refine(), cid);
             },
