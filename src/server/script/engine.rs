@@ -322,6 +322,12 @@ define_python_class! {
             Ok(try!(logic::misc::set_cave(eng, pid, pos)))
         }
 
+        fn logic_is_cave(eng: &mut Engine,
+                         pid: PlaneId,
+                         pos: V3) -> PyResult<bool> {
+            Ok(try!(logic::misc::is_cave(eng, pid, pos)))
+        }
+
         fn logic_set_interior(eng: &mut Engine,
                               pid: PlaneId,
                               pos: V3,

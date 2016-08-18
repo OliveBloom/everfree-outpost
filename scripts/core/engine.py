@@ -206,9 +206,12 @@ class EntityProxy(ObjectProxy):
         if isinstance(activity, Walk):
             self._eng.world_entity_set_activity_walk(self.id)
         elif isinstance(activity, Emote):
-            self._eng.world_entity_set_activity_emote(self.id, activity.anim)
+            anim = DATA.animation_id(activity.anim)
+            self._eng.world_entity_set_activity_emote(self.id, anim)
         elif isinstance(activity, Work):
-            self._eng.world_entity_set_activity_work(self.id, activity.anim, activity.icon)
+            anim = DATA.animation_id(activity.anim)
+            icon = DATA.animation_id(activity.icon)
+            self._eng.world_entity_set_activity_work(self.id, anim, icon)
 
     def extra(self):
         return ExtraHashProxy(self._eng.world_entity_extra(self.id))
@@ -325,6 +328,9 @@ class PlaneProxy(ObjectProxy):
 
     def set_cave(self, pos):
         return self._eng.logic_set_cave(self.id, pos)
+
+    def is_cave(self, pos):
+        return self._eng.logic_is_cave(self.id, pos)
 
     def set_farmland(self, pos):
         self._eng.logic_set_interior(self.id, pos, 'farmland')

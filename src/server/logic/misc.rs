@@ -261,6 +261,14 @@ pub fn set_cave(eng: &mut Engine,
     Ok(mined)
 }
 
+pub fn is_cave(eng: &mut Engine,
+               pid: PlaneId,
+               center: V3) -> world::OpResult<bool> {
+    let p = unwrap!(eng.world.get_plane(pid));
+    let cave = is_plain_cave(&p, center);
+    Ok(cave)
+}
+
 fn is_plain_cave(p: &ObjectRef<world::Plane>,
                  pos: V3) -> bool {
     let block_data = &p.world().data().block_data;

@@ -2,9 +2,8 @@ import random
 
 from outpost_server.core import alias, use, util
 from outpost_server.core.data import DATA
-from outpost_server.outpost.lib import structure_items, tool, ward
+from outpost_server.outpost.lib import structure_items, timed_action, tool, ward
 from outpost_server.outpost.lib.energy import energy_cost
-from outpost_server.outpost.lib.timed_action import timed_action
 
 structure_items.register('bookshelf', 'bookshelf/0')
 structure_items.register_attachment('bookshelf/0', 'wall/horiz')
@@ -49,19 +48,19 @@ alias.register_template('tree/v1', TREE)
 @use.structure(TREE)
 @use.structure(STUMP)
 @energy_cost(2)
-@timed_action(1000, 'activity//activity/kick')
+@timed_action.action('activity//activity/kick', 1000)
 def use_tree(e, s, args):
     e.inv().bulk_add(WOOD, 2)
 
 @tool.axe(TREE)
-@timed_action(1000, 'activity//item/axe')
+@timed_action.action('activity//item/axe', check=tool.default_check(1000))
 def axe_tree(e, s, args):
     ward.check(e, s.pos())
     s.replace(STUMP)
     e.inv().bulk_add(WOOD, 40)
 
 @tool.axe(STUMP)
-@timed_action(1000, 'activity//item/axe')
+@timed_action.action('activity//item/axe', check=tool.default_check(1000))
 def axe_stump(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
@@ -74,12 +73,12 @@ CRYSTAL = DATA.item('crystal')
 
 @use.structure(ROCK)
 @energy_cost(2)
-@timed_action(1000, 'activity//activity/kick')
+@timed_action.action('activity//activity/kick', 1000)
 def use_rock(e, s, args):
     e.inv().bulk_add(STONE, 2)
 
 @tool.pickaxe(ROCK)
-@timed_action(1000, 'activity//item/pick')
+@timed_action.action('activity//item/pick', check=tool.default_check(1000))
 def pickaxe_rock(e, s, args):
     ward.check(e, s.pos())
     s.destroy()

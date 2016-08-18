@@ -6,14 +6,42 @@ from outpost_server.outpost.lib import mallet, tool, ward
 
 @use.item('axe/stone')
 def axe(e, args):
-    tool.use(e, 'axe')
+    tool.use(e, tool.Args('axe', 0))
+
+@use.item('axe/copper')
+def axe(e, args):
+    tool.use(e, tool.Args('axe', 1))
+
+@use.item('axe/iron')
+def axe(e, args):
+    tool.use(e, tool.Args('axe', 2))
+
+
 
 @use.item('pick/stone')
 def pickaxe(e, args):
+    args = tool.Args('pickaxe', 0)
     if util.hit_structure(e) is None:
         cave.mine_wall(e, args)
     else:
-        tool.use(e, 'pickaxe')
+        tool.use(e, args)
+
+@use.item('pick/copper')
+def pickaxe(e, args):
+    args = tool.Args('pickaxe', 1)
+    if util.hit_structure(e) is None:
+        cave.mine_wall(e, args)
+    else:
+        tool.use(e, args)
+
+@use.item('pick/iron')
+def pickaxe(e, args):
+    args = tool.Args('pickaxe', 2)
+    if util.hit_structure(e) is None:
+        cave.mine_wall(e, args)
+    else:
+        tool.use(e, args)
+
 
 use.item('mallet')(mallet.use)
 
