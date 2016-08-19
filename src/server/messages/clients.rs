@@ -109,7 +109,8 @@ impl ClientInfo {
     }
 
     pub fn local_pos(&self, pos: V3) -> LocalPos {
-        LocalPos::from_global(self.offset_pos(pos))
+        LocalPos::from_global_bits(self.offset_pos(pos),
+                                   TILE_BITS + CHUNK_BITS + LOCAL_BITS)
     }
 
     // Can't compute global_pos without a reference point (current entity position)
