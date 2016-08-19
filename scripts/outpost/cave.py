@@ -32,3 +32,21 @@ def mine_wall_impl(e):
     if e.plane().set_cave(pos):
         e.inv('main').bulk_add(DATA.item('stone'), 20)
 
+
+@tool.pickaxe('ore_vein/copper')
+@timed_action.action('activity//item/pick', check=tool.default_check(1000))
+def pickaxe_copper(e, s, args):
+    ward.check(e, s.pos())
+    if e.inv().count_space('ore/copper') == 0:
+        return
+    s.destroy()
+    e.inv().bulk_add('ore/copper', 1)
+
+@tool.pickaxe('ore_vein/iron')
+@timed_action.action('activity//item/pick', check=tool.default_check(1000))
+def pickaxe_iron(e, s, args):
+    ward.check(e, s.pos())
+    if e.inv().count_space('ore/iron') == 0:
+        return
+    s.destroy()
+    e.inv().bulk_add('ore/iron', 1)

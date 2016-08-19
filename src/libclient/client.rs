@@ -548,8 +548,10 @@ impl<'d, P: Platform> Client<'d, P> {
             let mods = Modifiers::from_bits_truncate(mods);
             let evt = KeyEvent::new(key, mods);
             try_handle!(self, self.with_ui_dyn(|ui, dyn| ui.handle_key(evt, dyn)));
-            try_handle!(self, self.handle_ui_key(evt));
-            try_handle!(self, self.handle_key_down(evt));
+            if self.ui.root.dialog.inner.is_none() {
+                try_handle!(self, self.handle_ui_key(evt));
+                try_handle!(self, self.handle_key_down(evt));
+            }
         }
 
         self.process_event_status(EventStatus::Unhandled)
@@ -559,8 +561,9 @@ impl<'d, P: Platform> Client<'d, P> {
         if let Some(key) = Key::from_code(code) {
             let mods = Modifiers::from_bits_truncate(mods);
             let evt = KeyEvent::new(key, mods);
-            // TODO: block key if the down event was handled by ui
-            try_handle!(self, self.handle_key_up(evt));
+            if self.ui.root.dialog.inner.is_none() {
+                try_handle!(self, self.handle_key_up(evt));
+            }
         }
 
         self.process_event_status(EventStatus::Unhandled)

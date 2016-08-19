@@ -219,9 +219,9 @@ impl<'d> Provider<'d> {
             }
         }
 
-        // Anvil (at spawn)
+        // Workbench (at spawn)
         if cpos == scalar(0) {
-            let gs = GenStructure::new(scalar(0), template_id!("anvil"));
+            let gs = GenStructure::new(scalar(0), template_id!("workbench"));
             gc.structures.push(gs);
         }
 

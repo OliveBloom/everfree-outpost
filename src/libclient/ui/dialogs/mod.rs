@@ -52,6 +52,13 @@ impl AnyDialog {
         AnyDialog::Crafting(Crafting::new(inv_id, station_id, template))
     }
 
+    pub fn is_none(&self) -> bool {
+        match *self {
+            AnyDialog::None => true,
+            _ => false,
+        }
+    }
+
 
     fn on_close(self) -> EventStatus {
         match self {

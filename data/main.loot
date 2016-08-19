@@ -19,9 +19,17 @@
 (1) *cave/floor/large
 
 [choose_structure cave/floor/small]
+(5) *cave/floor/junk
+(3) *cave/floor/ore
+
+[choose_structure cave/floor/junk]
 (1) cave_junk/0
 (1) cave_junk/1
 (1) cave_junk/2
+
+[choose_structure cave/floor/ore]
+(3) ore_vein/copper
+(1) ore_vein/iron
 
 [choose_structure cave/floor/large]
 (1) chest

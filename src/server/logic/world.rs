@@ -25,7 +25,7 @@ pub fn structure_area(s: ObjectRef<Structure>) -> SmallSet<V2> {
 
 
 engine_part2!(pub EngineLifecycle(
-        world, cache, vision, messages, dialogs,
+        world, cache, vision, messages, dialogs, timer,
         Components));
 
 

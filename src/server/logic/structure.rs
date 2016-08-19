@@ -11,7 +11,7 @@ use world::object::*;
 use world::OpResult;
 
 
-engine_part2!(pub EngineLifecycle(world, cache, vision, messages, dialogs));
+engine_part2!(pub EngineLifecycle(world, cache, vision, messages, dialogs, timer));
 
 /// Handler to be called just after creating a structure.
 pub fn on_create(eng: &mut EngineLifecycle, sid: StructureId) {
