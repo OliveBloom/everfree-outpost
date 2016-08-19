@@ -101,7 +101,7 @@ def check(ctx, need_vars):
     return ok
 
 def run(args, log_file):
-    from . import context, cc, rustc, python, emscripten, js
+    from . import context, cc, rustc, python, emscripten, js, misc
 
     with tempfile.TemporaryDirectory() as temp_dir:
         ctx = context.Context(args, temp_dir, log_file)
@@ -114,6 +114,7 @@ def run(args, log_file):
             python.configure(ctx)
             emscripten.configure(ctx)
             js.configure(ctx)
+            misc.configure(ctx)
 
         ctx.save_cache()
 
@@ -127,6 +128,7 @@ def run(args, log_file):
         reqs.extend(python.requirements(ctx))
         reqs.extend(emscripten.requirements(ctx))
         reqs.extend(js.requirements(ctx))
+        reqs.extend(misc.requirements(ctx))
         ok = check(ctx, reqs)
 
         ctx.out('Configuration settings:')

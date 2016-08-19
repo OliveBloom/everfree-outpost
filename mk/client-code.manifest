@@ -16,4 +16,4 @@ client/configedit.js: $b_js/configedit.js
 
 client/instructions.html: $root/src/client/instructions.html
 client/credits.html: $b_data/credits.html
-
+client/changelog.html: $b_www/changelog.html

@@ -77,6 +77,7 @@ def main(args):
             'total_size': total_size,
             'redirects': {
                 'configedit': 'configedit.html',
+                'changelog': 'changelog.html',
                 },
             }, f)
 

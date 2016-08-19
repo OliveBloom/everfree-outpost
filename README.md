@@ -23,6 +23,7 @@ Dependencies:
  - ninja
  - closure-compiler
  - yui-compressor
+ - pandoc
 
 Transitive dependencies (needed to compile some of the Rust libraries above):
 

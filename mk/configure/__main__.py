@@ -54,6 +54,8 @@ def build_parser():
             help='name of the Closure Compiler binary')
     args.add_argument('--yui-compressor',
             help='name of the YUI Compressor binary')
+    args.add_argument('--pandoc',
+            help='name of the Pandoc binary')
 
     args.add_argument('--force', action='store_true', default=False,
             help='proceed even if there are configuration errors')
@@ -327,6 +329,7 @@ if __name__ == '__main__':
         www.render_template('$b_www/main.css', '$root/src/www/main.css'),
         www.render_template('$b_www/serverlist.html', '$root/src/launcher/serverlist.html'),
         www.render_template('$b_www/launcher.html', '$root/src/launcher/launcher.html'),
+        www.render_markdown('$b_www/changelog.html', '$root/doc/changelog.md'),
 
         www.render_template('$b_www/templates/_base.html',
                 '$root/src/auth/server/templates/_base.html'),

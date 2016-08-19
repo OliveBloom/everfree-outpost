@@ -22,6 +22,10 @@ def rules(i):
         rule collect_img_lists
             command = cat $in >$out
             description = GEN $out
+
+        rule run_pandoc
+            command = pandoc -f $format_in -t $format_out -o $out $in
+            description = PANDOC $out
     ''', **locals())
 
 def render_template(out_file, src_file):
@@ -38,4 +42,11 @@ def collect_img_lists(out_file, src_files):
             $b_www/%{f}-imgs.txt $
             %end
             %{'\n'}
+    ''', **locals())
+
+def render_markdown(out_file, src_file):
+    return template('''
+        build %out_file: run_pandoc %src_file
+            format_in = markdown
+            format_out = html5
     ''', **locals())

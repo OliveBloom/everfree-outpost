@@ -31,6 +31,8 @@ function buildServerEntry(info) {
     toggle.onclick = function() { more.classList.toggle('active'); };
     more.classList.add('server-more');
     more.appendChild(makeLink('launcher.html#r=configedit;s=' + info.url, 'Settings'));
+    more.appendChild(document.createTextNode(' - '));
+    more.appendChild(makeLink('launcher.html#r=changelog;s=' + info.url, 'Changelog'));
 
     div.appendChild(toggle);
     div.appendChild(more);
