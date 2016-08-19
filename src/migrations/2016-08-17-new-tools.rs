@@ -83,6 +83,8 @@ fn main() {
             }
         }
 
+        b.items = items.into_boxed_slice();
+
         let mut flat = Flat::new();
         flat.flatten_bundle(&b);
         flat.write(&mut File::create(&path_out).unwrap()).unwrap();

@@ -14,9 +14,9 @@ use std::path::Path;
 use server_bundle::flat::{self, FlatView, FlatViewMut};
 
 fn for_each_file<F: FnMut(&Path, &str, &str)>(base: &str, mut f: F) {
-    f(Path::new(&format!("{}/save/world.dat", base)), ".", "world.dat");
+    f(Path::new(&format!("{}/world.dat", base)), ".", "world.dat");
     for &dir in &["clients", "planes", "terrain_chunks"] {
-        for ent in fs::read_dir(&format!("{}/save/{}", base, dir)).unwrap() {
+        for ent in fs::read_dir(&format!("{}/{}", base, dir)).unwrap() {
             let ent = ent.unwrap();
             if !ent.file_type().unwrap().is_file() {
                 continue;
@@ -188,13 +188,13 @@ fn main() {
             maps.replace(&mut view);
 
             match dir {
-                "clients" => format!("{}/save/{}/{}", base_out, dir, name),
-                "planes" => format!("{}/save/planes/{:x}.plane",
+                "clients" => format!("{}/{}/{}", base_out, dir, name),
+                "planes" => format!("{}/planes/{:x}.plane",
                                     base_out, view.planes[0].stable_id),
-                "terrain_chunks" => format!("{}/save/terrain_chunks/{:x}.terrain_chunk",
+                "terrain_chunks" => format!("{}/terrain_chunks/{:x}.terrain_chunk",
                                             base_out, view.terrain_chunks[0].stable_id),
                 // world.dat
-                "." => format!("{}/save/{}", base_out, name),
+                "." => format!("{}/{}", base_out, name),
                 _ => unreachable!(),
             }
         };
