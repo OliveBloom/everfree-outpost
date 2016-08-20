@@ -5,7 +5,7 @@ from outpost_server.outpost.lib import timed_action, tool, util as util2, ward
 @tool.handler('pickaxe', 'cave_junk/0')
 @tool.handler('pickaxe', 'cave_junk/1')
 @tool.handler('pickaxe', 'cave_junk/2')
-@timed_action.action('activity//item/pick', check=tool.default_check(1000))
+@timed_action.action('activity//item/pick/stone', check=tool.default_check(1000))
 def cave_junk(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
@@ -24,7 +24,7 @@ def mine_wall(e, args):
         return
 
     delay = 5000 if args.level == 1 else 3000
-    timed_action.run(mine_wall_impl, 'activity//item/pick', delay, e)
+    timed_action.run(mine_wall_impl, 'activity//item/pick/stone', delay, e)
 
 def mine_wall_impl(e):
     pos = util.hit_tile(e)
@@ -34,7 +34,7 @@ def mine_wall_impl(e):
 
 
 @tool.pickaxe('ore_vein/copper')
-@timed_action.action('activity//item/pick', check=tool.default_check(1000))
+@timed_action.action('activity//item/pick/stone', check=tool.default_check(1000))
 def pickaxe_copper(e, s, args):
     ward.check(e, s.pos())
     if e.inv().count_space('ore/copper') == 0:
@@ -43,7 +43,7 @@ def pickaxe_copper(e, s, args):
     e.inv().bulk_add('ore/copper', 1)
 
 @tool.pickaxe('ore_vein/iron')
-@timed_action.action('activity//item/pick', check=tool.default_check(1000))
+@timed_action.action('activity//item/pick/stone', check=tool.default_check(1000))
 def pickaxe_iron(e, s, args):
     ward.check(e, s.pos())
     if e.inv().count_space('ore/iron') == 0:

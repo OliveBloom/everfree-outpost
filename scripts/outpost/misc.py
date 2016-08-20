@@ -53,14 +53,14 @@ def use_tree(e, s, args):
     e.inv().bulk_add(WOOD, 2)
 
 @tool.axe(TREE)
-@timed_action.action('activity//item/axe', check=tool.default_check(1000))
+@timed_action.action('activity//item/axe/stone', check=tool.default_check(1000))
 def axe_tree(e, s, args):
     ward.check(e, s.pos())
     s.replace(STUMP)
     e.inv().bulk_add(WOOD, 40)
 
 @tool.axe(STUMP)
-@timed_action.action('activity//item/axe', check=tool.default_check(1000))
+@timed_action.action('activity//item/axe/stone', check=tool.default_check(1000))
 def axe_stump(e, s, args):
     ward.check(e, s.pos())
     s.destroy()
@@ -78,7 +78,7 @@ def use_rock(e, s, args):
     e.inv().bulk_add(STONE, 2)
 
 @tool.pickaxe(ROCK)
-@timed_action.action('activity//item/pick', check=tool.default_check(1000))
+@timed_action.action('activity//item/pick/stone', check=tool.default_check(1000))
 def pickaxe_rock(e, s, args):
     ward.check(e, s.pos())
     s.destroy()

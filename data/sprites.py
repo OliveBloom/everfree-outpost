@@ -93,32 +93,3 @@ def init():
         for hat_type in ('witch', 'santa', 'party'):
             sheet = load1('equipment/%s-hat-%s.png' % (hat_type, sex))
             add_hat_layer('%s/hat/%s' % (sex, hat_type), sex, sheet)
-
-
-    # Activity sprites
-
-    bubble = SPRITE.new('activity_bubble', (32, 32))
-    bubble.add_anim('default', 1, 1)
-    bubble.add_layer('default')
-    anim = Anim([load1('misc/activity.png')], 1)
-    bubble.add_graphics('default', 'default', anim)
-
-
-    activity = SPRITE.new('activity', (512, 512))
-    activity.add_layer('default')
-
-    def add_activity_icon(name, img):
-        activity.add_anim(name, 1, 1)
-        anim = Anim([img], 1)
-        activity.add_graphics('default', name, anim)
-
-    icons = loader('icons', unit=16)
-
-    tools = icons('tools.png')
-    add_activity_icon('none', Image((16, 16)))
-    add_activity_icon('item/shovel', tools.extract((0, 0)))
-    add_activity_icon('item/pick', tools.extract((1, 0)))
-    add_activity_icon('item/mallet', tools.extract((2, 0)))
-    add_activity_icon('item/axe', tools.extract((3, 0)))
-    add_activity_icon('activity/kick', icons('activity-kick.png'))
-
