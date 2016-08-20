@@ -221,6 +221,11 @@ impl<'a> GeometryGenerator for EntityGeomGen<'a> {
             let pos = e.pos(self.now);
             // TODO: hard-coded constant based on entity size
             let center = pos + V3::new(16, 16, 48);
+            let center = util::wrap_base(center, self.bounds.min.extend(0));
+            if !self.bounds.contains(center.reduce()) {
+                // Not visible
+                continue;
+            }
 
             const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
             if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
