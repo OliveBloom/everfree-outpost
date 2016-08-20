@@ -51,6 +51,15 @@ function asmDispatchKey(asm_client, dir, code, shift) {
     }
 }
 
+function asmKeyHandler(asm_client, down, evt) {
+    var active_tag = document.activeElement.tagName.toLowerCase();
+    var typing = active_tag == 'input' || active_tag == 'textarea';
+    if (!typing && asmDispatchKey(asm_client, down, evt.keyCode, evt.shiftKey)) {
+        return true;
+    }
+}
+exports.asmKeyHandler = asmKeyHandler;
+
 
 /** @constructor */
 function Keyboard(asm_client) {
@@ -84,14 +93,6 @@ function Keyboard(asm_client) {
             }
         }
 
-        var active_tag = document.activeElement.tagName.toLowerCase();
-        var typing = active_tag == 'input' || active_tag == 'textarea';
-        if (!typing && asmDispatchKey(asm_client, true, evt.keyCode, evt.shiftKey)) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            return;
-        }
-
         if (this_._topHandler()(true, evt)) {
             evt.preventDefault();
             evt.stopPropagation();
@@ -109,14 +110,6 @@ function Keyboard(asm_client) {
                 delete timers[evt.keyCode];
                 this_._topHandler()(false, evt);
             }, Config.debounce_time.get());
-            evt.preventDefault();
-            evt.stopPropagation();
-            return;
-        }
-
-        var active_tag = document.activeElement.tagName.toLowerCase();
-        var typing = active_tag == 'input' || active_tag == 'textarea';
-        if (!typing && asmDispatchKey(asm_client, false, evt.keyCode, evt.shiftKey)) {
             evt.preventDefault();
             evt.stopPropagation();
             return;

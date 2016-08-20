@@ -7,6 +7,7 @@ var Config = require('config').Config;
 var handleResize = require('resize').handleResize;
 
 var Keyboard = require('keyboard').Keyboard;
+var asmKeyHandler = require('keyboard').asmKeyHandler;
 var Dialog = require('ui/dialog').Dialog;
 var Banner = require('ui/banner').Banner;
 var ChatWindow = require('ui/chat').ChatWindow;
@@ -318,12 +319,12 @@ function setupKeyHandler() {
                     break;
 
                 default:
-                    return shouldStop;
+                    return asmKeyHandler(asm_client, down, evt) || shouldStop;
             }
 
             return true;
         } else {
-            return shouldStop;
+            return asmKeyHandler(asm_client, down, evt) || shouldStop;
         }
     });
 

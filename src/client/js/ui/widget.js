@@ -17,6 +17,7 @@ function WidgetKeyEvent(down, raw) {
     this.down = down;
     this.shiftKey = raw.shiftKey;
     this.useDefault = false;
+    console.log('evt', down, Config.keybindings.get()[this.raw.keyCode]);
 };
 exports.WidgetKeyEvent = WidgetKeyEvent;
 
@@ -106,7 +107,7 @@ Button.prototype.click = function() {
 
 Button.prototype.onkey = function(evt) {
     if (evt.uiKeyName() == this.trigger_key) {
-        if (evt.down) {
+        if (!evt.down) {
             this.click();
         }
         return true;
@@ -161,12 +162,12 @@ Form.prototype.onkey = function(evt) {
 
     var binding = evt.uiKeyName();
     if (binding == 'select') {
-        if (evt.down) {
+        if (!evt.down) {
             this.submit();
         }
         return true;
     } else if (binding == 'cancel') {
-        if (evt.down) {
+        if (!evt.down) {
             this.cancel();
         }
         return true;
