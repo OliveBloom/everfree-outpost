@@ -1095,7 +1095,7 @@ fn calc_cursor_pos(data: &Data, pos: V3, anim: u16) -> Option<V2> {
     };
 
     // TODO: need z + 16 adjustment to work right on stairs
-    let tile = pos.div_floor(scalar(TILE_SIZE));
+    let tile = (pos + V3::new(16, 16, 16)).div_floor(scalar(TILE_SIZE));
     let pos = tile + DIRS[dir as usize].extend(0);
     Some(V2::new(pos.x, pos.y - pos.z) * scalar(TILE_SIZE) + scalar(TILE_SIZE / 2))
 }
