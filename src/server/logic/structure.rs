@@ -149,11 +149,7 @@ fn check_placement(cache: &TerrainCache,
             continue;
         }
 
-        let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
-        let base = (cpos * scalar(CHUNK_SIZE)).extend(0);
-        let entry = unwrap!(cache.get(pid, cpos));
-        // Cell not present -> it's empty, anything can overlap with it.
-        let cell = unwrap_or!(entry.get_cell(pos - base), continue);
+        let cell = unwrap_or!(cache.get_cell(pid, pos), continue);
 
         if cell.layers[template.layer as usize].occupied() {
             fail!("structure blocked (layering)");

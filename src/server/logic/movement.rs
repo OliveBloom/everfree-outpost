@@ -3,7 +3,7 @@ use util::SmallVec;
 use util::StrResult;
 use libcommon_proto::types::{LocalPos, LocalTime};
 use libphysics::{TILE_BITS, CHUNK_BITS, LOCAL_BITS};
-use libphysics::{CHUNK_SIZE, CHUNK_MASK};
+use libphysics::CHUNK_SIZE;
 use libphysics::ShapeSource;
 
 use cache::TerrainCache;
@@ -203,14 +203,6 @@ impl<'a> ShapeSource for ChunksSource<'a> {
         }
 
         let pos = pos + self.base_tile;
-
-        let offset = pos & scalar(CHUNK_MASK);
-        let cpos = (pos >> CHUNK_BITS).reduce();
-
-        if let Some(entry) = self.cache.get(self.plane, cpos) {
-            entry.get(offset).shape()
-        } else {
-            Shape::Empty
-        }
+        self.cache.get(self.plane, pos).shape()
     }
 }

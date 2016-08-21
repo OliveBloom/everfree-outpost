@@ -6,7 +6,7 @@
 use std::collections::hash_map::{HashMap, Entry};
 
 use types::*;
-use libphysics::{CHUNK_BITS, CHUNK_SIZE};
+use libphysics::{CHUNK_BITS, CHUNK_SIZE, CHUNK_MASK};
 
 use data::{Data, StructureTemplate, BlockFlags};
 
@@ -84,8 +84,18 @@ impl TerrainCache {
         }
     }
 
-    pub fn get(&self, pid: PlaneId, cpos: V2) -> Option<&CacheEntry> {
+    pub fn get(&self, pid: PlaneId, pos: V3) -> BlockFlags {
+        let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
+        let offset = pos & scalar(CHUNK_MASK);
         self.cache.get(&(pid, cpos))
+            .map_or(BlockFlags::empty(), |entry| entry.get(offset))
+    }
+
+    pub fn get_cell(&self, pid: PlaneId, pos: V3) -> Option<&CacheCell> {
+        let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
+        let offset = pos & scalar(CHUNK_MASK);
+        self.cache.get(&(pid, cpos))
+            .and_then(|entry| entry.get_cell(offset))
     }
 
     fn with_entry<R, F: FnOnce(&mut CacheEntry) -> R>(&mut self,
@@ -115,7 +125,7 @@ impl TerrainCache {
 }
 
 
-pub struct CacheEntry {
+struct CacheEntry {
     cells: HashMap<u16, CacheCell>,
 }
 
