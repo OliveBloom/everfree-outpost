@@ -116,14 +116,16 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
             AnyDialog::None => {},
 
             AnyDialog::Inventory(ref mut state) => {
-                let dyn = InventoryDyn::new(self.dyn.inventories.main_inventory());
+                let dyn = InventoryDyn::new(self.dyn.inventories.main_inventory(),
+                                            self.dyn.data);
                 let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },
 
             AnyDialog::Ability(ref mut state) => {
-                let dyn = InventoryDyn::new(self.dyn.inventories.ability_inventory());
+                let dyn = InventoryDyn::new(self.dyn.inventories.ability_inventory(),
+                                            self.dyn.data);
                 let mut child = WidgetPack::new(state, &dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);

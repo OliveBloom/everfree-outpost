@@ -4,6 +4,7 @@ use common_proto::game::Request;
 use physics::v3::{V2, Region};
 
 use client::ClientObj;
+use data::Data;
 use input::EventStatus;
 use inventory::Item;
 use ui::Context;
@@ -11,18 +12,21 @@ use ui::atlas;
 use ui::geom::Geom;
 use ui::input::{KeyAction, ActionEvent};
 use ui::inventory;
+use ui::text;
 use ui::util;
 use ui::widget::*;
 
 
 pub struct Inventory {
     grid: inventory::Grid,
+    text: text::TextDisplay,
 }
 
 impl Inventory {
     pub fn new() -> Inventory {
         Inventory {
             grid: inventory::Grid::new(),
+            text: text::TextDisplay::new(),
         }
     }
 
@@ -39,17 +43,47 @@ impl Inventory {
 #[derive(Clone, Copy)]
 pub struct InventoryDyn<'a> {
     inv: Option<&'a ::inventory::Inventory>,
+    data: &'a Data,
 }
 
 impl<'a> InventoryDyn<'a> {
-    pub fn new(inv: Option<&'a ::inventory::Inventory>) -> InventoryDyn<'a> {
+    pub fn new(inv: Option<&'a ::inventory::Inventory>,
+               data: &'a Data) -> InventoryDyn<'a> {
         InventoryDyn {
             inv: inv,
+            data: data,
         }
     }
 
     fn as_grid_dyn(self) -> GridDyn<'a> {
         GridDyn::new(self.inv, true)
+    }
+
+    fn make_segments(&self, focus: usize) -> Vec<text::Segment<&str>> {
+        let inv = match self.inv {
+            Some(x) => x,
+            None => return Vec::new(),
+        };
+
+        let item = match inv.items.get(focus) {
+            Some(x) => x,
+            None => return Vec::new(),
+        };
+        if item.id == NO_ITEM || item.quantity == 0 {
+            return Vec::new();
+        }
+
+        let def = self.data.item_def(item.id);
+
+        vec![
+            text::Segment::Text(text::Attr::Bold, def.ui_name()),
+            text::Segment::ParaBreak,
+            text::Segment::Text(text::Attr::Normal,
+                                "Long description goes here.
+                                test a b c d e f g
+                                test a b c d e f g
+                                Long description goes here."),
+        ]
     }
 }
 
@@ -57,13 +91,27 @@ impl<'a, 'b> Widget for WidgetPack<'a, Inventory, InventoryDyn<'b>> {
     fn size(&mut self) -> V2 {
         let dyn = self.dyn.as_grid_dyn();
         let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
-        child.size()
+        child.size() + V2::new(120 + 3, 0)
     }
 
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {
-        let dyn = self.dyn.as_grid_dyn();
-        let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
-        let rect = Region::sized(child.size()) + pos;
+        let grid_size = {
+            let dyn = self.dyn.as_grid_dyn();
+            let mut child = WidgetPack::new(&mut self.state.grid, &dyn);
+            let rect = Region::sized(child.size()) + pos;
+            v.visit(&mut child, rect);
+            rect.size()
+        };
+
+        let offset = V2::new(grid_size.x + 3, 0);
+        self.state.text.size = V2::new(120, grid_size.y);
+
+        let focus = self.state.grid.focus;
+        let segments = self.dyn.make_segments(focus);
+
+        let dyn = text::TextDisplayDyn::new(&segments);
+        let mut child = WidgetPack::new(&mut self.state.text, &dyn);
+        let rect = Region::sized(child.size()) + pos + offset;
         v.visit(&mut child, rect);
     }
 
