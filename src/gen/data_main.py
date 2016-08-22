@@ -266,6 +266,10 @@ def main(args):
         print('  Cache: %d images, %d compute' %
                 (image_cache.IMAGE_CACHE.size(), image_cache.COMPUTE_CACHE.size()))
 
+    # Load external data files
+    from outpost_data.core import external
+    external.load()
+
     # Run `init()` for every mod.
     print('Processing mods:')
     for mod in mods:

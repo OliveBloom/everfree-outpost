@@ -1,0 +1,181 @@
+ability/light:
+    Provides magical light in a small area.
+ability/remove_hat:
+    Remove your hat, returning it to your inventory.
+
+blueprint/colored_floors:
+    Teaches you how to craft colorful floor tiles.
+blueprint/colored_torches:
+    Teaches you how to craft torches in a variety of colors.
+
+
+anvil:
+    A station used to craft metal items.
+
+#ore/copper:
+#ore/iron:
+bar/copper:
+    A bar of copper, used for crafting.
+bar/iron:
+    A bar of iron, used for crafting.
+crystal:
+    Crafting material, used for magical items.
+stone:
+    Basic crafting material. It's literally just a rock.
+wood:
+    Basic crafting material. It was part of a tree, once.
+
+
+artichoke:
+    A species of thistle high in antioxidants, especially loved by health nuts.
+carrot:
+    A species of root vegetable favored by minature equines.
+#corn:
+#    It's actually called Maize, but only smug individuals refer to it as such.
+cucumber:
+    A gourd that is technically a fruit, but used as a vegetable.
+pepper:
+    It burns, it burns!.
+potato:
+    Boil \'em, mash \'em, stick \'em in a stew!.
+tomato:
+    You say tomato, I say tomato.
+
+axe/stone: &axe
+    A tool for chopping down trees and other wooden objects.
+axe/copper: *axe
+axe/iron: *axe
+pick/stone: &pick
+    A tool for breaking rocks and other stone objects.
+pick/copper: *pick
+pick/iron: *pick
+shovel:
+    A tool for clearing away grass, in preparation for planting crops.
+mallet:
+    A tool for adjusting structures after they've been placed.
+
+chest:
+    Container used for storing items.
+barrel:
+    Container used for storing items.
+cabinets:
+    Used for the storage of small items.
+
+bookshelf:
+    A wooden shelf for storing books.
+
+brick_door:
+    A door surrounded by a brick frame.
+brick_wall:
+    Wall made of red bricks, rumored to be wolf-proof.
+cottage_door:
+    Something to keep the outside out and the inside in.
+cottage_wall:
+    A wall for your house.
+ruined_door:
+    A door that has seen better days.
+ruined_wall:
+    An ex-wall.
+stone_door:
+    A door surrounded by a stone frame.
+stone_wall:
+    A wall of grey and white stone bricks.
+wood_door:
+    A somewhat flimsy affair, but it does separate the interior from the exterior.
+wood_wall:
+    A flimsy structure, but better than nothing. Can be quite cozy.
+
+stone_pillar:
+    A pillar made out of stone. 
+#wood_pillar:
+
+bed:
+    A place to rest your weary head.
+table:
+    A basic wooden table.
+statue:
+    A stone statue of a pony.
+
+fountain:
+    A rare piece of decorative architecture.
+#trophy:
+    #CONGRATULATION! YOU WIN THE FIRST PLACE!
+    #
+ward:
+    A magical device that stops other ponies from disturbing the nearby area.
+
+sign:
+    A wooden sign you can write on
+
+teleporter:
+    A mass of crystal, able to teleport you from place to place.
+
+#fence:
+#    Exterior door
+#fence_gate:
+#    Use this to keep those pesky deer from coming into your yard.
+#fence_post:
+#    You put fences in between these
+
+gem/blue:
+    A shiny blue gem found in deep caves, used in solving puzzles.
+gem/green:
+    A shiny green gem found in deep caves, used in solving puzzles.
+gem/orange:
+    A shiny orange gem found in deep caves, used in solving puzzles.
+gem/purple:
+    A shiny purple gem found in deep caves, used in solving puzzles.
+gem/red:
+    A shiny red gem found in deep caves, used in solving puzzles.
+gem/yellow:
+    A shiny yellow gem found in deep caves, used in solving puzzles.
+
+#hat:
+#hat/explorer:
+#santa_hat:
+#    Spread goodwill and cheer. 
+#house_floor:
+#interior_door:
+#interior_wall:
+
+key:
+    An old key found in deep caves used to open doors. Breaks upon use.
+key/master:
+    A key of magical power, able to open many doors without breaking.
+
+
+#party_hat:
+
+road:
+    Lets you move from place to place without messing up your hooficure.
+stair:
+    Use this to move from floor to floor.
+
+torch:
+    A source of light.
+
+torch/blue:
+    A source of light that glows blue like sapphires.
+torch/green:
+    A source of light that glows green like emeralds.
+torch/orange:
+    A source of light that glows orange like amber.
+torch/purple:
+    A source of light that glows purple like amethysts.
+torch/red:
+    A source of light that glows red like rubies.
+torch/yellow:
+    A source of light that glows yellow.
+
+wood_floor/blue:
+    A floor reminiscent of waves.
+wood_floor/green:
+    A floor reminiscent of forests.
+wood_floor/orange:
+    A floor reminiscent of deserts.
+wood_floor/purple:
+    A floor reminiscent of alien skies.
+wood_floor/red:
+    A floor reminiscent of clay.
+wood_floor/yellow:
+    A floor reminiscent of the Sun.

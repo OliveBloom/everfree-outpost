@@ -78,11 +78,7 @@ impl<'a> InventoryDyn<'a> {
         vec![
             text::Segment::Text(text::Attr::Bold, def.ui_name()),
             text::Segment::ParaBreak,
-            text::Segment::Text(text::Attr::Normal,
-                                "Long description goes here.
-                                test a b c d e f g
-                                test a b c d e f g
-                                Long description goes here."),
+            text::Segment::Text(text::Attr::Normal, def.desc()),
         ]
     }
 }

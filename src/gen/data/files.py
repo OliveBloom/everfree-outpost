@@ -5,8 +5,11 @@ from outpost_data.core import util
 
 ModInfo = namedtuple('ModInfo', ('assets', 'overrides', 'deps'))
 MOD_MAP = {}
+MOD_ORDER = []
 
 def register_mod(name, assets, override_dir, deps):
+    global MOD_MAP, MOD_ORDER
+
     # NB: `override_dir` is a directory containing overrides for *other*,
     # previously loaded mods.  The `overrides` field of `ModInfo` is a list of
     # override directories applied to *this* mod by others.
@@ -18,6 +21,7 @@ def register_mod(name, assets, override_dir, deps):
             util.err('mod %r depends on %r, which is not (yet) loaded' % (name, dep))
 
     MOD_MAP[name] = ModInfo(assets, [], deps)
+    MOD_ORDER.append(name)
 
     if override_dir is not None and os.path.exists(override_dir):
         for override_mod in os.listdir(override_dir):
@@ -78,6 +82,13 @@ def _find_file_uncached(mod_name, path):
 def find(path, mod=None):
     mod = mod or util.get_caller_mod_name()
     return _find_file(mod, path)
+
+def find_all(path):
+    for mod_name in MOD_ORDER:
+        mod = MOD_MAP[mod_name]
+        found = _find_file_in_dir(mod.assets, path)
+        if found is not None:
+            yield found
 
 def get_dependencies():
     return list(DEPENDENCIES)

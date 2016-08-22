@@ -1,5 +1,6 @@
 from PIL import Image
 
+from outpost_data.core import external, util
 from outpost_data.core.builder2.base import *
 from outpost_data.core.builder2.structure import StructureBuilder, StructurePrototype
 from outpost_data.core.consts import *
@@ -10,10 +11,21 @@ class ItemPrototype(PrototypeBase):
     KIND = 'item'
     FIELDS = ('display_name', 'description', 'icon')
 
+    def get_description(self):
+        if self.description is not None:
+            return self.description
+        else:
+            desc = external.get_item_desc(self.name)
+            if desc is not None:
+                return desc
+            else:
+                util.warn('missing description for item %r' % self.name)
+                return ''
+
     def instantiate(self):
         self.name = self.require('name') or '_%x' % id(self)
         display_name = self.require('display_name', default=self.name)
-        description = self.require('description', default='')
+        description = self.get_description()
         icon = raw_image(self.require('icon'))
         return ItemDef(self.name, display_name, description, icon)
 

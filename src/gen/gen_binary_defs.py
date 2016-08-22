@@ -221,6 +221,8 @@ class BinaryDefs:
             Field('name_len',       'I',  4,  0),
             Field('ui_name_off',    'I',  8,  0),
             Field('ui_name_len',    'I', 12,  0),
+            Field('desc_off',       'I', 16,  0),
+            Field('desc_len',       'I', 20,  0),
             ))
 
         self.convert_file(b'Items\0\0\0', 'items_client.json', c,

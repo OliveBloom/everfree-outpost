@@ -16,6 +16,8 @@ pub struct RawItemDef {
     pub name_len: usize,
     pub ui_name_off: usize,
     pub ui_name_len: usize,
+    pub desc_off: usize,
+    pub desc_len: usize,
 }
 
 pub struct ItemDef<'a> {
@@ -30,6 +32,10 @@ impl<'a> ItemDef<'a> {
 
     pub fn ui_name(&self) -> &'a str {
         self.data.string_slice(self.def.ui_name_off, self.def.ui_name_len)
+    }
+
+    pub fn desc(&self) -> &'a str {
+        self.data.string_slice(self.def.desc_off, self.def.desc_len)
     }
 }
 
