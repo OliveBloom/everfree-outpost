@@ -3,9 +3,10 @@ from outpost_data.core.consts import *
 
 
 class ItemDef(object):
-    def __init__(self, name, ui_name, image):
+    def __init__(self, name, ui_name, desc, image):
         self.name = name
         self.ui_name = ui_name
+        self.desc = desc
         self.image = image
 
         self.id = None
@@ -25,6 +26,7 @@ def build_client_json(items):
         return {
                 'name': i.name,
                 'ui_name': i.ui_name,
+                'desc': i.desc,
                 }
     return list(convert(i) for i in items)
 

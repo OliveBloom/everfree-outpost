@@ -8,13 +8,14 @@ from outpost_data.core.item import ItemDef
 
 class ItemPrototype(PrototypeBase):
     KIND = 'item'
-    FIELDS = ('display_name', 'icon')
+    FIELDS = ('display_name', 'description', 'icon')
 
     def instantiate(self):
         self.name = self.require('name') or '_%x' % id(self)
         display_name = self.require('display_name', default=self.name)
+        description = self.require('description', default='')
         icon = raw_image(self.require('icon'))
-        return ItemDef(self.name, display_name, icon)
+        return ItemDef(self.name, display_name, description, icon)
 
 def make_structure_icon(orig):
     w, h = orig.size
@@ -27,6 +28,7 @@ class ItemBuilder(BuilderBase):
     PROTO_CLASS = ItemPrototype
 
     display_name = dict_modifier('display_name')
+    description = dict_modifier('description')
 
     @dict_setter
     def icon(self, icon):
