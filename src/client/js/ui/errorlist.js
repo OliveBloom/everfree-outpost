@@ -14,7 +14,18 @@ ErrorList.prototype.attach = function(w) {
     w.onerror = function(msg, url, line, col, err) {
         var last_slash = url.lastIndexOf('/');
         var text = [url.substr(last_slash + 1), line, col, ' '].join(':') + msg;
-        var dom = util.element('div', ['text=' + text]);
-        this_.toast.add({ dom: dom });
+
+        var prev = this_.toast.last();
+        if (prev != null && prev.text == text) {
+            ++prev.count;
+            prev.dom.textContent = prev.text + ' (' + prev.count + ')';
+        } else {
+            var dom = util.element('div', ['text=' + text]);
+            this_.toast.add({
+                dom: dom,
+                text: text,
+                count: 1,
+            });
+        }
     };
 };

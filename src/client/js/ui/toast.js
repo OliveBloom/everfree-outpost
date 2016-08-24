@@ -11,18 +11,19 @@ function ToastList(cls, max, timeout) {
 }
 exports.ToastList = ToastList;
 
-ToastList.prototype.add = function(row) {
+ToastList.prototype.add = function(item) {
     if (this.items.length() >= this.max) {
         this._remove();
     }
 
-    var item = {
-        dom: row.dom,
-        timestamp: Date.now(),
-    };
+    item.timestamp = Date.now();
     this.items.enqueue(item);
     this.dom.appendChild(item.dom);
     this._updateTimer();
+};
+
+ToastList.prototype.last = function() {
+    return this.items.peek_back();
 };
 
 ToastList.prototype._remove = function() {
