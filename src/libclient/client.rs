@@ -14,7 +14,6 @@ use graphics::renderer::Renderer;
 
 use physics;
 use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE};
-use physics::Shape;
 use physics::v3::{V3, V2, Vn, scalar, Region};
 use common::Gauge;
 use common_movement::InputBits;
@@ -306,7 +305,7 @@ impl<'d, P: Platform> Client<'d, P> {
         let block_data = self.data.blocks();
         self.terrain_shape.set_shape_in_region_by(chunk_bounds, 0, |pos| {
             let b = blocks[chunk_bounds.index(pos)];
-            block_data[b as usize].shape
+            block_data[b as usize].flags().shape()
         });
 
         // Invalidate cached geometry

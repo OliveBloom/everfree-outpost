@@ -10,9 +10,9 @@ from outpost_data.core.loader import TimeIt
 
 
 class BlockDef(object):
-    def __init__(self, name, shape, tiles):
+    def __init__(self, name, flags, tiles):
         self.name = name
-        self.shape = shape
+        self.flags = flags
         self.tiles = tiles
 
         self.light_color = None
@@ -51,7 +51,7 @@ def build_sheet(blocks):
 def build_client_json(blocks):
     def convert(b):
         dct = {
-                'shape': SHAPE_ID[b.shape],
+                'flags': b.flags,
                 }
         for k in BLOCK_SIDES:
             if k in b.tile_ids:
@@ -71,7 +71,7 @@ def build_server_json(blocks):
     def convert(b):
         return {
                 'name': b.name,
-                'shape': b.shape,
+                'flags': b.flags,
                 }
 
     return list(convert(b) for b in blocks)

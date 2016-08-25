@@ -10,6 +10,9 @@ use std::prelude::v1::*;
 #[cfg(not(asmjs))] #[macro_use] extern crate log;
 
 #[macro_use] extern crate bitflags;
+extern crate common_types;
+
+pub use common_types::Shape;
 
 use v3::V3;
 
@@ -31,49 +34,6 @@ pub const CHUNK_MASK: i32 = CHUNK_SIZE - 1;
 pub const LOCAL_BITS: usize = 3;
 pub const LOCAL_SIZE: i32 = 1 << LOCAL_BITS;
 pub const LOCAL_MASK: i32 = LOCAL_SIZE - 1;
-
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[repr(u8)]
-pub enum Shape {
-    Empty = 0,
-    Floor = 1,
-    Solid = 2,
-    //RampE = 3,
-    //RampW = 4,
-    //RampS = 5,
-    RampN = 6,
-}
-
-impl Shape {
-    pub fn from_primitive(i: usize) -> Option<Shape> {
-        use self::Shape::*;
-        let s = match i {
-            0 => Empty,
-            1 => Floor,
-            2 => Solid,
-            6 => RampN,
-            // TODO: add ramp variants once they are actually supported
-            _ => return None,
-        };
-        Some(s)
-    }
-
-    pub fn is_ramp(&self) -> bool {
-        use self::Shape::*;
-        match *self {
-            RampN => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        match *self {
-            Shape::Empty => true,
-            _ => false,
-        }
-    }
-}
 
 
 pub trait ShapeSource {

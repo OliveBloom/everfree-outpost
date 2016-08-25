@@ -6,9 +6,45 @@ use std::str;
 
 use physics::Shape;
 use physics::v3::V3;
+use common_types::BlockFlags;
 
-use graphics::types::{BlockData, StructureTemplate, TemplatePart, TemplateVertex};
+use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
 use util;
+
+
+/// Tile numbers used to display a particular block.
+#[derive(Clone, Copy)]
+pub struct BlockDef {
+    // 0
+    pub front: u16,
+    pub back: u16,
+    pub top: u16,
+    pub bottom: u16,
+
+    // 8
+    pub light_color: (u8, u8, u8),
+    pub _pad1: u8,
+    pub light_radius: u16,
+    pub raw_flags: u16,
+
+    // 16
+}
+
+impl BlockDef {
+    pub fn tile(&self, side: usize) -> u16 {
+        match side {
+            0 => self.front,
+            1 => self.back,
+            2 => self.top,
+            3 => self.bottom,
+            _ => panic!("invalid side number"),
+        }
+    }
+
+    pub fn flags(&self) -> BlockFlags {
+        BlockFlags::from_bits_truncate(self.raw_flags)
+    }
+}
 
 
 pub struct RawItemDef {
@@ -212,7 +248,7 @@ macro_rules! gen_data {
 }
 
 gen_data! {
-    blocks (b"Blocks\0\0"): BlockData,
+    blocks (b"Blocks\0\0"): BlockDef,
     raw_items (b"Items\0\0\0"): RawItemDef,
 
     templates (b"StrcDefs"): StructureTemplate,

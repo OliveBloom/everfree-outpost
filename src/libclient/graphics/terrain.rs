@@ -1,6 +1,7 @@
 use std::prelude::v1::*;
 
-use graphics::types::{BlockData, BlockChunk};
+use data::BlockDef;
+use graphics::types::BlockChunk;
 
 use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
@@ -56,14 +57,14 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
 
 
 pub struct GeomGen<'a> {
-    block_data: &'a [BlockData],
+    block_data: &'a [BlockDef],
     chunk: &'a BlockChunk,
     cpos: V2,
     iter: RegionPoints<V3>,
 }
 
 impl<'a> GeomGen<'a> {
-    pub fn new(block_data: &'a [BlockData],
+    pub fn new(block_data: &'a [BlockDef],
                chunk: &'a BlockChunk,
                cpos: V2) -> GeomGen<'a> {
         GeomGen {

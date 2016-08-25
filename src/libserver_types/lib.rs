@@ -10,7 +10,6 @@ use libcommon_util::Bytes;
 
 pub use libcommon_types::*;
 pub use libphysics::v3::{V2, V3, Vn, scalar, Region, Region2};
-pub use libphysics::Shape;
 
 
 // Stable IDs, for use with StableIdMap.

@@ -6,81 +6,9 @@ use libserver_types::*;
 use super::ParseError;
 
 
-bitflags! {
-    pub flags BlockFlags: u16 {
-        // Cell parts. In a given cell, there can be at most one block for each part.
-        //
-        // There are two types of floor, called "floor" and "subfloor".  Terrain uses only
-        // "subfloor", and structures use only "floor".  This allows player-built floors to overlap
-        // the terrain.
-        /// The block includes a subfloor (identical to a normal floor, but doesn't conflict).
-        const B_SUBFLOOR =      0x0001,
-        /// The block includdes a floor.
-        const B_FLOOR =         0x0002,
-        /// The block includes a solid component.
-        const B_SOLID =         0x0004,
-        const B_PART_MASK =     0x0007,
-
-        /// If `B_SOLID` is set, these bits determine the actual shape for physics purposes.
-        /// Otherwise, it's determined by the presence of `B_SUBFLOOR` and `B_FLOOR`.
-        const B_SHAPE_MASK =    0xf000,
-
-        /// The block stops vision.
-        const B_OPAQUE =        0x0008,
-        /// The block applies a movespeed adjustment to characters standing in it.  The adjustment
-        /// amount is stored separately.
-        const B_SPEED_ADJUST =  0x0010,
-        /// Makes the block "count" for purposes of player interaction hit-tests, and for
-        /// determining whether two structures overlap in the same layer.
-        ///
-        /// Note that if `B_OCCUPIED` is unset for a structure block, then the remaining flags will
-        /// have no effect.
-        const B_OCCUPIED =      0x0020,
-        /// The block can have addons attached to it.
-        const B_ADDON_TARGET =  0x0040,
-        /// The block is (part of) an addon, which can be attached to `B_ADDON_TARGET`s.
-        const B_IS_ADDON =      0x0080,
-
-        //const B_HAS_SCRIPT =    0x0100,   // NYI
-    }
-}
-
-impl BlockFlags {
-    pub fn from_shape(s: Shape) -> BlockFlags {
-        match s {
-            Shape::Empty => BlockFlags::empty(),
-            Shape::Floor => B_FLOOR,
-            _ => B_SOLID | BlockFlags::from_bits_truncate((s as u8 as u16) << 12),
-        }
-    }
-
-    pub fn shape(&self) -> Shape {
-        if self.contains(B_SOLID) {
-            let shape_num = ((*self & B_SHAPE_MASK).bits() >> 12) as usize;
-            Shape::from_primitive(shape_num)
-                .expect("invalid shape value in B_SHAPE_MASK")
-        } else if self.contains(B_FLOOR) || self.contains(B_SUBFLOOR) {
-            Shape::Floor
-        } else {
-            Shape::Empty
-        }
-    }
-
-    pub fn occupied(&self) -> bool {
-        self.contains(B_OCCUPIED)
-    }
-
-    pub fn parts(&self) -> BlockFlags {
-        *self & B_PART_MASK
-    }
-}
-
-
 pub struct BlockDef {
     pub name: String,
     pub flags: BlockFlags,
-    /// Speed adjustment percentage.  100 = normal speed.
-    pub speed_adjust: u8,
 }
 
 pub struct BlockData {
@@ -99,26 +27,18 @@ impl BlockData {
         for (i, block) in blocks.iter().enumerate() {
             let name = get_convert!(block, "name", as_string,
                                     "for block {}", i);
-            let shape_str = get_convert!(block, "shape", as_string,
+            let raw_flags = get_convert!(block, "flags", as_i64,
                                          "for block {} ({})", i, name);
 
-            let shape = match shape_str {
-                "empty" => Shape::Empty,
-                "floor" => Shape::Floor,
-                "solid" => Shape::Solid,
-                "ramp_n" => Shape::RampN,
-                _ => return fail!("invalid shape \"{}\" for block {} ({})",
-                                  shape_str, i, name),
-            };
-            let flags = match shape {
-                Shape::Floor => B_SUBFLOOR,
-                _ => BlockFlags::from_shape(shape),
+            let flags = match BlockFlags::from_bits(raw_flags as _) {
+                Some(x) => x,
+                None => return fail!("invalid flags 0x{:x} for block {} ({})",
+                                     raw_flags, i, name),
             };
 
             block_defs.push(BlockDef {
                 name: name.to_owned(),
                 flags: flags,
-                speed_adjust: 100,
             });
             name_to_id.insert(name.to_owned(), i as BlockId);
         }

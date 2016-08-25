@@ -8,7 +8,7 @@ use std::collections::hash_map::{HashMap, Entry};
 use types::*;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE, CHUNK_MASK};
 
-use data::{Data, StructureTemplate, BlockFlags};
+use data::{Data, StructureTemplate};
 
 
 pub struct TerrainCache {

@@ -209,20 +209,20 @@ class BinaryDefs:
             Field('light_r',    'B',  8,  0),
             Field('light_g',    'B',  9,  0),
             Field('light_b',    'B', 10,  0),
-            Field('shape',      'B', 11,  0),
             Field('light_radius', 'H', 12,  0),
+            Field('flags',      'H', 14),
             ))
 
         self.convert_file(b'Blocks\0\0', 'blocks_client.json', c)
 
     def convert_items(self):
         c = Converter(16, (
-            Field('name_off',       'I',  0,  0),
-            Field('name_len',       'I',  4,  0),
-            Field('ui_name_off',    'I',  8,  0),
-            Field('ui_name_len',    'I', 12,  0),
-            Field('desc_off',       'I', 16,  0),
-            Field('desc_len',       'I', 20,  0),
+            Field('name_off',       'I',  0),
+            Field('name_len',       'I',  4),
+            Field('ui_name_off',    'I',  8),
+            Field('ui_name_len',    'I', 12),
+            Field('desc_off',       'I', 16, 0),
+            Field('desc_len',       'I', 20, 0),
             ))
 
         self.convert_file(b'Items\0\0\0', 'items_client.json', c,

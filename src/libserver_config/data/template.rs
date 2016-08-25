@@ -4,7 +4,6 @@ use rustc_serialize::json::Json;
 use libserver_types::*;
 
 use super::ParseError;
-use data::block::{BlockFlags, B_OCCUPIED};
 
 pub struct StructureTemplate {
     pub name: String,

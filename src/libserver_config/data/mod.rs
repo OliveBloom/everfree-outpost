@@ -1,6 +1,6 @@
 use rustc_serialize::json::Json;
 
-pub use self::block::{BlockData, BlockDef, BlockFlags};
+pub use self::block::{BlockData, BlockDef};
 pub use self::item::ItemData;
 pub use self::recipe::{Recipe, RecipeData};
 pub use self::template::{StructureTemplate, StructureTemplates};

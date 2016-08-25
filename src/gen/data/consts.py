@@ -11,8 +11,32 @@ SHAPE_ID = {
         'ramp_w': 4,
         'ramp_s': 5,
         'ramp_n': 6,
-        'ramp_top': 7,
         }
+
+
+S_EMPTY =           0
+S_FLOOR =           1
+S_SOLID =           2
+S_RAMP_E =          3
+S_RAMP_W =          4
+S_RAMP_S =          5
+S_RAMP_N =          6
+
+
+B_SUBFLOOR =        0x0001
+B_FLOOR =           0x0002
+B_SOLID =           0x0004
+B_PART_MASK =       0x0007
+
+B_SHAPE_MASK =      0xf000
+
+B_OPAQUE =          0x0008
+B_NON_WALKABLE =    0x0010
+B_OCCUPIED =        0x0020
+
+B_SOLID_SHAPE =     lambda s: B_SOLID | (s << 12)
+
+
 
 BLOCK_SIDES = ('front', 'back', 'top', 'bottom')
 
