@@ -623,7 +623,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.framebuffers.world_entity_depth,
             ])
             .output(&self.framebuffers.light)
-            .blend_mode(BlendMode::Add)
+            .blend_mode(BlendMode::MultiplyInv)
             .draw(&mut self.shaders.light_static);
 
         DrawArgs::<GL>::new()
@@ -637,7 +637,7 @@ impl<GL: Context> Renderer<GL> {
                 &self.framebuffers.world_entity_depth,
             ])
             .output(&self.framebuffers.light)
-            .blend_mode(BlendMode::Add)
+            .blend_mode(BlendMode::MultiplyInv)
             .draw(&mut self.shaders.light_static);
     }
 

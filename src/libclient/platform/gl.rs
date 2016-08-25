@@ -128,6 +128,7 @@ pub enum BlendMode {
     None = 0,
     Alpha = 1,
     Add = 2,
+    MultiplyInv = 3,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

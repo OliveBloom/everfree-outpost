@@ -436,16 +436,20 @@ AsmGl.prototype.setDepthTest = function(mode) {
 AsmGl.prototype.setBlendMode = function(mode) {
     var gl = this.gl;
     switch (mode) {
-        case 0:
+        case 0:     // None
             gl.disable(gl.BLEND);
             break;
-        case 1:
+        case 1:     // Alpha
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
             break;
-        case 2:
+        case 2:     // Add
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.ONE, gl.ONE);
+            break;
+        case 3:     // MultiplyInv
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.ONE_MINUS_DST_COLOR, gl.ONE);
             break;
     }
 };
