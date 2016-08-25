@@ -37,6 +37,8 @@ void main(void) {
     vec3 off = localPos3 - localCenter;
     float dist = length(off);
 
-    float ratio = 1.0 - (dist * dist) / (radius * radius);
-    gl_FragColor = vec4(color * ratio, ratio);
+    float ratio = max(0.0, 1.0 - (dist * dist) / (radius * radius));
+    vec4 light = vec4(color * ratio, ratio);
+    light = (light * 0.9 + 0.1) * light;
+    gl_FragColor = light;
 }

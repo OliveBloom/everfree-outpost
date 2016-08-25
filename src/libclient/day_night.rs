@@ -79,12 +79,19 @@ impl DayNight {
             (mix / (t1 - t0)) as u8
         };
 
+        let curve = |a: u8| -> u8 {
+            // This is like the adjustment at the end of light2.frag, but much less aggressive.
+            // The ambient light at night is already quite dark, it doesn't need to be much darker.
+            let a = a as u32;
+            ((a * 50 + 255 * 50) * a / (100 * 255)) as u8
+        };
+
         let (r1, g1, b1) = data.day_night_colors()[idx as usize];
         let (r2, g2, b2) = data.day_night_colors()[idx as usize + 1];
 
-        let r = blend(r1, r2);
-        let g = blend(g1, g2);
-        let b = blend(b1, b2);
+        let r = curve(blend(r1, r2));
+        let g = curve(blend(g1, g2));
+        let b = curve(blend(b1, b2));
 
         // Calculate grayscale intensity from RGB
         let i = ((2126 * r as u32 +
