@@ -1,4 +1,5 @@
-use physics::{CHUNK_BITS, Shape};
+use physics::CHUNK_BITS;
+use physics::v3::V3;
 use terrain::LOCAL_BITS;
 
 
@@ -34,6 +35,14 @@ pub struct StructureTemplate {
     pub light_radius: u16,
 
     // 20
+}
+
+impl StructureTemplate {
+    pub fn size(&self) -> V3 {
+        V3::new(self.size.0 as i32,
+                self.size.1 as i32,
+                self.size.2 as i32)
+    }
 }
 
 pub struct TemplatePart {

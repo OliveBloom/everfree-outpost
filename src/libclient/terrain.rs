@@ -1,8 +1,13 @@
+use types::*;
 use std::mem;
 
 use physics::v3::{V3, V2, scalar, Region};
-use physics::{Shape, ShapeSource};
+use physics::ShapeSource;
 use physics::{CHUNK_SIZE, CHUNK_BITS, CHUNK_MASK};
+
+use data::Data;
+use structures::Structures;
+
 
 pub const NUM_LAYERS: usize = 4;
 
@@ -23,6 +28,14 @@ impl ChunkShape {
 
         for shape in self.merged.iter_mut() {
             *shape = Shape::Empty;
+        }
+    }
+
+    fn reset_structure_layers(&mut self) {
+        for layer in self.layers.iter_mut().skip(1) {
+            for shape in layer.iter_mut() {
+                *shape = Shape::Empty;
+            }
         }
     }
 
@@ -48,7 +61,6 @@ impl ChunkShape {
         for pos in inner_bounds.points() {
             self.layers[layer][chunk_bounds.index(pos)] = f(pos);
         }
-        self.refresh(inner_bounds);
     }
 }
 
@@ -72,6 +84,8 @@ pub const LOCAL_MASK: i32 = LOCAL_SIZE - 1;
 
 pub struct TerrainShape {
     chunks: [ChunkShape; 1 << (2 * LOCAL_BITS)],
+    structures_valid: [bool; 1 << (2 * LOCAL_BITS)],
+    any_structures_invalid: bool,
 }
 
 impl ShapeSource for TerrainShape {
@@ -93,7 +107,11 @@ impl ShapeSource for TerrainShape {
 impl TerrainShape {
     pub fn new() -> TerrainShape {
         // 0 == Shape::Empty
-        unsafe { mem::zeroed() }
+        TerrainShape {
+            chunks: unsafe { mem::zeroed() },
+            structures_valid: [true; 1 << (2 * LOCAL_BITS)],
+            any_structures_invalid: false,
+        }
     }
 
     pub fn clear(&mut self) {
@@ -102,24 +120,91 @@ impl TerrainShape {
         }
     }
 
-    pub fn set_shape_in_region_by<F>(&mut self, bounds: Region, layer: usize, f: F)
-            where F: Fn(V3) -> Shape {
+    pub fn refresh_structures(&mut self, structures: &Structures, data: &Data) {
+        if !self.any_structures_invalid {
+            return;
+        }
+
+        let local_bounds = Region::<V2>::new(scalar(0), scalar(LOCAL_SIZE));
+        let chunk_bounds = Region::sized(scalar(CHUNK_SIZE));
+
+        for cpos in local_bounds.points() {
+            let idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
+            if !self.structures_valid[idx] {
+                self.chunks[local_bounds.index(cpos)].reset_structure_layers();
+            }
+        }
+
+        for (_, s) in structures.iter() {
+            self.add_structure_impl(data, s.pos(), s.template_id, true);
+        }
+
+        for cpos in local_bounds.points() {
+            let idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
+            if !self.structures_valid[idx] {
+                self.chunks[idx].refresh(chunk_bounds);
+                self.structures_valid[idx] = true;
+            }
+        }
+        self.any_structures_invalid = false;
+    }
+
+    pub fn set_terrain(&mut self, data: &Data, cpos: V2, blocks: &[BlockId]) {
+        let local_bounds = Region::sized(scalar(LOCAL_SIZE));
+        let chunk_bounds = Region::sized(scalar(CHUNK_SIZE));
+        let idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
+        self.chunks[idx].set_shape_in_region_by(chunk_bounds, 0, |pos| {
+            let block = blocks[chunk_bounds.index(pos)];
+            data.block(block).flags().shape()
+        });
+        self.chunks[idx].refresh(chunk_bounds);
+    }
+
+    fn add_structure_impl(&mut self,
+                          data: &Data,
+                          pos: V3,
+                          template_id: TemplateId,
+                          refreshing: bool) {
+        let t = data.template(template_id);
+        let shape = data.template_shape(template_id);
+
+        let bounds = Region::sized(t.size()) + pos;
         let cpos_bounds = bounds.reduce().div_round_signed(CHUNK_SIZE);
-        let local_bounds = Region::new(scalar(0), scalar(LOCAL_SIZE));
+        let local_bounds = Region::sized(scalar(LOCAL_SIZE));
+
         for cpos in cpos_bounds.points() {
+            let idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
+            if !refreshing {
+                if !self.structures_valid[idx] { continue; }
+            } else {
+                if self.structures_valid[idx] { continue; }
+            }
+
             let adj = (cpos * scalar(CHUNK_SIZE)).extend(0);
-            let adj_bounds = bounds - adj;
-            let cpos = cpos & scalar(LOCAL_MASK);
-            self.chunks[local_bounds.index(cpos)].set_shape_in_region_by(
-                adj_bounds, layer, |pos| f(pos + adj));
+            self.chunks[idx].set_shape_in_region_by(bounds - adj, 1 + t.layer as usize, |pos| {
+                shape[bounds.index(pos + adj)]
+            });
+            if !refreshing {
+                self.chunks[idx].refresh(bounds - adj);
+            }
         }
     }
 
-    pub fn set_shape_in_region(&mut self, bounds: Region, layer: usize, shape: &[Shape]) {
-        self.set_shape_in_region_by(bounds, layer, |pos| shape[bounds.index(pos)]);
+    pub fn add_structure(&mut self, data: &Data, pos: V3, template_id: TemplateId) {
+        self.add_structure_impl(data, pos, template_id, false);
     }
 
-    pub fn fill_shape_in_region(&mut self, bounds: Region, layer: usize, shape: Shape) {
-        self.set_shape_in_region_by(bounds, layer, |_pos| shape);
+    pub fn remove_structure(&mut self, data: &Data, pos: V3, template_id: TemplateId) {
+        let t = data.template(template_id);
+
+        let bounds = Region::sized(t.size()) + pos;
+        let cpos_bounds = bounds.reduce().div_round_signed(CHUNK_SIZE);
+        let local_bounds = Region::sized(scalar(LOCAL_SIZE));
+
+        for cpos in cpos_bounds.points() {
+            let idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
+            self.structures_valid[idx] = false;
+            self.any_structures_invalid = true;
+        }
     }
 }

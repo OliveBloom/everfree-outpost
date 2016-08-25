@@ -3,6 +3,8 @@ use std::collections::btree_map::{self, BTreeMap};
 use std::collections::Bound;
 use std::ops::Index;
 
+use physics::v3::V3;
+
 
 #[derive(Clone, Copy)]
 pub struct Structure {
@@ -14,6 +16,14 @@ pub struct Structure {
     /// Timestamp indicating when to start the structure's one-shot animation.  This field is only
     /// relevant if the structure's template defines such an animation.
     pub oneshot_start: u16,
+}
+
+impl Structure {
+    pub fn pos(&self) -> V3 {
+        V3::new(self.pos.0 as i32,
+                self.pos.1 as i32,
+                self.pos.2 as i32)
+    }
 }
 
 

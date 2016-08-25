@@ -25,7 +25,6 @@ use debug::Debug;
 use entity::{self, Entity, Entities};
 use graphics::renderer::Scene;
 use graphics::renderer::ONESHOT_MODULUS;
-use graphics::types::StructureTemplate;
 use input::{Key, Modifiers, KeyEvent, Button, ButtonEvent, EventStatus};
 use inventory::{Inventories, Item};
 use misc::Misc;
@@ -300,39 +299,13 @@ impl<'d, P: Platform> Client<'d, P> {
         rle16_decode(data, blocks);
 
         // Update self.terrain_shape
-        let chunk_bounds = Region::new(scalar(0), scalar(CHUNK_SIZE)) +
-                           (cpos * scalar(CHUNK_SIZE)).extend(0);
-        let block_data = self.data.blocks();
-        self.terrain_shape.set_shape_in_region_by(chunk_bounds, 0, |pos| {
-            let b = blocks[chunk_bounds.index(pos)];
-            block_data[b as usize].flags().shape()
-        });
+        self.terrain_shape.set_terrain(&self.data, cpos, blocks);
 
         // Invalidate cached geometry
         self.renderer.invalidate_terrain_geometry();
     }
 
     // Structure tracking
-
-    pub fn add_structure_shape(&mut self,
-                               t: &StructureTemplate,
-                               pos: (u8, u8, u8)) {
-        let pos = util::unpack_v3(pos);
-        let size = util::unpack_v3(t.size);
-        let bounds = Region::new(pos, pos + size);
-        let base = t.shape_idx as usize;
-        let shape = &self.data.template_shapes()[base .. base + bounds.volume() as usize];
-        self.terrain_shape.set_shape_in_region(bounds, 1 + t.layer as usize, shape);
-    }
-
-    pub fn remove_structure_shape(&mut self,
-                                  t: &StructureTemplate,
-                                  pos: (u8, u8, u8)) {
-        let pos = util::unpack_v3(pos);
-        let size = util::unpack_v3(t.size);
-        let bounds = Region::new(pos, pos + size);
-        self.terrain_shape.fill_shape_in_region(bounds, 1 + t.layer as usize, Shape::Empty);
-    }
 
     pub fn structure_appear(&mut self,
                             id: StructureId,
@@ -349,10 +322,10 @@ impl<'d, P: Platform> Client<'d, P> {
         self.structures.insert(id, pos, template_id, oneshot_start);
 
         // Update self.terrain_cache
-        let t = self.data.template(template_id);
-        self.add_structure_shape(t, pos);
+        self.terrain_shape.add_structure(&self.data, tile_pos, template_id);
 
         // Invalidate cached geometry
+        let t = self.data.template(template_id);
         self.renderer.invalidate_structure_geometry();
         if t.flags.contains(HAS_LIGHT) {
             self.renderer.invalidate_structure_light_geometry();
@@ -365,10 +338,10 @@ impl<'d, P: Platform> Client<'d, P> {
         let s = self.structures.remove(id);
 
         // Update self.terrain_cache
-        let t = self.data.template(s.template_id);
-        self.remove_structure_shape(t, s.pos);
+        self.terrain_shape.remove_structure(&self.data, s.pos(), s.template_id);
 
         // Invalidate cached geometry
+        let t = self.data.template(s.template_id);
         self.renderer.invalidate_structure_geometry();
         if t.flags.contains(HAS_LIGHT) {
             self.renderer.invalidate_structure_light_geometry();
@@ -380,7 +353,7 @@ impl<'d, P: Platform> Client<'d, P> {
                              template_id: TemplateId) {
         let (pos, old_t) = {
             let s = &self.structures[id];
-            (s.pos,
+            (s.pos(),
              self.data.template(s.template_id))
         };
         let new_t = self.data.template(template_id);
@@ -391,8 +364,8 @@ impl<'d, P: Platform> Client<'d, P> {
         self.structures.replace(id, template_id, oneshot_start);
 
         // Update self.terrain_cache
-        self.remove_structure_shape(old_t, pos);
-        self.add_structure_shape(new_t, pos);
+        self.terrain_shape.remove_structure(&self.data, pos, template_id);
+        self.terrain_shape.add_structure(&self.data, pos, template_id);
 
         // Invalidate cached geometry
         self.renderer.invalidate_structure_geometry();
@@ -833,6 +806,7 @@ impl<'d, P: Platform> Client<'d, P> {
         // Update player position
         // This needs to happen before the camera position is set, in case the motion changed
         // between the previous frame and now.
+        self.terrain_shape.refresh_structures(&self.structures, &self.data);
         self.pawn.update_movement(now,
                                   self.data,
                                   &*self.terrain_shape,

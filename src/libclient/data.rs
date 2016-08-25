@@ -6,7 +6,7 @@ use std::str;
 
 use physics::Shape;
 use physics::v3::V3;
-use common_types::BlockFlags;
+use common_types::{BlockFlags, BlockId};
 
 use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
 use util;
@@ -296,6 +296,11 @@ impl Data {
         let size = util::unpack_v3(t.size);
         let volume = (size.x * size.y * size.z) as usize;
         &self.template_shapes()[base .. base + volume]
+    }
+
+
+    pub fn block(&self, id: BlockId) -> &BlockDef {
+        &self.blocks()[id as usize]
     }
 
 
