@@ -1,3 +1,12 @@
+# Release 2016-08-27
+
+New features:
+
+ * The inventory dialog now shows the name and description of the selected
+   item.
+ * Lighting is now rendered using a different formula, which produces
+   smoother-looking results.
+
 # Release 2016-08-20
 
 This release adds metal tools:
