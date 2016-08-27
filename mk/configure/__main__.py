@@ -11,6 +11,8 @@ from configure.template import template
 def build_parser():
     args = argparse.ArgumentParser()
 
+    args.add_argument('--root-dir', default=None,
+            help='root of the project source tree')
     args.add_argument('--build-dir', default=None,
             help='directory to store build files')
     args.add_argument('--dist-dir', default=None,

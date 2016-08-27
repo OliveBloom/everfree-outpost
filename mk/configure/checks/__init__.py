@@ -44,11 +44,11 @@ def pre_configure(ctx):
     ctx.info.win32 = (p == 'Windows')
 
     ctx.info.add('root_dir', 'source directory')
-    script_dir = os.path.dirname(sys.argv[0])
-    if script_dir == '':
-        ctx.info.root_dir = '.'
-    else:
+    if ctx.args.root_dir is None:
+        script_dir = os.path.dirname(sys.argv[0])
         ctx.info.root_dir = os.path.normpath(os.path.join(script_dir, '..', '..'))
+    else:
+        ctx.info.root_dir = ctx.args.root_dir
 
     ctx.info.add('in_tree', 'build is in-tree')
     ctx.info.in_tree = ctx.info.root_dir == '.' or ctx.info.root_dir == os.getcwd()
