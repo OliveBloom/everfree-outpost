@@ -59,7 +59,7 @@ pub enum ClientEvent {
 
     CreateCharacter(u32),
 
-    PathStart(LocalPos, u16),
+    PathStart(LocalPos, u16, V3, InputBits),
     PathUpdate(LocalTime, V3, InputBits),
     PathBlocked(LocalTime),
 
@@ -353,9 +353,10 @@ impl Messages {
                 Ok(Some(ClientEvent::CreateCharacter(appearance))),
 
 
-            Request::PathStart(pos, delay) => {
+            Request::PathStart(pos, delay, velocity, input) => {
                 let pos = unwrap!(opt_client).unoffset_pos(pos);
-                Ok(Some(ClientEvent::PathStart(pos, delay)))
+                let input = unwrap!(InputBits::from_bits(input));
+                Ok(Some(ClientEvent::PathStart(pos, delay, velocity.to_global(), input)))
             },
 
             Request::PathUpdate(rel_time, velocity, input) => {

@@ -265,8 +265,8 @@ impl<'d> Engine<'d> {
                 warn_on_err!(logic::client::create_character(self, cid, appearance));
             },
 
-            PathStart(pos, delay) => {
-                warn_on_err!(logic::movement::path_start(self, cid, pos, delay));
+            PathStart(pos, delay, velocity, input) => {
+                warn_on_err!(logic::movement::path_start(self, cid, pos, delay, velocity, input));
             },
 
             PathUpdate(rel_time, velocity, input) => {

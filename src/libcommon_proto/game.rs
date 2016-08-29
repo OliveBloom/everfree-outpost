@@ -22,7 +22,11 @@ protocol! {
         [0x0015] CreateCharacter { appearance: u32 },
         [0x0016] Ready {__: ()},
         [0x0017] CloseDialog {__: ()},
-        [0x0018] PathStart { pos: LocalPos, delay: u16 },
+        [0x0018] PathStart {
+            pos: LocalPos,
+            delay: u16,
+            velocity: LocalOffset,
+            input_bits: u16 },
         [0x0019] PathUpdate {
             // Truncated version of the delta between the last Start/Update and this one
             rel_time: LocalTime,

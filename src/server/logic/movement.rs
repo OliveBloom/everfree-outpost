@@ -20,13 +20,16 @@ use world::object::*;
 pub fn path_start(eng: &mut Engine,
                   cid: ClientId,
                   pos: LocalPos,
-                  delay: u16) -> StrResult<()> {
+                  delay: u16,
+                  velocity: V3,
+                  input: InputBits) -> StrResult<()> {
     let c = unwrap!(eng.world.get_client(cid));
     let e = unwrap!(c.pawn());
     let pos = pos.to_global_bits(e.pos(eng.now),
                                  TILE_BITS + CHUNK_BITS + LOCAL_BITS);
-    trace!("record start: {:?}, {:?}", e.id(), pos);
+    trace!("record start: {:?}, {:?}, {:?}, {:?}", e.id(), pos, velocity, input);
     eng.movement.queue_start(eng.now, e.id, pos, delay);
+    eng.movement.queue_update(eng.now, e.id, LocalTime(0), velocity, input);
     Ok(())
 }
 

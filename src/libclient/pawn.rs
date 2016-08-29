@@ -256,27 +256,25 @@ impl Movement {
                     // Maybe start a path
                     let old_pos = pos;
                     let pos = LocalPos::from_global(pos);
-                    info!("convert pos: {:?} -> {:?}", old_pos, pos);
+                    let velocity = LocalOffset::from_global(velocity);
                     if !self.path_active {
                         // Don't start a new path if the player isn't actually moving somewhere.
                         if dir_input {
-                            platform.send_message(Request::PathStart(pos, 64));
+                            platform.send_message(Request::PathStart(
+                                    pos, 64, velocity, input.bits()));
                             self.time_base = time;
                             self.path_active = true;
                         }
-                    }
-
-                    // Update the path
-                    let rel_time = LocalTime::from_global_32(time - self.time_base);
-                    let velocity = LocalOffset::from_global(velocity);
-                    if self.path_active {
+                    } else {
+                        // Update the path
+                        let rel_time = LocalTime::from_global_32(time - self.time_base);
                         platform.send_message(Request::PathUpdate(
                                 rel_time, velocity, input.bits()));
-                    }
 
-                    // If the player has stopped moving, that's the end of the path.
-                    if !dir_input {
-                        self.path_active = false;
+                        // If the player has stopped moving, that's the end of the path.
+                        if !dir_input {
+                            self.path_active = false;
+                        }
                     }
                 },
 
