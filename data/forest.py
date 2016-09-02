@@ -4,29 +4,34 @@ from outpost_data.core.builder2 import STRUCTURE
 from outpost_data.core.image2 import loader
 from outpost_data.outpost.lib import terrain, models
 
-TREE_SHAPE = structure.Shape(3, 3, 4, [
-        'empty', 'empty', 'empty',
-        'empty', 'solid', 'empty',
-        'empty', 'empty', 'empty',
+def mk_tree_shapes():
+    solid = B_SOLID_SHAPE(S_SOLID) | B_OCCUPIED
+    solid2 = solid | B_SUBFLOOR | B_FLOOR
+    nil = 0
 
-        'empty', 'empty', 'empty',
-        'empty', 'solid', 'empty',
-        'empty', 'empty', 'empty',
+    tree_arr = [
+        nil,    nil,    nil,
+        nil,    solid2, nil,
+        nil,    nil,    nil,
 
-        'solid', 'solid', 'solid',
-        'solid', 'solid', 'solid',
-        'solid', 'solid', 'solid',
+        nil,    nil,    nil,
+        nil,    solid2, nil,
+        nil,    nil,    nil,
 
-        'solid', 'solid', 'solid',
-        'solid', 'solid', 'solid',
-        'solid', 'solid', 'solid',
-        ])
+        solid2, solid2, solid2,
+        solid2, solid2, solid2,
+        solid2, solid2, solid2,
 
-STUMP_SHAPE = structure.Shape(3, 3, 1, [
-        'empty', 'empty', 'empty',
-        'empty', 'solid', 'empty',
-        'empty', 'empty', 'empty',
-        ])
+        solid2, solid2, solid2,
+        solid2, solid2, solid2,
+        solid2, solid2, solid2,
+        ]
+
+    return (structure.Shape(3, 3, 4, tree_arr),
+            structure.Shape(3, 3, 1, tree_arr[:9]))
+
+
+TREE_SHAPE, STUMP_SHAPE = mk_tree_shapes()
 
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)

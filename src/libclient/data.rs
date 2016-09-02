@@ -254,7 +254,8 @@ gen_data! {
     templates (b"StrcDefs"): StructureTemplate,
     template_parts (b"StrcPart"): TemplatePart,
     template_verts (b"StrcVert"): TemplateVertex,
-    template_shapes (b"StrcShap"): Shape,
+    // TODO: need a check to ensure all the flags are valid (under BlockFlags::all())
+    template_shapes (b"StrcShap"): BlockFlags,
 
     animations (b"SprtAnim"): Animation,
     sprite_layers (b"SprtLayr"): SpriteLayer,
@@ -290,7 +291,7 @@ impl Data {
         util::unpack_v3(t.size)
     }
 
-    pub fn template_shape(&self, template_id: u32) -> &[Shape] {
+    pub fn template_shape(&self, template_id: u32) -> &[BlockFlags] {
         let t = &self.templates()[template_id as usize];
         let base = t.shape_idx as usize;
         let size = util::unpack_v3(t.size);

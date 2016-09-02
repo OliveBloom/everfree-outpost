@@ -6,10 +6,18 @@ from outpost_data.core import structure
 from outpost_data.outpost.lib import meshes
 
 
-OPEN_DOOR_SHAPE = structure.Shape(3, 1, 2, (
-    'solid', 'floor', 'solid',
-    'solid', 'empty', 'solid',
-    ))
+def mk_open_door_shape():
+    solid = B_SOLID_SHAPE(S_SOLID) | B_OCCUPIED
+    solid2 = solid | B_SUBFLOOR | B_FLOOR
+    empty = B_OCCUPIED
+
+    return structure.Shape(3, 1, 2, (
+        solid,  empty,  solid,
+        solid2, empty,  solid2,
+        ))
+
+OPEN_DOOR_SHAPE = mk_open_door_shape()
+
 
 def do_dungeon_door(basename, img, door_anim):
     sb = STRUCTURE.prefixed(basename) \

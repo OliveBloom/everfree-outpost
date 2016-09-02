@@ -268,7 +268,7 @@ class BinaryDefs:
         arr = [raw_arr[i : i + 3] for i in range(0, len(raw_arr), 3)]
         self.pack_array(b'StrcVert', arr, '<3H')
 
-        self.pack_file(b'StrcShap', 'structure_shapes_client.json', 'B')
+        self.pack_file(b'StrcShap', 'structure_shapes_client.json', 'H')
 
     def convert_sprites(self):
         c = Converter(4, (

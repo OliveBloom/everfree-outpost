@@ -5,15 +5,27 @@ from outpost_data.core.structure import Shape, solid
 
 from outpost_data.outpost.lib import models
 
-OPEN_DOOR_SHAPE = Shape(3, 1, 2, [
-        'solid', 'empty', 'solid',
-        'solid', 'empty', 'solid',
-        ])
+def mk_open_door_shape():
+    solid = B_SOLID_SHAPE(S_SOLID) | B_OCCUPIED
+    solid2 = solid | B_SUBFLOOR | B_FLOOR
+    empty = B_OCCUPIED
 
-CLOSED_DOOR_SHAPE = Shape(3, 1, 2, [
-        'solid', 'solid', 'solid',
-        'solid', 'solid', 'solid',
-        ])
+    open_arr = (
+            solid,  empty,  solid,
+            solid2, empty,  solid2,
+            )
+
+    closed_arr = (
+            solid,  solid,  solid,
+            solid2, solid2, solid2,
+            )
+
+    return (Shape(3, 1, 2, open_arr),
+            Shape(3, 1, 2, closed_arr))
+
+
+OPEN_DOOR_SHAPE, CLOSED_DOOR_SHAPE = mk_open_door_shape()
+
 
 def do_wall_parts(basename, image, door_image=None, extra_parts=()):
     parts = (

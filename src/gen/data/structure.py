@@ -9,18 +9,23 @@ from outpost_data.core.consts import *
 class Shape(object):
     def __init__(self, x, y, z, arr):
         self.size = (x, y, z)
+        assert all(isinstance(s, int) for s in arr)
         self.shape_array = arr
 
 def empty(x, y, z):
-    arr = ['empty'] * (x * y * z)
+    arr = [B_OCCUPIED] * (x * y)
     return Shape(x, y, z, arr)
 
 def floor(x, y, z):
-    arr = ['floor'] * (x * y) + ['empty'] * (x * y * (z - 1))
+    assert z == 1
+    arr = [B_FLOOR | B_OCCUPIED] * (x * y)
     return Shape(x, y, z, arr)
 
 def solid(x, y, z):
-    arr = ['solid'] * (x * y * z)
+    assert z >= 1
+    s_bottom = B_SOLID_SHAPE(S_SOLID) | B_OCCUPIED
+    s_top = B_SOLID_SHAPE(S_SOLID) | B_OCCUPIED | B_SUBFLOOR | B_FLOOR
+    arr = [s_bottom] * (x * y) + [s_top] * (x * y * (z - 1))
     return Shape(x, y, z, arr)
 
 
@@ -250,7 +255,7 @@ def collect_shapes(structures):
     all_shapes = []
 
     for s in structures:
-        k = tuple(SHAPE_ID[x] for x in s.shape)
+        k = tuple(s.shape)
         if k not in idx_map:
             idx_map[k] = len(all_shapes)
             all_shapes.extend(k)
@@ -265,7 +270,6 @@ def build_client_json(structures):
     def convert(s):
         dct = {
                 'size': s.size,
-                'shape': [SHAPE_ID[x] for x in s.shape],
                 'shape_idx': s.shape_idx,
                 'part_idx': s.part_idx,
                 'part_count': len(s.parts),
@@ -325,7 +329,7 @@ def build_server_json(structures):
         return {
                 'name': s.name,
                 'size': s.size,
-                'shape': [SHAPE_ID[x] for x in s.shape],
+                'shape': s.shape,
                 'layer': s.layer,
                 }
 

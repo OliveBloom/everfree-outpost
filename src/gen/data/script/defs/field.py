@@ -1,7 +1,7 @@
 import ast
 
 from outpost_data.core.structure import \
-        empty as empty_shape, floor as floor_shape, solid as solid_shape
+        floor as floor_shape, solid as solid_shape
 from outpost_data.core.consts import *
 
 

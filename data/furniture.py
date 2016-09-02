@@ -103,7 +103,7 @@ def do_fountain(image):
 def do_stair(image):
     s = STRUCTURE.new('stair/n') \
             .mesh(STAIR_N_MESH) \
-            .shape(structure.Shape(1, 1, 1, ['ramp_n'])) \
+            .shape(structure.Shape(1, 1, 1, [B_SOLID_SHAPE(S_RAMP_N) | B_OCCUPIED])) \
             .layer(1) \
             .image(image)
     i = ITEM.from_structure(s, name='stair').display_name('Stairs')

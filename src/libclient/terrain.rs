@@ -182,7 +182,7 @@ impl TerrainShape {
 
             let adj = (cpos * scalar(CHUNK_SIZE)).extend(0);
             self.chunks[idx].set_shape_in_region_by(bounds - adj, 1 + t.layer as usize, |pos| {
-                shape[bounds.index(pos + adj)]
+                shape[bounds.index(pos + adj)].shape()
             });
             if !refreshing {
                 self.chunks[idx].refresh(bounds - adj);

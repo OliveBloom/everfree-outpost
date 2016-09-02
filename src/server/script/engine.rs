@@ -764,11 +764,17 @@ define_python_class! {
             let mut best_id = None;
             let mut best_layer = 0;
             for s in eng.world.chunk_structures(pid, chunk) {
-                if s.bounds().contains(pos) {
-                    if s.template().layer >= best_layer {
-                        best_layer = s.template().layer;
-                        best_id = Some(s.id());
-                    }
+                if !s.bounds().contains(pos) {
+                    continue;
+                }
+                let idx = s.bounds().index(pos);
+                if !s.template().shape[idx].occupied() {
+                    continue;
+                }
+
+                if s.template().layer >= best_layer {
+                    best_layer = s.template().layer;
+                    best_id = Some(s.id());
                 }
             }
             best_id
@@ -780,7 +786,15 @@ define_python_class! {
                                                layer: u8) -> Option<StructureId> {
             let chunk = pos.reduce().div_floor(scalar(CHUNK_SIZE));
             for s in eng.world.chunk_structures(pid, chunk) {
-                if s.bounds().contains(pos) && s.template().layer == layer {
+                if !s.bounds().contains(pos) {
+                    continue;
+                }
+                let idx = s.bounds().index(pos);
+                if !s.template().shape[idx].occupied() {
+                    continue;
+                }
+
+                if s.template().layer == layer {
                     return Some(s.id())
                 }
             }

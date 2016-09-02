@@ -53,13 +53,13 @@ impl StructureTemplates {
 
             let mut shape = Vec::with_capacity(shape_arr.len());
             for (j, shape_json) in shape_arr.iter().enumerate() {
-                let shape_disr = expect!(shape_json.as_i64(),
-                                         "non-integer at templates[{}].shape[{}] ({})",
-                                         i, j, name);
-                let shape_enum = expect!(Shape::from_primitive(shape_disr as usize),
-                                         "invalid shape {} at templates[{}].shape[{}] ({})",
-                                         shape_disr, i, j, name);
-                shape.push(BlockFlags::from_shape(shape_enum) | B_OCCUPIED);
+                let flags_raw = expect!(shape_json.as_i64(),
+                                        "non-integer at templates[{}].shape[{}] ({})",
+                                        i, j, name);
+                let flags = expect!(BlockFlags::from_bits(flags_raw as u16),
+                                    "invalid flags 0x{:x} at templates[{}].shape[{}] ({})",
+                                    flags_raw, i, j, name);
+                shape.push(flags);
             }
 
             info!("parsed template: {}", name);
