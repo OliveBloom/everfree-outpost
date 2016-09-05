@@ -63,9 +63,14 @@ def do_statue(image):
 def do_shelves(image):
     image = image.with_unit((32, 96))
 
+    STRUCTURE.new('shelf_collider') \
+            .parts(()) \
+            .shape(structure.solid(1, 1, 2)) \
+            .layer(1)
+
     s_base = STRUCTURE.child() \
             .mesh(SHELF_MESH) \
-            .shape(structure.solid(1, 1, 2)) \
+            .shape(structure.empty(1, 1, 2)) \
             .layer(2)
 
     s = s_base.new('cabinets').image(image.extract((0, 0)))

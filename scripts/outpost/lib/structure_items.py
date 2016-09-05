@@ -14,7 +14,13 @@ def place(e, item, template=None, ignore_ward=False):
     template = DATA.template(template if template is not None else item.name)
 
     if template.layer == LAYER_ATTACH:
-        if not check_attachment(template, e.plane(), pos):
+        print(template, _DEFAULT_BASE.get(template))
+        if check_attachment(template, e.plane(), pos):
+            pass
+        elif template in _DEFAULT_BASE:
+            s = e.plane().create_structure(pos, _DEFAULT_BASE[template])
+            print(s, s.template(), s.pos())
+        else:
             raise RuntimeError('invalid base for attachment')
 
     if e.inv('main').count(item) == 0:
@@ -31,11 +37,18 @@ def take(e, s, item, ignore_ward=False):
         ward.check(e, s.pos())
 
     item = DATA.item(item)
+    template = s.template()
+    pos = s.pos()
 
     if e.inv('main').count_space(item) == 0:
         raise RuntimeError('no space for item in inventory')
     s.destroy()
     e.inv('main').bulk_add(item, 1)
+
+    if template.layer == LAYER_ATTACH and template in _DEFAULT_BASE:
+        base = e.plane().find_structure_at_point_layer(pos, 1)
+        if base is not None and base.template() == _DEFAULT_BASE[template]:
+            base.destroy()
 
 def register(item, template=None, tool=None):
     item = DATA.item(item)
@@ -49,10 +62,13 @@ def register(item, template=None, tool=None):
 
 _ATTACH_MAP = {}
 _BASE_MAP = {}
+_DEFAULT_BASE = {}
 
-def register_attachment(template, cls):
+def register_attachment(template, cls, default_base=None):
     template = DATA.template(template)
     _ATTACH_MAP[template] = cls
+    if default_base is not None:
+        _DEFAULT_BASE[template] = DATA.template(default_base)
 
 def register_base(template, cls):
     template = DATA.template(template)
@@ -67,7 +83,7 @@ def check_attachment(template, plane, pos):
 
     s = plane.find_structure_at_point_layer(pos, 1)
     if s is None:
-        return True
+        return False
 
     cls = _ATTACH_MAP[template]
     bases = _BASE_MAP.get(cls)

@@ -6,7 +6,7 @@ from outpost_server.outpost.lib import structure_items, timed_action, tool, ward
 from outpost_server.outpost.lib.energy import energy_cost
 
 structure_items.register('bookshelf', 'bookshelf/0')
-structure_items.register_attachment('bookshelf/0', 'wall/horiz')
+structure_items.register_attachment('bookshelf/0', 'wall/horiz', 'shelf_collider')
 BOOKSHELF = [DATA.template('bookshelf/%d' % i) for i in range(3)]
 BOOK = DATA.item('book')
 

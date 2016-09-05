@@ -9,11 +9,12 @@ from outpost_data.core.consts import *
 class Shape(object):
     def __init__(self, x, y, z, arr):
         self.size = (x, y, z)
+        assert len(arr) == x * y * z
         assert all(isinstance(s, int) for s in arr)
         self.shape_array = arr
 
 def empty(x, y, z):
-    arr = [B_OCCUPIED] * (x * y)
+    arr = [B_OCCUPIED] * (x * y * z)
     return Shape(x, y, z, arr)
 
 def floor(x, y, z):

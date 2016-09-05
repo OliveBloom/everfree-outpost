@@ -24,7 +24,7 @@ def register_container(item, template, size):
 register_container('chest', 'chest', 30)
 register_container('barrel', 'barrel', 30)
 register_container('cabinets', 'cabinets', 30)
-structure_items.register_attachment('cabinets', 'wall/horiz')
+structure_items.register_attachment('cabinets', 'wall/horiz', 'shelf_collider')
 
 
 
