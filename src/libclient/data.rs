@@ -168,21 +168,67 @@ struct SectionHeader {
 
 const SUPPORTED_VERSION: (u16, u16) = (2, 0);
 
+
+/// Parameters for the CHD perfect hash function.
+pub struct ChdParams<T> {
+    /// `m` - the modulus = number of buckets for the main hash table.
+    m: u32,
+    /// `l_i` - the key used for the `i`^th bucket of the intermediate table.
+    l: [T],
+}
+
+
+unsafe trait Section {
+    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const Self;
+}
+
+// TODO: should be `T: Bytes`
+unsafe impl<T> Section for [T] {
+    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const [T] {
+        slice::from_raw_parts(ptr as *const T,
+                              len / mem::size_of::<T>())
+    }
+}
+
+unsafe impl Section for str {
+    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const str {
+        let bytes = <[u8] as Section>::from_bytes(ptr, len);
+        str::from_utf8(&*bytes).unwrap()
+    }
+}
+
+// TODO: should be `T: Bytes`
+unsafe impl<T> Section for ChdParams<T> {
+    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const ChdParams<T> {
+        let dummy_slice: *const [u8] = slice::from_raw_parts(4096 as *const u8, 0);
+        let dummy_params: *const ChdParams<T> = mem::transmute(dummy_slice);
+        let offset = mem::size_of_val(&*dummy_params);
+
+        let adj_len = len - offset;
+        let slice = slice::from_raw_parts(ptr as *const T,
+                                          adj_len / mem::size_of::<T>());
+        let params: &ChdParams<T> = mem::transmute(slice);
+        // `m` and `r` (= l.len()) must be powers of two.
+        assert!(params.m.count_ones() == 1);
+        assert!(params.l.len().count_ones() == 1);
+        params
+    }
+}
+
+
 macro_rules! gen_data {
     ($($name:ident ($sect_name:pat): $ty:ty,)*) => {
         pub struct Data {
             // `raw` is never referenced directly, but holds ownership for the other fields.
             #[allow(dead_code)]
             raw: Box<[u8]>,
-            strings: *const str,
 
-            $( $name: *const [$ty], )*
+            $( $name: *const $ty, )*
         }
 
         impl Data {
             pub fn new(raw: Box<[u8]>) -> Data {
-                let mut strings = None;
-                $( let mut $name: Option<*const [$ty]> = None; )*
+                $( let mut $name: Option<*const $ty> = None; )*
 
                 unsafe {
                     let ptr = raw.as_ptr();
@@ -200,18 +246,11 @@ macro_rules! gen_data {
 
                     for s in sections {
                         match &s.name {
-                            b"Strings\0" => {
-                                let bytes = slice::from_raw_parts(ptr.offset(s.offset as isize),
-                                                                  s.len as usize);
-                                let s = str::from_utf8(bytes).unwrap();
-                                strings = Some(s);
-                            },
-
                             $(
                                 $sect_name => {
-                                    $name = Some(slice::from_raw_parts(
-                                        ptr.offset(s.offset as isize) as *const $ty,
-                                        s.len as usize / mem::size_of::<$ty>()));
+                                    $name = Some(<$ty as Section>::from_bytes(
+                                        ptr.offset(s.offset as isize),
+                                        s.len as usize));
                                 },
                             )*
 
@@ -224,19 +263,13 @@ macro_rules! gen_data {
 
                 Data {
                     raw: raw,
-                    strings: strings.expect(
-                        concat!("missing section: ", stringify!(b"Strings\0"))),
                     $( $name: $name.expect(
                         concat!("missing section: ", stringify!($sect_name))), )*
                 }
             }
 
-            pub fn strings<'a>(&'a self) -> &'a str {
-                unsafe { &*self.strings }
-            }
-
             $(
-                pub fn $name<'a>(&'a self) -> &'a [$ty] {
+                pub fn $name<'a>(&'a self) -> &'a $ty {
                     unsafe { &*self.$name }
                 }
             )*
@@ -245,31 +278,37 @@ macro_rules! gen_data {
 }
 
 gen_data! {
-    blocks (b"Blocks\0\0"): BlockDef,
-    raw_items (b"Items\0\0\0"): RawItemDef,
+    strings (b"Strings\0"): str,
 
-    templates (b"StrcDefs"): StructureTemplate,
-    template_parts (b"StrcPart"): TemplatePart,
-    template_verts (b"StrcVert"): TemplateVertex,
+    blocks (b"Blocks\0\0"): [BlockDef],
+    raw_items (b"Items\0\0\0"): [RawItemDef],
+
+    templates (b"StrcDefs"): [StructureTemplate],
+    template_parts (b"StrcPart"): [TemplatePart],
+    template_verts (b"StrcVert"): [TemplateVertex],
     // TODO: need a check to ensure all the flags are valid (under BlockFlags::all())
-    template_shapes (b"StrcShap"): BlockFlags,
+    template_shapes (b"StrcShap"): [BlockFlags],
 
-    animations (b"SprtAnim"): Animation,
-    sprite_layers (b"SprtLayr"): SpriteLayer,
-    sprite_graphics (b"SprtGrfx"): SpriteGraphics,
+    animations (b"SprtAnim"): [Animation],
+    sprite_layers (b"SprtLayr"): [SpriteLayer],
+    sprite_graphics (b"SprtGrfx"): [SpriteGraphics],
 
-    recipes (b"RcpeDefs"): RawRecipeDef,
-    recipe_items (b"RcpeItms"): RecipeItem,
+    recipes (b"RcpeDefs"): [RawRecipeDef],
+    recipe_items (b"RcpeItms"): [RecipeItem],
 
-    day_night_phases (b"DyNtPhas"): DayNightPhase,
-    day_night_colors (b"DyNtColr"): (u8, u8, u8),
+    day_night_phases (b"DyNtPhas"): [DayNightPhase],
+    day_night_colors (b"DyNtColr"): [(u8, u8, u8)],
 
-    pony_layer_table (b"XPonLayr"): u8,
-    physics_anim_table (b"XPhysAnm"): [u16; 8],
-    anim_dir_table (b"XAnimDir"): u8,
-    special_anims (b"XSpcAnim"): u16,
-    special_layers (b"XSpcLayr"): u8,
-    special_graphics (b"XSpcGrfx"): u16,
+    pony_layer_table (b"XPonLayr"): [u8],
+    physics_anim_table (b"XPhysAnm"): [[u16; 8]],
+    anim_dir_table (b"XAnimDir"): [u8],
+    special_anims (b"XSpcAnim"): [u16],
+    special_layers (b"XSpcLayr"): [u8],
+    special_graphics (b"XSpcGrfx"): [u16],
+
+    index_table_items (b"IxTbItem"): [u16],
+    // TODO: need to add llvm_ctpop to asm.js externs to load ChdParams
+    //index_params_items (b"IxPrItem"): ChdParams<u16>,
 }
 
 impl Data {

@@ -137,10 +137,12 @@ class Struct(Conversion):
 
 
 class Context:
-    def __init__(self):
+    def __init__(self, gen_phf='gen_phf'):
         self.sections = defaultdict(bytearray)
         self.intern_maps = {}
         self.intern_item_size = {}
+
+        self.gen_phf_prog = gen_phf
 
     def init_intern_table(self, section, size):
         self.intern_maps[section] = {}
@@ -159,7 +161,7 @@ class Context:
         self.sections[section] = b''.join(conv.convert(self, obj) for obj in objs)
 
     def build_index(self, name, strs, idx_ty='H'):
-        p = subprocess.Popen((os.environ['OUTPOST_BUILD_PHF'],),
+        p = subprocess.Popen((self.gen_phf_prog,),
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         result, _ = p.communicate(''.join(s + '\n' for s in strs).encode('utf-8'))
         assert p.wait() == 0, 'hash builder failed'

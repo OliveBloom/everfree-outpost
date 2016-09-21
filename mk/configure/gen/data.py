@@ -138,12 +138,14 @@ def binary_defs(out_file):
 
     return template('''
         rule gen_binary_defs
-            command = $python3 $root/src/gen/gen_binary_defs.py client $b_data $out
+            command = $python3 $root/src/gen/gen_binary_defs.py $
+                    --gen-phf=$b_native/gen_phf client $b_data $out
             description = GEN $out
             depfile = $out.d
 
         build %out_file: gen_binary_defs $
             | $root/src/gen/gen_binary_defs.py $
+              $b_native/gen_phf $
               %{' '.join(deps)}
     ''', **locals())
 

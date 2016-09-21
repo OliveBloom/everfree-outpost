@@ -245,6 +245,12 @@ if __name__ == '__main__':
                   '$b_native/equip_sprites_render$_so'),
         '',
 
+        '# Perfect hash function generator',
+        native.rust('gen_phf', 'bin', (),
+                src_file='$root/src/gen/gen_phf.rs',
+                build_type='release'),
+        '',
+
         '# Client - asmlibs',
         asmjs.rules(i),
         asmjs.rlib('core', (), i.rust_libcore_src),

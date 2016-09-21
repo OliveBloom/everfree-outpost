@@ -53,15 +53,13 @@ def chunks(ctx, ver_minor):
             yield b'\0' * adj
             offset += adj
 
-def write_server(defs, f):
-    ctx = binary_defs.context.Context()
+def write_server(ctx, defs, f):
     binary_defs.server.convert(ctx, defs)
 
     for c in chunks(ctx, binary_defs.server.VER_MINOR):
         f.write(c)
 
-def write_client(defs, f):
-    ctx = binary_defs.context.Context()
+def write_client(ctx, defs, f):
     binary_defs.client.convert(ctx, defs)
 
     for c in chunks(ctx, binary_defs.client.VER_MINOR):
@@ -77,6 +75,9 @@ def build_parser():
             help='input data directory (containing JSON files)')
     args.add_argument('output', metavar='FILE_OUT.bin',
             help='output file (binary-formatted)')
+
+    args.add_argument('--gen-phf', metavar='path', default='gen_phf',
+            help='path to gen_phf binary')
 
     return args
 
@@ -100,11 +101,12 @@ def main():
             defs[k] = json.load(f)
 
     # Generate and write output
+    ctx = binary_defs.context.Context(gen_phf=args.gen_phf)
     with open(args.output, 'wb') as f:
         if args.mode == 'client':
-            write_client(defs, f)
+            write_client(ctx, defs, f)
         elif args.mode == 'server':
-            write_server(defs, f)
+            write_server(ctx, defs, f)
         else:
             assert False, 'bad mode: %r' % args.mode
 

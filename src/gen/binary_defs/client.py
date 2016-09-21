@@ -215,4 +215,4 @@ def convert(ctx, defs):
     convert_day_night(ctx, defs['day_night'])
     convert_extras(ctx, defs['extras'])
 
-    #ctx.build_index(b'Item', (x['name'] for x in defs['items']))
+    ctx.build_index(b'Item', (x['name'] for x in defs['items']))
