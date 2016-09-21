@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import struct
+import sys
 
 
 import binary_defs.context
@@ -18,7 +19,7 @@ VER_MAJOR = 2
 def header(ctx, ver_minor):
     header = bytearray()
     header.extend(struct.pack('<HHIII',
-        VER_MAJOR, ver_minor, len(ctx.sections), 0, 0))
+        ver_minor, VER_MAJOR, len(ctx.sections), 0, 0))
 
     # Start section offsets after the file and section headers
     offset = 16 * (1 + len(ctx.sections))
@@ -82,6 +83,7 @@ def build_parser():
 def main():
     args = build_parser().parse_args()
 
+    # Collect input files
     if args.mode == 'server':
         files = binary_defs.server.FILES
     elif args.mode == 'client':
@@ -90,10 +92,14 @@ def main():
         assert False, 'unsupported mode %r' % args.mode
 
     defs = {}
+    deps = set()
     for k in files:
-        with open(os.path.join(args.input, '%s_%s.json' % (k, args.mode))) as f:
+        path = os.path.join(args.input, '%s_%s.json' % (k, args.mode))
+        deps.add(path)
+        with open(path) as f:
             defs[k] = json.load(f)
 
+    # Generate and write output
     with open(args.output, 'wb') as f:
         if args.mode == 'client':
             write_client(defs, f)
@@ -101,6 +107,20 @@ def main():
             write_server(defs, f)
         else:
             assert False, 'bad mode: %r' % args.mode
+
+    # Collect additional deps based on imported modules
+    for k,v in sys.modules.items():
+        if k.partition('.')[0] == 'binary_defs':
+            f = getattr(v, '__file__', None)
+            if f is not None:
+                deps.add(f)
+
+    # Write deps to file
+    with open(args.output + '.d', 'w') as f:
+        f.write('%s: \\\n' % args.output)
+        for x in sorted(deps):
+            f.write('  %s \\\n' % x)
+        f.write('\n')
 
 if __name__ == '__main__':
     main()

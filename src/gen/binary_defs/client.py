@@ -199,6 +199,9 @@ def convert_extras(ctx, j):
 
 
 def convert(ctx, defs):
+    ctx.init_intern_table(b'Strings\0', 1)
+    ctx.init_intern_table(b'RcpeItms', RECIPE_ITEM.size())
+
     ctx.convert(b'Blocks\0\0', BLOCK, defs['blocks'])
     ctx.convert(b'Items\0\0\0', ITEM, defs['items'])
     ctx.convert(b'StrcVert', STRUCTURE_VERT, defs['structure_verts'])

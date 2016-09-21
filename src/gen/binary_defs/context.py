@@ -139,12 +139,17 @@ class Struct(Conversion):
 class Context:
     def __init__(self):
         self.sections = defaultdict(bytearray)
-        self.intern_maps = defaultdict(dict)
+        self.intern_maps = {}
+        self.intern_item_size = {}
+
+    def init_intern_table(self, section, size):
+        self.intern_maps[section] = {}
+        self.intern_item_size[section] = size
 
     def intern(self, section, b):
         offset = self.intern_maps[section].get(b)
         if offset is None:
-            offset = len(self.sections[section])
+            offset = len(self.sections[section]) // self.intern_item_size[section]
             self.sections[section].extend(b)
             self.intern_maps[section][b] = offset
         return offset

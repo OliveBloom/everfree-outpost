@@ -163,11 +163,10 @@ struct FileHeader {
 struct SectionHeader {
     name: [u8; 8],
     offset: u32,
-    item_size: u16,
-    item_count: u16,
+    len: u32,
 }
 
-const SUPPORTED_VERSION: (u16, u16) = (0, 1);
+const SUPPORTED_VERSION: (u16, u16) = (2, 0);
 
 macro_rules! gen_data {
     ($($name:ident ($sect_name:pat): $ty:ty,)*) => {
@@ -202,19 +201,17 @@ macro_rules! gen_data {
                     for s in sections {
                         match &s.name {
                             b"Strings\0" => {
-                                assert!(s.item_size == 1);
                                 let bytes = slice::from_raw_parts(ptr.offset(s.offset as isize),
-                                                                  s.item_count as usize);
+                                                                  s.len as usize);
                                 let s = str::from_utf8(bytes).unwrap();
                                 strings = Some(s);
                             },
 
                             $(
                                 $sect_name => {
-                                    assert!(s.item_size as usize == mem::size_of::<$ty>());
                                     $name = Some(slice::from_raw_parts(
                                         ptr.offset(s.offset as isize) as *const $ty,
-                                        s.item_count as usize));
+                                        s.len as usize / mem::size_of::<$ty>()));
                                 },
                             )*
 

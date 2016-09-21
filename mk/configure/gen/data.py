@@ -133,12 +133,12 @@ def binary_defs(out_file):
 
     deps = (
             '$b_data/stamp',
-            '$b_data/day_night.json',
+            '$b_data/day_night_client.json',
             )
 
     return template('''
         rule gen_binary_defs
-            command = $python3 $root/src/gen/gen_binary_defs.py $b_data $out
+            command = $python3 $root/src/gen/gen_binary_defs.py client $b_data $out
             description = GEN $out
             depfile = $out.d
 
@@ -150,7 +150,7 @@ def binary_defs(out_file):
 def pack():
     extra_data = (
             'fonts.png', 'fonts_metrics.json',
-            'day_night.json',
+            'day_night_client.json',
             'ui_atlas.png', 'ui_atlas.json',
             'client_data.bin',
             )

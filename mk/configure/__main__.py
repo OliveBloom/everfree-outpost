@@ -297,7 +297,7 @@ if __name__ == '__main__':
         '# Data',
         data.rules(i),
 
-        data.day_night('$b_data/day_night.json', '$root/assets/misc/day_night_pixels.png'),
+        data.day_night('$b_data/day_night_client.json', '$root/assets/misc/day_night_pixels.png'),
         data.font('name', '$root/assets/misc/NeoSans.png'),
         data.font('default_gray', '$root/assets/misc/NeoSans.png',
                 extra_args='--color=0x757161'),
