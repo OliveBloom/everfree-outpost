@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use std::hash::{Hash, Hasher, SipHasher};
 use std::mem;
 use std::ops::Deref;
 use std::slice;
@@ -208,9 +209,10 @@ unsafe impl<T> Section for ChdParams<T> {
         let slice = slice::from_raw_parts(ptr as *const T,
                                           adj_len / mem::size_of::<T>());
         let params: &ChdParams<T> = mem::transmute(slice);
-        // `m` and `r` (= l.len()) must be powers of two.
-        assert!(params.m.count_ones() == 1);
-        assert!(params.l.len().count_ones() == 1);
+        // Hash table moduli must be powers of two.
+        fn is_power_of_two(x: usize) -> bool { x & (x - 1) == 0 }
+        assert!(is_power_of_two(params.m as usize));
+        assert!(is_power_of_two(params.l.len()));
         params
     }
 }
@@ -307,8 +309,24 @@ gen_data! {
     special_graphics (b"XSpcGrfx"): [u16],
 
     index_table_items (b"IxTbItem"): [u16],
-    // TODO: need to add llvm_ctpop to asm.js externs to load ChdParams
-    //index_params_items (b"IxPrItem"): ChdParams<u16>,
+    index_params_items (b"IxPrItem"): ChdParams<u16>,
+}
+
+/// Apply the CHD-derived perfect hash function to obtain the index of the bucket assigned to the
+/// indicated key.
+fn chd_lookup(key: &str, table: &[u16], params: &ChdParams<u16>) -> u16 {
+    let mut h1 = SipHasher::new_with_keys(0x123456, 0xfedcba);
+    key.hash(&mut h1);
+    // params.l.len() is a power of two, so use & instead of %
+    let idx1 = h1.finish() as usize & (params.l.len() - 1);
+    let l = params.l[idx1] as u64;
+
+    let mut h2 = SipHasher::new_with_keys(0x123456 + l, 0xfedcba - l);
+    key.hash(&mut h2);
+    let idx2 = h2.finish() as usize & (params.m as usize - 1);
+    let result = table.get(idx2).map_or(0xffff, |&x| x);
+
+    result
 }
 
 impl Data {
@@ -353,13 +371,12 @@ impl Data {
     }
 
     pub fn find_item_id(&self, name: &str) -> Option<u16> {
-        for (i, raw) in self.raw_items().iter().enumerate() {
-            let def = self.make_item_def(raw);
-            if name == def.name() {
-                return Some(i as u16);
-            }
+        let idx = chd_lookup(name, self.index_table_items(), self.index_params_items());
+        if (idx as usize) < self.raw_items().len() && self.item_def(idx).name() == name {
+            Some(idx)
+        } else {
+            None
         }
-        None
     }
 
 
