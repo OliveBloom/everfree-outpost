@@ -320,7 +320,8 @@ if __name__ == '__main__':
         data.ui_atlas('$b_data', '$root/assets/ui_gl/png'),
 
         data.process(),
-        data.binary_defs('$b_data/client_data.bin'),
+        data.binary_defs('$b_data/client_data.bin', 'client'),
+        data.binary_defs('$b_data/server_data.bin', 'server'),
         data.pack(),
 
         data.credits('$b_data/credits.html'),

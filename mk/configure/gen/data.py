@@ -35,6 +35,13 @@ def rules(i):
         rule gen_credits
             command = $python3 $root/src/gen/gen_credits.py $root $out $dep_files
             description = GEN $out
+
+        rule gen_binary_defs
+            command = $python3 $root/src/gen/gen_binary_defs.py $
+                    --gen-phf=$b_native/gen_phf $mode $b_data $out
+            description = GEN $out
+            depfile = $out.d
+
     ''', **locals())
 
 def font(basename, src_img, charset_args='--first-char=0x21', extra_args=''):
@@ -128,25 +135,25 @@ def process():
             process_data | %{' '.join(deps)}
     ''', **locals())
 
-def binary_defs(out_file):
-    out_file = out_file or os.path.splitext(src_file)[0] + '.bin'
-
-    deps = (
-            '$b_data/stamp',
-            '$b_data/day_night_client.json',
-            )
+def binary_defs(out_file, mode):
+    if mode == 'client':
+        deps = (
+                '$b_data/stamp',
+                '$b_data/day_night_client.json',
+                )
+    elif mode == 'server':
+        deps = (
+                '$b_data/stamp',
+                )
+    else:
+        assert False, 'bad binary_defs mode'
 
     return template('''
-        rule gen_binary_defs
-            command = $python3 $root/src/gen/gen_binary_defs.py $
-                    --gen-phf=$b_native/gen_phf client $b_data $out
-            description = GEN $out
-            depfile = $out.d
-
         build %out_file: gen_binary_defs $
             | $root/src/gen/gen_binary_defs.py $
               $b_native/gen_phf $
               %{' '.join(deps)}
+            mode = %mode
     ''', **locals())
 
 def pack():
