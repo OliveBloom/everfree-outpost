@@ -21,6 +21,7 @@
 extern crate client_fonts;
 pub extern crate client_ui_atlas;
 extern crate common;
+#[macro_use] extern crate common_data;
 extern crate common_movement;
 extern crate common_proto;
 extern crate common_types;

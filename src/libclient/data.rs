@@ -1,20 +1,19 @@
 use std::prelude::v1::*;
-use std::hash::{Hash, Hasher, SipHasher};
 use std::mem;
 use std::ops::Deref;
 use std::slice;
 use std::str;
 
-use physics::Shape;
 use physics::v3::V3;
+use common_data::{Section, ChdParams, chd_lookup};
 use common_types::{BlockFlags, BlockId};
+use common_util::Bytes;
 
-use graphics::types::{StructureTemplate, TemplatePart, TemplateVertex};
 use util;
 
 
 /// Tile numbers used to display a particular block.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct BlockDef {
     // 0
     pub front: u16,
@@ -30,6 +29,7 @@ pub struct BlockDef {
 
     // 16
 }
+unsafe impl Bytes for BlockDef {}
 
 impl BlockDef {
     pub fn tile(&self, side: usize) -> u16 {
@@ -48,6 +48,7 @@ impl BlockDef {
 }
 
 
+#[derive(Clone, Copy, Debug)]
 pub struct RawItemDef {
     pub name_off: usize,
     pub name_len: usize,
@@ -56,6 +57,7 @@ pub struct RawItemDef {
     pub desc_off: usize,
     pub desc_len: usize,
 }
+unsafe impl Bytes for RawItemDef {}
 
 pub struct ItemDef<'a> {
     def: &'a RawItemDef,
@@ -77,6 +79,73 @@ impl<'a> ItemDef<'a> {
 }
 
 
+bitflags! {
+    pub flags TemplateFlags: u8 {
+        const HAS_SHADOW =      0x01,
+        const HAS_ANIM =        0x02,
+        const HAS_LIGHT =       0x04,
+    }
+}
+// TODO: this impl is bogus, only 0x00 - 0x07 are valid bit patterns
+unsafe impl Bytes for TemplateFlags {}
+
+#[derive(Clone, Copy, Debug)]
+pub struct StructureTemplate {
+    // 0
+    pub size: (u8, u8, u8),
+    pub _pad1: u8,
+    pub shape_idx: u16,
+    pub part_idx: u16,
+    pub part_count: u8,
+    pub vert_count: u8,
+    pub layer: u8,
+    pub flags: TemplateFlags,
+
+    // 12
+    pub light_pos: (u8, u8, u8),
+    pub light_color: (u8, u8, u8),
+    pub light_radius: u16,
+
+    // 20
+}
+unsafe impl Bytes for StructureTemplate {}
+
+impl StructureTemplate {
+    pub fn size(&self) -> V3 {
+        V3::new(self.size.0 as i32,
+                self.size.1 as i32,
+                self.size.2 as i32)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TemplatePart {
+    // 0
+    pub vert_idx: u16,
+    pub vert_count: u16,
+    pub offset: (i16, i16),
+    pub sheet: u8,
+    pub flags: TemplateFlags,
+
+    // 10
+    pub anim_length: i8,
+    pub anim_rate: u8,
+    pub anim_step: u16,     // x-size of each frame
+
+    // 14
+}
+unsafe impl Bytes for TemplatePart {}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TemplateVertex {
+    pub x: u16,
+    pub y: u16,
+    pub z: u16,
+}
+unsafe impl Bytes for TemplateVertex {}
+
+
+#[derive(Clone, Copy, Debug)]
 pub struct RawRecipeDef {
     pub ui_name_off: usize,
     pub ui_name_len: usize,
@@ -88,6 +157,7 @@ pub struct RawRecipeDef {
     _pad0: u16,
     pub station: u32,
 }
+unsafe impl Bytes for RawRecipeDef {}
 
 pub struct RecipeDef<'a> {
     def: &'a RawRecipeDef,
@@ -119,23 +189,30 @@ impl<'a> Deref for RecipeDef<'a> {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct RecipeItem {
     pub item: u16,
     pub quantity: u16,
 }
+unsafe impl Bytes for RecipeItem {}
 
 
+#[derive(Clone, Copy, Debug)]
 pub struct Animation {
     pub local_id: u16,
     pub framerate: u8,
     pub length: u8,
 }
+unsafe impl Bytes for Animation {}
 
+#[derive(Clone, Copy, Debug)]
 pub struct SpriteLayer {
     pub gfx_start: u16,
     pub gfx_count: u16,
 }
+unsafe impl Bytes for SpriteLayer {}
 
+#[derive(Clone, Copy, Debug)]
 pub struct SpriteGraphics {
     pub src_offset: (u16, u16),
     pub dest_offset: (u16, u16),
@@ -143,143 +220,35 @@ pub struct SpriteGraphics {
     pub sheet: u8,
     pub mirror: u8,
 }
+unsafe impl Bytes for SpriteGraphics {}
 
+#[derive(Clone, Copy, Debug)]
 pub struct DayNightPhase {
     pub start_time: u16,
     pub end_time: u16,
     pub start_color: u8,
     pub end_color: u8,
 }
+unsafe impl Bytes for DayNightPhase {}
 
 
+pub struct BlockFlagsArray([BlockFlags]);
 
-struct FileHeader {
-    minor: u16,
-    major: u16,
-    num_sections: u32,
-    _reserved0: u32,
-    _reserved1: u32,
-}
-
-struct SectionHeader {
-    name: [u8; 8],
-    offset: u32,
-    len: u32,
-}
-
-const SUPPORTED_VERSION: (u16, u16) = (2, 0);
-
-
-/// Parameters for the CHD perfect hash function.
-pub struct ChdParams<T> {
-    /// `m` - the modulus = number of buckets for the main hash table.
-    m: u32,
-    /// `l_i` - the key used for the `i`^th bucket of the intermediate table.
-    l: [T],
-}
-
-
-unsafe trait Section {
-    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const Self;
-}
-
-// TODO: should be `T: Bytes`
-unsafe impl<T> Section for [T] {
-    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const [T] {
-        slice::from_raw_parts(ptr as *const T,
-                              len / mem::size_of::<T>())
+unsafe impl Section for BlockFlagsArray {
+    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const BlockFlagsArray {
+        assert!(mem::size_of::<u16>() == mem::size_of::<BlockFlags>());
+        let raw = slice::from_raw_parts(ptr as *const u16,
+                                        len / mem::size_of::<u16>());
+        assert!(raw.iter().all(|&x| x & !BlockFlags::all().bits() == 0),
+                "found invalid bits in BlockFlags array");
+        mem::transmute(raw as *const [u16])
     }
 }
 
-unsafe impl Section for str {
-    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const str {
-        let bytes = <[u8] as Section>::from_bytes(ptr, len);
-        str::from_utf8(&*bytes).unwrap()
-    }
-}
-
-// TODO: should be `T: Bytes`
-unsafe impl<T> Section for ChdParams<T> {
-    unsafe fn from_bytes(ptr: *const u8, len: usize) -> *const ChdParams<T> {
-        let dummy_slice: *const [u8] = slice::from_raw_parts(4096 as *const u8, 0);
-        let dummy_params: *const ChdParams<T> = mem::transmute(dummy_slice);
-        let offset = mem::size_of_val(&*dummy_params);
-
-        let adj_len = len - offset;
-        let slice = slice::from_raw_parts(ptr as *const T,
-                                          adj_len / mem::size_of::<T>());
-        let params: &ChdParams<T> = mem::transmute(slice);
-        // Hash table moduli must be powers of two.
-        fn is_power_of_two(x: usize) -> bool { x & (x - 1) == 0 }
-        assert!(is_power_of_two(params.m as usize));
-        assert!(is_power_of_two(params.l.len()));
-        params
-    }
-}
-
-
-macro_rules! gen_data {
-    ($($name:ident ($sect_name:pat): $ty:ty,)*) => {
-        pub struct Data {
-            // `raw` is never referenced directly, but holds ownership for the other fields.
-            #[allow(dead_code)]
-            raw: Box<[u8]>,
-
-            $( $name: *const $ty, )*
-        }
-
-        impl Data {
-            pub fn new(raw: Box<[u8]>) -> Data {
-                $( let mut $name: Option<*const $ty> = None; )*
-
-                unsafe {
-                    let ptr = raw.as_ptr();
-                    assert!(ptr as usize & 7 == 0,
-                            "raw data allocation must be 8-byte aligned");
-
-                    let header = &*(ptr as *const FileHeader);
-                    let version = (header.major, header.minor);
-                    assert!(version == SUPPORTED_VERSION,
-                            "unsupported data file version (got {:?}, need {:?}",
-                            version, SUPPORTED_VERSION);
-
-                    let sections = slice::from_raw_parts(ptr.offset(16) as *const SectionHeader,
-                                                         header.num_sections as usize);
-
-                    for s in sections {
-                        match &s.name {
-                            $(
-                                $sect_name => {
-                                    $name = Some(<$ty as Section>::from_bytes(
-                                        ptr.offset(s.offset as isize),
-                                        s.len as usize));
-                                },
-                            )*
-
-                            _ => {
-                                warn!("unknown data section: {:?}", s.name);
-                            },
-                        }
-                    }
-                }
-
-                Data {
-                    raw: raw,
-                    $( $name: $name.expect(
-                        concat!("missing section: ", stringify!($sect_name))), )*
-                }
-            }
-
-            $(
-                pub fn $name<'a>(&'a self) -> &'a $ty {
-                    unsafe { &*self.$name }
-                }
-            )*
-        }
-    };
-}
 
 gen_data! {
+    version = (2, 0);
+
     strings (b"Strings\0"): str,
 
     blocks (b"Blocks\0\0"): [BlockDef],
@@ -288,8 +257,7 @@ gen_data! {
     templates (b"StrcDefs"): [StructureTemplate],
     template_parts (b"StrcPart"): [TemplatePart],
     template_verts (b"StrcVert"): [TemplateVertex],
-    // TODO: need a check to ensure all the flags are valid (under BlockFlags::all())
-    template_shapes (b"StrcShap"): [BlockFlags],
+    _template_shapes (b"StrcShap"): BlockFlagsArray,
 
     animations (b"SprtAnim"): [Animation],
     sprite_layers (b"SprtLayr"): [SpriteLayer],
@@ -310,23 +278,6 @@ gen_data! {
 
     index_table_items (b"IxTbItem"): [u16],
     index_params_items (b"IxPrItem"): ChdParams<u16>,
-}
-
-/// Apply the CHD-derived perfect hash function to obtain the index of the bucket assigned to the
-/// indicated key.
-fn chd_lookup(key: &str, table: &[u16], params: &ChdParams<u16>) -> u16 {
-    let mut h1 = SipHasher::new_with_keys(0x123456, 0xfedcba);
-    key.hash(&mut h1);
-    // params.l.len() is a power of two, so use & instead of %
-    let idx1 = h1.finish() as usize & (params.l.len() - 1);
-    let l = params.l[idx1] as u64;
-
-    let mut h2 = SipHasher::new_with_keys(0x123456 + l, 0xfedcba - l);
-    key.hash(&mut h2);
-    let idx2 = h2.finish() as usize & (params.m as usize - 1);
-    let result = table.get(idx2).map_or(0xffff, |&x| x);
-
-    result
 }
 
 impl Data {
@@ -353,6 +304,10 @@ impl Data {
         &self.template_shapes()[base .. base + volume]
     }
 
+    pub fn template_shapes(&self) -> &[BlockFlags] {
+        &self._template_shapes().0
+    }
+
 
     pub fn block(&self, id: BlockId) -> &BlockDef {
         &self.blocks()[id as usize]
@@ -371,12 +326,12 @@ impl Data {
     }
 
     pub fn find_item_id(&self, name: &str) -> Option<u16> {
-        let idx = chd_lookup(name, self.index_table_items(), self.index_params_items());
-        if (idx as usize) < self.raw_items().len() && self.item_def(idx).name() == name {
-            Some(idx)
-        } else {
-            None
+        if let Some(id) = chd_lookup(name, self.index_table_items(), self.index_params_items()) {
+            if (id as usize) < self.raw_items().len() && self.item_def(id).name() == name {
+                return Some(id)
+            }
         }
+        None
     }
 
 
