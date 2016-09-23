@@ -6,7 +6,7 @@ use libserver_types::*;
 
 use loot::{TableIndex, Weight, Chance, ItemTable, StructureTable};
 
-use super::ParseError;
+use data::ParseError;
 
 pub struct LootTables {
     pub item: Box<[ItemTable]>,

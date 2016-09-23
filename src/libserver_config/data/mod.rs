@@ -6,7 +6,6 @@ pub use self::recipe::{Recipe, RecipeData};
 pub use self::template::{StructureTemplate, StructureTemplates};
 pub use self::animation::{Animation, AnimationData};
 pub use self::sprite_layer::SpriteLayerData;
-pub use self::loot_table::LootTables;
 
 
 #[derive(Debug)]
@@ -20,7 +19,6 @@ pub struct Data {
     pub structure_templates: StructureTemplates,
     pub animations: AnimationData,
     pub sprite_layers: SpriteLayerData,
-    pub loot_tables: LootTables,
 }
 
 impl Data {
@@ -29,8 +27,7 @@ impl Data {
                      recipe_json: Json,
                      structure_template_json: Json,
                      animation_json: Json,
-                     sprite_layer_json: Json,
-                     loot_table_json: Json) -> Result<Data, ParseError> {
+                     sprite_layer_json: Json) -> Result<Data, ParseError> {
         Ok(Data {
             block_data: try!(BlockData::from_json(block_json)),
             item_data: try!(ItemData::from_json(item_json)),
@@ -38,7 +35,6 @@ impl Data {
             structure_templates: try!(StructureTemplates::from_json(structure_template_json)),
             animations: try!(AnimationData::from_json(animation_json)),
             sprite_layers: try!(SpriteLayerData::from_json(sprite_layer_json)),
-            loot_tables: try!(LootTables::from_json(loot_table_json)),
         })
     }
 }
@@ -112,4 +108,3 @@ pub mod recipe;
 pub mod template;
 pub mod animation;
 pub mod sprite_layer;
-pub mod loot_table;

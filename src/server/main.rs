@@ -112,14 +112,12 @@ fn main() {
     let template_json = read_json(storage.open_template_data());
     let animation_json = read_json(storage.open_animation_data());
     let sprite_layer_json = read_json(storage.open_sprite_layer_data());
-    let loot_table_json = read_json(storage.open_loot_table_data());
     let data = data::Data::from_json(block_json,
                                      item_json,
                                      recipe_json,
                                      template_json,
                                      animation_json,
-                                     sprite_layer_json,
-                                     loot_table_json).unwrap();
+                                     sprite_layer_json).unwrap();
 
     script::ffi_module_preinit();
     python::api::initialize();

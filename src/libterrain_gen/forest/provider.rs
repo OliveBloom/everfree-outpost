@@ -1,7 +1,7 @@
 use rand::{Rng, XorShiftRng};
 
 use libphysics::CHUNK_SIZE;
-use libserver_config::{Data, Storage};
+use libserver_config::{Data, Storage, LootTables};
 use libserver_types::*;
 
 use {GenChunk, GenStructure};
@@ -10,13 +10,18 @@ use forest::terrain_grid::{self, Cell, FloorType};
 
 pub struct Provider<'d> {
     data: &'d Data,
+    loot_tables: &'d LootTables,
     ctx: Context<'d>,
 }
 
 impl<'d> Provider<'d> {
-    pub fn new(data: &'d Data, storage: &'d Storage, rng: XorShiftRng) -> Provider<'d> {
+    pub fn new(data: &'d Data,
+               loot_tables: &'d LootTables,
+               storage: &'d Storage,
+               rng: XorShiftRng) -> Provider<'d> {
         Provider {
             data: data,
+            loot_tables: loot_tables,
             ctx: Context::new(storage, rng),
         }
     }
@@ -189,12 +194,12 @@ impl<'d> Provider<'d> {
                 }
                 let pos = pos.extend(layer as i32 * 2);
 
-                let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "cave/floor");
+                let opt_id = self.loot_tables.eval_structure_table(&mut rng, "cave/floor");
                 if let Some(id) = opt_id {
                     let mut gs = GenStructure::new(pos, id);
                     if id == chest_id {
-                        let contents = self.data.loot_tables.eval_item_table(&mut rng,
-                                                                             "cave/chest");
+                        let contents = self.loot_tables.eval_item_table(&mut rng,
+                                                                        "cave/chest");
                         let mut s = String::new();
                         for (item_id, count) in contents {
                             s.push_str(&format!("{}:{},",
@@ -212,7 +217,7 @@ impl<'d> Provider<'d> {
         for t in &self.ctx.collect_points::<TreesPass>(pid, bounds + base) {
             let pos = (t.pos - base).extend(t.layer as i32 * 2);
 
-            let opt_id = self.data.loot_tables.eval_structure_table(&mut rng, "forest/floor");
+            let opt_id = self.loot_tables.eval_structure_table(&mut rng, "forest/floor");
             if let Some(id) = opt_id {
                 let gs = GenStructure::new(pos, id);
                 gc.structures.push(gs);

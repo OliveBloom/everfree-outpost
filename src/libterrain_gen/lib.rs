@@ -24,7 +24,6 @@ use libserver_types::*;
 
 pub use libterrain_gen_algo as algo;
 
-pub mod worker;
 mod prop;
 pub mod cache;
 

@@ -10,7 +10,9 @@ extern crate rustc_serialize;
 
 pub use data::Data;
 pub use storage::Storage;
+pub use loot_table::LootTables;
 
-pub mod data;
+#[macro_use] pub mod data;
 pub mod storage;
 pub mod loot;
+pub mod loot_table;

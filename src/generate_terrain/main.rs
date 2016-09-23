@@ -16,7 +16,7 @@ extern crate terrain_gen;
 
 use server_bundle::types::Bundle;
 use server_bundle::flat::Flat;
-use server_config::{Data, Storage};
+use server_config::{Data, LootTables, Storage};
 use server_types::*;
 use terrain_gen::forest::Provider as ForestProvider;
 use terrain_gen::dungeon::Provider as DungeonProvider;
@@ -110,7 +110,7 @@ fn read_json(mut file: File) -> json::Json {
     json::Json::from_str(&content).unwrap()
 }
 
-fn load_config(path: &Path) -> (Data, Storage) {
+fn load_config(path: &Path) -> (Data, LootTables, Storage) {
     let storage = Storage::new(&path.to_owned());
 
     let block_json = read_json(storage.open_block_data());
@@ -119,16 +119,17 @@ fn load_config(path: &Path) -> (Data, Storage) {
     let template_json = read_json(storage.open_template_data());
     let animation_json = read_json(storage.open_animation_data());
     let sprite_layer_json = read_json(storage.open_sprite_layer_data());
-    let loot_table_json = read_json(storage.open_loot_table_data());
     let data = Data::from_json(block_json,
                                item_json,
                                recipe_json,
                                template_json,
                                animation_json,
-                               sprite_layer_json,
-                               loot_table_json).unwrap();
+                               sprite_layer_json).unwrap();
 
-    (data, storage)
+    let loot_table_json = read_json(storage.open_loot_table_data());
+    let loot_tables = LootTables::from_json(loot_table_json).unwrap();
+
+    (data, loot_tables, storage)
 }
 
 fn main() {
@@ -136,13 +137,13 @@ fn main() {
 
 
     let args = env::args().collect::<Vec<_>>();
-    let (data, storage) = load_config(Path::new(&args[1]));
+    let (data, loot_tables, storage) = load_config(Path::new(&args[1]));
 
 
     let mut rng: XorShiftRng = rand::random();
     let mut ctx = Context {
         data: &data,
-        forest: ForestProvider::new(&data, &storage, rng.gen()),
+        forest: ForestProvider::new(&data, &loot_tables, &storage, rng.gen()),
         dungeon: DungeonProvider::new(&data, &storage, rng.gen()),
     };
 
