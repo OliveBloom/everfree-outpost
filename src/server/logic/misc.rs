@@ -73,7 +73,7 @@ fn update_block_interior(eng: &mut Engine,
         let mut cache = [Status::Uninitialized; 25];
         cache[2 * 5 + 2] = if inside { Status::Inside } else { Status::Outside };
 
-        let bd = &eng.data.block_data;
+        let d = eng.data;
         let p = unwrap!(eng.world.get_plane(pid));
 
         let cache_region = Region::new(center - V3::new(2, 2, 0),
@@ -90,7 +90,7 @@ fn update_block_interior(eng: &mut Engine,
                     let cpos = pos.reduce().div_floor(scalar(CHUNK_SIZE));
                     let tc = p.terrain_chunk(cpos);
                     let block_id = tc.blocks()[tc.bounds().index(pos)];
-                    let block_name = bd.name(block_id);
+                    let block_name = d.block(block_id).name();
                     trace!("  at {:?}, saw {} (inside? {})", pos, block_name,
                            block_name.starts_with(&*prefix));
 
@@ -132,7 +132,7 @@ fn update_block_interior(eng: &mut Engine,
 
             let part_name = INTERIOR_NAMES[INTERIOR_SHAPE_TABLE[bits] as usize];
             let name = format!("{}/{}", base, part_name);
-            let block_id = unwrap!(bd.find_id(&*name));
+            let block_id = unwrap!(d.get_block_id(&*name));
             updates[update_region.index(pos)] = Some(block_id);
         }
     }
@@ -271,11 +271,11 @@ pub fn is_cave(eng: &mut Engine,
 
 fn is_plain_cave(p: &ObjectRef<world::Plane>,
                  pos: V3) -> bool {
-    let block_data = &p.world().data().block_data;
+    let data = p.world().data();
     let tc = unwrap_or!(p.get_terrain_chunk(pos.reduce().div_floor(scalar(CHUNK_SIZE))),
                         return false);
     let idx = tc.bounds().index(pos);
-    let name = block_data.name(tc.blocks()[idx]);
+    let name = data.block(tc.blocks()[idx]).name();
     info!("checking for cave-ness: {}", name);
 
     let mut iter = name.split("/");
@@ -302,13 +302,13 @@ fn is_plain_cave(p: &ObjectRef<world::Plane>,
 pub fn set_cave_single<'a, 'd>(p: &mut ObjectRefMut<'a, 'd, world::Plane>,
                                pos: V3,
                                set_corners: [bool; 4]) -> world::OpResult<bool> {
-    let block_data = &p.world().data().block_data;
+    let data = p.world().data();
     let mut tc = unwrap!(p.get_terrain_chunk_mut(pos.reduce().div_floor(scalar(CHUNK_SIZE))));
 
     // z0 part
     for z in 0 .. 2 {
         let idx = tc.bounds().index(pos + V3::new(0, 0, z));
-        let name = block_data.name(tc.blocks()[idx]);
+        let name = data.block(tc.blocks()[idx]).name();
         let mut new_name = String::new();
         for part in name.split("/") {
             if new_name.len() > 0 {
@@ -329,7 +329,7 @@ pub fn set_cave_single<'a, 'd>(p: &mut ObjectRefMut<'a, 'd, world::Plane>,
         if name == &new_name {
             return Ok(false);
         }
-        if let Some(block_id) = block_data.find_id(&new_name) {
+        if let Some(block_id) = data.get_block_id(&new_name) {
             tc.blocks_mut()[idx] = block_id;
         } else {
             warn!("no such block: {:?} (replacing {:?})", new_name, name);

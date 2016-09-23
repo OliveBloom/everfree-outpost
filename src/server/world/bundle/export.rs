@@ -58,27 +58,27 @@ impl<'d> Exporter<'d> {
     }
 
     pub fn export_anim_id(&mut self, id: AnimId) -> AnimId {
-        let d = &self.data.animations;
+        let d = self.data;
         self.anims.get_or(id, |raw| (raw as AnimId,
-                                     &d.animation(id).name))
+                                     d.animation(id).name()))
     }
 
     pub fn export_item_id(&mut self, id: ItemId) -> ItemId {
-        let d = &self.data.item_data;
+        let d = self.data;
         self.items.get_or(id, |raw| (raw as ItemId,
-                                     d.name(id)))
+                                     d.item(id).name()))
     }
 
     pub fn export_block_id(&mut self, id: BlockId) -> BlockId {
-        let d = &self.data.block_data;
+        let d = self.data;
         self.blocks.get_or(id, |raw| (raw as BlockId,
-                                      d.name(id)))
+                                      d.block(id).name()))
     }
 
     pub fn export_template_id(&mut self, id: TemplateId) -> TemplateId {
-        let d = &self.data.structure_templates;
+        let d = self.data;
         self.templates.get_or(id, |raw| (raw as TemplateId,
-                                         &d.template(id).name))
+                                         d.template(id).name()))
     }
 
     pub fn export<E: Export>(&mut self, e: &E) -> E {

@@ -8,12 +8,7 @@ use libserver_types::{Stable, PlaneId, TerrainChunkId};
 
 
 const DATA_DIR: &'static str = "data";
-const BLOCK_DATA_FILE: &'static str = "blocks.json";
-const ITEM_DATA_FILE: &'static str = "items.json";
-const RECIPE_DATA_FILE: &'static str = "recipes.json";
-const TEMPLATE_DATA_FILE: &'static str = "structures.json";
-const ANIMATION_DATA_FILE: &'static str = "animations.json";
-const SPRITE_LAYER_DATA_FILE: &'static str = "sprite_layers.json";
+const BINARY_DATA_FILE: &'static str = "server_data.bin";
 const LOOT_TABLE_DATA_FILE: &'static str = "loot_tables.json";
 
 const SCRIPT_DIR: &'static str = "scripts";
@@ -148,28 +143,8 @@ impl Storage {
         self.base.join(DATA_DIR).join(file)
     }
 
-    pub fn open_block_data(&self) -> File {
-        File::open(self.data_path(BLOCK_DATA_FILE)).unwrap()
-    }
-
-    pub fn open_item_data(&self) -> File {
-        File::open(self.data_path(ITEM_DATA_FILE)).unwrap()
-    }
-
-    pub fn open_recipe_data(&self) -> File {
-        File::open(self.data_path(RECIPE_DATA_FILE)).unwrap()
-    }
-
-    pub fn open_template_data(&self) -> File {
-        File::open(self.data_path(TEMPLATE_DATA_FILE)).unwrap()
-    }
-
-    pub fn open_animation_data(&self) -> File {
-        File::open(self.data_path(ANIMATION_DATA_FILE)).unwrap()
-    }
-
-    pub fn open_sprite_layer_data(&self) -> File {
-        File::open(self.data_path(SPRITE_LAYER_DATA_FILE)).unwrap()
+    pub fn open_binary_data(&self) -> File {
+        File::open(self.data_path(BINARY_DATA_FILE)).unwrap()
     }
 
     pub fn open_loot_table_data(&self) -> File {

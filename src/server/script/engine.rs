@@ -340,7 +340,7 @@ define_python_class! {
                                 pos: V3,
                                 base: String,
                                 new_center: String) -> PyResult<()> {
-            let new_center_id = pyunwrap!(eng.data.block_data.find_id(&new_center));
+            let new_center_id = pyunwrap!(eng.data.get_block_id(&new_center));
             warn_on_err!(logic::misc::clear_block_interior(eng,
                                                            pid,
                                                            pos,
@@ -768,7 +768,7 @@ define_python_class! {
                     continue;
                 }
                 let idx = s.bounds().index(pos);
-                if !s.template().shape[idx].occupied() {
+                if !s.template().shape()[idx].occupied() {
                     continue;
                 }
 
@@ -790,7 +790,7 @@ define_python_class! {
                     continue;
                 }
                 let idx = s.bounds().index(pos);
-                if !s.template().shape[idx].occupied() {
+                if !s.template().shape()[idx].occupied() {
                     continue;
                 }
 

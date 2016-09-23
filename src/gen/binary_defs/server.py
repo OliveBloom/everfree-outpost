@@ -11,7 +11,6 @@ FILES = (
         'recipes',
         'structures',
         'animations',
-        'sprite_layers',
         )
 
 
@@ -53,10 +52,6 @@ ANIMATION = Struct((
     Field('length',         Scalar('B')),
     ))
 
-SPRITE_LAYER = Struct((
-    Field('name',           String()),
-    ))
-
 
 def convert(ctx, defs):
     ctx.init_intern_table(b'Strings\0', 1)
@@ -68,11 +63,9 @@ def convert(ctx, defs):
     ctx.convert(b'RcpeDefs', RECIPE, defs['recipes'])
     ctx.convert(b'StrcDefs', STRUCTURE, defs['structures'])
     ctx.convert(b'SprtAnim', ANIMATION, defs['animations'])
-    ctx.convert(b'SprtLayr', SPRITE_LAYER, defs['sprite_layers'])
 
     ctx.build_index(b'Blck', (x['name'] for x in defs['blocks']))
     ctx.build_index(b'Item', (x['name'] for x in defs['items']))
     ctx.build_index(b'Rcpe', (x['name'] for x in defs['recipes']))
     ctx.build_index(b'Strc', (x['name'] for x in defs['structures']))
     ctx.build_index(b'Anim', (x['name'] for x in defs['animations']))
-    ctx.build_index(b'Layr', (x['name'] for x in defs['sprite_layers']))

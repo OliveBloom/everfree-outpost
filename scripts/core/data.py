@@ -75,7 +75,6 @@ class DataProxy:
         _define_methods(cls, RecipeProxy, 'recipe')
         _define_methods(cls, TemplateProxy, 'template')
         _define_methods(cls, AnimationProxy, 'animation')
-        _define_methods(cls, SpriteLayerProxy, 'sprite_layer')
 
 DATA = DataProxy()
 
@@ -129,13 +128,13 @@ class RecipeProxy(DefProxy):
 
     @property
     def inputs(self):
-        dct = _DATA.recipe_inputs(self.id)
-        return {ItemProxy.by_id(k): v for k, v in dct.items()}
+        lst = _DATA.recipe_inputs(self.id)
+        return {ItemProxy.by_id(k): v for k, v in lst}
 
     @property
     def outputs(self):
-        dct = _DATA.recipe_outputs(self.id)
-        return {ItemProxy.by_id(k): v for k, v in dct.items()}
+        lst = _DATA.recipe_outputs(self.id)
+        return {ItemProxy.by_id(k): v for k, v in lst}
 
 class TemplateProxy(DefProxy):
     @property
@@ -159,11 +158,6 @@ class AnimationProxy(DefProxy):
     def length(self):
         return _DATA.animation_length(self.id)
 
-class SpriteLayerProxy(DefProxy):
-    @property
-    def name(self):
-        return _DATA.sprite_layer_name(self.id)
-
 
 def init(data):
     global _DATA
@@ -174,6 +168,5 @@ def init(data):
     RecipeProxy.INSTANCES = [None] * data.recipe_count()
     TemplateProxy.INSTANCES = [None] * data.template_count()
     AnimationProxy.INSTANCES = [None] * data.animation_count()
-    SpriteLayerProxy.INSTANCES = [None] * data.sprite_layer_count()
 
     DataProxy._init()

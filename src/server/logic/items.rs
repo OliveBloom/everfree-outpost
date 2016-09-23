@@ -276,7 +276,7 @@ pub fn craft_recipe(eng: &mut Engine,
                     iid: InventoryId,
                     recipe_id: RecipeId,
                     count: u16) -> StrResult<()> {
-    let recipe = unwrap!(eng.data.recipes.get_recipe(recipe_id));
+    let recipe = unwrap!(eng.data.get_recipe(recipe_id));
 
     let _ = station_sid; // TODO
 
@@ -285,26 +285,26 @@ pub fn craft_recipe(eng: &mut Engine,
 
         let mut count = count;
 
-        for (&item_id, &num_required) in recipe.inputs.iter() {
-            count = cmp::min(count, i.count(item_id) / num_required as u16);
+        for input in recipe.inputs() {
+            count = cmp::min(count, i.count(input.item) / input.quantity as u16);
         }
 
         // TODO: this calculation is wrong for multiple outputs
         // It counts Item::Empty as 255 available space for *each* output
-        for (&item_id, &num_produced) in recipe.outputs.iter() {
-            count = cmp::min(count, i.count_space(item_id) / num_produced as u16);
+        for output in recipe.outputs() {
+            count = cmp::min(count, i.count_space(output.item) / output.quantity as u16);
         }
 
         count
     };
 
     if real_count > 0 {
-        for (&item_id, &num_required) in recipe.inputs.iter() {
-            err_on_err!(bulk_remove(eng, iid, item_id, real_count * num_required as u16));
+        for input in recipe.inputs() {
+            err_on_err!(bulk_remove(eng, iid, input.item, real_count * input.quantity as u16));
         }
 
-        for (&item_id, &num_produced) in recipe.outputs.iter() {
-            err_on_err!(bulk_add(eng, iid, item_id, real_count * num_produced as u16));
+        for output in recipe.outputs() {
+            err_on_err!(bulk_add(eng, iid, output.item, real_count * output.quantity as u16));
         }
     }
     Ok(())

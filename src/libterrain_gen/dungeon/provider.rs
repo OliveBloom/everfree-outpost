@@ -3,7 +3,6 @@ use rand::Rng;
 use libserver_types::*;
 use libphysics::CHUNK_SIZE;
 use libserver_config::Data;
-use libserver_config::data::{BlockData, StructureTemplates};
 use libserver_config::Storage;
 
 use {GenChunk, GenStructure};
@@ -75,8 +74,6 @@ impl<'d> Provider<'d> {
                 plane_summ: self.plane_cache.get((pid, scalar(0))),
                 cpos: cpos,
                 data: &self.data,
-                block_data: &self.data.block_data,
-                structure_templates: &self.data.structure_templates,
                 // Don't use layer 7.  Anything 2 blocks tall on that layer will have its top plane
                 // fail to render.  TODO: fix rendering so this doesn't happen
                 layer: 6,
@@ -112,11 +109,11 @@ impl<'d> Provider<'d> {
 }
 
 macro_rules! block_id {
-    ($self_:ident, $($t:tt)*) => ($self_.block_data.get_id(&format!($($t)*)))
+    ($self_:ident, $($t:tt)*) => ($self_.data.block_id(&format!($($t)*)))
 }
 
 macro_rules! template_id {
-    ($self_:ident, $($t:tt)*) => ($self_.structure_templates.get_id(&format!($($t)*)))
+    ($self_:ident, $($t:tt)*) => ($self_.data.template_id(&format!($($t)*)))
 }
 
 struct Context<'a> {
@@ -126,8 +123,6 @@ struct Context<'a> {
     plane_summ: &'a PlaneSummary,
     cpos: V2,
     data: &'a Data,
-    block_data: &'a BlockData,
-    structure_templates: &'a StructureTemplates,
     layer: u8,
     vaults: Vec<&'a Vault>,
 }
@@ -245,7 +240,7 @@ impl<'a> Context<'a> {
     }
 
     fn gen_structure_room(&mut self, pos: V2, template_id: TemplateId) {
-        let size = self.structure_templates.template(template_id).size;
+        let size = self.data.template(template_id).size;
         if self.check_placement(pos, size.reduce()) {
             let gs = GenStructure::new(pos.extend(self.layer_z()), template_id);
             self.gc.structures.push(gs);

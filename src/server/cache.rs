@@ -8,7 +8,7 @@ use std::collections::hash_map::{HashMap, Entry};
 use types::*;
 use libphysics::{CHUNK_BITS, CHUNK_SIZE, CHUNK_MASK};
 
-use data::{Data, StructureTemplate};
+use data::{Data, TemplateRef};
 
 
 pub struct TerrainCache {
@@ -44,8 +44,8 @@ impl TerrainCache {
         });
     }
 
-    pub fn add_structure(&mut self, pid: PlaneId, pos: V3, template: &StructureTemplate) {
-        trace!("add structure {} at {:?} {:?}", template.name, pid, pos);
+    pub fn add_structure(&mut self, pid: PlaneId, pos: V3, template: TemplateRef) {
+        trace!("add structure {} at {:?} {:?}", template.name(), pid, pos);
         let bounds = Region::sized(template.size) + pos;
         let bounds_chunk = bounds.reduce().div_round_signed(CHUNK_SIZE);
 
@@ -55,7 +55,7 @@ impl TerrainCache {
             self.with_entry(pid, cpos, |entry| {
                 for p in chunk_bounds.intersect(bounds).points() {
                     let offset = p - base;
-                    let flags = template.shape[bounds.index(p)];
+                    let flags = template.shape()[bounds.index(p)];
                     if flags.occupied() {
                         entry.set(offset, template.layer as i8, flags);
                     }
@@ -64,8 +64,8 @@ impl TerrainCache {
         }
     }
 
-    pub fn remove_structure(&mut self, pid: PlaneId, pos: V3, template: &StructureTemplate) {
-        trace!("remove structure {} at {:?} {:?}", template.name, pid, pos);
+    pub fn remove_structure(&mut self, pid: PlaneId, pos: V3, template: TemplateRef) {
+        trace!("remove structure {} at {:?} {:?}", template.name(), pid, pos);
         let bounds = Region::sized(template.size) + pos;
         let bounds_chunk = bounds.reduce().div_round_signed(CHUNK_SIZE);
 
@@ -75,7 +75,7 @@ impl TerrainCache {
             self.with_entry(pid, cpos, |entry| {
                 for p in chunk_bounds.intersect(bounds).points() {
                     let offset = p - base;
-                    let flags = template.shape[bounds.index(p)];
+                    let flags = template.shape()[bounds.index(p)];
                     if flags.occupied() {
                         entry.set(offset, template.layer as i8, BlockFlags::empty());
                     }
@@ -138,7 +138,7 @@ impl CacheEntry {
 
     fn fill_base(&mut self, data: &Data, chunk: &BlockChunk) {
         for (i, &block) in chunk.iter().enumerate() {
-            let flags = data.block_data.block(block).flags;
+            let flags = data.block(block).flags();
             self.with_cell_key(i as u16, |cell| {
                 if cell.base != flags {
                     cell.set_layer(-1, flags);

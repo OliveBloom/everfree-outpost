@@ -106,18 +106,9 @@ fn main() {
         storage.create_save_layer(storage::SaveLayer::Delta);
     }
 
-    let block_json = read_json(storage.open_block_data());
-    let item_json = read_json(storage.open_item_data());
-    let recipe_json = read_json(storage.open_recipe_data());
-    let template_json = read_json(storage.open_template_data());
-    let animation_json = read_json(storage.open_animation_data());
-    let sprite_layer_json = read_json(storage.open_sprite_layer_data());
-    let data = data::Data::from_json(block_json,
-                                     item_json,
-                                     recipe_json,
-                                     template_json,
-                                     animation_json,
-                                     sprite_layer_json).unwrap();
+    let mut raw_bytes = Vec::new();
+    storage.open_binary_data().read_to_end(&mut raw_bytes).unwrap();
+    let data = data::Data::new(raw_bytes.into_boxed_slice());
 
     script::ffi_module_preinit();
     python::api::initialize();

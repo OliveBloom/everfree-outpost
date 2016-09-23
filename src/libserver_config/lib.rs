@@ -4,6 +4,8 @@
 #[macro_use] extern crate log;
 extern crate rand;
 
+#[macro_use] extern crate common_data as libcommon_data;
+extern crate common_util as libcommon_util;
 extern crate physics as libphysics;
 extern crate server_types as libserver_types;
 extern crate rustc_serialize;

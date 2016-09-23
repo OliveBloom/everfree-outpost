@@ -144,6 +144,18 @@ impl<T> Pack for Vec<T>
     }
 }
 
+impl<'a, T> Pack for &'a [T]
+        where T: Pack+Clone {
+    fn pack(self) -> PyResult<PyBox> {
+        let lst = try!(py::list::new());
+        for x in self {
+            let x = try!(Pack::pack(x.clone()));
+            try!(py::list::append(lst.borrow(), x.borrow()));
+        }
+        Ok(lst)
+    }
+}
+
 impl<K, V> Pack for HashMap<K, V>
         where K: Pack + Eq + Hash,
               V: Pack {

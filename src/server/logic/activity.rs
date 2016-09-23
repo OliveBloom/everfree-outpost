@@ -86,6 +86,6 @@ fn set_activity_icon(eng: &mut Engine,
 
 fn clear_activity_icon(eng: &mut Engine,
                        eid: EntityId) {
-    let no_icon = eng.data.animations.get_id("activity//none");
+    let no_icon = eng.data.animation_id("activity//none");
     set_activity_icon(eng, eid, no_icon);
 }

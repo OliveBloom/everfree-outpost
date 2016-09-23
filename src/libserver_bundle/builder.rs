@@ -134,47 +134,47 @@ impl<'d> Builder<'d> {
 
 
     pub fn anim(&mut self, name: &str) -> AnimId {
-        let id = self.data.animations.get_id(name);
+        let id = self.data.animation_id(name);
         self.anim_id(id)
     }
 
     pub fn anim_id(&mut self, id: AnimId) -> AnimId {
-        let d = &self.data.animations;
+        let d = self.data;
         self.anims.get_or(id, |raw| (raw as AnimId,
-                                     &d.animation(id).name))
+                                     d.animation(id).name()))
     }
 
     pub fn item(&mut self, name: &str) -> ItemId {
-        let id = self.data.item_data.get_id(name);
+        let id = self.data.item_id(name);
         self.item_id(id)
     }
 
     pub fn item_id(&mut self, id: ItemId) -> ItemId {
-        let d = &self.data.item_data;
+        let d = self.data;
         self.items.get_or(id, |raw| (raw as ItemId,
-                                     d.name(id)))
+                                     d.item(id).name()))
     }
 
     pub fn block(&mut self, name: &str) -> BlockId {
-        let id = self.data.block_data.get_id(name);
+        let id = self.data.block_id(name);
         self.block_id(id)
     }
 
     pub fn block_id(&mut self, id: BlockId) -> BlockId {
-        let d = &self.data.block_data;
+        let d = self.data;
         self.blocks.get_or(id, |raw| (raw as BlockId,
-                                      d.name(id)))
+                                      d.block(id).name()))
     }
 
     pub fn template(&mut self, name: &str) -> TemplateId {
-        let id = self.data.structure_templates.get_id(name);
+        let id = self.data.template_id(name);
         self.template_id(id)
     }
 
     pub fn template_id(&mut self, id: TemplateId) -> TemplateId {
-        let d = &self.data.structure_templates;
+        let d = self.data;
         self.templates.get_or(id, |raw| (raw as TemplateId,
-                                         &d.template(id).name))
+                                         d.template(id).name()))
     }
 
 
@@ -322,7 +322,7 @@ impl<'d> Builder<'d> {
 
     /// Final cleanup: provide default values for any data references that aren't set.
     fn cleanup(&mut self) {
-        let anim_name = &self.data.animations.animation(0).name;
+        let anim_name = &self.data.animation(0).name();
 
         for e in &mut self.entities {
             if e.anim.is_none() {

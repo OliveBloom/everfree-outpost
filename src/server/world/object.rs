@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 use libphysics::CHUNK_SIZE;
 use types::*;
 
-use data::StructureTemplate;
+use data::TemplateRef;
 use world::World;
 use world::{Client, Entity, Inventory, Plane, TerrainChunk, Structure};
 use world::{EntitiesById, StructuresById, InventoriesById};
@@ -333,7 +333,7 @@ impl<'a, 'd> EntityRefMut<'d> for ObjectRefMut<'a, 'd, Entity> { }
 
 pub trait InventoryRef<'d>: ObjectRefBase<'d, Inventory> {
     fn count_by_name(&self, name: &str) -> OpResult<u16> {
-        let item_id = unwrap!(self.world().data().item_data.find_id(name));
+        let item_id = unwrap!(self.world().data().get_item_id(name));
         Ok(self.obj().count(item_id))
     }
 
@@ -421,7 +421,7 @@ pub trait TerrainChunkRef<'d>: ObjectRefBase<'d, TerrainChunk> {
     }
 
     fn shape(&self, idx: usize) -> Shape {
-        self.world().data.block_data.shape(self.obj().block(idx))
+        self.world().data.block(self.obj().block(idx)).flags().shape()
     }
 
     fn shape_at(&self, pos: V3) -> Shape {
@@ -464,8 +464,8 @@ fn block_pos_to_idx<'d, R: ?Sized+TerrainChunkRef<'d>>(self_: &R, pos: V3) -> us
 
 
 pub trait StructureRef<'d>: ObjectRefBase<'d, Structure> {
-    fn template(&self) -> &'d StructureTemplate {
-        self.world().data.structure_templates.template(self.obj().template_id())
+    fn template(&self) -> TemplateRef<'d> {
+        self.world().data.template(self.obj().template_id())
     }
 
     fn size(&self) -> V3 {

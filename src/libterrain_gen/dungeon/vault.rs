@@ -104,7 +104,7 @@ impl Vault for Structure {
                       layer: u8) {
         let layer_z = layer as i32 * 2;
         if bounds.contains(self.pos) {
-            let template_id = data.structure_templates.get_id(self.kind.name());
+            let template_id = data.template_id(self.kind.name());
             structures.push(GenStructure::new((self.pos - bounds.min).extend(layer_z),
                                               template_id));
         }
@@ -210,16 +210,16 @@ impl Vault for Door {
 
         if bounds.contains(left) {
             terrain[tile_bounds.index(left.extend(layer_z))] =
-                data.block_data.get_id("terrain/cccc/c0122");
+                data.block_id("terrain/cccc/c0122");
             terrain[tile_bounds.index(left.extend(layer_z + 1))] =
-                data.block_data.get_id("cave_z1/c0122");
+                data.block_id("cave_z1/c0122");
         }
 
         if bounds.contains(right) {
             terrain[tile_bounds.index(right.extend(layer_z))] =
-                data.block_data.get_id("terrain/cccc/c1022");
+                data.block_id("terrain/cccc/c1022");
             terrain[tile_bounds.index(right.extend(layer_z + 1))] =
-                data.block_data.get_id("cave_z1/c1022");
+                data.block_id("cave_z1/c1022");
         }
     }
 
@@ -231,7 +231,7 @@ impl Vault for Door {
         let layer_z = layer as i32 * 2;
         let door_pos = self.center - V2::new(1, 0);
         if bounds.contains(door_pos) {
-            let template_id = data.structure_templates.get_id(self.kind.template_name());
+            let template_id = data.template_id(self.kind.template_name());
             let pos = (door_pos - bounds.min).extend(layer_z);
             let mut gs = GenStructure::new(pos, template_id);
             match self.kind {
@@ -304,7 +304,7 @@ impl Vault for Entrance {
 
         let exit_pos = self.center - V2::new(0, 1);
         if bounds.contains(exit_pos) {
-            let template_id = data.structure_templates.get_id("dungeon_exit");
+            let template_id = data.template_id("dungeon_exit");
             structures.push(GenStructure::new((exit_pos - bounds.min).extend(layer_z),
                                               template_id));
         }
@@ -384,7 +384,7 @@ impl Vault for Chest {
         let layer_z = layer as i32 * 2;
         if bounds.contains(self.center) {
             let pos = (self.center - bounds.min).extend(layer_z);
-            let template_id = data.structure_templates.get_id("chest");
+            let template_id = data.template_id("chest");
             let mut gs = GenStructure::new(pos, template_id);
 
             let mut loot_str = String::new();
@@ -465,8 +465,7 @@ impl Vault for Library {
                     else if choice < 10 { 2 }
                     else { continue; };
 
-                let template_id = data.structure_templates.get_id(
-                    &format!("bookshelf/{}", amount));
+                let template_id = data.template_id(&format!("bookshelf/{}", amount));
                 structures.push(GenStructure::new((pos - bounds.min).extend(layer_z),
                                                   template_id));
             }
@@ -646,7 +645,7 @@ impl Vault for GemPuzzle {
                 } else {
                     ("empty", "dungeon/gem_slot/normal/empty")
                 };
-            let template_id = data.structure_templates.get_id(template_name);
+            let template_id = data.template_id(template_name);
             let pos = inner_base + V2::new(i as i32, 0);
             if !bounds.contains(pos) {
                 continue;

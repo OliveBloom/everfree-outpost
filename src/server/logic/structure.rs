@@ -3,7 +3,7 @@ use libphysics::CHUNK_SIZE;
 use util::SmallVec;
 
 use cache::TerrainCache;
-use data::StructureTemplate;
+use data::TemplateRef;
 use engine::split2::Coded;
 use logic;
 use world::flags::*;
@@ -66,7 +66,7 @@ pub fn on_replace(eng: &mut EngineLifecycle,
     let s = eng.world.structure(sid);
 
     // Update cache
-    let old_template = eng.data().structure_templates.template(old_template_id);
+    let old_template = eng.data().template(old_template_id);
     let old_bounds = Region::sized(old_template.size) + s.pos();
 
     let new_bounds = s.bounds();
@@ -118,7 +118,7 @@ pub fn checked_create(eng: &mut EngineCheck,
                       pid: PlaneId,
                       pos: V3,
                       template_id: TemplateId) -> OpResult<StructureId> {
-    let template = unwrap!(eng.data().structure_templates.get_template(template_id));
+    let template = unwrap!(eng.data().get_template(template_id));
     try!(check_placement(&eng.cache, pid, pos, template));
     let s = try!(eng.world.create_structure(pid, pos, template_id));
     Ok(s.id())
@@ -127,7 +127,7 @@ pub fn checked_create(eng: &mut EngineCheck,
 pub fn checked_replace(eng: &mut EngineCheck,
                        sid: StructureId,
                        template_id: TemplateId) -> OpResult<()> {
-    let new_template = unwrap!(eng.data().structure_templates.get_template(template_id));
+    let new_template = unwrap!(eng.data().get_template(template_id));
 
     let mut s = unwrap!(eng.world.get_structure_mut(sid));
     let old_template = s.template();
@@ -140,11 +140,11 @@ pub fn checked_replace(eng: &mut EngineCheck,
 fn check_placement(cache: &TerrainCache,
                    pid: PlaneId,
                    pos: V3,
-                   template: &StructureTemplate) -> OpResult<()> {
+                   template: TemplateRef) -> OpResult<()> {
     let bounds = Region::sized(template.size) + pos;
 
     for pos in bounds.points() {
-        let flags = template.shape[bounds.index(pos)];
+        let flags = template.shape()[bounds.index(pos)];
         if !flags.occupied() {
             continue;
         }
@@ -167,8 +167,8 @@ fn check_placement(cache: &TerrainCache,
 fn check_replacement(cache: &mut TerrainCache,
                      pid: PlaneId,
                      pos: V3,
-                     old_template: &StructureTemplate,
-                     new_template: &StructureTemplate) -> OpResult<()> {
+                     old_template: TemplateRef,
+                     new_template: TemplateRef) -> OpResult<()> {
 
     // If the new template sets strictly fewer flags than the old one, then placement is guaranteed
     // to succeed.
@@ -177,8 +177,8 @@ fn check_replacement(cache: &mut TerrainCache,
         let mut ok = true;
         for pos in bounds.points() {
             let idx = bounds.index(pos);
-            let old = old_template.shape[idx];
-            let new = new_template.shape[idx];
+            let old = old_template.shape()[idx];
+            let new = new_template.shape()[idx];
             if old != new && (!old.contains(new) || old.shape() != new.shape()) {
                 ok = false;
                 break;

@@ -239,7 +239,7 @@ pub fn facing_anim(data: &Data, facing: V3, speed: u8) -> AnimId {
     let anim_name = format!("pony//{}-{}",
                             SPEED_NAME_MAP[speed as usize],
                             anim_dir);
-    data.animations.get_id(&anim_name)
+    data.animation_id(&anim_name)
 }
 
 

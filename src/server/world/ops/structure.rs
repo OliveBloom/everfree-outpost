@@ -13,7 +13,7 @@ pub fn create(w: &mut World,
               pid: PlaneId,
               pos: V3,
               tid: TemplateId) -> OpResult<StructureId> {
-    let t = unwrap!(w.data.structure_templates.get_template(tid));
+    let t = unwrap!(w.data.get_template(tid));
     let bounds = Region::new(pos, pos + t.size);
 
     if bounds.min.z < 0 || bounds.max.z > CHUNK_SIZE {
@@ -63,7 +63,7 @@ pub fn post_init(w: &mut World,
                  sid: StructureId) {
     let (pid, bounds) = {
         let s = &w.structures[sid];
-        let t = w.data.structure_templates.template(s.template);
+        let t = w.data.template(s.template);
 
         (s.plane, Region::new(s.pos, s.pos + t.size))
     };
@@ -75,7 +75,7 @@ pub fn pre_fini(w: &mut World,
                 sid: StructureId) {
     let (pid, bounds) = {
         let s = &w.structures[sid];
-        let t = w.data.structure_templates.template(s.template);
+        let t = w.data.template(s.template);
 
         (s.plane, Region::new(s.pos, s.pos + t.size))
     };
@@ -89,7 +89,7 @@ pub fn destroy(w: &mut World,
     let s = unwrap!(w.structures.remove(sid));
     w.snapshot.record_structure(sid, &s);
 
-    let t = w.data.structure_templates.template(s.template);
+    let t = w.data.template(s.template);
     let bounds = Region::new(s.pos, s.pos + t.size);
     remove_from_lookup(&mut w.structures_by_chunk, sid, s.plane, bounds);
 
@@ -165,7 +165,7 @@ pub fn replace(w: &mut World,
                new_tid: TemplateId) -> OpResult<()> {
     let bounds = {
         let s = unwrap!(w.structures.get(sid));
-        let t = unwrap!(w.data.structure_templates.get_template(new_tid));
+        let t = unwrap!(w.data.get_template(new_tid));
         Region::new(s.pos, s.pos + t.size)
     };
 

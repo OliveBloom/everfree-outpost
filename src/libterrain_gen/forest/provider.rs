@@ -40,7 +40,7 @@ impl<'d> Provider<'d> {
 
         macro_rules! get_id {
             ($name:expr) => {
-                match self.data.block_data.find_id($name) {
+                match self.data.get_block_id($name) {
                     Some(x) => x,
                     None => { /*warn!("no such block: {}", $name);*/ 0 }
                 }
@@ -179,7 +179,7 @@ impl<'d> Provider<'d> {
         }
 
         macro_rules! template_id {
-            ($name:expr) => (self.data.structure_templates.get_id($name))
+            ($name:expr) => (self.data.template_id($name))
         };
 
         // Apply cave junk
@@ -203,7 +203,7 @@ impl<'d> Provider<'d> {
                         let mut s = String::new();
                         for (item_id, count) in contents {
                             s.push_str(&format!("{}:{},",
-                                                self.data.item_data.name(item_id),
+                                                self.data.item(item_id).name(),
                                                 count));
                         }
                         gs.extra.insert("loot".to_owned(), s);

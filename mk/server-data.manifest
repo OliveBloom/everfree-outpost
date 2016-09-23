@@ -1,9 +1,4 @@
 
-server/data/blocks.json: $b_data/blocks_server.json
-server/data/items.json: $b_data/items_server.json
-server/data/recipes.json: $b_data/recipes_server.json
-server/data/structures.json: $b_data/structures_server.json
-server/data/animations.json: $b_data/animations_server.json
+server/data/server_data.bin: $b_data/server_data.bin
 server/data/loot_tables.json: $b_data/loot_tables_server.json
-server/data/sprite_layers.json: $b_data/sprite_layers_server.json
 

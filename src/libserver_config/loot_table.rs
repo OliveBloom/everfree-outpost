@@ -6,7 +6,72 @@ use libserver_types::*;
 
 use loot::{TableIndex, Weight, Chance, ItemTable, StructureTable};
 
-use data::ParseError;
+
+#[derive(Debug)]
+pub struct ParseError(pub String);
+
+
+macro_rules! fail {
+    ($msg:expr) => {
+        fail!($msg,)
+    };
+    ($msg:expr, $($extra:tt)*) => {
+        Err(ParseError(format!($msg, $($extra)*)))
+    };
+}
+
+macro_rules! expect {
+    ($e:expr, $str:expr) => {
+        expect!($e, $str,)
+    };
+    ($e:expr, $str:expr, $($extra:tt)*) => {
+        match $e {
+            Some(x) => x,
+            None => return Err(ParseError(format!($str, $($extra)*))),
+        }
+    };
+}
+
+macro_rules! find_convert {
+    ($json:expr, $key:expr, $convert:ident, $where_:expr) => {
+        find_convert!($json, $key, $convert, $where_,)
+    };
+    ($json:expr, $key:expr, $convert:ident, $where_:expr, $($extra:tt)*) => {{
+        let key = $key;
+        match $json.find(key) {
+            Some(j) => match j.$convert() {
+                Some(x) => Ok(x),
+                None => fail!(concat!("failed to convert key \"{}\" with {} ", $where_),
+                              key, stringify!($convert), $($extra)*),
+            },
+            None => fail!(concat!("missing key \"{}\" ", $where_),
+                          key, $($extra)*),
+        }
+    }};
+}
+
+macro_rules! get_convert {
+    ($json:expr, $key:expr, $convert:ident, $where_:expr) => {
+        get_convert!($json, $key, $convert, $where_,)
+    };
+    ($json:expr, $key:expr, $convert:ident, $where_:expr, $($extra:tt)*) => {
+        try!(find_convert!($json, $key, $convert, $where_, $($extra)*))
+    };
+}
+
+macro_rules! convert {
+    ($json:expr, $convert:ident, $what:expr) => {
+        convert!($expr, $convert, $what,)
+    };
+    ($json:expr, $convert:ident, $what:expr, $($extra:tt)*) => {{
+        match json.$convert() {
+            Some(x) => Ok(x),
+            None => fail!(concat!("failed to convert ", $what, " with {}"),
+                          $($extra)*, stringify!($convert)),
+        },
+    }};
+}
+
 
 pub struct LootTables {
     pub item: Box<[ItemTable]>,

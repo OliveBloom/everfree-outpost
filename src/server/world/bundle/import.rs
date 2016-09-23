@@ -85,13 +85,13 @@ impl<'d> Importer<'d> {
         let d = self.data;
 
         self.anim_id_map = b.anims.iter()
-            .map(|s| d.animations.get_id(&s)).collect();
+            .map(|s| d.animation_id(&s)).collect();
         self.item_id_map = b.items.iter()
-            .map(|s| d.item_data.get_id(&s)).collect();
+            .map(|s| d.item_id(&s)).collect();
         self.block_id_map = b.blocks.iter()
-            .map(|s| d.block_data.get_id(&s)).collect();
+            .map(|s| d.block_id(&s)).collect();
         self.template_id_map = b.templates.iter()
-            .map(|s| d.structure_templates.get_id(&s)).collect();
+            .map(|s| d.template_id(&s)).collect();
 
         self.client_id_map = (0 .. b.clients.len())
             .map(|_| ops::client::create_unchecked(w)).collect();
