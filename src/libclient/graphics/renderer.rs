@@ -349,27 +349,8 @@ impl<GL: Context> Renderer<GL> {
                                    chunks: &LocalChunks,
                                    bounds: Region<V2>) {
         self.terrain_geom.update(bounds, |buffer, _| {
-            let local_bounds = Region::new(scalar(0), scalar(LOCAL_SIZE as i32));
-
-            let mut vert_count = 0;
-            for cpos in bounds.points() {
-                let chunk_idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
-                vert_count += terrain::GeomGen::new(data.blocks(),
-                                                    &chunks[chunk_idx],
-                                                    cpos).count_verts();
-            }
-
-            buffer.alloc(vert_count * mem::size_of::<terrain::Vertex>());
-            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-
-            let mut offset = 0;
-            for cpos in bounds.points() {
-                let chunk_idx = local_bounds.index(cpos & scalar(LOCAL_MASK));
-                let mut gen = terrain::GeomGen::new(data.blocks(),
-                                                    &chunks[chunk_idx],
-                                                    cpos);
-                load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut offset);
-            }
+            let mut gen = terrain::RegionGeomGen::new(data.blocks(), chunks, bounds);
+            load_buffer2::<GL, _>(buffer, &mut gen);
         });
     }
 
