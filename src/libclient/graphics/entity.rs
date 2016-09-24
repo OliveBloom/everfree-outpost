@@ -10,7 +10,7 @@ use platform::gl;
 use terrain::LOCAL_BITS;
 use util;
 
-use graphics::GeometryGenerator;
+use graphics::GeometryGenerator2;
 
 
 #[derive(Clone, Copy)]
@@ -71,13 +71,13 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
 }
 
 
+#[derive(Clone)]
 pub struct GeomGen<'a> {
     entities: &'a Entities,
     data: &'a Data,
     render_names: bool,
     bounds: Region<V2>,
     now: i32,
-    next: Option<EntityId>,
 }
 
 const LOCAL_PX_MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
@@ -99,50 +99,20 @@ impl<'a> GeomGen<'a> {
 
             bounds: bounds,
             now: now,
-            next: None,
         }
-    }
-
-    pub fn count_verts(&self) -> usize {
-        let mut count = 0;
-        for (_, e) in self.entities.iter() {
-            let pos = e.pos(self.now);
-            if !util::contains_wrapped(self.bounds, pos.reduce(), scalar(LOCAL_PX_MASK)) {
-                // Not visible
-                continue;
-            }
-
-            count += 6 * count_quads_one(e);
-        }
-        count
     }
 }
 
-impl<'a> GeometryGenerator for GeomGen<'a> {
+impl<'a> GeometryGenerator2 for GeomGen<'a> {
     type Vertex = Vertex;
 
-    fn generate(&mut self,
-                buf: &mut [Vertex]) -> (usize, bool) {
-        let mut idx = 0;
-        let iter = if let Some(next) = self.next {
-            self.entities.iter_z_order_from(next)
-        } else {
-            self.entities.iter_z_order()
-        };
-        for e in iter {
-            let id = e.id;
-            self.next = Some(id);
-
+    fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {
+        for e in self.entities.iter_z_order() {
             let pos = e.pos(self.now);
             let pos = util::wrap_base(pos, self.bounds.min.extend(0));
             if !self.bounds.contains(pos.reduce()) {
                 // Not visible
                 continue;
-            }
-
-            let num_quads = count_quads_one(e);
-            if idx + 6 * num_quads >= buf.len() {
-                return (idx, true);
             }
 
             let a = self.data.animation(e.motion.anim_id);
@@ -169,7 +139,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                              dest_y + g.dest_offset.1 + cy * g.size.1)
                         };
 
-                    buf[idx] = Vertex {
+                    emit(Vertex {
                         dest_pos: dest_pos,
                         src_pos: (g.src_offset.0 + cx * g.size.0,
                                   g.src_offset.1 + cy * g.size.1),
@@ -188,8 +158,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         anim_rate: a.framerate as u16,
                         anim_start: (e.motion.start_time % 55440) as u16,
                         anim_step: g.size.0,
-                    };
-                    idx += 1;
+                    });
                 }
             });
 
@@ -208,7 +177,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         let h = fonts::NAME.height as u16;
 
                         for &(cx, cy) in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
-                            buf[idx] = Vertex {
+                            emit(Vertex {
                                 dest_pos: (dx + cx * w,
                                            dy + cy * h),
                                 src_pos: (sx + cx * w,
@@ -228,8 +197,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                                 anim_rate: 1,
                                 anim_start: 0,
                                 anim_step: 0,
-                            };
-                            idx += 1;
+                            });
                         }
                     }
                 }
@@ -249,7 +217,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         (dest_x + g.dest_offset.0 + cx * g.size.0,
                          dest_y + g.dest_offset.1 + cy * g.size.1);
 
-                    buf[idx] = Vertex {
+                    emit(Vertex {
                         dest_pos: dest_pos,
                         src_pos: (g.src_offset.0 + cx * g.size.0,
                                   g.src_offset.1 + cy * g.size.1),
@@ -268,8 +236,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         anim_rate: 1,
                         anim_start: (e.motion.start_time % 55440) as u16,
                         anim_step: 0,
-                    };
-                    idx += 1;
+                    });
                 }
 
 
@@ -285,7 +252,7 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         (dest_x + g.dest_offset.0 + cx * g.size.0,
                          dest_y + g.dest_offset.1 + cy * g.size.1);
 
-                    buf[idx] = Vertex {
+                    emit(Vertex {
                         dest_pos: dest_pos,
                         src_pos: (g.src_offset.0 + cx * g.size.0,
                                   g.src_offset.1 + cy * g.size.1),
@@ -304,22 +271,11 @@ impl<'a> GeometryGenerator for GeomGen<'a> {
                         anim_rate: 1,
                         anim_start: (e.motion.start_time % 55440) as u16,
                         anim_step: 0,
-                    };
-                    idx += 1;
+                    });
                 }
             }
         }
-
-        // Ran out of entites - we're done.
-        (idx, false)
     }
-}
-
-
-fn count_quads_one(e: &Entity) -> usize {
-    count_layers(e.appearance) +
-    name_len(&e.name) +
-    if e.activity_anim.is_some() { 2 } else { 0 }
 }
 
 
@@ -335,26 +291,6 @@ pub const EQUIP1_SHIFT: usize = 22;
 pub const EQUIP2_SHIFT: usize = 26;
 
 pub static COLOR_TABLE: [u8; 6] = [0x00, 0x44, 0x88, 0xcc, 0xff, 0xff];
-
-fn count_layers(appearance: u32) -> usize {
-    let mut count = 1;  // base
-    if appearance & WINGS != 0 { count += 2; }  // frontwing + backwing
-    if appearance & HORN != 0 { count += 1; }   // horn
-    count += 3;     // mane + tail + eyes
-    if (appearance >> EQUIP0_SHIFT) & 0xf != 0 { count += 1; }  // equip0
-    if (appearance >> EQUIP1_SHIFT) & 0xf != 0 { count += 1; }  // equip1
-    // equip2 is not actually used yet.
-    //if (appearance >> EQUIP2_SHIFT) & 0xf != 0 { count += 1; }  // equip2
-    count
-}
-
-fn name_len(name: &Option<String>) -> usize {
-    if let Some(ref name) = *name {
-        fonts::NAME.iter_str(name).filter(|&(ref idx, _)| idx.is_some()).count()
-    } else {
-        0
-    }
-}
 
 fn for_each_layer<F: FnMut(usize, (u8, u8, u8))>(appearance: u32, mut f: F) {
     let red = (appearance as usize >> 4) & 3;

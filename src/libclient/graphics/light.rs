@@ -8,8 +8,8 @@ use platform::gl;
 use structures::Structures;
 use util;
 
-use graphics::{IntrusiveCorner, GeometryGenerator};
-use graphics::{emit_quad, remaining_quads};
+use graphics::{IntrusiveCorner, GeometryGenerator2};
+use graphics::emit_quad2;
 use graphics::entity;
 use graphics::types::{StructureTemplate, HAS_LIGHT};
 use terrain::LOCAL_BITS;
@@ -63,11 +63,11 @@ pub fn load_shader<GL: gl::Context>(gl: &mut GL) -> GL::Shader {
 }
 
 
+#[derive(Clone)]
 pub struct StructureGeomGen<'a> {
     structures: &'a Structures,
     templates: &'a [StructureTemplate],
     bounds: Region<V2>,
-    next: StructureId,
 }
 
 impl<'a> StructureGeomGen<'a> {
@@ -78,45 +78,15 @@ impl<'a> StructureGeomGen<'a> {
             structures: structures,
             templates: templates,
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
-            next: StructureId(0),
         }
-    }
-
-    pub fn count_verts(&self) -> usize {
-        let mut count = 0;
-        for (_, s) in self.structures.iter() {
-            let t = &self.templates[s.template_id as usize];
-            if !t.flags.contains(HAS_LIGHT) {
-                continue;
-            }
-
-            let offset = V3::new(t.light_pos.0 as i32,
-                                 t.light_pos.1 as i32,
-                                 t.light_pos.2 as i32);
-            let s_pos = V3::new(s.pos.0 as i32,
-                                s.pos.1 as i32,
-                                s.pos.2 as i32);
-            let center = s_pos * scalar(TILE_SIZE) + offset;
-
-            const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
-            if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
-                continue;
-            }
-
-            count += 6;
-        }
-        count
     }
 }
 
-impl<'a> GeometryGenerator for StructureGeomGen<'a> {
+impl<'a> GeometryGenerator2 for StructureGeomGen<'a> {
     type Vertex = Vertex;
 
-    fn generate(&mut self, buf: &mut [Vertex]) -> (usize, bool) {
-        let mut idx = 0;
-        for (&id, s) in self.structures.iter_from(self.next) {
-            self.next = id;
-
+    fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {
+        for (_, s) in self.structures.iter() {
             let t = &self.templates[s.template_id as usize];
 
             if !t.flags.contains(HAS_LIGHT) {
@@ -138,12 +108,7 @@ impl<'a> GeometryGenerator for StructureGeomGen<'a> {
                 continue;
             }
 
-            if remaining_quads(buf, idx) < 1 {
-                // No more space in buffer.
-                return (idx, true);
-            }
-
-            emit_quad(buf, &mut idx, Vertex {
+            emit_quad2(|v| emit(v), Vertex {
                 corner: (0, 0),
                 // Give the position of the front corner of the structure, since the quad should
                 // cover the front plane.
@@ -158,18 +123,15 @@ impl<'a> GeometryGenerator for StructureGeomGen<'a> {
                 _pad2: 0,
             });
         }
-
-        // Ran out of structures - we're done.
-        (idx, false)
     }
 }
 
 
+#[derive(Clone)]
 pub struct EntityGeomGen<'a> {
     entities: &'a Entities,
     bounds: Region<V2>,
     now: Time,
-    next: EntityId,
 }
 
 impl<'a> EntityGeomGen<'a> {
@@ -180,40 +142,15 @@ impl<'a> EntityGeomGen<'a> {
             entities: entities,
             bounds: bounds * scalar(CHUNK_SIZE * TILE_SIZE),
             now: now,
-            next: EntityId(0),
         }
-    }
-
-    pub fn count_verts(&self) -> usize {
-        let mut count = 0;
-        for (_, e) in self.entities.iter() {
-            if e.appearance & entity::LIGHT == 0 {
-                continue;
-            }
-
-            let pos = e.pos(self.now);
-            // TODO: hard-coded constant based on entity size
-            let center = pos + V3::new(16, 16, 48);
-
-            const MASK: i32 = (1 << (LOCAL_BITS + CHUNK_BITS + TILE_BITS)) - 1;
-            if !util::contains_wrapped(self.bounds, center.reduce(), scalar(MASK)) {
-                continue;
-            }
-
-            count += 6;
-        }
-        count
     }
 }
 
-impl<'a> GeometryGenerator for EntityGeomGen<'a> {
+impl<'a> GeometryGenerator2 for EntityGeomGen<'a> {
     type Vertex = Vertex;
 
-    fn generate(&mut self, buf: &mut [Vertex]) -> (usize, bool) {
-        let mut idx = 0;
-        for (&id, e) in self.entities.iter_from(self.next) {
-            self.next = id;
-
+    fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {
+        for (_, e) in self.entities.iter() {
             if e.appearance & entity::LIGHT == 0 {
                 continue;
             }
@@ -232,12 +169,7 @@ impl<'a> GeometryGenerator for EntityGeomGen<'a> {
                 continue;
             }
 
-            if remaining_quads(buf, idx) < 1 {
-                // No more space in buffer.
-                return (idx, true);
-            }
-
-            emit_quad(buf, &mut idx, Vertex {
+            emit_quad2(|v| emit(v), Vertex {
                 corner: (0, 0),
                 // Give the position of the front corner of the entity, since the quad should
                 // cover the front plane.
@@ -252,8 +184,5 @@ impl<'a> GeometryGenerator for EntityGeomGen<'a> {
                 _pad2: 0,
             });
         }
-
-        // Ran out of entities - we're done.
-        (idx, false)
     }
 }

@@ -400,9 +400,7 @@ impl<GL: Context> Renderer<GL> {
                                            bounds: Region<V2>) {
         self.structure_light_geom.update(bounds, |buffer, _| {
             let mut gen = light::StructureGeomGen::new(structures, data.templates(), bounds);
-            buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
-            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-            load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut 0);
+            load_buffer2::<GL, _>(buffer, &mut gen);
         });
     }
 
@@ -434,19 +432,12 @@ impl<GL: Context> Renderer<GL> {
         {
             let mut gen = entity::GeomGen::new(entities, data, self.render_names,
                                                bounds, now);
-            let expected = gen.count_verts();
-            self.entity_buffer.alloc(expected * mem::size_of::<entity::Vertex>());
-            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-            let actual = load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen, &mut tmp, &mut 0);
-            assert!(actual == expected,
-                    "entity::GeomGen::count_verts counted wrong: {} != {}", actual, expected);
+            load_buffer2::<GL, _>(&mut self.entity_buffer, &mut gen);
         }
 
         {
             let mut gen = light::EntityGeomGen::new(entities, bounds, now);
-            self.entity_light_buffer.alloc(gen.count_verts() * mem::size_of::<light::Vertex>());
-            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-            load_buffer::<GL, _>(&mut self.entity_light_buffer, &mut gen, &mut tmp, &mut 0);
+            load_buffer2::<GL, _>(&mut self.entity_light_buffer, &mut gen);
         }
     }
 

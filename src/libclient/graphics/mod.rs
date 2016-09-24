@@ -25,6 +25,15 @@ pub fn emit_quad<T: Copy+IntrusiveCorner>(buf: &mut [T],
     }
 }
 
+pub fn emit_quad2<F, V>(mut emit: F, vertex: V)
+        where F: FnMut(V), V: Clone+IntrusiveCorner, {
+    for &corner in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
+        let mut v = vertex.clone();
+        *v.corner_mut() = corner;
+        emit(v);
+    }
+}
+
 pub fn remaining_quads<T>(buf: &[T], idx: usize) -> usize {
     (buf.len() - idx) / 6
 }
