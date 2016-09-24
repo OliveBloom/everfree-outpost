@@ -10,7 +10,7 @@ use platform::gl;
 use terrain::LOCAL_BITS;
 use util;
 
-use graphics::GeometryGenerator2;
+use graphics::GeometryGenerator;
 
 
 #[derive(Clone, Copy)]
@@ -103,7 +103,7 @@ impl<'a> GeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator2 for GeomGen<'a> {
+impl<'a> GeometryGenerator for GeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {

@@ -8,8 +8,8 @@ use platform::gl;
 use structures::Structures;
 use util;
 
-use graphics::{IntrusiveCorner, GeometryGenerator2};
-use graphics::emit_quad2;
+use graphics::{IntrusiveCorner, GeometryGenerator};
+use graphics::emit_quad;
 use graphics::entity;
 use graphics::types::{StructureTemplate, HAS_LIGHT};
 use terrain::LOCAL_BITS;
@@ -82,7 +82,7 @@ impl<'a> StructureGeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator2 for StructureGeomGen<'a> {
+impl<'a> GeometryGenerator for StructureGeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {
@@ -108,7 +108,7 @@ impl<'a> GeometryGenerator2 for StructureGeomGen<'a> {
                 continue;
             }
 
-            emit_quad2(|v| emit(v), Vertex {
+            emit_quad(|v| emit(v), Vertex {
                 corner: (0, 0),
                 // Give the position of the front corner of the structure, since the quad should
                 // cover the front plane.
@@ -146,7 +146,7 @@ impl<'a> EntityGeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator2 for EntityGeomGen<'a> {
+impl<'a> GeometryGenerator for EntityGeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {
@@ -169,7 +169,7 @@ impl<'a> GeometryGenerator2 for EntityGeomGen<'a> {
                 continue;
             }
 
-            emit_quad2(|v| emit(v), Vertex {
+            emit_quad(|v| emit(v), Vertex {
                 corner: (0, 0),
                 // Give the position of the front corner of the entity, since the quad should
                 // cover the front plane.

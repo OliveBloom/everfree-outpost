@@ -10,7 +10,6 @@ use data::Data;
 use debug;
 use entity::Entities;
 use graphics::GeometryGenerator;
-use graphics::GeometryGenerator2;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
 use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, DepthMode, Feature, FeatureStatus};
@@ -350,7 +349,7 @@ impl<GL: Context> Renderer<GL> {
                                    bounds: Region<V2>) {
         self.terrain_geom.update(bounds, |buffer, _| {
             let mut gen = terrain::RegionGeomGen::new(data.blocks(), chunks, bounds);
-            load_buffer2::<GL, _>(buffer, &mut gen);
+            load_buffer::<GL, _>(buffer, &mut gen);
         });
     }
 
@@ -365,7 +364,7 @@ impl<GL: Context> Renderer<GL> {
                                      bounds: Region<V2>) {
         self.structure_geom.update(bounds, |buffer, _| {
             let mut gen = structure::GeomGen::new(structures, data, bounds);
-            load_buffer2::<GL, _>(buffer, &mut gen);
+            load_buffer::<GL, _>(buffer, &mut gen);
         });
     }
 
@@ -381,7 +380,7 @@ impl<GL: Context> Renderer<GL> {
                                            bounds: Region<V2>) {
         self.structure_light_geom.update(bounds, |buffer, _| {
             let mut gen = light::StructureGeomGen::new(structures, data.templates(), bounds);
-            load_buffer2::<GL, _>(buffer, &mut gen);
+            load_buffer::<GL, _>(buffer, &mut gen);
         });
     }
 
@@ -413,12 +412,12 @@ impl<GL: Context> Renderer<GL> {
         {
             let mut gen = entity::GeomGen::new(entities, data, self.render_names,
                                                bounds, now);
-            load_buffer2::<GL, _>(&mut self.entity_buffer, &mut gen);
+            load_buffer::<GL, _>(&mut self.entity_buffer, &mut gen);
         }
 
         {
             let mut gen = light::EntityGeomGen::new(entities, bounds, now);
-            load_buffer2::<GL, _>(&mut self.entity_light_buffer, &mut gen);
+            load_buffer::<GL, _>(&mut self.entity_light_buffer, &mut gen);
         }
     }
 
@@ -823,31 +822,8 @@ impl<GL: Context, K: Eq> GeomCache<GL, K> {
 
 
 fn load_buffer<GL, G>(buf: &mut GL::Buffer,
-                      gen: &mut G,
-                      tmp: &mut [G::Vertex],
-                      offset: &mut usize) -> usize
+                      gen: &mut G)
         where GL: Context, G: GeometryGenerator {
-    let mut keep_going = true;
-    let mut total = 0;
-    while keep_going {
-        let (len, more) = gen.generate(tmp);
-        keep_going = more;
-
-        let byte_len = len * mem::size_of::<G::Vertex>();
-        let bytes = unsafe {
-            slice::from_raw_parts(tmp.as_ptr() as *const u8, byte_len)
-        };
-        buf.load(*offset, bytes);
-        *offset += byte_len;
-
-        total += len;
-    }
-    total
-}
-
-fn load_buffer2<GL, G>(buf: &mut GL::Buffer,
-                       gen: &mut G)
-        where GL: Context, G: GeometryGenerator2 {
     buf.alloc(gen.count_verts() * mem::size_of::<G::Vertex>());
 
     let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };

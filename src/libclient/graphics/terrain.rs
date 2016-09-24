@@ -7,8 +7,8 @@ use physics::v3::{V3, V2, scalar, Region, RegionPoints};
 use physics::CHUNK_SIZE;
 
 use graphics::ATLAS_SIZE;
-use graphics::{IntrusiveCorner, GeometryGenerator2};
-use graphics::{emit_quad2, remaining_quads};
+use graphics::{IntrusiveCorner, GeometryGenerator};
+use graphics::emit_quad;
 use graphics::types::LocalChunks;
 use platform::gl;
 use terrain::{LOCAL_SIZE, LOCAL_MASK};
@@ -77,7 +77,7 @@ impl<'a> GeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator2 for GeomGen<'a> {
+impl<'a> GeometryGenerator for GeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {
@@ -96,7 +96,7 @@ impl<'a> GeometryGenerator2 for GeomGen<'a> {
 
                 let s = tile % ATLAS_SIZE;
                 let t = tile / ATLAS_SIZE;
-                emit_quad2(|v| emit(v), Vertex {
+                emit_quad(|v| emit(v), Vertex {
                     corner: (0, 0),
                     pos: (pos.x as u8,
                           pos.y as u8,
@@ -131,7 +131,7 @@ impl<'a> RegionGeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator2 for RegionGeomGen<'a> {
+impl<'a> GeometryGenerator for RegionGeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {

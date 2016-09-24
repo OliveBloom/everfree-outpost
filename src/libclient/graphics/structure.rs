@@ -9,7 +9,7 @@ use structures::Structures;
 use terrain::LOCAL_MASK;
 use util;
 
-use graphics::GeometryGenerator2;
+use graphics::GeometryGenerator;
 
 
 #[derive(Clone, Copy)]
@@ -93,7 +93,7 @@ impl<'a> GeomGen<'a> {
     }
 }
 
-impl<'a> GeometryGenerator2 for GeomGen<'a> {
+impl<'a> GeometryGenerator for GeomGen<'a> {
     type Vertex = Vertex;
 
     fn generate<F: FnMut(Vertex)>(&mut self, mut emit: F) {

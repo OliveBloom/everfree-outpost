@@ -15,17 +15,7 @@ pub trait IntrusiveCorner {
     fn corner_mut(&mut self) -> &mut (u8, u8);
 }
 
-pub fn emit_quad<T: Copy+IntrusiveCorner>(buf: &mut [T],
-                                          idx: &mut usize,
-                                          vertex: T) {
-    for &corner in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
-        buf[*idx] = vertex;
-        *buf[*idx].corner_mut() = corner;
-        *idx += 1;
-    }
-}
-
-pub fn emit_quad2<F, V>(mut emit: F, vertex: V)
+pub fn emit_quad<F, V>(mut emit: F, vertex: V)
         where F: FnMut(V), V: Clone+IntrusiveCorner, {
     for &corner in &[(0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1)] {
         let mut v = vertex.clone();
@@ -34,17 +24,8 @@ pub fn emit_quad2<F, V>(mut emit: F, vertex: V)
     }
 }
 
-pub fn remaining_quads<T>(buf: &[T], idx: usize) -> usize {
-    (buf.len() - idx) / 6
-}
 
-
-trait GeometryGenerator {
-    type Vertex;
-    fn generate(&mut self, buf: &mut [Self::Vertex]) -> (usize, bool);
-}
-
-trait GeometryGenerator2: Clone {
+trait GeometryGenerator: Clone {
     type Vertex;
 
     fn generate<F: FnMut(Self::Vertex)>(&mut self, emit: F);
