@@ -34,3 +34,16 @@ trait GeometryGenerator {
     type Vertex;
     fn generate(&mut self, buf: &mut [Self::Vertex]) -> (usize, bool);
 }
+
+trait GeometryGenerator2: Clone {
+    type Vertex;
+
+    fn generate<F: FnMut(Self::Vertex)>(&mut self, emit: F);
+
+    fn count_verts(&self) -> usize {
+        let mut gen = self.clone();
+        let mut count = 0;
+        gen.generate(|_| { count += 1; });
+        count
+    }
+}

@@ -10,6 +10,7 @@ use data::Data;
 use debug;
 use entity::Entities;
 use graphics::GeometryGenerator;
+use graphics::GeometryGenerator2;
 use graphics::types::LocalChunks;
 use platform::gl::{Context, Buffer, Framebuffer, Texture};
 use platform::gl::{DrawArgs, UniformValue, Attach, BlendMode, DepthMode, Feature, FeatureStatus};
@@ -383,9 +384,7 @@ impl<GL: Context> Renderer<GL> {
                                      bounds: Region<V2>) {
         self.structure_geom.update(bounds, |buffer, _| {
             let mut gen = structure::GeomGen::new(structures, data, bounds);
-            buffer.alloc(gen.count_verts() * mem::size_of::<structure::Vertex>());
-            let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
-            load_buffer::<GL, _>(buffer, &mut gen, &mut tmp, &mut 0);
+            load_buffer2::<GL, _>(buffer, &mut gen);
         });
     }
 
@@ -874,4 +873,35 @@ fn load_buffer<GL, G>(buf: &mut GL::Buffer,
     total
 }
 
+fn load_buffer2<GL, G>(buf: &mut GL::Buffer,
+                       gen: &mut G)
+        where GL: Context, G: GeometryGenerator2 {
+    buf.alloc(gen.count_verts() * mem::size_of::<G::Vertex>());
 
+    let mut tmp = unsafe { util::zeroed_boxed_slice(64 * 1024) };
+    let mut idx = 0;
+
+    let mut buf_idx = 0;
+    let mut flush = |tmp: &[G::Vertex], count| {
+        if count == 0 {
+            return;
+        }
+
+        let byte_len = count * mem::size_of::<G::Vertex>();
+        let bytes = unsafe {
+            slice::from_raw_parts(tmp.as_ptr() as *const u8, byte_len)
+        };
+        buf.load(buf_idx, bytes);
+        buf_idx += bytes.len();
+    };
+
+    gen.generate(|v| {
+        if idx == tmp.len() {
+            flush(&tmp, idx);
+            idx = 0;
+        }
+        tmp[idx] = v;
+        idx += 1;
+    });
+    flush(&tmp, idx);
+}
