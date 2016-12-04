@@ -24,12 +24,25 @@ void build_cmd(char* base, vector<size_t>& idxs, vector<char*>& cmd) {
 int main(int argc, char *argv[]) {
     io_service ios;
 
+
+    const char* port_str = getenv("OUTPOST_PORT");
+    int port = 8888;
+    if (port_str != NULL) {
+        char* port_str_end = NULL;
+        port = strtol(port_str, &port_str_end, 10);
+        if (*port_str == '\0' || *port_str_end != '\0') {
+            cerr << "invalid setting for OUTPOST_PORT" << endl;
+            return 1;
+        }
+    }
+
+
 #ifndef _WIN32
     local::stream_protocol::endpoint control_addr("control");
     local::stream_protocol::endpoint repl_addr("repl");
 #else
-    ip::tcp::endpoint control_addr(ip::address_v4::loopback(), 8890);
-    ip::tcp::endpoint repl_addr(ip::address_v4::loopback(), 8891);
+    ip::tcp::endpoint control_addr(ip::address_v4::loopback(), port + 1);
+    ip::tcp::endpoint repl_addr(ip::address_v4::loopback(), port + 2);
 #endif
 
 
@@ -52,7 +65,7 @@ int main(int argc, char *argv[]) {
              &auth_cmd[0],
              control_addr,
              repl_addr,
-             8888);
+             port);
 
     ios.run();
 }
