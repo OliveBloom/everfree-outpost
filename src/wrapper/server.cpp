@@ -38,13 +38,13 @@ server::server(io_service& ios,
                char** auth_command,
                platform::local_stream::endpoint control_addr,
                platform::local_stream::endpoint repl_addr,
-               uint16_t ws_port)
+               boost::asio::ip::tcp::endpoint ws_addr)
     : game_backend_(new game_backend(*this, ios, game_command)),
       auth_backend_(new auth_backend(*this, ios, auth_command)),
       control_(new control(*this, ios, control_addr)),
       repl_(new repl(*this, ios, repl_addr)),
       signals_(new signals(*this, ios)),
-      websocket_(new websocket(*this, ios, ws_port)) {
+      websocket_(new websocket(*this, ios, ws_addr)) {
     game_backend_->start();
     auth_backend_->start();
 }

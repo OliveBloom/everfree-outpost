@@ -37,7 +37,7 @@ public:
            char** auth_command,
            platform::local_stream::endpoint control_addr,
            platform::local_stream::endpoint repl_addr,
-           uint16_t ws_port);
+           boost::asio::ip::tcp::endpoint ws_addr);
 
     void handle_game_response(message msg);
     void handle_game_shutdown();
