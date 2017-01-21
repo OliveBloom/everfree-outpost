@@ -36,6 +36,22 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    const char* host_str = getenv("OUTPOST_HOST");
+    boost::asio::ip::tcp::endpoint ws_addr;
+    if (host_str != NULL) {
+        // Bind on the indicated address
+        boost::system::error_code ec;
+        auto host = boost::asio::ip::address::from_string(host_str, ec);
+        if (ec) {
+            cerr << "error parsing OUTPOST_HOST: " << ec << endl;
+            return 1;
+        }
+        ws_addr = boost::asio::ip::tcp::endpoint(host, port);
+    } else {
+        // Bind on IPv6 wildcard address (also handles IPv4)
+        ws_addr = boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v6(), port);
+    }
+
 
 #ifndef _WIN32
     local::stream_protocol::endpoint control_addr("control");
@@ -65,7 +81,7 @@ int main(int argc, char *argv[]) {
              &auth_cmd[0],
              control_addr,
              repl_addr,
-             port);
+             ws_addr);
 
     ios.run();
 }
