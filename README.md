@@ -2,35 +2,27 @@
 
 Dependencies:
 
- - rust-lang/rust 1.10.0 (development build)
- - kripken/emscripten-fastcomp 1.36.5  (Other Emscripten components
+ - rust-lang/rust 1.14.0
+ - kripken/emscripten-fastcomp 1.37.0  (Other Emscripten components
    are not required)
 
- - rust-lang/bitflags 41aa413 (0.5.0)
- - rust-lang/libc 0.2.8
- - rust-lang/log 95f4961 (0.3.5)
- - rust-lang/rand f872fda (0.3.14)
- - rust-lang/rustc-serialize 31b52d4 (0.3.18)
- - rust-lang/time 874cad8 (0.1.34)
- - contain-rs/linked-hash-map 53bf10a (0.0.9)
- - dgrunwald/rust-cpython 0.0.5 (`libpython3_sys` only)
+ - rust-lang/bitflags 0.6.0-16-g27f0536
+ - rust-lang/libc 0.2.20-24-g8d8264b
+ - rust-lang/log d0c2f47
+ - rust-lang/rand 0.3.15-6-g4402c90
+ - rust-lang/rustc-serialize 0.3.22-2-gf424df8
+ - rust-lang/time 0.1.36 (6af46da)
+ - contain-rs/linked-hash-map 4fbb8ea
+ - dgrunwald/rust-cpython 0.0.4-170-gb6939f1
 
  - python3
  - python3-pillow
- - python3-wand (with libmagickwand >= 6.9.3-3)
  - python3-yaml
  - libpython3.5
  - ninja
  - closure-compiler
  - yui-compressor
  - pandoc
-
-Transitive dependencies (needed to compile some of the Rust libraries above):
-
- - BurntSushi/aho-corasick 0.5.1
- - BurntSushi/rust-memchr 0.1.10
- - BurntSushi/utf8-ranges 0.1.3
- - rust-lang/regex 0.1.55
 
 The script `util/build_libs.sh` may be useful for compiling the Rust libraries.
 
