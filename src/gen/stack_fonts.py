@@ -106,7 +106,6 @@ def main(out_img_path, out_metrics_path, out_rust_path, args):
 
     y = 0
     for i in inputs:
-        print('place %s at %d' % (i.name, y))
         out_img.paste(i.img, (0, y))
         i.metrics['y'] = y
         out_metrics[i.name] = i.metrics

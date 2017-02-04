@@ -17,6 +17,7 @@ use terrain::LOCAL_BITS;
 
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Vertex {
     // 0
     corner: (u8, u8),

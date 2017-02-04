@@ -1,19 +1,19 @@
-use std::prelude::v1::*;
-use types::*;
+#[allow(unused)] use std::prelude::v1::*;
+#[allow(unused)] use types::*;
 use physics::v3::{V2, scalar, Region};
-use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE, TILE_BITS};
+use physics::{CHUNK_SIZE, TILE_SIZE};
 
 use data::Data;
-use entity::{Entities, Entity};
+use entity::Entities;
 use fonts::{self, FontMetricsExt};
 use platform::gl;
-use terrain::LOCAL_BITS;
 use util;
 
 use graphics::GeometryGenerator;
 
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Vertex {
     // 0
     dest_pos: (u16, u16),
@@ -79,8 +79,6 @@ pub struct GeomGen<'a> {
     bounds: Region<V2>,
     now: i32,
 }
-
-const LOCAL_PX_MASK: i32 = (1 << (TILE_BITS + CHUNK_BITS + LOCAL_BITS)) - 1;
 
 impl<'a> GeomGen<'a> {
     pub fn new(entities: &'a Entities,

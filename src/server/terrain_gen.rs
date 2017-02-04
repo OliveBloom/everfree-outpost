@@ -12,7 +12,6 @@
 //! are dispatched by the main `Engine` loop to `logic::terrain_gen`, which imports the newly
 //! generated chunk into the `World`.
 use std::io::{self, Read};
-use std::mem;
 use std::process::{Command, Child, Stdio, ChildStdin, ChildStdout};
 use std::sync::mpsc::{self, Sender, Receiver};
 use std::thread::{self, JoinHandle};

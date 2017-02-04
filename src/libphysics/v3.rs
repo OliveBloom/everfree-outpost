@@ -193,9 +193,9 @@ pub trait Vn:
 {
     type Axis: Eq+Copy;
 
-    fn unfold<T, F: FnMut(<Self as Vn>::Axis, T) -> (i32, T)>(val: T, mut f: F) -> (Self, T);
+    fn unfold<T, F: FnMut(Self::Axis, T) -> (i32, T)>(val: T, f: F) -> (Self, T);
     fn get(self, axis: <Self as Vn>::Axis) -> i32;
-    fn fold_axes<T, F: FnMut(<Self as Vn>::Axis, T) -> T>(init: T, mut f: F) -> T;
+    fn fold_axes<T, F: FnMut(Self::Axis, T) -> T>(init: T, f: F) -> T;
 
     #[inline]
     fn from_fn<F: FnMut(<Self as Vn>::Axis) -> i32>(mut f: F) -> Self {

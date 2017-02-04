@@ -1,4 +1,4 @@
-use std::prelude::v1::*;
+#[allow(unused)] use std::prelude::v1::*;
 use std::borrow::Borrow;
 
 use physics::v3::{V2, scalar, Region};
@@ -17,6 +17,7 @@ pub enum Attr {
 
 #[derive(Clone, Debug)]
 pub enum Segment<S: Borrow<str>> {
+    #[allow(dead_code)]
     LineBreak,
     ParaBreak,
     Text(Attr, S),

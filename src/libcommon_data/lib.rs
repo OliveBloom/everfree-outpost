@@ -6,7 +6,8 @@
 
 extern crate common_util;
 
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+#[allow(deprecated)] use std::hash::SipHasher;
 use std::mem;
 use std::slice;
 use std::str;
@@ -50,6 +51,12 @@ unsafe impl Section for str {
         let bytes = <[u8] as Section>::from_bytes(ptr, len);
         str::from_utf8(&*bytes).unwrap()
     }
+}
+
+
+#[allow(deprecated)]
+fn sip_hasher(k0: u64, k1: u64) -> SipHasher {
+    SipHasher::new_with_keys(k0, k1)
 }
 
 
@@ -153,13 +160,13 @@ pub fn chd_lookup<H: ?Sized, T, P>(key: &H, table: &[T], params: &ChdParams<P>) 
         where H: Hash,
               T: Copy,
               P: Into<u64>+Copy {
-    let mut h1 = SipHasher::new_with_keys(0x123456, 0xfedcba);
+    let mut h1 = sip_hasher(0x123456, 0xfedcba);
     key.hash(&mut h1);
     // params.l.len() is a power of two, so use & instead of %
     let idx1 = h1.finish() as usize & (params.l.len() - 1);
     let l: u64 = params.l[idx1].into();
 
-    let mut h2 = SipHasher::new_with_keys(0x123456 + l, 0xfedcba - l);
+    let mut h2 = sip_hasher(0x123456 + l, 0xfedcba - l);
     key.hash(&mut h2);
     let idx2 = h2.finish() as usize & (params.m as usize - 1);
     table.get(idx2).map(|&x| x)

@@ -1,5 +1,4 @@
 use physics::CHUNK_BITS;
-use physics::v3::V3;
 use terrain::LOCAL_BITS;
 
 

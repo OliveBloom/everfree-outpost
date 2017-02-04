@@ -181,7 +181,6 @@ def main():
     adjust_palette(img)
     metrics = build_metrics(code_boxes, mx, my, args.bold)
     mask = build_mask(img, code_boxes, metrics, args.bold)
-    print(args.bold)
 
     out = Image.new('RGBA', mask.size, (0, 0, 0, 0))
     for offset in offsets:

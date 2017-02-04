@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use data::BlockDef;
 use graphics::types::BlockChunk;
 
-use physics::v3::{V3, V2, scalar, Region, RegionPoints};
+use physics::v3::{V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
 use graphics::ATLAS_SIZE;

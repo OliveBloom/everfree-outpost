@@ -4,7 +4,6 @@ use std::f32;
 use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
-use std::mem;
 use std::slice;
 
 use physics::v3::{Region, V2, scalar};

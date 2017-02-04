@@ -3,7 +3,6 @@ use std::hash::Hash;
 use std::isize;
 use std::marker::Unsize;
 use std::mem;
-use std::ops::{Deref, DerefMut};
 use std::panic;
 use std::ptr;
 use time;

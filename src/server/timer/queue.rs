@@ -1,5 +1,4 @@
 use std::mem;
-use std::ptr;
 use std::sync::mpsc::{channel, Sender, Receiver, TryRecvError};
 use std::thread;
 use std::time::Duration;

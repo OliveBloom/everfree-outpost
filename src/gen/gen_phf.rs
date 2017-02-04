@@ -9,11 +9,13 @@
 ///
 /// The modulus and intermediate table size are always powers of two.
 use std::cmp;
-use std::hash::{Hash, Hasher, SipHasher};
-use std::io::{self, BufReader, BufRead, Write};
+use std::hash::{Hash, Hasher};
+#[allow(deprecated)] use std::hash::SipHasher;
+use std::io::{self, BufReader, BufRead};
 use std::iter;
 extern crate rand;
 
+#[allow(deprecated)]    // for SipHasher
 fn hash<H: Hash+?Sized>(s: &H, k: (u64, u64)) -> u64 {
     let mut h = SipHasher::new_with_keys(k.0, k.1);
     s.hash(&mut h);

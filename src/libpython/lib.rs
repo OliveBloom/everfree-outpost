@@ -1,10 +1,8 @@
 #![crate_name = "python"]
 
 #![feature(
-    filling_drop,
     nonzero,
     plugin,
-    type_macros,
 )]
 
 #![plugin(syntax_exts)]

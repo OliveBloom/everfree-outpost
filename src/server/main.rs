@@ -7,7 +7,6 @@
     btree_range,
     collections,
     collections_bound,
-    filling_drop,
     fnbox,
     mpsc_select,
     plugin,

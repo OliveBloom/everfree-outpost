@@ -4,8 +4,6 @@
 #![feature(
     alloc,
     box_syntax,
-    filling_drop,
-    iter_arith,
     oom,
 )]
 

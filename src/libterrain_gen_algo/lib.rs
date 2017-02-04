@@ -1,7 +1,7 @@
 #![crate_name = "terrain_gen_algo"]
 #![allow(dead_code)]
 #![feature(
-    zero_one,
+    try_from,
 )]
 
 #[macro_use] extern crate bitflags;
@@ -11,7 +11,7 @@ extern crate rand;
 extern crate server_types as libserver_types;
 
 use std::cmp::PartialOrd;
-use std::num::Zero;
+use std::convert::TryFrom;
 use std::ops::Add;
 use rand::Rng;
 use rand::distributions::range::SampleRange;
@@ -83,16 +83,17 @@ pub fn reservoir_sample<R, T, I>(rng: &mut R, mut iter: I) -> Option<T>
 
 pub fn reservoir_sample_weighted<R, T, W, I>(rng: &mut R, iter: I) -> Option<T>
         where R: Rng,
-              W: PartialOrd + SampleRange + Copy + Add<Output=W> + Zero,
+              W: PartialOrd + SampleRange + Copy + Add<Output=W> + TryFrom<u8>,
               I: Iterator<Item=(T, W)> {
-    let mut iter = iter.filter(|&(_, w)| w > Zero::zero());
+    let zero = W::try_from(0_u8).ok().unwrap();
+    let mut iter = iter.filter(|&(_, w)| w > zero);
     let (mut choice, mut weight_sum) = match iter.next() {
         Some(x) => x,
         None => return None,
     };
     for (x, w) in iter {
         weight_sum = weight_sum + w;
-        let r = rng.gen_range(Zero::zero(), weight_sum);
+        let r = rng.gen_range(zero, weight_sum);
         if r < w {
             choice = x;
         }
