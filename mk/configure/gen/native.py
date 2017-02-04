@@ -5,7 +5,9 @@ from configure.util import cond, join, maybe, mk_build
 
 
 def rules(i):
-    rustc_base = join('$rustc $in',
+    rustc_base = join(
+            i.rustc_feature_env,
+            '$rustc $in',
             '--out-dir $b_native',
             '--emit link,dep-info',
             '-L $b_native',

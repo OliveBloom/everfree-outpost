@@ -43,12 +43,41 @@ def configure(ctx):
     configure_lib_src(ctx, 'collections', ctx.args.rust_home, 'src/libcollections')
     configure_lib_src(ctx, 'bitflags', ctx.args.bitflags_home)
 
+    configure_unstable_features(ctx)
+
     ctx.copy_arg('rust_extra_libdir', 'Rust extra library directory')
 
 def requirements(ctx):
-    return ('rustc',) + \
+    return ('rustc', 'rustc_feature_env',) + \
             tuple('rust_lib%s_path' % l for l in NEED_RUST_LIBS) + \
             tuple('rust_lib%s_src' % l for l in NEED_RUST_LIB_SRC)
+
+def configure_unstable_features(ctx):
+    ctx.info.add('rustc_feature_env', 'rustc settings for #![feature(...)]')
+
+    src = ctx.write('rs', '#![feature(lang_items)] fn main() {}')
+    out = ctx.file('exe')
+
+    ctx.out_part('Checking for rustc #![feature(...)]: ')
+    ok = ctx.run(ctx.info.rustc, (src, '-o', out))
+    if ok:
+        ctx.out('ok')
+        ctx.info.rustc_feature_env = ''
+        return
+    else:
+        ctx.out('not available')
+
+    ctx.out_part('Checking for rustc #![feature(...)] (with RUSTC_BOOTSTRAP=1): ')
+    ok = ctx.run(ctx.info.rustc, (src, '-o', out),
+            env={'RUSTC_BOOTSTRAP': '1'})
+    if ok:
+        ctx.out('ok')
+        ctx.info.rustc_feature_env = 'RUSTC_BOOTSTRAP=1'
+        return
+    else:
+        ctx.out('not available')
+
+    ctx.info.rustc_feature_env = None
 
 def configure_lib(ctx, crate_name):
     key = 'rust_lib%s_path' % crate_name

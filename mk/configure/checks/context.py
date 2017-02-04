@@ -105,15 +105,21 @@ class Context:
                 (what_desc, why_desc), level=level)
 
     # Command running
-    def run(self, prog, args=[], expect_ret=0):
+    def run(self, prog, args=[], expect_ret=0, env=None):
         if prog is None:
             self.warn('Skipping check because a needed program was not found')
             return None
 
+        if env is not None:
+            extra_env = env
+            env = os.environ.copy()
+            env.update(extra_env)
+        # Otherwise leave it as `None` to get the default behavior
+
         cmd = prog + ''.join(' ' + quote(a) for a in args)
         self.log('Execute: %r' % cmd)
         self.log_file.flush()
-        ret = subprocess.call(cmd, shell=True,
+        ret = subprocess.call(cmd, shell=True, env=env,
                 stdin=subprocess.DEVNULL, stdout=self.log_file, stderr=subprocess.STDOUT)
         self.log_file.flush()
         if expect_ret is None or ret == expect_ret:
@@ -123,10 +129,16 @@ class Context:
             self.warn('Process %r returned %d (expected %d)' % (prog, ret, expect_ret),)
             return None
 
-    def run_output(self, prog, args=[], expect_ret=0):
+    def run_output(self, prog, args=[], expect_ret=0, env=None):
+        if env is not None:
+            extra_env = env
+            env = os.environ.copy()
+            env.update(extra_env)
+        # Otherwise leave it as `None` to get the default behavior
+
         cmd = prog + ''.join(' ' + quote(a) for a in args)
         self.log('Execute: %r' % cmd)
-        p = subprocess.Popen(cmd, shell=True,
+        p = subprocess.Popen(cmd, shell=True, env=env,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output, _ = p.communicate()
 
