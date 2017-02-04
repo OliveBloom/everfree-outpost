@@ -25,8 +25,3 @@ Dependencies:
  - pandoc
 
 The script `util/build_libs.sh` may be useful for compiling the Rust libraries.
-
-Additional dependencies for the deployment scripts:
-
- - ansible
- - s3cmd
