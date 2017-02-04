@@ -1,11 +1,11 @@
 use std::cmp;
 use std::collections::hash_map::{self, HashMap};
 use std::mem;
-use std::ptr;
 
 use libcommon_proto::ExtraArg;
 
 use types::*;
+use util;
 
 
 pub use libcommon_movement::{
@@ -39,13 +39,8 @@ pub struct Input {
 
 impl Input {
     pub fn new() -> Input {
-        let mut maps = unsafe { mem::dropped() };
-        for map in &mut maps {
-            unsafe { ptr::write(map as *mut _, HashMap::new()) };
-        }
-
         Input {
-            pending_input_maps: maps,
+            pending_input_maps: unsafe { util::fixed_array_with(HashMap::new) },
             input_index: 0,
             pending_action: HashMap::new(),
         }

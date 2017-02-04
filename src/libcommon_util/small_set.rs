@@ -10,7 +10,6 @@ const SMALL_SET_WORDS: usize = 5;
 
 type Storage = [u64; SMALL_SET_WORDS];
 
-#[unsafe_no_drop_flag]
 pub struct SmallSet<T: Eq+Hash> {
     len: usize,
     data: [u64; SMALL_SET_WORDS],

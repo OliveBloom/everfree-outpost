@@ -1,5 +1,5 @@
-//use std::prelude::v1::*;
-use types::*;
+#[allow(unused)] use std::prelude::v1::*;
+#[allow(unused)] use types::*;
 use physics::v3::{V3, V2, scalar, Region};
 use physics::CHUNK_SIZE;
 
@@ -13,6 +13,7 @@ use graphics::GeometryGenerator;
 
 
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Vertex {
     // 0
     vert_offset: (u16, u16, u16),

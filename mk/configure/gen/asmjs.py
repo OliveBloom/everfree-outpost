@@ -8,7 +8,9 @@ def rules(i):
     fastcomp = lambda p: os.path.join(i.emscripten_fastcomp_prefix, 'bin', p) \
             if i.emscripten_fastcomp_prefix is not None else p
 
-    compile_base = join('$rustc $in',
+    compile_base = join(
+            i.rustc_feature_env,
+            '$rustc $in',
             '--out-dir $b_asmjs',
             '--cfg asmjs',
             '--cfg \'feature="no_std"\'',

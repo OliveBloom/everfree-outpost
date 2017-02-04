@@ -4,10 +4,7 @@
 #![feature(
     alloc,
     box_syntax,
-    filling_drop,
-    iter_arith,
     oom,
-    unsafe_no_drop_flag,
 )]
 
 #[macro_use] extern crate fakestd as std;

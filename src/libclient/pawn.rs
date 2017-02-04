@@ -254,7 +254,6 @@ impl Movement {
                              pos, velocity, input, self.path_active);
 
                     // Maybe start a path
-                    let old_pos = pos;
                     let pos = LocalPos::from_global(pos);
                     let velocity = LocalOffset::from_global(velocity);
                     if !self.path_active {

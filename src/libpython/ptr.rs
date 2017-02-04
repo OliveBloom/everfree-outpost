@@ -7,7 +7,6 @@ use python3_sys::*;
 use api;
 use exc::PyResult;
 
-#[unsafe_no_drop_flag]
 #[derive(PartialEq, Eq, Debug)]
 pub struct PyBox {
     ptr: NonZero<*mut PyObject>,
@@ -44,23 +43,18 @@ impl PyBox {
         unsafe { PyRef::new_non_null(self.as_ptr()) }
     }
 
-    pub fn unwrap(mut self) -> *mut PyObject {
-        unsafe {
-            let val = self.as_ptr();
-            self.ptr = NonZero::new(mem::POST_DROP_USIZE as *mut PyObject);
-            val
-        }
+    pub fn unwrap(self) -> *mut PyObject {
+        let ptr = self.as_ptr();
+        mem::forget(self);
+        ptr
     }
 }
 
 impl Drop for PyBox {
     fn drop(&mut self) {
         let ptr = self.as_ptr();
-        if ptr as usize != mem::POST_DROP_USIZE {
-            unsafe {
-                Py_DECREF(ptr);
-                self.ptr = NonZero::new(mem::POST_DROP_USIZE as *mut PyObject);
-            }
+        unsafe {
+            Py_DECREF(ptr);
         }
     }
 }

@@ -1,4 +1,5 @@
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+#[allow(deprecated)] use std::hash::SipHasher;
 use libserver_types::*;
 
 pub struct Params {
@@ -23,6 +24,7 @@ fn smooth_deriv(x: f64) -> f64 {
     30.0 * x4 - 60.0 * x3 + 30.0 * x2
 }
 
+#[allow(deprecated)]    // for SipHasher
 fn hash_point(seed: u64, p: V2) -> u64 {
     let mut sip = SipHasher::new_with_keys(seed, 0x1234567);
     p.hash(&mut sip);

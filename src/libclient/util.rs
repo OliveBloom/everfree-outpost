@@ -1,5 +1,6 @@
 use std::prelude::v1::*;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+#[allow(deprecated)] use std::hash::SipHasher;
 use std::intrinsics;
 use physics::v3::{V3, V2, Vn, Region, scalar};
 
@@ -41,6 +42,7 @@ pub fn round(x: f64) -> f64 {
 }
 
 
+#[allow(deprecated)]    // for SipHasher
 pub fn hash<H: ?Sized+Hash>(x: &H) -> u64 {
     let mut sip = SipHasher::new();
     x.hash(&mut sip);

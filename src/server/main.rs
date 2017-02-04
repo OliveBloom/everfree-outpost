@@ -3,16 +3,16 @@
 #![allow(dead_code)]
 
 #![feature(
+    box_syntax,
     btree_range,
     collections,
     collections_bound,
-    filling_drop,
     fnbox,
     mpsc_select,
     plugin,
     trace_macros,
     unboxed_closures,
-    unsafe_no_drop_flag,
+    unsize,
 )]
 #![cfg_attr(test, feature(test))]
 
@@ -28,8 +28,6 @@ extern crate rustc_serialize;
 #[cfg(test)] extern crate test;
 extern crate time;
 
-extern crate linked_hash_map;
-extern crate vec_map;
 extern crate python3_sys;
 
 extern crate common as libcommon;

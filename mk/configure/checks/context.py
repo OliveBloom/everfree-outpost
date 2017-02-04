@@ -55,6 +55,9 @@ class Context:
         self.info = Info()
         self.args = InstrumentedArgs(args)
         self.raw_args = args
+        # Settings where errors occurred, but the error was overridden by
+        # --force + --key=value
+        self.errors_overridden = set()
 
         self.temp_dir = temp_dir
         self.counter = 0
@@ -102,15 +105,21 @@ class Context:
                 (what_desc, why_desc), level=level)
 
     # Command running
-    def run(self, prog, args=[], expect_ret=0):
+    def run(self, prog, args=[], expect_ret=0, env=None):
         if prog is None:
             self.warn('Skipping check because a needed program was not found')
             return None
 
+        if env is not None:
+            extra_env = env
+            env = os.environ.copy()
+            env.update(extra_env)
+        # Otherwise leave it as `None` to get the default behavior
+
         cmd = prog + ''.join(' ' + quote(a) for a in args)
         self.log('Execute: %r' % cmd)
         self.log_file.flush()
-        ret = subprocess.call(cmd, shell=True,
+        ret = subprocess.call(cmd, shell=True, env=env,
                 stdin=subprocess.DEVNULL, stdout=self.log_file, stderr=subprocess.STDOUT)
         self.log_file.flush()
         if expect_ret is None or ret == expect_ret:
@@ -120,10 +129,16 @@ class Context:
             self.warn('Process %r returned %d (expected %d)' % (prog, ret, expect_ret),)
             return None
 
-    def run_output(self, prog, args=[], expect_ret=0):
+    def run_output(self, prog, args=[], expect_ret=0, env=None):
+        if env is not None:
+            extra_env = env
+            env = os.environ.copy()
+            env.update(extra_env)
+        # Otherwise leave it as `None` to get the default behavior
+
         cmd = prog + ''.join(' ' + quote(a) for a in args)
         self.log('Execute: %r' % cmd)
-        p = subprocess.Popen(cmd, shell=True,
+        p = subprocess.Popen(cmd, shell=True, env=env,
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output, _ = p.communicate()
 
@@ -181,6 +196,11 @@ class Context:
                 break
             except ConfigError as e:
                 self.out(str(e))
+
+        if result is None and arg is not None and self.args.force:
+            self.out('  (using provided value anyway, because --force is set)')
+            result = arg
+            self.errors_overridden.add(key)
 
         setattr(self.info, key, result)
 

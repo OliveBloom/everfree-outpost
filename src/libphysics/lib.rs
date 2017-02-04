@@ -3,11 +3,8 @@
 
 #[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
 #[cfg(not(asmjs))] #[macro_use] extern crate std;
-use std::prelude::v1::*;
-
-// TODO: currently this is the way to get the asm.js log macros
-#[cfg(asmjs)] #[macro_use] extern crate asmrt;
 #[cfg(not(asmjs))] #[macro_use] extern crate log;
+#[allow(unused)] use std::prelude::v1::*;
 
 #[macro_use] extern crate bitflags;
 extern crate common_types;
