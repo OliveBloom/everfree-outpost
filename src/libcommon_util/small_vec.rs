@@ -10,7 +10,6 @@ const SMALL_VEC_WORDS: usize = 3;
 
 type Storage = [u64; SMALL_VEC_WORDS];
 
-#[unsafe_no_drop_flag]
 pub struct SmallVec<T> {
     len: usize,
     data: [u64; SMALL_VEC_WORDS],

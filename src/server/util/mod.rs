@@ -1,5 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
+use std::isize;
+use std::marker::Unsize;
+use std::mem;
+use std::ops::{Deref, DerefMut};
+use std::panic;
+use std::ptr;
 use time;
 
 use types::Time;
@@ -94,4 +100,54 @@ pub fn encode_rle16<I: Iterator<Item=u16>>(iter: I) -> Vec<u16> {
     }
 
     result
+}
+
+
+/// Build a fixed-length array, filling each slot with the result of `f()`.  `A` must be a
+/// fixed-length array type, such as `[T; 10]`.
+///
+/// The `A: Unsize<[T]>` bound imposes roughly the desired constraint, but I'm not sure it's
+/// exactly right, so this function is unsafe for now.
+pub unsafe fn fixed_array_with<T, A, F>(mut f: F) -> A
+        where F: FnMut() -> T,
+              A: Unsize<[T]> {
+    let mut arr: A = mem::zeroed();
+    let ptr = &mut arr as *mut A as *mut T;
+
+    // Need some special handling to avoid running `drop` on uninitialized array elements, in the
+    // event of a panic inside f().
+    let res = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        let len = mem::size_of::<A>() / mem::size_of::<T>();
+        assert!(len <= isize::MAX as usize);
+        for i in 0 .. len as isize {
+            ptr::write(ptr.offset(i), f());
+        }
+    }));
+
+    match res {
+        Ok(()) => arr,
+        Err(e) => {
+            mem::forget(arr);
+            panic::resume_unwind(e)
+        },
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_fixed_array_with() {
+        use super::fixed_array_with;
+
+        let a: [u8; 10] = unsafe { fixed_array_with(|| 99) };
+        assert_eq!(a, [99; 10]);
+
+        let b: [Vec<u8>; 10] = unsafe { fixed_array_with(Vec::new) };
+        assert!(b.iter().all(|v| v.len() == 0));
+        assert!(b.iter().all(|v| v.capacity() == 0));
+
+        let c: [Vec<u8>; 10] = unsafe { fixed_array_with(|| Vec::with_capacity(3)) };
+        assert!(c.iter().all(|v| v.len() == 0));
+        assert!(c.iter().all(|v| v.capacity() >= 3));
+    }
 }

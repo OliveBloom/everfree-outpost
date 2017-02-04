@@ -14,6 +14,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var STACK_MAX = env.STACK_END|0;
 
     var abort = env.abort;
+    var abortStackOverflow = env.abort;
     var _llvm_trap = env.abort;
     var _write_str = env.writeStr;
     var _flush_str = env.flushStr;
@@ -23,6 +24,7 @@ var asmlibs_code_raw = function(global, env, buffer) {
     var Math_clz32 = global.Math.clz32;
     var Math_imul = global.Math.imul;
     var Math_sqrt = global.Math.sqrt;
+    var Math_floor = global.Math.floor;
     var nan = global.NaN;
     var _emscripten_memcpy_big = env._emscripten_memcpy_big;
 

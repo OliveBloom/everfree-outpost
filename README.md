@@ -13,11 +13,11 @@ Dependencies:
  - rust-lang/rustc-serialize 31b52d4 (0.3.18)
  - rust-lang/time 874cad8 (0.1.34)
  - contain-rs/linked-hash-map 53bf10a (0.0.9)
- - contain-rs/vec-map d274541 (0.6.0)
  - dgrunwald/rust-cpython 0.0.5 (`libpython3_sys` only)
 
  - python3
  - python3-pillow
+ - python3-wand (with libmagickwand >= 6.9.3-3)
  - python3-yaml
  - libpython3.5
  - ninja

@@ -1,6 +1,6 @@
-extern crate server_util;
+extern crate common_util;
 
-use server_util::SmallVec;
+use common_util::SmallVec;
 
 fn push_pop_n(n: u32) {
     let mut v: SmallVec<u32> = SmallVec::new();
@@ -11,8 +11,8 @@ fn push_pop_n(n: u32) {
     }
     println!(" ---");
     for i in 0 .. n {
-        println!("pop {}", i);
-        v.pop();
+        let result = v.pop();
+        println!("pop {} = {:?}", i, result);
     }
 }
 

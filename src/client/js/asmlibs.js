@@ -19,10 +19,10 @@ var STATIC_END = STATIC_START + STATIC_SIZE;
 
 // Align STACK_START to an 8-byte boundary.
 var STACK_START = (STATIC_END + 7) & ~7;
-// Give at least 16k for stack, and align to 4k boundary.
-var STACK_END = (STACK_START + 0x4000 + 0x0fff) & ~0x0fff;
+// Give at least 32k for stack, and align to 4k boundary.
+var STACK_END = (STACK_START + 0x8000 + 0x0fff) & ~0x0fff;
 var STACK_SIZE = STACK_END - STACK_START;
-console.assert(STACK_SIZE >= 0x1000, 'want at least 4kb for stack');
+console.assert(STACK_SIZE >= 0x8000, 'want at least 32kb for stack');
 
 var HEAP_START = STACK_END;
 

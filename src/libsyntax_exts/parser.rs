@@ -3,8 +3,8 @@ use std::error;
 use std::result;
 
 use syntax::codemap::Span;
-use syntax::ast::TokenTree;
 use syntax::parse::token::{Token, DelimToken};
+use syntax::tokenstream::TokenTree;
 
 
 #[derive(Clone, Debug)]

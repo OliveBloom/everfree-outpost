@@ -4,6 +4,7 @@
 
 #![feature(core_intrinsics)]
 #![feature(lang_items)]
+#![feature(unwind_attributes)]
 
 use core::fmt;
 
@@ -15,18 +16,19 @@ mod std {
 
 // Essential lang items.  These would normally be provided by librustrt.
 
-#[inline(always)] #[cold]
+#[inline(never)] #[cold]
 #[lang = "panic_fmt"]
-extern fn lang_panic_fmt(args: &core::fmt::Arguments,
-                        file: &'static str,
-                        line: usize) -> ! {
+#[unwind]
+pub extern fn lang_panic_fmt(args: &core::fmt::Arguments,
+                            file: &'static str,
+                            line: usize) -> ! {
     raw_println_err(format_args!("task panicked at {}:{}: {}", file, line, args));
     unsafe { core::intrinsics::abort() };
 }
 
-#[inline(always)] #[cold]
+#[inline(never)] #[cold]
 #[lang = "eh_personality"]
-extern fn lang_eh_personality() -> ! {
+pub extern fn lang_eh_personality() -> ! {
     unsafe { core::intrinsics::abort() };
 }
 

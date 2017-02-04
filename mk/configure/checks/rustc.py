@@ -2,7 +2,7 @@ import os
 
 from configure.checks.context import ConfigError
 
-NEED_RUSTC_HASH = 'cfcb716cf'
+NEED_RUSTC_VERSION = '1.14.0'
 
 NEED_RUST_LIBS = (
     # Keep these in dependency order.  That way necessary --extern flags will already be
@@ -10,18 +10,12 @@ NEED_RUST_LIBS = (
     'libc',
     'bitflags',
     'rand',
-    'memchr',
-    'aho_corasick',
-    'utf8_ranges',
-    'regex_syntax',
-    'regex',
     'log',
     'env_logger',
     'rustc_serialize',
     'time',
     'python3_sys',
     'linked_hash_map',
-    'vec_map',
     )
 
 NEED_RUST_LIB_SRC = (
@@ -126,7 +120,7 @@ def chk_rustc(ctx, rustc):
         raise ConfigError('not found')
 
     ver = out.splitlines()[0]
-    if NEED_RUSTC_HASH not in ver:
-        raise ConfigError('bad version %r (need %r)' % (ver.strip(), NEED_RUSTC_HASH))
+    if NEED_RUSTC_VERSION not in ver:
+        raise ConfigError('bad version %r (need %r)' % (ver.strip(), NEED_RUSTC_VERSION))
 
     return True

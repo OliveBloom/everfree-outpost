@@ -50,7 +50,7 @@ pub type TerrainGenEvent = Response;
 pub struct TerrainGen {
     send: Sender<Request>,
     recv: Receiver<Response>,
-    io_thread: JoinHandle<()>,
+    io_thread: Option<JoinHandle<()>>,
     subprocess: Child,
 }
 
@@ -64,11 +64,12 @@ impl Drop for TerrainGen {
         warn_on_err!(self.subprocess.wait());
 
         info!("waiting for io_thread");
-        let io_thread = unsafe { mem::replace(&mut self.io_thread, mem::dropped()) };
-        // Note: can't use warn_on_err! because the error may not actually implement Error.
-        match io_thread.join() {
-            Ok(()) => {},
-            Err(_) => { error!("failed to join terrain_gen thread on shutdown"); },
+        if let Some(io_thread) = self.io_thread.take() {
+            // Note: can't use warn_on_err! because the error may not actually implement Error.
+            match io_thread.join() {
+                Ok(()) => {},
+                Err(_) => { error!("failed to join terrain_gen thread on shutdown"); },
+            }
         }
         info!("terrain gen has shut down");
     }
@@ -98,7 +99,7 @@ impl TerrainGen {
         TerrainGen {
             send: send_req,
             recv: recv_resp,
-            io_thread: thread,
+            io_thread: Some(thread),
             subprocess: child,
         }
     }

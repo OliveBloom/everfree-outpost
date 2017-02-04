@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use syntax::ast::TokenTree;
 use syntax::codemap::Span;
 use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::parse;
 use syntax::parse::token::{Token, DelimToken};
+use syntax::tokenstream::TokenTree;
 use syntax::util::small_vector::SmallVector;
 
 use parser::{self, Parser};
@@ -219,17 +219,14 @@ pub fn engine_part2(cx: &mut ExtCtxt,
     items.push(parse::parse_item_from_source_str(
             "<engine_part2!>".to_owned(),
             gen_struct(&name, is_pub, flags),
-            cx.cfg.clone(),
             cx.parse_sess).unwrap().unwrap());
     items.push(parse::parse_item_from_source_str(
             "<engine_part2!>".to_owned(),
             gen_coded_impl(&name, flags),
-            cx.cfg.clone(),
             cx.parse_sess).unwrap().unwrap());
     items.push(parse::parse_item_from_source_str(
             "<engine_part2!>".to_owned(),
             format!("engine_part2_impl!({});", name),
-            cx.cfg.clone(),
             cx.parse_sess).unwrap().unwrap());
 
     MacEager::items(items)

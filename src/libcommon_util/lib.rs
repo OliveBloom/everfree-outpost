@@ -1,7 +1,4 @@
 #![crate_name = "common_util"]
-#![feature(
-    unsafe_no_drop_flag,
-    )]
 
 #![cfg_attr(asmjs, no_std)]
 #[cfg(asmjs)] #[macro_use] extern crate fakestd as std;
@@ -118,4 +115,3 @@ pub fn make_array_with<T, F: FnMut() -> T>(len: usize, mut f: F) -> Box<[T]> {
     }
     v.into_boxed_slice()
 }
-

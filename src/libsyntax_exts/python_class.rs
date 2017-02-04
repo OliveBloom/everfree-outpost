@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
 use syntax::ast::DUMMY_NODE_ID;
-use syntax::ast::{TokenTree, Delimited};
 use syntax::ast::{Ty, TyKind, BlockCheckMode, SpannedIdent};
 use syntax::ast::{Expr};
 use syntax::ast::{Item, ItemKind, Mac_, Visibility};
@@ -12,6 +11,8 @@ use syntax::parse::PResult;
 use syntax::parse::parser::Parser;
 use syntax::parse::token::{self, Token, DelimToken, Nonterminal, keywords};
 use syntax::ptr::P;
+use syntax::tokenstream::{TokenTree, Delimited};
+use syntax::util::ThinVec;
 use syntax::util::small_vector::SmallVector;
 
 
@@ -57,7 +58,7 @@ trait ParserExt<'a> {
         if &*id.name.as_str() == word {
             Ok(())
         } else {
-            Err(p.span_fatal(p.last_span,
+            Err(p.span_fatal(p.prev_span,
                              &format!("expected `{}`, found `{}`", word, id.name.as_str())))
         }
     }
@@ -67,7 +68,7 @@ trait ParserExt<'a> {
         let id = try!(p.parse_ident());
         Ok(Spanned {
             node: id,
-            span: p.last_span,
+            span: p.prev_span,
         })
     }
 
@@ -165,7 +166,7 @@ fn parse_python_class<'a>(mut p: Parser<'a>) -> PResult<'a, ClassDef> {
                 mode = Mode::Method;
             },
             _ => {
-                return Err(p.span_fatal(p.last_span,
+                return Err(p.span_fatal(p.prev_span,
                                         &format!("expected `members`, `slots`, or `methods`, \
                                                  found `{}`", kw.node.name.as_str())));
             },
@@ -199,7 +200,7 @@ fn parse_method<'a>(p: &mut Parser<'a>) -> PResult<'a, MethodDef> {
     let args = try!(p.parse_token_tree());
     let ret_ty = try!(p.parse_ret_ty2());
     let lo = p.span.lo;
-    let body = try!(p.parse_block_expr(lo, BlockCheckMode::Default, None));
+    let body = try!(p.parse_block_expr(lo, BlockCheckMode::Default, ThinVec::new()));
 
     Ok(MethodDef {
         mac: mac,
@@ -220,7 +221,7 @@ fn parse_slot<'a>(p: &mut Parser<'a>) -> PResult<'a, SlotDef> {
     let args = try!(p.parse_token_tree());
     let ret_ty = try!(p.parse_ret_ty2());
     let lo = p.span.lo;
-    let body = try!(p.parse_block_expr(lo, BlockCheckMode::Default, None));
+    let body = try!(p.parse_block_expr(lo, BlockCheckMode::Default, ThinVec::new()));
 
     Ok(SlotDef {
         mac: mac,
@@ -284,7 +285,7 @@ impl Builder {
     }
 
     fn nonterminal(&mut self, nt: Nonterminal, sp: Option<Span>) {
-        self.token(Token::Interpolated(nt), sp);
+        self.token(Token::Interpolated(Rc::new(nt)), sp);
     }
 
     fn ty(&mut self, ty: P<Ty>) {
@@ -392,7 +393,6 @@ pub fn define_python_class(cx: &mut ExtCtxt,
         Err(_) => { return DummyResult::any(sp); },
     };
 
-    let name = cls.name.clone();
     let mut builder = Builder { tts: Vec::new(), };
     emit_class(&mut builder, cls);
 
@@ -401,7 +401,6 @@ pub fn define_python_class(cx: &mut ExtCtxt,
     let mac_ = Mac_ {
         path: path,
         tts: builder.tts,
-        ctxt: name.node.ctxt
     };
     let mac = Spanned {
         node: mac_,

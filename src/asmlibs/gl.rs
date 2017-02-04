@@ -101,7 +101,6 @@ mod ffi {
 }
 
 
-#[unsafe_no_drop_flag]
 struct InnerPtr(*mut (UnsafeCell<Inner>, Cell<usize>));
 
 impl InnerPtr {
@@ -127,10 +126,6 @@ impl InnerPtr {
 
 impl Drop for InnerPtr {
     fn drop(&mut self) {
-        if self.0 as usize == mem::POST_DROP_USIZE {
-            return;
-        }
-
         unsafe {
             let ptr = self.0;
             let count = (*ptr).1.get();
@@ -140,7 +135,6 @@ impl Drop for InnerPtr {
                 // This is the last reference
                 drop(Box::from_raw(ptr));
             }
-            self.0 = mem::POST_DROP_USIZE as *mut _;
         }
     }
 }
