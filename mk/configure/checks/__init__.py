@@ -94,7 +94,7 @@ def check(ctx, need_vars):
     ok = True
 
     for k in need_vars:
-        if getattr(ctx.info, k) is None:
+        if getattr(ctx.info, k) is None or k in ctx.errors_overridden:
             ctx.out('Error: Failed to detect %s' % ctx.info._descs[k])
             ok = False
 

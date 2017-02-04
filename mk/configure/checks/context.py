@@ -55,6 +55,9 @@ class Context:
         self.info = Info()
         self.args = InstrumentedArgs(args)
         self.raw_args = args
+        # Settings where errors occurred, but the error was overridden by
+        # --force + --key=value
+        self.errors_overridden = set()
 
         self.temp_dir = temp_dir
         self.counter = 0
@@ -181,6 +184,11 @@ class Context:
                 break
             except ConfigError as e:
                 self.out(str(e))
+
+        if result is None and arg is not None and self.args.force:
+            self.out('  (using provided value anyway, because --force is set)')
+            result = arg
+            self.errors_overridden.add(key)
 
         setattr(self.info, key, result)
 
