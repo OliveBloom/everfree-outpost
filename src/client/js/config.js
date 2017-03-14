@@ -102,6 +102,7 @@ var DEFAULT_CONFIG = {
     'debug_shader_defs': {},
     'debug_fake_lag': 0,
     'debug_fake_lag_dev': 0,
+    'debug_log_server': null,
 };
 
 
@@ -145,6 +146,7 @@ exports.Config = {
     debug_shader_defs: new ConfigItem('debug_shader_defs'),
     debug_fake_lag: new ConfigItem('debug_fake_lag'),
     debug_fake_lag_dev: new ConfigItem('debug_fake_lag_dev'),
+    debug_log_server: new ConfigItem('debug_log_server'),
 };
 
 

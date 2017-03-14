@@ -5,6 +5,7 @@ var static_size = window['asmlibs_data_size'];
 var config = require('config');
 var decodeUtf8 = require('util/misc').decodeUtf8;
 var encodeUtf8 = require('util/misc').encodeUtf8;
+var LogServer = require('debug_log').LogServer;
 
 var AsmGl = require('asmgl').AsmGl;
 
@@ -45,17 +46,20 @@ var module_env = function(asm) {
 
         'flushStr': function() {
             console.log(msg_buffer);
+            LogServer.send('INFO: ' + msg_buffer);
             msg_buffer = '';
         },
 
         'flushStrWarn': function() {
             console.warn(msg_buffer);
+            LogServer.send('WARN: ' + msg_buffer);
             msg_buffer = '';
         },
 
         'flushStrErr': function() {
             console.error(msg_buffer);
             window.onerror(msg_buffer, '<native code>', 0, 0, null);
+            LogServer.send('ERROR: ' + msg_buffer);
             msg_buffer = '';
         },
 
