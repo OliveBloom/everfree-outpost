@@ -157,6 +157,8 @@ fn main() {
 
     let mut ward_info = Vec::new();
 
+    let mut teleport_networks = HashMap::new();
+
     for_each_file(&format!("{}/terrain_chunks", dir_in), |path| {
         let b = read_bundle(path);
         counters.update(&b);
@@ -187,9 +189,17 @@ fn main() {
 
         if let Some(teleporter_id) = find_template_id(&b, "teleporter") {
             for s in b.structures.iter() {
-                if s.template == teleporter_id {
-                    println!("found teleporter at {:?}, extra = {:?}", s.pos, s.extra);
+                if s.template != teleporter_id {
+                    continue;
                 }
+                println!("found teleporter at {:?}, extra = {:?}", s.pos, s.extra);
+
+                let name = s.extra.get("name").unwrap().unwrap_value().as_str().unwrap();
+                let network = s.extra.get("network").unwrap().unwrap_value().as_str().unwrap();
+                let pos = s.pos * scalar(32) + V3::new(32, 0, 0);
+
+                teleport_networks.entry(network).or_insert_with(HashMap::new)
+                                 .insert(name, pos);
             }
         }
     });
@@ -204,12 +214,17 @@ fn main() {
     {
         let extra = &mut plane_bundles.get_mut(&Stable::new(2)).unwrap().planes[0].extra;
         let mut h = extra.set_hash("ward_info");
+
         for (pos, id, name) in ward_info {
             let id_str = format!("{}", id.unwrap());
             let mut h2 = h.borrow().set_hash(&id_str);
             h2.borrow().set("pos", Value::V3(pos));
             h2.borrow().set("name", Value::Str(name.to_string()));
         }
+
+        let mut h2 = h.borrow().set_hash("server");
+        h2.borrow().set("pos", Value::V3(scalar(0)));
+        h2.borrow().set("name", Value::Str("the server".to_owned()));
     }
 
 
@@ -225,6 +240,20 @@ fn main() {
         w.next_plane = counters.plane + 1;
         w.next_terrain_chunk = counters.terrain_chunk + 1;
         w.next_structure = counters.structure + 1;
+
+        {
+            let mut h = w.extra.set_hash("teleport_networks");
+            for (network, map) in teleport_networks {
+                let mut h2 = h.borrow().set_hash(&network);
+                for (name, pos) in map {
+                    h2.borrow().set(&name, Value::V3(pos));
+                }
+            }
+        }
+
+        w.extra.set_hash("ward_perms");
+
+        println!("{:?}", w.extra);
     }
 
     write_bundle(&format!("{}/world.dat", dir_out), &world_bundle);
