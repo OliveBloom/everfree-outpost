@@ -13,10 +13,7 @@ def requirements(ctx):
 
 
 def chk_closure(ctx, closure):
-    # Strangely, closure-compiler --help seems to return 255, not 0.
-    # We could use closure-compiler --version instead, but that takes much
-    # longer to run (several seconds).
-    if not ctx.run(closure, ('--help',), expect_ret=255):
+    if not ctx.run(closure, ('--version',)):
         raise ConfigError('not found')
     return True
 
