@@ -533,7 +533,7 @@ impl<'a> Iterator for HashViewIterMut<'a> {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Extra {
     h: Option<Box<HashMap<String, Repr>>>,
 }

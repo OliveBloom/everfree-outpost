@@ -359,6 +359,16 @@ if __name__ == '__main__':
         '', # ensure there's a newline after the last command
         ))
 
+    for src_file in os.listdir(os.path.join(i.root_dir, 'src', 'migrations')):
+        if not src_file.endswith('.rs'):
+            continue
+        name = src_file[:-3].replace('-', '_')
+
+        content += native.rust(name, 'bin',
+            ('server_bundle', 'server_extra', 'server_types'),
+            src_file='$root/src/migrations/%s' % src_file)
+        content += '\n'
+
     with open('build.ninja', 'w') as f:
         f.write(content)
 
