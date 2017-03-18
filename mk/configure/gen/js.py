@@ -5,12 +5,16 @@ from configure.util import cond, join, maybe, mk_build
 
 
 def rules(i):
+
     return template('''
+        # This rule uses a separate `$in_exact` variable, which contains the
+        # pre-normalization version of `$in`.  This is necessary for the paths
+        # to line up with `$module_dir`.
         rule js_compile_modules
             command = $
                 %if not i.debug
                 $closure_compiler $
-                    $$($python3 $root/mk/misc/collect_js_deps.py $in $out $depfile) $
+                    $$($python3 $root/mk/misc/collect_js_deps.py $in_exact $out $depfile) $
                     --js_output_file=$out $
                     --language_in=ECMASCRIPT5_STRICT $
                     --compilation_level=ADVANCED_OPTIMIZATIONS $
@@ -50,6 +54,7 @@ def compile(i, out_file, main_src):
               %if i.debug% $root/mk/misc/gen_js_loader.py %end%
             entry_module = %module_name
             module_dir = %main_dir
+            in_exact = %main_src
     ''', **locals())
 
 def minify(i, out_file, js_src):
