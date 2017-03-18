@@ -1,6 +1,7 @@
 var Config = require('config').Config;
 
 
+/** @constructor */
 function LogServer(url) {
     this.ws = new WebSocket(url);
     this.buffer = [];
