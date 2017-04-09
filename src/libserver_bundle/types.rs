@@ -1,3 +1,5 @@
+use std::fmt;
+
 use server_extra::Extra;
 use server_types::*;
 use server_world_types::flags::{InventoryFlags, TerrainChunkFlags, StructureFlags};
@@ -5,6 +7,7 @@ use server_world_types::{Motion, Item};
 use server_world_types::{EntityAttachment, InventoryAttachment, StructureAttachment};
 
 
+#[derive(Debug)]
 pub struct Bundle {
     pub anims: Box<[Box<str>]>,
     pub items: Box<[Box<str>]>,
@@ -20,6 +23,7 @@ pub struct Bundle {
     pub structures: Box<[Structure]>,
 }
 
+#[derive(Debug)]
 pub struct World {
     pub now: Time,
 
@@ -35,6 +39,7 @@ pub struct World {
     pub child_inventories: Box<[InventoryId]>,
 }
 
+#[derive(Debug)]
 pub struct Client {
     pub name: Box<str>,
     pub pawn: Option<EntityId>,
@@ -46,6 +51,7 @@ pub struct Client {
     pub child_inventories: Box<[InventoryId]>,
 }
 
+#[derive(Debug)]
 pub struct Entity {
     pub stable_plane: Stable<PlaneId>,
     // plane: transient
@@ -62,6 +68,7 @@ pub struct Entity {
     pub child_inventories: Box<[InventoryId]>,
 }
 
+#[derive(Debug)]
 pub struct Inventory {
     pub contents: Box<[Item]>,
 
@@ -71,6 +78,7 @@ pub struct Inventory {
     pub attachment: InventoryAttachment,
 }
 
+#[derive(Debug)]
 pub struct Plane {
     pub name: Box<str>,
 
@@ -81,6 +89,7 @@ pub struct Plane {
     pub stable_id: StableId,
 }
 
+// Needs manual debug impl due to use of BlockChunk
 pub struct TerrainChunk {
     pub stable_plane: Stable<PlaneId>,
     pub cpos: V2,
@@ -92,6 +101,7 @@ pub struct TerrainChunk {
     pub child_structures: Box<[StructureId]>,
 }
 
+#[derive(Debug)]
 pub struct Structure {
     pub stable_plane: Stable<PlaneId>,
     pub pos: V3,
@@ -222,3 +232,30 @@ impl Clone for Structure {
         }
     }
 }
+
+
+impl fmt::Debug for TerrainChunk {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let &TerrainChunk {
+            ref stable_plane,
+            ref cpos,
+            ref blocks,
+
+            ref extra,
+            ref stable_id,
+            ref flags,
+            ref child_structures,
+        } = self;
+
+        f.debug_struct("TerrainChunk")
+            .field("stable_plane", stable_plane)
+            .field("cpos", cpos)
+            .field("blocks", &(&**blocks as &[BlockId]))
+            .field("extra", extra)
+            .field("stable_id", stable_id)
+            .field("flags", flags)
+            .field("child_structures", child_structures)
+            .finish()
+    }
+}
+
