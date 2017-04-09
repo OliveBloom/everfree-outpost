@@ -60,6 +60,7 @@ fn main() {
 
     let mut world_bundle = read_bundle(&format!("{}/world.dat", save_dir));
 
+
     let mut rev_map = HashMap::new();
 
     for_each_file(&format!("{}/clients", save_dir), |path| {
@@ -68,7 +69,7 @@ fn main() {
         for e in b.entities.iter() {
             if e.stable_id != 0 {
                 rev_map.entry(e.stable_id).or_insert_with(Vec::new)
-                       .push(path.to_owned());
+                       .push((path.to_owned(), (*b.clients[0].name).to_owned()));
             }
         }
     });
@@ -79,8 +80,35 @@ fn main() {
         }
 
         println!("\nCOLLISION on {:x}", id);
-        for path in paths {
-            let new_id = next_stable_entity_id(world_bundle.world.as_mut().unwrap());
+
+        let mut num_non_anon = 0;
+        let mut the_path = None;
+        let mut the_name = None;
+
+        for &(ref path, ref name) in &paths {
+            if name.starts_with("Anon:") {
+                continue;
+            }
+
+            num_non_anon += 1;
+
+            if num_non_anon == 1 {
+                the_path = Some(path.clone());
+                the_name = Some(name.clone());
+            } else {
+                the_path = None;
+                the_name = None;
+            }
+        }
+
+        if let Some(ref name) = the_name {
+            println!("  only one non-anonymous player in this collision: {:?}", name);
+        }
+
+        for (path, name) in paths {
+            let new_id =
+                if Some(&name) == the_name.as_ref() { id }
+                else { next_stable_entity_id(world_bundle.world.as_mut().unwrap()) };
             println!("  reassign {:?} = {:x}", path, new_id);
 
             let mut b = read_bundle(&path);

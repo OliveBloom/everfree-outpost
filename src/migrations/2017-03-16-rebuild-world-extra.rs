@@ -102,7 +102,14 @@ fn main() {
                     _ => panic!("unexpected value for ward owner"),
                 };
 
-                ward_info.push((s.pos, owner, &entity_name_map[&owner]));
+                let owner_name = match entity_name_map.get(&owner) {
+                    Some(name) => (**name).to_owned(),
+                    None => {
+                        println!("can't find name for ward owner {:?}", owner);
+                        format!("[unknown entity {}]", owner.unwrap())
+                    },
+                };
+                ward_info.push((s.pos, owner, owner_name));
             }
         }
 
@@ -132,7 +139,7 @@ fn main() {
             let id_str = format!("{}", id.unwrap());
             let mut h2 = h.borrow().set_hash(&id_str);
             h2.borrow().set("pos", Value::V3(pos));
-            h2.borrow().set("name", Value::Str(name.to_string()));
+            h2.borrow().set("name", Value::Str(name));
         }
 
         let mut h2 = h.borrow().set_hash("server");
