@@ -121,6 +121,14 @@ fn main() {
     };
 
 
+    // Clients
+
+    for_each_file(&format!("{}/clients", dir_in), |path| {
+        let b = read_bundle(path);
+        counters.update(&b);
+    });
+
+
     // Planes
 
     for (_, b) in plane_bundles.iter() {
