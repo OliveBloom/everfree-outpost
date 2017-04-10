@@ -223,6 +223,12 @@ if __name__ == '__main__':
             ldflags=py_ldflags,
             ),
 
+        native.rust('py_bundle', 'dylib',
+            ('python',),
+            src_file='src/py_bundle/lib.rs'),
+        dist.copy('$b_native/libpy_bundle$_so',
+                  '$b_native/_outpost_bundle$_so'),
+
         native.rust('terrain_gen_ffi', 'staticlib',
             ('terrain_gen', 'server_config', 'server_types'),
             src_file='$root/src/test_terrain_gen/ffi.rs'),

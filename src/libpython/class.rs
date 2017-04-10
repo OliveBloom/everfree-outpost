@@ -112,7 +112,7 @@ macro_rules! define_python_class_impl {
                             name: concat!(stringify!($mname), "\0")
                                     .as_ptr() as *mut c_char,
                             type_code: get_ptr_type_code(off_ptr),
-                            offset: off_ptr as Py_ssize_t,
+                            offset: off_ptr as python3_sys::Py_ssize_t,
                             flags: 0,
                             doc: ptr::null_mut(),
                         };
@@ -210,6 +210,12 @@ impl_member_type! {
     c_ulonglong => T_ULONGLONG,
     c_float => T_FLOAT,
     c_double => T_DOUBLE,
+}
+
+unsafe impl MemberType for super::ptr::PyBox {
+    fn get_type_code() -> libc::c_int {
+        python3_sys::structmember::T_OBJECT
+    }
 }
 
 pub fn decay<T>(ptr: &mut T) -> *mut T {

@@ -55,8 +55,6 @@ pub mod object {
 }
 
 pub mod unicode {
-    use std::ptr;
-    use std::slice;
     use std::str;
     use python3_sys::*;
     use super::{PyBox, PyRef, PyResult};
@@ -81,12 +79,37 @@ pub mod unicode {
     pub fn as_string(obj: PyRef) -> PyResult<String> {
         let bytes = try!(encode_utf8(obj));
         unsafe {
-            let mut ptr = ptr::null_mut();
-            let mut len = 0;
-            let ret = PyBytes_AsStringAndSize(bytes.as_ptr(), &mut ptr, &mut len);
-            pycheck!(ret == 0);
-            let bytes = slice::from_raw_parts(ptr as *const u8, len as usize);
+            let bytes = try!(super::bytes::as_slice(bytes.borrow()));
             Ok(str::from_utf8_unchecked(bytes).to_owned())
+        }
+    }
+}
+
+pub mod bytes {
+    use std::ptr;
+    use std::slice;
+    use python3_sys::*;
+    use super::{PyBox, PyRef, PyResult};
+
+    pub fn check(obj: PyRef) -> bool {
+        unsafe { PyBytes_Check(obj.as_ptr()) != 0 }
+    }
+
+    pub fn from_slice(s: &[u8]) -> PyResult<PyBox> {
+        pyassert!(s.len() as u64 <= PY_SSIZE_T_MAX as u64);
+        unsafe {
+            let ptr = PyBytes_FromStringAndSize(s.as_ptr() as *const i8,
+                                                s.len() as Py_ssize_t);
+            PyBox::new(ptr)
+        }
+    }
+
+    pub fn as_slice<'a>(obj: PyRef<'a>) -> PyResult<&'a [u8]> {
+        unsafe {
+            let len = PyBytes_Size(obj.as_ptr());
+            let ptr = PyBytes_AsString(obj.as_ptr());
+            pycheck!(!ptr.is_null());
+            Ok(slice::from_raw_parts(ptr as *const u8, len as usize))
         }
     }
 }
