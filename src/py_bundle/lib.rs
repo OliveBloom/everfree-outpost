@@ -62,6 +62,8 @@ impl<T: Adapt> Adapt for Box<[T]> {
     }
 
     fn from_python(py: PyRef) -> PyResult<Self> {
+        pyassert!(py::list::check(py),
+                  type_error, "expected list");
         let len = try!(py::list::size(py));
         let mut vec = Vec::with_capacity(len);
         for i in 0 .. len {
@@ -273,6 +275,32 @@ impl Adapt for Extra {
 
 
 #[macro_export]
+macro_rules! adapter_new_slot {
+    () => { unsafe extern "C" fn(_, _, _) -> _ };
+    ( $fname:ident,
+      ($this:ident: *mut $T:ty),
+      $ret_ty:ty,
+      $body:expr ) => {
+        unsafe extern "C" fn $fname(subtype: *mut ::python3_sys::PyTypeObject,
+                                    _args: *mut ::python3_sys::PyObject,
+                                    _kwds: *mut ::python3_sys::PyObject)
+                                    -> *mut ::python3_sys::PyObject {
+            use python3_sys::*;
+
+            let tp_alloc: fn(*mut PyTypeObject, Py_ssize_t) -> *mut PyObject =
+                ::std::mem::transmute(PyType_GetSlot(subtype, Py_tp_alloc));
+
+            let slf = tp_alloc(subtype, 0);
+            {
+                let $this = slf as *mut $T;
+                $body;
+            }
+            slf
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! adapter_dealloc_slot {
     () => { unsafe extern "C" fn(_) };
     ( $fname:ident,
@@ -319,6 +347,10 @@ macro_rules! adapt_struct {
                 $(let $field := $field;)*
 
             slots:
+                fn(adapter_new_slot!) Py_tp_new(this: *mut $PyThing) -> () {
+                    $(::std::ptr::write(&mut (*this).$field, py::none().to_box());)*
+                }
+
                 fn(adapter_dealloc_slot!) Py_tp_dealloc(this: *mut $PyThing) -> () {
                     $(::std::ptr::drop_in_place(&mut (*this).$field);)*
                 }
