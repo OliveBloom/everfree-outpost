@@ -71,8 +71,8 @@ pub fn inventory_appear_message(i: ObjectRef<Inventory>) -> ClientResponse {
     ClientResponse::InventoryAppear(i.id(), contents)
 }
 
-pub fn inventory_gone_message(i: ObjectRef<Inventory>) -> ClientResponse {
-    ClientResponse::InventoryGone(i.id())
+pub fn inventory_gone_message(iid: InventoryId) -> ClientResponse {
+    ClientResponse::InventoryGone(iid)
 }
 
 pub fn inventory_update_message(i: ObjectRef<Inventory>, slot_idx: u8) -> ClientResponse {

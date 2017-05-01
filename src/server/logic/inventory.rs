@@ -32,11 +32,9 @@ pub fn subscribe(eng: &mut EngineSubscribe, cid: ClientId, iid: InventoryId) {
 
 pub fn unsubscribe(eng: &mut EngineSubscribe, cid: ClientId, iid: InventoryId) {
     info!("unsubscribe {:?} from {:?}", cid, iid);
-    let world = &mut eng.world;
     let messages = &mut eng.messages;
     eng.vision.unsubscribe_inventory(cid, iid, || {
-        let i = world.inventory(iid);
-        let msg = logic::vision::inventory_gone_message(i);
+        let msg = logic::vision::inventory_gone_message(iid);
         messages.send_client(cid, msg);
     });
 }
