@@ -152,7 +152,7 @@ def convert_day_night(ctx, j):
                 end_color=cut_2),
             dict(   # sunrise
                 start_time=j['night_end'],
-                end_time=j['day_start'],
+                end_time=24000,
                 start_color=cut_2,
                 end_color=cut_3 - 1),
             ]
