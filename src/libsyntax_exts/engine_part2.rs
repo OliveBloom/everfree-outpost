@@ -213,7 +213,7 @@ pub fn engine_part2(cx: &mut ExtCtxt,
     };
 
 
-    let mut items = SmallVector::zero();
+    let mut items = SmallVector::new();
 
     // TODO: error handling
     items.push(parse::parse_item_from_source_str(

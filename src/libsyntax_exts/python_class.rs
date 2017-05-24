@@ -9,7 +9,8 @@ use syntax::ext::base::{ExtCtxt, MacResult, MacEager, DummyResult};
 use syntax::ext::build::AstBuilder;
 use syntax::parse::PResult;
 use syntax::parse::parser::Parser;
-use syntax::parse::token::{self, Token, DelimToken, Nonterminal, keywords};
+use syntax::parse::token::{self, Token, DelimToken, Nonterminal};
+use syntax::symbol::keywords;
 use syntax::ptr::P;
 use syntax::tokenstream::{TokenTree, Delimited};
 use syntax::util::ThinVec;
@@ -273,9 +274,7 @@ impl Builder {
     fn delimited(&mut self, child: Builder, delim: DelimToken) {
         let d = Rc::new(Delimited {
             delim: delim,
-            open_span: DUMMY_SP,
             tts: child.tts,
-            close_span: DUMMY_SP,
         });
         self.emit(TokenTree::Delimited(DUMMY_SP, d));
     }

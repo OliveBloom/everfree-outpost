@@ -52,15 +52,8 @@ pub const BLANK_METHOD_DEF: PyMethodDef = PyMethodDef {
 const MOD_NAME: &'static str = "_outpost_server\0";
 
 static mut FFI_MOD_DEF: PyModuleDef = PyModuleDef {
-    m_base: PyModuleDef_HEAD_INIT,
-    m_name: 0 as *const _,
-    m_doc: 0 as *const _,
     m_size: -1,
-    m_methods: 0 as *mut _,
-    m_reload: None,
-    m_traverse: None,
-    m_clear: None,
-    m_free: None,
+    .. PyModuleDef_INIT
 };
 
 static mut FFI_METHOD_DEFS: [PyMethodDef; 1] = [BLANK_METHOD_DEF; 1];

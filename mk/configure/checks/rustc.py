@@ -2,7 +2,7 @@ import os
 
 from configure.checks.context import ConfigError
 
-NEED_RUSTC_VERSION = '1.14.0'
+NEED_RUSTC_VERSION = '1.16.0'
 
 NEED_RUST_LIBS = (
     # Keep these in dependency order.  That way necessary --extern flags will already be
@@ -21,7 +21,7 @@ NEED_RUST_LIBS = (
 NEED_RUST_LIB_SRC = (
         'core',
         'alloc',
-        'rustc_unicode',
+        'std_unicode',
         'collections',
         'bitflags',
         # If you extend this, also add a new check in configure()
@@ -39,7 +39,7 @@ def configure(ctx):
 
     configure_lib_src(ctx, 'core', ctx.args.rust_home, 'src/libcore')
     configure_lib_src(ctx, 'alloc', ctx.args.rust_home, 'src/liballoc')
-    configure_lib_src(ctx, 'rustc_unicode', ctx.args.rust_home, 'src/librustc_unicode')
+    configure_lib_src(ctx, 'std_unicode', ctx.args.rust_home, 'src/libstd_unicode')
     configure_lib_src(ctx, 'collections', ctx.args.rust_home, 'src/libcollections')
     configure_lib_src(ctx, 'bitflags', ctx.args.bitflags_home)
 

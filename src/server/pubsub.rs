@@ -219,15 +219,15 @@ impl<P: Name, C: Name, S: Name> PubSub<P, C, S> {
 
 fn multi_lookup<'a, K: Name, V: Name>(set: &'a BTreeSet<(K, V)>,
                                       k: &K) -> btree_set::Range<'a, (K, V)> {
-    set.range(Included(&(k.clone(), V::min_bound())),
-              Included(&(k.clone(), V::max_bound())))
+    set.range((Included(&(k.clone(), V::min_bound())),
+               Included(&(k.clone(), V::max_bound()))))
 }
 
 fn multi_lookup_count<'a, K1, K2, V>(map: &'a BTreeMap<(K1, K2), V>,
                                      k1: &K1) -> btree_map::Range<'a, (K1, K2), V>
         where K1: Name, K2: Name {
-    map.range(Included(&(k1.clone(), K2::min_bound())),
-              Included(&(k1.clone(), K2::max_bound())))
+    map.range((Included(&(k1.clone(), K2::min_bound())),
+               Included(&(k1.clone(), K2::max_bound()))))
 }
 
 fn assoc_insert<K, F>(map: &mut BTreeMap<K, usize>, k: K, f: F)
