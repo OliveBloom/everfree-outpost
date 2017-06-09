@@ -170,7 +170,7 @@ BLACK = (50, 33, 37)
 def chop_black():
     """Build a dict of solid black sections."""
     img = image2.Image(size=(3, 3), unit=TILE_SIZE)
-    img = img.modify(lambda i: i.paste(BLACK + (255,)))
+    img = img.modify(lambda i: i.paste(BLACK + (255,), (0, 0) + i.size))
 
     parts = {}
     parts.update(clear_center(img).chop_grid(BORDER_PARTS))

@@ -226,7 +226,7 @@ impl Entities {
     }
 
     pub fn iter_from(&self, min: EntityId) -> RangeIter {
-        self.map.range(Bound::Included(&min), Bound::Unbounded)
+        self.map.range((Bound::Included(&min), Bound::Unbounded))
     }
 
 

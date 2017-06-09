@@ -73,7 +73,7 @@ impl Structures {
     }
 
     pub fn iter_from(&self, min: StructureId) -> RangeIter {
-        self.map.range(Bound::Included(&min), Bound::Unbounded)
+        self.map.range((Bound::Included(&min), Bound::Unbounded))
     }
 }
 
