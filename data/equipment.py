@@ -86,7 +86,7 @@ COLORS = [
 def multiply_image(img, color):
     def f(raw):
         overlay = PIL.Image.new('RGBA', raw.size)
-        overlay.paste(color)
+        overlay.paste(color, (0, 0) + overlay.size)
         return PIL.ImageChops.multiply(raw, overlay)
     return img.modify(f, desc=color)
 

@@ -100,7 +100,7 @@ impl<'a> Parser<'a> {
 
         match *self.peek() {
             TokenTree::Token(_, Token::Ident(ref id))
-                    if id.name.as_str() == word => {
+                    if &id.name.as_str() as &str == word => {
                 try!(self.take());
                 Ok(())
             },

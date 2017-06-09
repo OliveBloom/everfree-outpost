@@ -177,15 +177,8 @@ unsafe fn init_type() -> *mut PyObject {
 
 
 static mut MODULE_DEF: PyModuleDef = PyModuleDef {
-    m_base: PyModuleDef_HEAD_INIT,
-    m_name: 0 as *const _,
-    m_doc: 0 as *const _,
     m_size: -1,
-    m_methods: 0 as *mut _,
-    m_reload: None,
-    m_traverse: None,
-    m_clear: None,
-    m_free: None,
+    .. PyModuleDef_INIT
 };
 
 #[allow(non_snake_case)]
