@@ -75,7 +75,7 @@ fn main() {
     println!("{:?}", args);
     let save_dir = &args[1];
 
-    let mut plane_bundles = read_plane_bundles(save_dir);
+    let mut plane_bundles = read_plane_bundles(&format!("{}/delta", save_dir));
 
     for (stable_pid, bundle) in plane_bundles {
         let plane = &bundle.planes[0];
@@ -97,10 +97,11 @@ fn main() {
                 let path = format!("{}/summary/{}/{}/{},{}",
                                    save_dir, which, stable_pid.unwrap(), cpos.x, cpos.y);
                 if Path::new(&path).exists() {
+                    println!("removing {}", path);
                     fs::remove_dir_all(&path).unwrap();
                 }
-                total_removed += 1;
             }
+            total_removed += 1;
         }
         println!("removed {} chunks for plane {:?}", total_removed, stable_pid);
     }
