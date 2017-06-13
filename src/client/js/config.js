@@ -270,3 +270,10 @@ function rawClear(key, val) {
     }
 };
 exports.rawClear = rawClear;
+
+
+function addConfigItem(name, default_value) {
+    exports.Config[name] = new ConfigItem(name);
+    DEFAULT_CONFIG[name] = default_value;
+};
+exports.addConfigItem = addConfigItem;

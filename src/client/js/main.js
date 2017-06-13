@@ -33,6 +33,7 @@ var net = require('net');
 var Timing = require('time').Timing;
 
 var util = require('util/misc');
+var EXPORTS = require('export').EXPORTS;
 
 
 // Client objects
@@ -76,6 +77,7 @@ OutpostClient.prototype._init = function() {
     canvas = null;
 
     asm_client = new DynAsm();
+    EXPORTS['asm'] = asm_client;
 
     ui_div = util.element('div', ['ui-container']);
     banner = new Banner();
@@ -98,6 +100,7 @@ OutpostClient.prototype['loadData'] = function(blob, next) {
     var this_ = this;
     loader.loadPack(blob, function(assets_) {
         assets = assets_;
+        EXPORTS['assets'] = assets;
         next();
     });
 };
