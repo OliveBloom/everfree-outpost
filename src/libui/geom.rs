@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Point {
@@ -25,6 +25,17 @@ impl Add<Point> for Point {
     }
 }
 
+impl Sub<Point> for Point {
+    type Output = Point;
+    fn sub(self, other: Point) -> Point {
+        Point {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+
 impl Rect {
     pub fn new(x0: i32, y0: i32, x1: i32, y1: i32) -> Rect {
         Rect {
@@ -33,8 +44,25 @@ impl Rect {
         }
     }
 
+    pub fn sized(size: Point) -> Rect {
+        Rect {
+            min: Point { x: 0, y: 0 },
+            max: size,
+        }
+    }
+
     pub fn contains(&self, pos: Point) -> bool {
         self.min.x <= pos.x && pos.x < self.max.x &&
         self.min.y <= pos.y && pos.y < self.max.y
+    }
+
+    pub fn center(&self, inner: Rect) -> Rect {
+        let x = ((self.max.x - self.min.x) - (inner.max.x - inner.min.x)) / 2;
+        let y = ((self.max.y - self.min.y) - (inner.max.y - inner.min.y)) / 2;
+        let offset = Point { x: x, y: y };
+        Rect {
+            min: inner.min + offset,
+            max: inner.max + offset,
+        }
     }
 }

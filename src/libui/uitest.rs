@@ -32,6 +32,7 @@ mod ctx {
     use sdl2::render::{Renderer, Texture};
 
     use ui::context::{Context, CommonState, ButtonState};
+    use ui::context::{TextStyle, ButtonStyle};
     use ui::geom::*;
 
 
@@ -70,15 +71,7 @@ mod ctx {
         }
 
 
-        type TextStyle = ();
-
-        fn text_width(&self, s: &str, style: Self::TextStyle) -> i32 {
-            s.len() as i32 * 16
-        }
-
-        fn text_height(&self, style: Self::TextStyle) -> i32 {
-            16
-        }
+        type TextStyle = SdlTextStyle;
 
         fn draw_str(&mut self, s: &str, style: Self::TextStyle) {
             let base = self.cur_bounds().min;
@@ -95,7 +88,7 @@ mod ctx {
         }
 
 
-        type ButtonStyle = ();
+        type ButtonStyle = SdlButtonStyle;
 
         fn draw_button(&mut self, style: Self::ButtonStyle, state: ButtonState) {
             let bounds = self.cur_bounds();
@@ -109,6 +102,46 @@ mod ctx {
                 r.set_draw_color(color);
                 r.fill_rect(super::sdl_rect(bounds));
             });
+        }
+    }
+
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum SdlTextStyle {
+        Normal,
+    }
+
+    impl Default for SdlTextStyle {
+        fn default() -> SdlTextStyle {
+            SdlTextStyle::Normal
+        }
+    }
+
+    impl TextStyle for SdlTextStyle {
+        fn text_size(&self, s: &str) -> Point {
+            Point {
+                x: 16 * s.len() as i32,
+                y: 16,
+            }
+        }
+    }
+
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum SdlButtonStyle {
+        Normal,
+    }
+
+    impl Default for SdlButtonStyle {
+        fn default() -> SdlButtonStyle {
+            SdlButtonStyle::Normal
+        }
+    }
+
+    impl ButtonStyle for SdlButtonStyle {
+        fn border_size(&self) -> (Point, Point) {
+            (Point { x: 5, y: 3 },
+             Point { x: 5, y: 3 })
         }
     }
 }
@@ -147,8 +180,8 @@ pub fn main() {
         state: CommonState::new(geom::Rect::new(0, 0, 800, 600)),
         bits: bits,
     };
-    let root_rect = geom::Rect::new(0, 0, 150, 40);
-    let mut root = widgets::text::Label::new("hello, world");
+    let root_rect = geom::Rect::new(0, 0, 250, 40);
+    let mut root = widgets::button::Button::new("hello, world");
 
     // Main loop
 

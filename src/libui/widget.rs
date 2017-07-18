@@ -14,8 +14,7 @@ pub trait Widget<Ctx: Context> {
     type Event;
 
 
-    fn min_size(&self,
-                ctx: &Ctx) -> Point;
+    fn min_size(&self) -> Point;
 
 
     fn on_paint(&self,

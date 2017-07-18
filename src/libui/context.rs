@@ -44,12 +44,10 @@ pub trait Context: Sized {
     fn state(&self) -> &CommonState;
     fn state_mut(&mut self) -> &mut CommonState;
 
-    type TextStyle: Copy+Default;
-    fn text_width(&self, s: &str, style: Self::TextStyle) -> i32;
-    fn text_height(&self, style: Self::TextStyle) -> i32;
+    type TextStyle: TextStyle;
     fn draw_str(&mut self, s: &str, style: Self::TextStyle);
 
-    type ButtonStyle: Copy+Default;
+    type ButtonStyle: ButtonStyle;
     fn draw_button(&mut self, style: Self::ButtonStyle, state: ButtonState);
 
 
@@ -116,4 +114,13 @@ pub enum ButtonState {
     Down,
     Hover,
     Active,
+}
+
+
+pub trait TextStyle: Sized+Copy+Default {
+    fn text_size(&self, s: &str) -> Point;
+}
+
+pub trait ButtonStyle: Sized+Copy+Default {
+    fn border_size(&self) -> (Point, Point);
 }

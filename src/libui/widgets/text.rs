@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use context::Context;
+use context::{Context, TextStyle};
 use event::MouseEvent;
 use geom::*;
 use param::{Param, RefParam};
@@ -39,11 +39,8 @@ impl<'a, Ctx: Context> Label<'a, Ctx> {
 impl<'a, Ctx: Context> Widget<Ctx> for Label<'a, Ctx> {
     type Event = ();
 
-    fn min_size(&self, ctx: &Ctx) -> Point {
-        Point {
-            x: ctx.text_width(self.text, self.style),
-            y: ctx.text_height(self.style),
-        }
+    fn min_size(&self) -> Point {
+        self.style.text_size(self.text)
     }
 
     fn on_paint(&self, ctx: &mut Ctx) {
