@@ -44,12 +44,13 @@ pub trait Context: Sized {
     fn state(&self) -> &CommonState;
     fn state_mut(&mut self) -> &mut CommonState;
 
-    type TextStyle;
-    fn str_width(&self, s: &str, style: &Self::TextStyle) -> i32;
-    fn draw_str(&mut self, s: &str, style: &Self::TextStyle);
+    type TextStyle: Copy+Default;
+    fn text_width(&self, s: &str, style: Self::TextStyle) -> i32;
+    fn text_height(&self, style: Self::TextStyle) -> i32;
+    fn draw_str(&mut self, s: &str, style: Self::TextStyle);
 
-    type ButtonStyle;
-    fn draw_button(&mut self, style: &Self::ButtonStyle, state: ButtonState);
+    type ButtonStyle: Copy+Default;
+    fn draw_button(&mut self, style: Self::ButtonStyle, state: ButtonState);
 
 
     fn cur_bounds(&self) -> Rect {
@@ -85,7 +86,7 @@ pub trait Context: Sized {
 
     fn dispatch_paint<W: Widget<Self>>(&mut self,
                                        rect: Rect,
-                                       mut w: W) {
+                                       w: &mut W) {
         self.with_bounds(rect, |ctx| {
             w.on_paint(ctx);
         });
@@ -94,7 +95,7 @@ pub trait Context: Sized {
     fn dispatch_key<W: Widget<Self>>(&mut self,
                                      evt: KeyEvent<Self>,
                                      rect: Rect,
-                                     mut w: W) -> UIResult<W::Event> {
+                                     w: &mut W) -> UIResult<W::Event> {
         self.with_bounds(rect, |ctx| {
             w.on_key(ctx, evt)
         })
@@ -103,7 +104,7 @@ pub trait Context: Sized {
     fn dispatch_mouse<W: Widget<Self>>(&mut self,
                                        evt: MouseEvent<Self>,
                                        rect: Rect,
-                                       mut w: W) -> UIResult<W::Event> {
+                                       w: &mut W) -> UIResult<W::Event> {
         self.with_bounds(rect, |ctx| {
             w.on_mouse(ctx, evt)
         })

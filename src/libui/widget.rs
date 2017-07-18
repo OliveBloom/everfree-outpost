@@ -3,6 +3,7 @@ use event::{KeyEvent, MouseEvent};
 use geom::{Point, Rect};
 
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum UIResult<T> {
     Event(T),
     NoEvent,
@@ -13,10 +14,11 @@ pub trait Widget<Ctx: Context> {
     type Event;
 
 
-    fn min_size(&mut self) -> Point;
+    fn min_size(&self,
+                ctx: &Ctx) -> Point;
 
 
-    fn on_paint(&mut self,
+    fn on_paint(&self,
                 ctx: &mut Ctx) {
         // No-op
     }
