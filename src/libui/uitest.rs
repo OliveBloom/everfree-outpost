@@ -21,6 +21,7 @@ use sdl2::rect::Rect;
 use ui::context::{Context, CommonState};
 use ui::event::{KeyEvent, MouseEvent};
 use ui::geom;
+use ui::widget::UIResult;
 use ui::widgets;
 
 
@@ -93,12 +94,16 @@ mod ctx {
         fn draw_button(&mut self, style: Self::ButtonStyle, state: ButtonState) {
             let bounds = self.cur_bounds();
             self.bits.open(|r, _| {
-                let color = match state {
-                    ButtonState::Up => Color::RGB(200, 50, 0),
-                    ButtonState::Hover => Color::RGB(0, 50, 200),
-                    ButtonState::Active => Color::RGB(250, 250, 0),
-                    ButtonState::Down => Color::RGB(50, 180, 0),
+
+                let _0 = if style == SdlButtonStyle::Checked { 255 } else { 0 };
+
+                let mut color = match state {
+                    ButtonState::Up => Color::RGB(200, 50, _0),
+                    ButtonState::Hover => Color::RGB(_0, 50, 200),
+                    ButtonState::Active => Color::RGB(250, 250, _0),
+                    ButtonState::Down => Color::RGB(50, 180, _0),
                 };
+
                 r.set_draw_color(color);
                 r.fill_rect(super::sdl_rect(bounds));
             });
@@ -127,9 +132,10 @@ mod ctx {
     }
 
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
     pub enum SdlButtonStyle {
         Normal,
+        Checked,
     }
 
     impl Default for SdlButtonStyle {
@@ -142,6 +148,14 @@ mod ctx {
         fn border_size(&self) -> (Point, Point) {
             (Point { x: 5, y: 3 },
              Point { x: 5, y: 3 })
+        }
+
+        fn default_off() -> Self {
+            SdlButtonStyle::Normal
+        }
+
+        fn default_on() -> Self {
+            SdlButtonStyle::Checked
         }
     }
 }
@@ -181,7 +195,8 @@ pub fn main() {
         bits: bits,
     };
     let root_rect = geom::Rect::new(0, 0, 250, 40);
-    let mut root = widgets::button::Button::new("hello, world");
+    //let mut root = widgets::button::Button::new("hello, world");
+    let mut root = widgets::button::CheckBox::new("hello, world", false);
 
     // Main loop
 
@@ -222,6 +237,10 @@ pub fn main() {
                         ctx.state.record_mouse_up(geom::Point { x: x, y: y });
                     }
                     println!("mouseup {:?} {},{} -> {:?}", mouse_btn, x, y, evt);
+
+                    if let UIResult::Event(b) = evt {
+                        root = root.checked(b);
+                    }
                 },
 
 

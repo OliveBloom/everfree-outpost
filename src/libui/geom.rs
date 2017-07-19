@@ -65,4 +65,22 @@ impl Rect {
             max: inner.max + offset,
         }
     }
+
+    pub fn inset(&self, x0: i32, y0: i32, x1: i32, y1: i32) -> Rect {
+        Rect {
+            min: self.min + Point { x: x0, y: y0 },
+            max: self.max + Point { x: x0, y: y0 },
+        }
+    }
 }
+
+impl Add<Point> for Rect {
+    type Output = Rect;
+    fn add(self, other: Point) -> Rect {
+        Rect {
+            min: self.min + other,
+            max: self.max + other,
+        }
+    }
+}
+

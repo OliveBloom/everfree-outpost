@@ -123,4 +123,7 @@ pub trait TextStyle: Sized+Copy+Default {
 
 pub trait ButtonStyle: Sized+Copy+Default {
     fn border_size(&self) -> (Point, Point);
+
+    fn default_off() -> Self;
+    fn default_on() -> Self;
 }
