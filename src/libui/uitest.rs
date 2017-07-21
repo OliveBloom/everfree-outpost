@@ -1,7 +1,7 @@
 extern crate png_file;
 extern crate sdl2;
 
-extern crate ui;
+#[macro_use] extern crate ui;
 
 
 use std::fs::File;
@@ -23,6 +23,7 @@ use ui::event::{KeyEvent, MouseEvent};
 use ui::geom;
 use ui::widget::UIResult;
 use ui::widgets;
+use ui::widgets::container::{ChildWidget, Align};
 
 
 mod ctx {
@@ -194,9 +195,16 @@ pub fn main() {
         state: CommonState::new(geom::Rect::new(0, 0, 800, 600)),
         bits: bits,
     };
-    let root_rect = geom::Rect::new(0, 0, 250, 40);
+    let root_rect = geom::Rect::new(0, 0, 400, 150);
     //let mut root = widgets::button::Button::new("hello, world");
-    let mut root = widgets::button::CheckBox::new("hello, world", false);
+    //let mut root = widgets::button::CheckBox::new("hello, world", false);
+    let mut root = widgets::container::Box::horiz(contents![
+        ChildWidget::new(widgets::text::Label::new("hello, world"), |_| ()),
+        ChildWidget::new(widgets::button::Button::new("hello, world"), |_| ()).align(Align::Center),
+        ChildWidget::new(widgets::text::Label::new("poni poni"), |_| ()).align(Align::End),
+        ChildWidget::new(widgets::button::CheckBox::new("hello, world", false), |_| ()),
+        ChildWidget::new(widgets::text::Label::new("aeiou"), |_| ()),
+    ]).spacing(5);
 
     // Main loop
 
@@ -238,9 +246,9 @@ pub fn main() {
                     }
                     println!("mouseup {:?} {},{} -> {:?}", mouse_btn, x, y, evt);
 
-                    if let UIResult::Event(b) = evt {
-                        root = root.checked(b);
-                    }
+                    //if let UIResult::Event(b) = evt {
+                        //root = root.checked(b);
+                    //}
                 },
 
 

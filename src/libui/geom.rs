@@ -59,7 +59,7 @@ impl Rect {
     pub fn center(&self, inner: Rect) -> Rect {
         let x = ((self.max.x - self.min.x) - (inner.max.x - inner.min.x)) / 2;
         let y = ((self.max.y - self.min.y) - (inner.max.y - inner.min.y)) / 2;
-        let offset = Point { x: x, y: y };
+        let offset = self.min + Point { x: x, y: y };
         Rect {
             min: inner.min + offset,
             max: inner.max + offset,
@@ -71,6 +71,10 @@ impl Rect {
             min: self.min + Point { x: x0, y: y0 },
             max: self.max + Point { x: x0, y: y0 },
         }
+    }
+
+    pub fn size(&self) -> Point {
+        self.max - self.min
     }
 }
 
