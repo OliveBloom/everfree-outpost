@@ -64,12 +64,12 @@ impl<'a, Ctx: Context> Widget<Ctx> for Button<'a, Ctx> {
         ctx.draw_button(self.style, state);
 
         // Compute where to draw the label.  Start with the button's entire area.
-        let cur = ctx.cur_bounds();
+        let cur_size = ctx.cur_bounds().size();
         // Inset by the border size to get the content area.
         let (nw, se) = self.style.border_size();
         let inner = Rect {
-            min: cur.min + nw,
-            max: cur.max - se,
+            min: nw,
+            max: cur_size - se,
         };
         // Center the label text inside the content area.
         let text_size = self.text_style.text_size(self.text);
@@ -194,7 +194,8 @@ impl<'a, Ctx: Context> Widget<Ctx> for CheckBox<'a, Ctx> {
             else { (0, -y_off) };
 
         let box_bounds = Rect::sized(box_size) + Point { x: 0, y: box_y };
-        let text_bounds = ctx.cur_bounds().inset(box_size.x + CHECKBOX_MARGIN, text_y, 0, 0);
+        let cur_size = ctx.cur_bounds().size();
+        let text_bounds = Rect::sized(cur_size).inset(box_size.x + CHECKBOX_MARGIN, text_y, 0, 0);
 
         ctx.with_bounds(box_bounds, |ctx| {
             ctx.draw_button(style, state);
