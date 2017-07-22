@@ -2,10 +2,10 @@ use std::cmp;
 use std::marker::PhantomData;
 
 use context::{Context, TextStyle, ButtonStyle, ButtonState};
-use event::{KeyEvent, MouseEvent};
+use event::{KeyEvent, MouseEvent, UIResult};
 use geom::*;
 use param::{Param, RefParam};
-use widget::{Widget, UIResult};
+use widget::Widget;
 
 
 #[derive(Clone, Debug)]

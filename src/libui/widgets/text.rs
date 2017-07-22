@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
 use context::{Context, TextStyle};
-use event::MouseEvent;
+use event::{MouseEvent, UIResult};
 use geom::*;
 use param::{Param, RefParam};
-use widget::{Widget, UIResult};
+use widget::Widget;
 
 
 #[derive(Clone, Debug)]

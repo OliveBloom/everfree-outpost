@@ -1,14 +1,7 @@
 use context::Context;
-use event::{KeyEvent, MouseEvent};
+use event::{KeyEvent, MouseEvent, UIResult};
 use geom::{Point, Rect};
 
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum UIResult<T> {
-    Event(T),
-    NoEvent,
-    Unhandled,
-}
 
 pub trait Widget<Ctx: Context> {
     type Event;

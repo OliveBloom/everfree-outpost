@@ -2,6 +2,7 @@ use std::cmp;
 use std::marker::PhantomData;
 
 use context::Context;
+use event::{KeyEvent, MouseEvent, UIResult};
 use geom::{Point, Rect};
 use widget::Widget;
 
@@ -239,5 +240,43 @@ impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Box<Ctx
             layout: Layout::new(D::minor(bounds_size), self.spacing),
         };
         self.contents.accept(&mut v);
+    }
+
+    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<R> {
+        struct MouseVisitor<'a, Ctx: Context+'a, D: Direction, R> {
+            ctx: &'a mut Ctx,
+            layout: Layout<D>,
+            event: MouseEvent<Ctx>,
+            result: UIResult<R>,
+        }
+        impl<'a, Ctx: Context, D: Direction, R> VisitorMut<Ctx, R> for MouseVisitor<'a, Ctx, D, R> {
+            fn visit_mut<W, F>(&mut self, cw: &mut ChildWidget<W, F>)
+                    where W: Widget<Ctx>, F: Fn(W::Event) -> R {
+                match self.result {
+                    UIResult::Unhandled => {},
+                    _ => return,
+                }
+
+                let size = cw.w.min_size();
+                let bounds = self.layout.place(size, cw.align);
+                let evt = &self.event;
+                self.result = self.ctx.with_bounds(bounds, |ctx| {
+                    if !ctx.mouse_over() {
+                        return UIResult::Unhandled;
+                    }
+                    cw.w.on_mouse(ctx, evt.clone()).map(|e| (cw.f)(e))
+                });
+            }
+        }
+
+        let bounds_size = ctx.cur_bounds().size();
+        let mut v: MouseVisitor<Ctx, D, R> = MouseVisitor {
+            ctx: ctx,
+            layout: Layout::new(D::minor(bounds_size), self.spacing),
+            event: evt,
+            result: UIResult::Unhandled,
+        };
+        self.contents.accept_mut(&mut v);
+        v.result
     }
 }

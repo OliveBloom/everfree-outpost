@@ -1,8 +1,8 @@
 use std::mem;
 
-use event::{KeyEvent, MouseEvent};
+use event::{KeyEvent, MouseEvent, UIResult};
 use geom::{Point, Rect};
-use widget::{Widget, UIResult};
+use widget::Widget;
 
 
 pub enum Void {}
@@ -38,8 +38,8 @@ impl CommonState {
 }
 
 pub trait Context: Sized {
-    type Key;
-    type Button;
+    type Key: Clone;
+    type Button: Clone;
 
     fn state(&self) -> &CommonState;
     fn state_mut(&mut self) -> &mut CommonState;

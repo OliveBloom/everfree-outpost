@@ -19,9 +19,8 @@ use sdl2::pixels::PixelFormatEnum;
 use sdl2::rect::Rect;
 
 use ui::context::{Context, CommonState};
-use ui::event::{KeyEvent, MouseEvent};
+use ui::event::{KeyEvent, MouseEvent, UIResult};
 use ui::geom;
-use ui::widget::UIResult;
 use ui::widgets;
 use ui::widgets::container::{ChildWidget, Align};
 
