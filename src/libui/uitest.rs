@@ -197,7 +197,7 @@ pub fn main() {
     let root_rect = geom::Rect::new(0, 0, 400, 150);
     //let mut root = widgets::button::Button::new("hello, world");
     //let mut root = widgets::button::CheckBox::new("hello, world", false);
-    let mut root = widgets::container::Box::horiz(contents![
+    let mut root = widgets::container::Group::vert(contents![
         ChildWidget::new(widgets::text::Label::new("hello, world"), |_| ()),
         ChildWidget::new(widgets::button::Button::new("hello, world"), |_| ()).align(Align::Center),
         ChildWidget::new(widgets::text::Label::new("poni poni"), |_| ()).align(Align::End),

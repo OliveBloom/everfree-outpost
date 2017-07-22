@@ -155,15 +155,15 @@ impl<D: Direction> Layout<D> {
 }
 
 
-pub struct Box<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
+pub struct Group<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
     contents: C,
     spacing: i32,
     _marker: PhantomData<(Ctx, D, R)>,
 }
 
-impl<Ctx: Context, R, C: Contents<Ctx, R>> Box<Ctx, Horizontal, R, C> {
-    pub fn horiz(contents: C) -> Box<Ctx, Horizontal, R, C> {
-        Box {
+impl<Ctx: Context, R, C: Contents<Ctx, R>> Group<Ctx, Horizontal, R, C> {
+    pub fn horiz(contents: C) -> Group<Ctx, Horizontal, R, C> {
+        Group {
             contents: contents,
             spacing: 0,
             _marker: PhantomData,
@@ -171,9 +171,9 @@ impl<Ctx: Context, R, C: Contents<Ctx, R>> Box<Ctx, Horizontal, R, C> {
     }
 }
 
-impl<Ctx: Context, R, C: Contents<Ctx, R>> Box<Ctx, Vertical, R, C> {
-    pub fn vert(contents: C) -> Box<Ctx, Vertical, R, C> {
-        Box {
+impl<Ctx: Context, R, C: Contents<Ctx, R>> Group<Ctx, Vertical, R, C> {
+    pub fn vert(contents: C) -> Group<Ctx, Vertical, R, C> {
+        Group {
             contents: contents,
             spacing: 0,
             _marker: PhantomData,
@@ -181,16 +181,16 @@ impl<Ctx: Context, R, C: Contents<Ctx, R>> Box<Ctx, Vertical, R, C> {
     }
 }
 
-impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Box<Ctx, D, R, C> {
+impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<Ctx, D, R, C> {
     pub fn spacing(self, spacing: i32) -> Self {
-        Box {
+        Group {
             spacing: spacing,
             .. self
         }
     }
 }
 
-impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Box<Ctx, D, R, C> {
+impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Group<Ctx, D, R, C> {
     type Event = R;
 
     fn min_size(&self) -> Point {
