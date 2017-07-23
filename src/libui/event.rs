@@ -38,6 +38,13 @@ pub enum UIResult<T> {
 }
 
 impl<T> UIResult<T> {
+    pub fn is_handled(&self) -> bool {
+        match *self {
+            UIResult::Unhandled => false,
+            _ => true,
+        }
+    }
+
     pub fn map<F: FnOnce(T) -> U, U>(self, f: F) -> UIResult<U> {
         match self {
             UIResult::Event(t) => UIResult::Event(f(t)),

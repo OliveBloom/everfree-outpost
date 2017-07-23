@@ -155,15 +155,21 @@ impl<D: Direction> Layout<D> {
 }
 
 
-pub struct Group<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
+pub struct GroupState {
+    focus: usize,
+}
+
+pub struct Group<'a, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
+    state: &'a mut GroupState,
     contents: C,
     spacing: i32,
     _marker: PhantomData<(Ctx, D, R)>,
 }
 
-impl<Ctx: Context, R, C: Contents<Ctx, R>> Group<Ctx, Horizontal, R, C> {
-    pub fn horiz(contents: C) -> Group<Ctx, Horizontal, R, C> {
+impl<'a, Ctx: Context, R, C: Contents<Ctx, R>> Group<'a, Ctx, Horizontal, R, C> {
+    pub fn horiz(state: &'a mut GroupState, contents: C) -> Group<'a, Ctx, Horizontal, R, C> {
         Group {
+            state: state,
             contents: contents,
             spacing: 0,
             _marker: PhantomData,
@@ -171,9 +177,10 @@ impl<Ctx: Context, R, C: Contents<Ctx, R>> Group<Ctx, Horizontal, R, C> {
     }
 }
 
-impl<Ctx: Context, R, C: Contents<Ctx, R>> Group<Ctx, Vertical, R, C> {
-    pub fn vert(contents: C) -> Group<Ctx, Vertical, R, C> {
+impl<'a, Ctx: Context, R, C: Contents<Ctx, R>> Group<'a, Ctx, Vertical, R, C> {
+    pub fn vert(state: &'a mut GroupState, contents: C) -> Group<'a, Ctx, Vertical, R, C> {
         Group {
+            state: state,
             contents: contents,
             spacing: 0,
             _marker: PhantomData,
@@ -181,7 +188,7 @@ impl<Ctx: Context, R, C: Contents<Ctx, R>> Group<Ctx, Vertical, R, C> {
     }
 }
 
-impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<Ctx, D, R, C> {
+impl<'a, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<'a, Ctx, D, R, C> {
     pub fn spacing(self, spacing: i32) -> Self {
         Group {
             spacing: spacing,
@@ -190,7 +197,8 @@ impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<Ctx, D, R, C> {
     }
 }
 
-impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Group<Ctx, D, R, C> {
+impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
+        where Ctx: Context, D: Direction, C: Contents<Ctx, R> {
     type Event = R;
 
     fn min_size(&self) -> Point {
@@ -219,11 +227,11 @@ impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Group<C
     }
 
     fn on_paint(&self, ctx: &mut Ctx) {
-        struct PaintVisitor<'a, Ctx: Context+'a, D: Direction> {
-            ctx: &'a mut Ctx,
+        struct PaintVisitor<'c, Ctx: Context+'c, D: Direction> {
+            ctx: &'c mut Ctx,
             layout: Layout<D>,
         }
-        impl<'a, Ctx: Context, D: Direction, R> Visitor<Ctx, R> for PaintVisitor<'a, Ctx, D> {
+        impl<'c, Ctx: Context, D: Direction, R> Visitor<Ctx, R> for PaintVisitor<'c, Ctx, D> {
             fn visit<W, F>(&mut self, cw: &ChildWidget<W, F>)
                     where W: Widget<Ctx>, F: Fn(W::Event) -> R {
                 let size = cw.w.min_size();
@@ -242,19 +250,63 @@ impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Group<C
         self.contents.accept(&mut v);
     }
 
+    fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<R> {
+        struct KeyVisitor<'c, Ctx: Context+'c, D: Direction, R> {
+            ctx: &'c mut Ctx,
+            idx: usize,
+            focus: usize,
+            layout: Layout<D>,
+            event: Option<KeyEvent<Ctx>>,
+            result: UIResult<R>,
+        }
+        impl<'c, Ctx, D, R> VisitorMut<Ctx, R> for KeyVisitor<'c, Ctx, D, R>
+                where Ctx: Context, D: Direction {
+            fn visit_mut<W, F>(&mut self, cw: &mut ChildWidget<W, F>)
+                    where W: Widget<Ctx>, F: Fn(W::Event) -> R {
+                if self.idx == self.focus {
+                    let size = cw.w.min_size();
+                    let bounds = self.layout.place(size, cw.align);
+                    let evt = self.event.take().unwrap();
+                    self.result = self.ctx.with_bounds(bounds, |ctx| {
+                        cw.w.on_key(ctx, evt).map(|e| (cw.f)(e))
+                    });
+                }
+                self.idx += 1;
+            }
+        }
+
+        let bounds_size = ctx.cur_bounds().size();
+        let mut v: KeyVisitor<Ctx, D, R> = KeyVisitor {
+            ctx: ctx,
+            idx: 0,
+            focus: self.state.focus,
+            layout: Layout::new(D::minor(bounds_size), self.spacing),
+            event: Some(evt),
+            result: UIResult::Unhandled,
+        };
+        self.contents.accept_mut(&mut v);
+        v.result
+    }
+
     fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<R> {
-        struct MouseVisitor<'a, Ctx: Context+'a, D: Direction, R> {
-            ctx: &'a mut Ctx,
+        struct MouseVisitor<'a, 'c, Ctx: Context+'c, D: Direction, R> {
+            ctx: &'c mut Ctx,
+            state: &'a mut GroupState,
+            idx: usize,
             layout: Layout<D>,
             event: MouseEvent<Ctx>,
             result: UIResult<R>,
         }
-        impl<'a, Ctx: Context, D: Direction, R> VisitorMut<Ctx, R> for MouseVisitor<'a, Ctx, D, R> {
+        impl<'a, 'c, Ctx, D, R> VisitorMut<Ctx, R> for MouseVisitor<'a, 'c, Ctx, D, R>
+                where Ctx: Context, D: Direction {
             fn visit_mut<W, F>(&mut self, cw: &mut ChildWidget<W, F>)
                     where W: Widget<Ctx>, F: Fn(W::Event) -> R {
-                match self.result {
-                    UIResult::Unhandled => {},
-                    _ => return,
+                let idx = self.idx;
+                self.idx += 1;
+
+                if self.result.is_handled() {
+                    // A previous child already handled the input, so stop processing it.
+                    return;
                 }
 
                 let size = cw.w.min_size();
@@ -266,12 +318,19 @@ impl<Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Widget<Ctx> for Group<C
                     }
                     cw.w.on_mouse(ctx, evt.clone()).map(|e| (cw.f)(e))
                 });
+
+                if self.result.is_handled() {
+                    // This child handled the input, so update the container focus.
+                    self.state.focus = idx;
+                }
             }
         }
 
         let bounds_size = ctx.cur_bounds().size();
         let mut v: MouseVisitor<Ctx, D, R> = MouseVisitor {
             ctx: ctx,
+            state: self.state,
+            idx: 0,
             layout: Layout::new(D::minor(bounds_size), self.spacing),
             event: evt,
             result: UIResult::Unhandled,

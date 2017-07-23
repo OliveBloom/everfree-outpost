@@ -1,4 +1,6 @@
+use std::cmp;
 use std::ops::{Add, Sub};
+
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Point {
@@ -75,6 +77,19 @@ impl Rect {
 
     pub fn size(&self) -> Point {
         self.max - self.min
+    }
+
+    pub fn intersect(&self, other: &Rect) -> Rect {
+        Rect {
+            min: Point {
+                x: cmp::max(self.min.x, other.min.x),
+                y: cmp::max(self.min.y, other.min.y),
+            },
+            max: Point {
+                x: cmp::min(self.max.x, other.max.x),
+                y: cmp::min(self.max.y, other.max.y),
+            },
+        }
     }
 }
 
