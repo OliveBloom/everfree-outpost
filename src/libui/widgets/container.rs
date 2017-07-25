@@ -159,6 +159,14 @@ pub struct GroupState {
     focus: usize,
 }
 
+impl GroupState {
+    pub fn new() -> GroupState {
+        GroupState {
+            focus: 0,
+        }
+    }
+}
+
 pub struct Group<'a, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
     state: &'a mut GroupState,
     contents: C,

@@ -197,13 +197,16 @@ pub fn main() {
     let root_rect = geom::Rect::new(0, 0, 400, 150);
     //let mut root = widgets::button::Button::new("hello, world");
     //let mut root = widgets::button::CheckBox::new("hello, world", false);
-    let mut root = widgets::container::Group::vert(contents![
+    let mut state1 = widgets::container::GroupState::new();
+    let root = widgets::container::Group::vert(&mut state1, contents![
         ChildWidget::new(widgets::text::Label::new("hello, world"), |_| ()),
         ChildWidget::new(widgets::button::Button::new("hello, world"), |_| ()).align(Align::Center),
         ChildWidget::new(widgets::text::Label::new("poni poni"), |_| ()).align(Align::End),
         ChildWidget::new(widgets::button::CheckBox::new("hello, world", false), |_| ()),
         ChildWidget::new(widgets::text::Label::new("aeiou"), |_| ()),
-    ]).spacing(5);
+    ]).spacing(20);
+    let mut state2 = widgets::scroll::ScrollPaneState::new();
+    let mut root = widgets::scroll::ScrollPane::new(&mut state2, geom::Point { x: 300, y: 100 }, root);
 
     // Main loop
 
@@ -248,6 +251,10 @@ pub fn main() {
                     //if let UIResult::Event(b) = evt {
                         //root = root.checked(b);
                     //}
+                },
+                Event::MouseWheel { y, .. } => {
+                    let evt = ctx.dispatch_mouse(MouseEvent::Wheel(y as i8), root_rect, &mut root);
+                    println!("mousewheel {} -> {:?}", y, evt);
                 },
 
 

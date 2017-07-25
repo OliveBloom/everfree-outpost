@@ -9,6 +9,7 @@ pub enum Void {}
 
 pub struct CommonState {
     pub bounds: Rect,
+    pub clip: Option<Rect>,
     pub mouse_pos: Option<Point>,
     pub mouse_down_pos: Option<Point>,
 }
@@ -17,6 +18,7 @@ impl CommonState {
     pub fn new(bounds: Rect) -> CommonState {
         CommonState {
             bounds: bounds,
+            clip: None,
             mouse_pos: None,
             mouse_down_pos: None,
         }
@@ -34,6 +36,35 @@ impl CommonState {
     pub fn record_mouse_up(&mut self, pos: Point) {
         self.mouse_pos = Some(pos);
         self.mouse_down_pos = None;
+    }
+
+
+    /// Restrict the output bounds to the given sub-region of the current output bounds.  Returns a
+    /// state value that can be passed to `pop_bounds` to restore the previous bounds.
+    fn push_bounds(&mut self, bounds: Rect) -> Rect {
+        let abs_bounds = bounds + self.bounds.min;
+        mem::replace(&mut self.bounds, abs_bounds)
+    }
+
+    fn pop_bounds(&mut self, old: Rect) {
+        self.bounds = old;
+    }
+
+
+    fn push_surface(&mut self, size: Point, src_pos: Point, dest_rect: Rect)
+                    -> (Rect, Option<Rect>) {
+        let new_clip = dest_rect + self.bounds.min;
+        // Which point on the current surface coincides with 0,0 on the new surface?
+        let new_origin = dest_rect.min - src_pos;
+        let new_bounds = Rect::sized(size) + new_origin;
+        (mem::replace(&mut self.bounds, new_bounds),
+         mem::replace(&mut self.clip, Some(new_clip)))
+    }
+
+    fn pop_surface(&mut self, old: (Rect, Option<Rect>)) {
+        let (old_bounds, old_clip) = old;
+        self.bounds = old_bounds;
+        self.clip = old_clip;
     }
 }
 
@@ -56,16 +87,24 @@ pub trait Context: Sized {
     }
 
     fn with_bounds<F: FnOnce(&mut Self) -> R, R>(&mut self, bounds: Rect, func: F) -> R {
-        // TODO: clip better
-        let base = self.state().bounds.min;
-        let abs_bounds = Rect {
-            min: bounds.min + base,
-            max: bounds.max + base,
-        };
-
-        let old_bounds = mem::replace(&mut self.state_mut().bounds, abs_bounds);
+        let old = self.state_mut().push_bounds(bounds);
         let r = func(self);
-        self.state_mut().bounds = old_bounds;
+        self.state_mut().pop_bounds(old);
+        r
+    }
+
+    /// Enter a new drawing surface of the given `size`.  The region of the new surface beginning
+    /// at `src_pos` will be output to `dest_rect` in the current surface.
+    ///
+    /// This method is useful for implementing scrollable content.
+    fn with_surface<F: FnOnce(&mut Self) -> R, R>(&mut self,
+                                                  size: Point,
+                                                  src_pos: Point,
+                                                  dest_rect: Rect,
+                                                  func: F) -> R {
+        let old = self.state_mut().push_surface(size, src_pos, dest_rect);
+        let r = func(self);
+        self.state_mut().pop_surface(old);
         r
     }
 

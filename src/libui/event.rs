@@ -18,6 +18,7 @@ pub enum MouseEvent<Ctx: Context> {
     Down(Ctx::Button),
     Up(Ctx::Button),
     Move,
+    Wheel(i8),
 }
 
 impl<Ctx: Context> Clone for MouseEvent<Ctx> {
@@ -26,6 +27,7 @@ impl<Ctx: Context> Clone for MouseEvent<Ctx> {
             MouseEvent::Down(ref btn) => MouseEvent::Down(btn.clone()),
             MouseEvent::Up(ref btn) => MouseEvent::Up(btn.clone()),
             MouseEvent::Move => MouseEvent::Move,
+            MouseEvent::Wheel(dir) => MouseEvent::Wheel(dir),
         }
     }
 }
