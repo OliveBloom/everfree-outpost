@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use context::Context;
 use event::{KeyEvent, MouseEvent, UIResult};
-use geom::{Point, Rect};
+use geom::*;
 use widget::Widget;
 
 
@@ -74,44 +74,6 @@ macro_rules! contents {
     () => { () };
     ($a:expr $(, $rest:expr)*) => { ($a, contents!($($rest),*)) };
     ($($a:expr,)*) => { contents!($($a),*) };
-}
-
-
-pub struct Vertical;
-pub struct Horizontal;
-
-pub trait Direction {
-    fn to_vert(p: Point) -> Point;
-
-    fn from_vert(p: Point) -> Point {
-        // "Identity" and "swap" are both their own inverses.  Though it's still useful to have
-        // both the `to` and `from` names, for readability.
-        Self::to_vert(p)
-    }
-
-    fn make_point(major: i32, minor: i32) -> Point {
-        Self::from_vert(Point { x: minor, y: major })
-    }
-
-    fn major(p: Point) -> i32 {
-        Self::to_vert(p).y
-    }
-
-    fn minor(p: Point) -> i32 {
-        Self::to_vert(p).x
-    }
-}
-
-impl Direction for Vertical {
-    fn to_vert(p: Point) -> Point {
-        p
-    }
-}
-
-impl Direction for Horizontal {
-    fn to_vert(p: Point) -> Point {
-        Point { x: p.y, y: p.x }
-    }
 }
 
 

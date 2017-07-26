@@ -81,6 +81,15 @@ pub trait Context: Sized {
     type ButtonStyle: ButtonStyle;
     fn draw_button(&mut self, style: Self::ButtonStyle, state: ButtonState);
 
+    type ScrollBarStyle: ScrollBarStyle;
+    fn draw_scroll_bar(&mut self,
+                       style: Self::ScrollBarStyle,
+                       val: i16,
+                       max: i16,
+                       top_pressed: bool,
+                       bottom_pressed: bool);
+
+
 
     fn cur_bounds(&self) -> Rect {
         self.state().bounds
@@ -165,4 +174,11 @@ pub trait ButtonStyle: Sized+Copy+Default {
 
     fn default_off() -> Self;
     fn default_on() -> Self;
+}
+
+pub trait ScrollBarStyle: Sized+Copy+Default {
+    fn width(&self) -> i32;
+    fn handle_height(&self) -> i32;
+    fn top_button_height(&self) -> i32;
+    fn bottom_button_height(&self) -> i32;
 }

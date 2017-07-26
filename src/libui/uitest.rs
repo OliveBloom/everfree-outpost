@@ -33,7 +33,7 @@ mod ctx {
     use sdl2::render::{Renderer, Texture};
 
     use ui::context::{Context, CommonState, ButtonState};
-    use ui::context::{TextStyle, ButtonStyle};
+    use ui::context::{TextStyle, ButtonStyle, ScrollBarStyle};
     use ui::geom::*;
 
 
@@ -108,6 +108,44 @@ mod ctx {
                 r.fill_rect(super::sdl_rect(bounds));
             });
         }
+
+
+        type ScrollBarStyle = SdlScrollBarStyle;
+
+        fn draw_scroll_bar(&mut self,
+                           style: Self::ScrollBarStyle,
+                           val: i16,
+                           max: i16,
+                           top_pressed: bool,
+                           bottom_pressed: bool) {
+            let bounds = self.cur_bounds();
+
+            self.bits.open(|r, _| {
+                let bar_bounds = Rect {
+                    min: bounds.min,
+                    max: Point { x: bounds.min.x + style.width(), y: bounds.max.y },
+                };
+                r.set_draw_color(Color::RGB(200, 200, 200));
+                r.fill_rect(super::sdl_rect(bar_bounds));
+
+                let top_bounds = Rect::sized(Point { x: style.width(), y: style.top_button_height() });
+                let bottom_bounds = Rect::sized(Point { x: style.width(), y: style.bottom_button_height() }) +
+                                    Point { x: 0, y: bounds.size().y - style.bottom_button_height() };
+                r.set_draw_color(Color::RGB(50, 50, 150));
+                r.fill_rect(super::sdl_rect(top_bounds));
+                r.fill_rect(super::sdl_rect(bottom_bounds));
+
+                let space = bounds.size().y -
+                            style.top_button_height() -
+                            style.bottom_button_height() -
+                            style.handle_height();
+                let offset = space * val as i32 / max as i32;
+                let handle_bounds = Rect::sized(Point { x: style.width(), y: style.handle_height() }) +
+                                    Point { x: 0, y: style.top_button_height() + offset };
+                r.set_draw_color(Color::RGB(50, 150, 250));
+                r.fill_rect(super::sdl_rect(handle_bounds));
+            });
+        }
     }
 
 
@@ -158,6 +196,36 @@ mod ctx {
             SdlButtonStyle::Checked
         }
     }
+
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum SdlScrollBarStyle {
+        Normal,
+    }
+
+    impl Default for SdlScrollBarStyle {
+        fn default() -> SdlScrollBarStyle {
+            SdlScrollBarStyle::Normal
+        }
+    }
+
+    impl ScrollBarStyle for SdlScrollBarStyle {
+        fn width(&self) -> i32 {
+            16
+        }
+
+        fn top_button_height(&self) -> i32 {
+            16
+        }
+
+        fn bottom_button_height(&self) -> i32 {
+            16
+        }
+
+        fn handle_height(&self) -> i32 {
+            12
+        }
+    }
 }
 
 pub fn sdl_rect(r: geom::Rect) -> Rect {
@@ -197,16 +265,21 @@ pub fn main() {
     let root_rect = geom::Rect::new(0, 0, 400, 150);
     //let mut root = widgets::button::Button::new("hello, world");
     //let mut root = widgets::button::CheckBox::new("hello, world", false);
+    /*
     let mut state1 = widgets::container::GroupState::new();
-    let root = widgets::container::Group::vert(&mut state1, contents![
+    let mut root = widgets::container::Group::vert(&mut state1, contents![
         ChildWidget::new(widgets::text::Label::new("hello, world"), |_| ()),
         ChildWidget::new(widgets::button::Button::new("hello, world"), |_| ()).align(Align::Center),
         ChildWidget::new(widgets::text::Label::new("poni poni"), |_| ()).align(Align::End),
         ChildWidget::new(widgets::button::CheckBox::new("hello, world", false), |_| ()),
         ChildWidget::new(widgets::text::Label::new("aeiou"), |_| ()),
     ]).spacing(20);
+    */
+    let mut root = widgets::scroll::ScrollBar::<_, geom::Horizontal>::new(15, 20);
+    /*
     let mut state2 = widgets::scroll::ScrollPaneState::new();
     let mut root = widgets::scroll::ScrollPane::new(&mut state2, geom::Point { x: 300, y: 100 }, root);
+    */
 
     // Main loop
 

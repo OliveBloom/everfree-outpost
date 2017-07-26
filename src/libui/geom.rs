@@ -71,7 +71,7 @@ impl Rect {
     pub fn inset(&self, x0: i32, y0: i32, x1: i32, y1: i32) -> Rect {
         Rect {
             min: self.min + Point { x: x0, y: y0 },
-            max: self.max + Point { x: x0, y: y0 },
+            max: self.max - Point { x: x1, y: y1 },
         }
     }
 
@@ -103,3 +103,40 @@ impl Add<Point> for Rect {
     }
 }
 
+
+pub struct Vertical;
+pub struct Horizontal;
+
+pub trait Direction {
+    fn to_vert(p: Point) -> Point;
+
+    fn from_vert(p: Point) -> Point {
+        // "Identity" and "swap" are both their own inverses.  Though it's still useful to have
+        // both the `to` and `from` names, for readability.
+        Self::to_vert(p)
+    }
+
+    fn make_point(major: i32, minor: i32) -> Point {
+        Self::from_vert(Point { x: minor, y: major })
+    }
+
+    fn major(p: Point) -> i32 {
+        Self::to_vert(p).y
+    }
+
+    fn minor(p: Point) -> i32 {
+        Self::to_vert(p).x
+    }
+}
+
+impl Direction for Vertical {
+    fn to_vert(p: Point) -> Point {
+        p
+    }
+}
+
+impl Direction for Horizontal {
+    fn to_vert(p: Point) -> Point {
+        Point { x: p.y, y: p.x }
+    }
+}
