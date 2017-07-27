@@ -54,4 +54,12 @@ impl<T> UIResult<T> {
             UIResult::Unhandled => UIResult::Unhandled,
         }
     }
+
+    pub fn and_then<F: FnOnce(T) -> UIResult<U>, U>(self, f: F) -> UIResult<U> {
+        match self {
+            UIResult::Event(t) => f(t),
+            UIResult::NoEvent => UIResult::NoEvent,
+            UIResult::Unhandled => UIResult::Unhandled,
+        }
+    }
 }

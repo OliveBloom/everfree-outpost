@@ -132,8 +132,8 @@ mod ctx {
                 let bottom_bounds = Rect::sized(Point { x: style.width(), y: style.bottom_button_height() }) +
                                     Point { x: 0, y: bounds.size().y - style.bottom_button_height() };
                 r.set_draw_color(Color::RGB(50, 50, 150));
-                r.fill_rect(super::sdl_rect(top_bounds));
-                r.fill_rect(super::sdl_rect(bottom_bounds));
+                r.fill_rect(super::sdl_rect(top_bounds + bar_bounds.min));
+                r.fill_rect(super::sdl_rect(bottom_bounds + bar_bounds.min));
 
                 let space = bounds.size().y -
                             style.top_button_height() -
@@ -143,7 +143,7 @@ mod ctx {
                 let handle_bounds = Rect::sized(Point { x: style.width(), y: style.handle_height() }) +
                                     Point { x: 0, y: style.top_button_height() + offset };
                 r.set_draw_color(Color::RGB(50, 150, 250));
-                r.fill_rect(super::sdl_rect(handle_bounds));
+                r.fill_rect(super::sdl_rect(handle_bounds + bar_bounds.min));
             });
         }
     }
@@ -265,7 +265,6 @@ pub fn main() {
     let root_rect = geom::Rect::new(0, 0, 400, 150);
     //let mut root = widgets::button::Button::new("hello, world");
     //let mut root = widgets::button::CheckBox::new("hello, world", false);
-    /*
     let mut state1 = widgets::container::GroupState::new();
     let mut root = widgets::container::Group::vert(&mut state1, contents![
         ChildWidget::new(widgets::text::Label::new("hello, world"), |_| ()),
@@ -273,13 +272,9 @@ pub fn main() {
         ChildWidget::new(widgets::text::Label::new("poni poni"), |_| ()).align(Align::End),
         ChildWidget::new(widgets::button::CheckBox::new("hello, world", false), |_| ()),
         ChildWidget::new(widgets::text::Label::new("aeiou"), |_| ()),
-    ]).spacing(20);
-    */
-    let mut root = widgets::scroll::ScrollBar::<_, geom::Horizontal>::new(15, 20);
-    /*
-    let mut state2 = widgets::scroll::ScrollPaneState::new();
+    ]).spacing(40);
+    let mut state2 = 0;
     let mut root = widgets::scroll::ScrollPane::new(&mut state2, geom::Point { x: 300, y: 100 }, root);
-    */
 
     // Main loop
 

@@ -8,52 +8,80 @@ use param::{Param, RefParam};
 use widget::Widget;
 
 
-#[derive(Debug)]
-pub struct ScrollPaneInner<'a, W> {
+pub struct ScrollPane<'a, Ctx: Context, W> {
     top: &'a mut i32,
     size: Point,
-    scroll_step: i32,
+    scroll_step: i16,
     child: W,
+    bar_style: Ctx::ScrollBarStyle,
 }
 
-impl<'a, W> ScrollPaneInner<'a, W> {
+impl<'a, Ctx: Context, W> ScrollPane<'a, Ctx, W> {
     pub fn new(state: &'a mut i32,
                size: Point,
-               child: W) -> ScrollPaneInner<'a, W> {
-        ScrollPaneInner {
+               child: W) -> ScrollPane<'a, Ctx, W> {
+        ScrollPane {
             top: state,
             size: size,
             scroll_step: 10,
             child: child,
+            bar_style: Ctx::ScrollBarStyle::default(),
         }
     }
 
-    pub fn scroll_step(self, scroll_step: i32) -> Self {
-        ScrollPaneInner {
+    pub fn scroll_step(self, scroll_step: i16) -> Self {
+        ScrollPane {
             scroll_step: scroll_step,
+            .. self
+        }
+    }
+
+    pub fn bar_style(self, bar_style: Ctx::ScrollBarStyle) -> Self {
+        ScrollPane {
+            bar_style: bar_style,
             .. self
         }
     }
 }
 
-impl<'a, W> ScrollPaneInner<'a, W> {
+impl<'a, Ctx: Context, W: Widget<Ctx>> ScrollPane<'a, Ctx, W> {
     #[inline]
-    fn child_surface_info<Ctx>(&self, ctx: &Ctx) -> (Point, Point, Rect)
-            where Ctx: Context, W: Widget<Ctx> {
+    fn child_surface_info(&self, ctx: &Ctx) -> (Point, Point, Rect, Rect) {
         let cur_size = ctx.cur_bounds().size();
         let child_size = self.child.min_size();
         let inner_size = Point {
-            x: cur_size.x,
+            x: cur_size.x - self.bar_style.width(),
             y: cmp::max(cur_size.y, child_size.y),
         };
 
         let src_pos = Point { x: 0, y: *self.top };
 
-        (inner_size, src_pos, Rect::sized(cur_size))
+        let dest_rect = Rect::new(0, 0, inner_size.x, cur_size.y);
+        let bar_rect = Rect::new(inner_size.x, 0, cur_size.x, cur_size.y);
+
+        (inner_size, src_pos, dest_rect, bar_rect)
+    }
+
+    fn bar(&self) -> ScrollBar<Ctx, Horizontal>
+            where W: Widget<Ctx> {
+        ScrollBar::new(self.child.min_size().y as i16)
+            .value(*self.top as i16)
+            .step(self.scroll_step)
+            .style(self.bar_style)
+    }
+
+    fn set_top_clamp(&mut self, top: i32) {
+        let child_size = self.child.min_size();
+        *self.top = cmp::max(0, cmp::min(child_size.y, top));
+    }
+
+    fn adjust_top_clamp(&mut self, offset: i32) {
+        let top = *self.top + offset;
+        self.set_top_clamp(top);
     }
 }
 
-impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPaneInner<'a, W> {
+impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
     type Event = W::Event;
 
     fn min_size(&self) -> Point {
@@ -61,16 +89,17 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPaneInner<'a, W> {
     }
 
     fn on_paint(&self, ctx: &mut Ctx) {
-        let (inner_size, src_pos, dest_rect) = self.child_surface_info(ctx);
+        let (inner_size, src_pos, dest_rect, bar_rect) = self.child_surface_info(ctx);
         ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
             self.child.on_paint(ctx);
         });
+        ctx.with_bounds(bar_rect, |ctx| self.bar().on_paint(ctx));
     }
 
     fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
-        // TODO: match up/down arrows
+        // TODO: match page up / page down
 
-        let (inner_size, src_pos, dest_rect) = self.child_surface_info(ctx);
+        let (inner_size, src_pos, dest_rect, _bar_rect) = self.child_surface_info(ctx);
         ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
             self.child.on_key(ctx, evt)
         })
@@ -79,15 +108,29 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPaneInner<'a, W> {
     fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Wheel(dir) => {
-                let child_size = self.child.min_size();
-                let raw_top = *self.top - dir as i32 * self.scroll_step;
-                *self.top = cmp::max(0, cmp::min(child_size.y, raw_top));
+                let step = -dir as i32 * self.scroll_step as i32;
+                self.adjust_top_clamp(step);
                 return UIResult::NoEvent;
             },
             _ => {},
         }
 
-        let (inner_size, src_pos, dest_rect) = self.child_surface_info(ctx);
+        let (inner_size, src_pos, dest_rect, bar_rect) = self.child_surface_info(ctx);
+
+        let r = ctx.with_bounds(bar_rect, |ctx| {
+            if !ctx.mouse_over() {
+                return UIResult::Unhandled;
+            }
+            self.bar().on_mouse(ctx, evt.clone())
+        }).and_then(|pos| {;
+            self.set_top_clamp(pos as i32);
+            UIResult::NoEvent
+        });
+        // TODO: make this a macro
+        if r.is_handled() {
+            return r;
+        }
+
         ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
             self.child.on_mouse(ctx, evt)
         })
@@ -104,13 +147,20 @@ pub struct ScrollBar<Ctx: Context, D: Direction> {
 }
 
 impl<Ctx: Context, D: Direction> ScrollBar<Ctx, D> {
-    pub fn new(value: i16, max: i16) -> ScrollBar<Ctx, D> {
+    pub fn new(max: i16) -> ScrollBar<Ctx, D> {
         ScrollBar {
-            value: value,
+            value: 0,
             max: max,
             step: 10,
             style: Ctx::ScrollBarStyle::default(),
             _marker: PhantomData,
+        }
+    }
+
+    pub fn value(self, value: i16) -> Self {
+        ScrollBar {
+            value: value,
+            .. self
         }
     }
 
