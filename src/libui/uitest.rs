@@ -267,6 +267,12 @@ pub fn main() {
     //let mut root = widgets::button::CheckBox::new("hello, world", false);
     let mut state1 = widgets::container::GroupState::new();
     let mut root = widgets::container::Group::vert(&mut state1, contents![
+        ChildWidget::new(widgets::text::WrappedLabel::new("hello, world", 120), |_| ()),
+        ChildWidget::new(widgets::text::WrappedLabel::new("hello longlonglong world", 120), |_| ()),
+        ChildWidget::new(widgets::text::WrappedLabel::new("a  b  c  d  e  f  g  h  i  j", 120), |_| ()),
+        ChildWidget::new(widgets::text::WrappedLabel::new("long wordwordword", 120), |_| ()),
+        ChildWidget::new(widgets::text::WrappedLabel::new("long wordwordword ", 120), |_| ()),
+        ChildWidget::new(widgets::text::WrappedLabel::new("hello, space ", 120), |_| ()),
         ChildWidget::new(widgets::text::Label::new("hello, world"), |_| ()),
         ChildWidget::new(widgets::button::Button::new("hello, world"), |_| ()).align(Align::Center),
         ChildWidget::new(widgets::text::Label::new("poni poni"), |_| ()).align(Align::End),
@@ -274,7 +280,7 @@ pub fn main() {
         ChildWidget::new(widgets::text::Label::new("aeiou"), |_| ()),
     ]).spacing(40);
     let mut state2 = 0;
-    let mut root = widgets::scroll::ScrollPane::new(&mut state2, geom::Point { x: 300, y: 100 }, root);
+    let mut root = widgets::scroll::ScrollPane::new(&mut state2, geom::Point { x: 300, y: 300 }, root);
 
     // Main loop
 

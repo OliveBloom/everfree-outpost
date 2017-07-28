@@ -184,6 +184,14 @@ pub enum ButtonState {
 
 pub trait TextStyle: Sized+Copy+Default {
     fn text_size(&self, s: &str) -> Point;
+
+    fn space_width(&self) -> i32 {
+        self.text_size(" ").x
+    }
+
+    fn line_height(&self) -> i32 {
+        self.text_size("").y
+    }
 }
 
 pub trait ButtonStyle: Sized+Copy+Default {
