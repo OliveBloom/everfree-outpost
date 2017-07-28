@@ -118,7 +118,7 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
         let (inner_size, src_pos, dest_rect, bar_rect) = self.child_surface_info(ctx);
 
         let r = ctx.with_bounds(bar_rect, |ctx| {
-            if !ctx.mouse_over() {
+            if !ctx.mouse_target() {
                 return UIResult::Unhandled;
             }
             self.bar().on_mouse(ctx, evt.clone())

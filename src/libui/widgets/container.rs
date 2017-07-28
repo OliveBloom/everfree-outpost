@@ -283,7 +283,7 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
                 let bounds = self.layout.place(size, cw.align);
                 let evt = &self.event;
                 self.result = self.ctx.with_bounds(bounds, |ctx| {
-                    if !ctx.mouse_over() {
+                    if !ctx.mouse_target() {
                         return UIResult::Unhandled;
                     }
                     cw.w.on_mouse(ctx, evt.clone()).map(|e| (cw.f)(e))

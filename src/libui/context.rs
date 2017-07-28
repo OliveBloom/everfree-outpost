@@ -12,6 +12,7 @@ pub struct CommonState {
     pub clip: Option<Rect>,
     pub mouse_pos: Option<Point>,
     pub mouse_down_pos: Option<Point>,
+    pub mouse_grabbed: bool,
 }
 
 impl CommonState {
@@ -21,6 +22,7 @@ impl CommonState {
             clip: None,
             mouse_pos: None,
             mouse_down_pos: None,
+            mouse_grabbed: false,
         }
     }
 
@@ -36,6 +38,7 @@ impl CommonState {
     pub fn record_mouse_up(&mut self, pos: Point) {
         self.mouse_pos = Some(pos);
         self.mouse_down_pos = None;
+        self.mouse_grabbed = false;
     }
 
 
@@ -127,6 +130,20 @@ pub trait Context: Sized {
     fn mouse_pressed_over(&self) -> bool {
         let s = self.state();
         s.mouse_down_pos.map_or(false, |pos| s.bounds.contains(pos))
+    }
+
+    /// Is the target for mouse events inside the current bounds?
+    fn mouse_target(&self) -> bool {
+        let s = self.state();
+        let target_pos = if s.mouse_grabbed { s.mouse_down_pos } else { s.mouse_pos };
+        target_pos.map_or(false, |pos| s.bounds.contains(pos))
+    }
+
+    fn grab_mouse(&mut self) {
+        let s = self.state_mut();
+        if s.mouse_down_pos.is_some() {
+            s.mouse_grabbed = true;
+        }
     }
 
 
