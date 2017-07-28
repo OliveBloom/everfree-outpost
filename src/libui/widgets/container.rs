@@ -183,7 +183,7 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
                 let child_size = cw.w.min_size();
                 let add_minor = cmp::max(0, D::minor(child_size) - D::minor(self.size));
                 let add_major = D::major(child_size) +
-                    if D::major(self.size) == 0 { self.spacing } else { 0 };
+                    if D::major(self.size) != 0 { self.spacing } else { 0 };
                 self.size = self.size + D::make_point(add_major, add_minor);
             }
         }
