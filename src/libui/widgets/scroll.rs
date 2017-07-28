@@ -62,22 +62,31 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> ScrollPane<'a, Ctx, W> {
         (inner_size, src_pos, dest_rect, bar_rect)
     }
 
-    fn bar(&self) -> ScrollBar<Ctx, Horizontal>
+    fn scroll_max(&self, ctx: &Ctx) -> i32 {
+        let child_size = self.child.min_size().y;
+        let pane_size = ctx.cur_bounds().size().y;
+        if pane_size >= child_size {
+            0
+        } else {
+            child_size - pane_size
+        }
+    }
+
+    fn bar(&self, ctx: &Ctx) -> ScrollBar<Ctx, Horizontal>
             where W: Widget<Ctx> {
-        ScrollBar::new(self.child.min_size().y as i16)
+        ScrollBar::new(self.scroll_max(ctx) as i16)
             .value(*self.top as i16)
             .step(self.scroll_step)
             .style(self.bar_style)
     }
 
-    fn set_top_clamp(&mut self, top: i32) {
-        let child_size = self.child.min_size();
-        *self.top = cmp::max(0, cmp::min(child_size.y, top));
+    fn set_top_clamp(&mut self, top: i32, ctx: &Ctx) {
+        *self.top = cmp::max(0, cmp::min(self.scroll_max(ctx), top));
     }
 
-    fn adjust_top_clamp(&mut self, offset: i32) {
+    fn adjust_top_clamp(&mut self, offset: i32, ctx: &Ctx) {
         let top = *self.top + offset;
-        self.set_top_clamp(top);
+        self.set_top_clamp(top, ctx);
     }
 }
 
@@ -93,7 +102,8 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
         ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
             self.child.on_paint(ctx);
         });
-        ctx.with_bounds(bar_rect, |ctx| self.bar().on_paint(ctx));
+        let bar = self.bar(ctx);
+        ctx.with_bounds(bar_rect, |ctx| bar.on_paint(ctx));
     }
 
     fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
@@ -109,7 +119,7 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
         match evt {
             MouseEvent::Wheel(dir) => {
                 let step = -dir as i32 * self.scroll_step as i32;
-                self.adjust_top_clamp(step);
+                self.adjust_top_clamp(step, ctx);
                 return UIResult::NoEvent;
             },
             _ => {},
@@ -117,13 +127,14 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
 
         let (inner_size, src_pos, dest_rect, bar_rect) = self.child_surface_info(ctx);
 
+        let mut bar = self.bar(ctx);
         let r = ctx.with_bounds(bar_rect, |ctx| {
             if !ctx.mouse_target() {
                 return UIResult::Unhandled;
             }
-            self.bar().on_mouse(ctx, evt.clone())
+            bar.on_mouse(ctx, evt.clone())
         }).and_then(|pos| {;
-            self.set_top_clamp(pos as i32);
+            self.set_top_clamp(pos as i32, ctx);
             UIResult::NoEvent
         });
         // TODO: make this a macro
