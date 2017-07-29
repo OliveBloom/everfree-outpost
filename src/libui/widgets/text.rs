@@ -47,7 +47,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for Label<'a, Ctx> {
         ctx.draw_str(self.text, self.style);
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Down(_) => UIResult::NoEvent,
             MouseEvent::Up(_) => {
@@ -197,7 +197,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for WrappedLabel<'a, Ctx> {
         }
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Down(_) => UIResult::NoEvent,
             MouseEvent::Up(_) => {

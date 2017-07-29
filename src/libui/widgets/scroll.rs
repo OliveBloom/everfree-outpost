@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::cmp;
 use std::marker::PhantomData;
 
@@ -8,20 +9,20 @@ use param::{Param, RefParam};
 use widget::Widget;
 
 
-pub struct ScrollPane<'a, Ctx: Context, W> {
-    top: &'a mut i32,
+pub struct ScrollPane<'s, Ctx: Context, W> {
+    top: &'s Cell<i32>,
     size: Point,
     scroll_step: i16,
     child: W,
     bar_style: Ctx::ScrollBarStyle,
 }
 
-impl<'a, Ctx: Context, W> ScrollPane<'a, Ctx, W> {
-    pub fn new(state: &'a mut i32,
+impl<'s, Ctx: Context, W> ScrollPane<'s, Ctx, W> {
+    pub fn new(top: &'s Cell<i32>,
                size: Point,
-               child: W) -> ScrollPane<'a, Ctx, W> {
+               child: W) -> ScrollPane<'s, Ctx, W> {
         ScrollPane {
-            top: state,
+            top: top,
             size: size,
             scroll_step: 10,
             child: child,
@@ -44,7 +45,7 @@ impl<'a, Ctx: Context, W> ScrollPane<'a, Ctx, W> {
     }
 }
 
-impl<'a, Ctx: Context, W: Widget<Ctx>> ScrollPane<'a, Ctx, W> {
+impl<'s, Ctx: Context, W: Widget<Ctx>> ScrollPane<'s, Ctx, W> {
     #[inline]
     fn child_surface_info(&self, ctx: &Ctx) -> (Point, Point, Rect, Rect) {
         let cur_size = ctx.cur_bounds().size();
@@ -54,7 +55,7 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> ScrollPane<'a, Ctx, W> {
             y: cmp::max(cur_size.y, child_size.y),
         };
 
-        let src_pos = Point { x: 0, y: *self.top };
+        let src_pos = Point { x: 0, y: self.top.get() };
 
         let dest_rect = Rect::new(0, 0, inner_size.x, cur_size.y);
         let bar_rect = Rect::new(inner_size.x, 0, cur_size.x, cur_size.y);
@@ -75,22 +76,23 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> ScrollPane<'a, Ctx, W> {
     fn bar(&self, ctx: &Ctx) -> ScrollBar<Ctx, Horizontal>
             where W: Widget<Ctx> {
         ScrollBar::new(self.scroll_max(ctx) as i16)
-            .value(*self.top as i16)
+            .value(self.top.get() as i16)
             .step(self.scroll_step)
             .style(self.bar_style)
     }
 
-    fn set_top_clamp(&mut self, top: i32, ctx: &Ctx) {
-        *self.top = cmp::max(0, cmp::min(self.scroll_max(ctx), top));
+    fn set_top_clamp(&self, top: i32, ctx: &Ctx) {
+        let top = cmp::max(0, cmp::min(self.scroll_max(ctx), top));
+        self.top.set(top);
     }
 
-    fn adjust_top_clamp(&mut self, offset: i32, ctx: &Ctx) {
-        let top = *self.top + offset;
+    fn adjust_top_clamp(&self, offset: i32, ctx: &Ctx) {
+        let top = self.top.get() + offset;
         self.set_top_clamp(top, ctx);
     }
 }
 
-impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
+impl<'s, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'s, Ctx, W> {
     type Event = W::Event;
 
     fn min_size(&self) -> Point {
@@ -106,7 +108,7 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
         ctx.with_bounds(bar_rect, |ctx| bar.on_paint(ctx));
     }
 
-    fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
         // TODO: match page up / page down
 
         let (inner_size, src_pos, dest_rect, _bar_rect) = self.child_surface_info(ctx);
@@ -115,7 +117,7 @@ impl<'a, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'a, Ctx, W> {
         })
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Wheel(dir) => {
                 let step = -dir as i32 * self.scroll_step as i32;
@@ -234,7 +236,7 @@ impl<Ctx: Context, D: Direction> Widget<Ctx> for ScrollBar<Ctx, D> {
         ctx.draw_scroll_bar(self.style, self.value, self.max, top_pressed, bottom_pressed);
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Wheel(dir) => {
                 let adjust = -(dir as i16 * self.step);

@@ -80,7 +80,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for Button<'a, Ctx> {
         });
     }
 
-    fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
         // TODO: only react to "enter" / "activate" keys
         match evt {
             KeyEvent::Down(_) => UIResult::NoEvent,
@@ -88,7 +88,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for Button<'a, Ctx> {
         }
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Down(_) => UIResult::NoEvent,
             MouseEvent::Up(_) => {
@@ -205,7 +205,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for CheckBox<'a, Ctx> {
         });
     }
 
-    fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
         // TODO: only react to "enter" / "activate" keys
         match evt {
             KeyEvent::Down(_) => UIResult::NoEvent,
@@ -213,7 +213,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for CheckBox<'a, Ctx> {
         }
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Down(_) => UIResult::NoEvent,
             MouseEvent::Up(_) => {

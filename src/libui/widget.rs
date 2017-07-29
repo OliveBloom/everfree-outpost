@@ -15,13 +15,13 @@ pub trait Widget<Ctx: Context> {
         // No-op
     }
 
-    fn on_key(&mut self,
+    fn on_key(&self,
               ctx: &mut Ctx,
               evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
         UIResult::Unhandled
     }
 
-    fn on_mouse(&mut self,
+    fn on_mouse(&self,
                 ctx: &mut Ctx,
                 evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         UIResult::Unhandled

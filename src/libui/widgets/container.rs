@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::cmp;
 use std::marker::PhantomData;
 
@@ -33,16 +34,10 @@ impl<W, F> ChildWidget<W, F> {
 
 pub trait Contents<Ctx: Context, R> {
     fn accept<V: Visitor<Ctx, R>>(&self, v: &mut V);
-    fn accept_mut<V: VisitorMut<Ctx, R>>(&mut self, v: &mut V);
 }
 
 pub trait Visitor<Ctx: Context, R> {
     fn visit<W, F>(&mut self, cw: &ChildWidget<W, F>)
-        where W: Widget<Ctx>, F: Fn(W::Event) -> R;
-}
-
-pub trait VisitorMut<Ctx: Context, R> {
-    fn visit_mut<W, F>(&mut self, cw: &mut ChildWidget<W, F>)
         where W: Widget<Ctx>, F: Fn(W::Event) -> R;
 }
 
@@ -56,16 +51,10 @@ impl<Ctx, R, W1, F1, C2> Contents<Ctx, R> for (ChildWidget<W1, F1>, C2)
         v.visit(&self.0);
         self.1.accept(v);
     }
-
-    fn accept_mut<V: VisitorMut<Ctx, R>>(&mut self, v: &mut V) {
-        v.visit_mut(&mut self.0);
-        self.1.accept_mut(v);
-    }
 }
 
 impl<Ctx: Context, R> Contents<Ctx, R> for () {
     fn accept<V: Visitor<Ctx, R>>(&self, v: &mut V) {}
-    fn accept_mut<V: VisitorMut<Ctx, R>>(&mut self, v: &mut V) {}
 }
 
 
@@ -117,29 +106,17 @@ impl<D: Direction> Layout<D> {
 }
 
 
-pub struct GroupState {
-    focus: usize,
-}
-
-impl GroupState {
-    pub fn new() -> GroupState {
-        GroupState {
-            focus: 0,
-        }
-    }
-}
-
-pub struct Group<'a, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
-    state: &'a mut GroupState,
+pub struct Group<'s, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> {
+    focus: &'s Cell<usize>,
     contents: C,
     spacing: i32,
     _marker: PhantomData<(Ctx, D, R)>,
 }
 
-impl<'a, Ctx: Context, R, C: Contents<Ctx, R>> Group<'a, Ctx, Horizontal, R, C> {
-    pub fn horiz(state: &'a mut GroupState, contents: C) -> Group<'a, Ctx, Horizontal, R, C> {
+impl<'s, Ctx: Context, R, C: Contents<Ctx, R>> Group<'s, Ctx, Horizontal, R, C> {
+    pub fn horiz(focus: &'s Cell<usize>, contents: C) -> Group<'s, Ctx, Horizontal, R, C> {
         Group {
-            state: state,
+            focus: focus,
             contents: contents,
             spacing: 0,
             _marker: PhantomData,
@@ -147,10 +124,10 @@ impl<'a, Ctx: Context, R, C: Contents<Ctx, R>> Group<'a, Ctx, Horizontal, R, C> 
     }
 }
 
-impl<'a, Ctx: Context, R, C: Contents<Ctx, R>> Group<'a, Ctx, Vertical, R, C> {
-    pub fn vert(state: &'a mut GroupState, contents: C) -> Group<'a, Ctx, Vertical, R, C> {
+impl<'s, Ctx: Context, R, C: Contents<Ctx, R>> Group<'s, Ctx, Vertical, R, C> {
+    pub fn vert(focus: &'s Cell<usize>, contents: C) -> Group<'s, Ctx, Vertical, R, C> {
         Group {
-            state: state,
+            focus: focus,
             contents: contents,
             spacing: 0,
             _marker: PhantomData,
@@ -158,7 +135,7 @@ impl<'a, Ctx: Context, R, C: Contents<Ctx, R>> Group<'a, Ctx, Vertical, R, C> {
     }
 }
 
-impl<'a, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<'a, Ctx, D, R, C> {
+impl<'s, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<'s, Ctx, D, R, C> {
     pub fn spacing(self, spacing: i32) -> Self {
         Group {
             spacing: spacing,
@@ -167,7 +144,7 @@ impl<'a, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<'a, Ctx, D, R
     }
 }
 
-impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
+impl<'s, Ctx, D, R, C> Widget<Ctx> for Group<'s, Ctx, D, R, C>
         where Ctx: Context, D: Direction, C: Contents<Ctx, R> {
     type Event = R;
 
@@ -220,7 +197,7 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
         self.contents.accept(&mut v);
     }
 
-    fn on_key(&mut self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<R> {
+    fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<R> {
         struct KeyVisitor<'c, Ctx: Context+'c, D: Direction, R> {
             ctx: &'c mut Ctx,
             idx: usize,
@@ -229,9 +206,9 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
             event: Option<KeyEvent<Ctx>>,
             result: UIResult<R>,
         }
-        impl<'c, Ctx, D, R> VisitorMut<Ctx, R> for KeyVisitor<'c, Ctx, D, R>
+        impl<'c, Ctx, D, R> Visitor<Ctx, R> for KeyVisitor<'c, Ctx, D, R>
                 where Ctx: Context, D: Direction {
-            fn visit_mut<W, F>(&mut self, cw: &mut ChildWidget<W, F>)
+            fn visit<W, F>(&mut self, cw: &ChildWidget<W, F>)
                     where W: Widget<Ctx>, F: Fn(W::Event) -> R {
                 if self.idx == self.focus {
                     let size = cw.w.min_size();
@@ -249,27 +226,27 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
         let mut v: KeyVisitor<Ctx, D, R> = KeyVisitor {
             ctx: ctx,
             idx: 0,
-            focus: self.state.focus,
+            focus: self.focus.get(),
             layout: Layout::new(D::minor(bounds_size), self.spacing),
             event: Some(evt),
             result: UIResult::Unhandled,
         };
-        self.contents.accept_mut(&mut v);
+        self.contents.accept(&mut v);
         v.result
     }
 
-    fn on_mouse(&mut self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<R> {
-        struct MouseVisitor<'a, 'c, Ctx: Context+'c, D: Direction, R> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<R> {
+        struct MouseVisitor<'s, 'c, Ctx: Context+'c, D: Direction, R> {
             ctx: &'c mut Ctx,
-            state: &'a mut GroupState,
+            focus: &'s Cell<usize>,
             idx: usize,
             layout: Layout<D>,
             event: MouseEvent<Ctx>,
             result: UIResult<R>,
         }
-        impl<'a, 'c, Ctx, D, R> VisitorMut<Ctx, R> for MouseVisitor<'a, 'c, Ctx, D, R>
+        impl<'s, 'c, Ctx, D, R> Visitor<Ctx, R> for MouseVisitor<'s, 'c, Ctx, D, R>
                 where Ctx: Context, D: Direction {
-            fn visit_mut<W, F>(&mut self, cw: &mut ChildWidget<W, F>)
+            fn visit<W, F>(&mut self, cw: &ChildWidget<W, F>)
                     where W: Widget<Ctx>, F: Fn(W::Event) -> R {
                 let idx = self.idx;
                 self.idx += 1;
@@ -291,7 +268,7 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
 
                 if self.result.is_handled() {
                     // This child handled the input, so update the container focus.
-                    self.state.focus = idx;
+                    self.focus.set(idx);
                 }
             }
         }
@@ -299,13 +276,13 @@ impl<'a, Ctx, D, R, C> Widget<Ctx> for Group<'a, Ctx, D, R, C>
         let bounds_size = ctx.cur_bounds().size();
         let mut v: MouseVisitor<Ctx, D, R> = MouseVisitor {
             ctx: ctx,
-            state: self.state,
+            focus: self.focus,
             idx: 0,
             layout: Layout::new(D::minor(bounds_size), self.spacing),
             event: evt,
             result: UIResult::Unhandled,
         };
-        self.contents.accept_mut(&mut v);
+        self.contents.accept(&mut v);
         v.result
     }
 }
