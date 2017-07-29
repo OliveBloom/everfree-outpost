@@ -116,7 +116,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
         }
     }
 
-    fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
+    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
+        use outpost_ui::widget::Widget;
+        use outpost_ui::widgets::text::Label;
+        use ui2;
+
+        let ui2_rect = rect.inset(200, 150, 200, 150);
+        let mut ctx = ui2::context::Context::new(self.dyn.data, geom, ui2_rect);
+        Label::new("hello, outpost").on_paint(&mut ctx);
+
     }
 
     fn on_key(&mut self, key: ActionEvent) -> EventStatus {

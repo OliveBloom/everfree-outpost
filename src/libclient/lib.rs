@@ -27,6 +27,7 @@ extern crate common_proto;
 extern crate common_types;
 extern crate common_util;
 extern crate physics;
+extern crate ui as outpost_ui;
 
 pub use client::Client;
 pub use data::Data;
@@ -56,5 +57,6 @@ mod pawn;
 
 pub mod graphics;
 pub mod ui;
+pub mod ui2;
 
 pub type Time = i32;
