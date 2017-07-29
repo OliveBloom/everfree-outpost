@@ -118,17 +118,31 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
         use std::cell::Cell;
+        use outpost_ui::geom::Point;
         use outpost_ui::widget::Widget;
         use outpost_ui::widgets::scroll::ScrollPane;
         use outpost_ui::widgets::text::Label;
         use ui2;
         use ui2::util::*;
+        use ui2::widgets::list::TextList;
 
         let ui2_rect = rect.inset(200, 200, 150, 150);
         let mut ctx = ui2::context::Context::new(self.dyn.data, geom, ui2_rect);
+        TextList {
+            top: &Cell::new(0),
+            focus: &Cell::new(0),
+            items: &[
+                "good morning",
+                "everfree outpost",
+                "!!!",
+            ],
+            size: Point { x: 300, y: 200 },
+        }.on_paint(&mut ctx);
+        /*
         let l = Label::new("hello, outpost");
         let st = Cell::new(0);
         ScrollPane::new(&st, from_v2(V2::new(300, 200)), l).on_paint(&mut ctx);
+        */
 
     }
 

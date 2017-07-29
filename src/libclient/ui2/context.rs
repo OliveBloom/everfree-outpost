@@ -9,7 +9,7 @@ use physics::v3::{V2, scalar, Region};
 use data::Data;
 use fonts::{self, FontMetrics, FontMetricsExt};
 use input;
-use ui::atlas;
+use ui::atlas::{self, AtlasEntry};
 use ui::geom::Geom;
 use ui2::util::*;
 
@@ -28,6 +28,16 @@ impl<'d, 'a> Context<'d, 'a> {
             geom: geom,
             state: context::CommonState::new(from_region2(bounds)),
         }
+    }
+
+    pub fn draw_ui(&mut self, atlas: AtlasEntry, pos: Point) {
+        let pos = to_v2(pos + self.cur_bounds().min);
+        self.geom.draw_ui(atlas, pos);
+    }
+
+    pub fn draw_ui_tiled(&mut self, atlas: AtlasEntry, rect: Rect) {
+        let rect = to_region2(rect + self.cur_bounds().min);
+        self.geom.draw_ui_tiled(atlas, rect);
     }
 }
 

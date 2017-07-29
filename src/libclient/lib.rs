@@ -8,6 +8,7 @@
     btree_range,
     collections,
     collections_bound,
+    conservative_impl_trait,
     core_intrinsics,
     fnbox,
     )]

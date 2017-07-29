@@ -1,6 +1,8 @@
+use std::prelude::v1::*;
 use std::cell::Cell;
 use std::cmp;
 use std::marker::PhantomData;
+use std::ops::Range;
 
 use context::Context;
 use event::{KeyEvent, MouseEvent, UIResult};
@@ -55,6 +57,58 @@ impl<Ctx, R, W1, F1, C2> Contents<Ctx, R> for (ChildWidget<W1, F1>, C2)
 
 impl<Ctx: Context, R> Contents<Ctx, R> for () {
     fn accept<V: Visitor<Ctx, R>>(&self, v: &mut V) {}
+}
+
+
+pub struct GenWidgets<W, F, G> {
+    range: Range<usize>,
+    gen: G,
+    _marker: PhantomData<fn() -> ChildWidget<W, F>>,
+}
+
+impl<W, F, G> GenWidgets<W, F, G>
+        where G: Fn(usize) -> ChildWidget<W, F> {
+    pub fn new(range: Range<usize>, gen: G) -> GenWidgets<W, F, G> {
+        GenWidgets {
+            range: range,
+            gen: gen,
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<Ctx, R, W, F, G> Contents<Ctx, R> for GenWidgets<W, F, G>
+        where Ctx: Context,
+              W: Widget<Ctx>,
+              F: Fn(W::Event) -> R,
+              G: Fn(usize) -> ChildWidget<W, F> {
+    fn accept<V: Visitor<Ctx, R>>(&self, v: &mut V) {
+        for idx in self.range.clone() {
+            let cw = (self.gen)(idx);
+            v.visit(&cw);
+        }
+    }
+}
+
+
+impl<Ctx, R, W, F> Contents<Ctx, R> for [ChildWidget<W, F>]
+        where Ctx: Context,
+              W: Widget<Ctx>,
+              F: Fn(W::Event) -> R {
+    fn accept<V: Visitor<Ctx, R>>(&self, v: &mut V) {
+        for cw in self {
+            v.visit(cw);
+        }
+    }
+}
+
+impl<Ctx, R, W, F> Contents<Ctx, R> for Vec<ChildWidget<W, F>>
+        where Ctx: Context,
+              W: Widget<Ctx>,
+              F: Fn(W::Event) -> R {
+    fn accept<V: Visitor<Ctx, R>>(&self, v: &mut V) {
+        (**self).accept(v);
+    }
 }
 
 
