@@ -1,6 +1,9 @@
 use outpost_ui::context;
 use outpost_ui::geom::{Point, Rect};
-use outpost_ui::context::Context as ContextTrait;
+use outpost_ui::context::{
+    Context as ContextTrait,
+    ScrollBarStyle as ScrollBarStyleTrait,
+};
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
@@ -53,10 +56,31 @@ impl<'d, 'a> context::Context for Context<'d, 'a> {
                        max: i16,
                        top_pressed: bool,
                        bottom_pressed: bool) {
-        let bounds = self.cur_bounds();
+        let bounds = to_region2(self.cur_bounds()).inset(0, -style.width(), 0, 0);
+        let size = bounds.size();
+
         match style {
             ScrollBarStyle::Default => {
-                unimplemented!()
+                // Whole bar is the width of the handle.  The caps are 2px narrower than the
+                // handle, and the background is 6px narrower.
+                let bg_rect = bounds.inset(3, 3, 0, 0);
+                self.geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_BELOW, bg_rect);
+
+                let cap_size = atlas::SCROLL_BAR_CAP.size();
+                let cap_rect1 = bounds.inset(1, 1, 0, -cap_size.y);
+                self.geom.draw_ui(atlas::SCROLL_BAR_CAP, cap_rect1.min);
+                let cap_rect2 = bounds.inset(1, 1, -cap_size.y, 0);
+                self.geom.draw_ui(atlas::SCROLL_BAR_CAP, cap_rect2.min);
+
+                // Caps are each 4px high, but can overlap by 1px with the handle.  The handle
+                // itself is 5px high.  Valid handle offsets are 0 to max_offset, inclusive.
+                let max_offset = size.y - 3 * 2 - 5;
+                // Top handle is 4px, but 1px can overlap.
+                let base_offset = 3;
+                let offset = base_offset + 
+                    if max != 0 { max_offset * val as i32 / max as i32 } else { 0 };
+                let handle_pos = bounds.min + V2::new(0, offset);
+                self.geom.draw_ui(atlas::SCROLL_BAR_THUMB, handle_pos);
             },
         }
     }
