@@ -67,39 +67,8 @@ TeleportSetupDialog.prototype.submit = function() {
 };
 
 
-/** @constructor */
-function TeleportDestDialog(parts) {
-    var dests = parts['dests'];
-    dests.sort();
-
-    var this_ = this;
-    var items = [];
-    var list_elt = util.element('div', ['list']);
-    for (var i = 0; i < dests.length; ++i) {
-        var elt = util.element('div', ['list-item', 'text=' + dests[i]], list_elt);
-        items[i] = new widget.Button(elt);
-        items[i].value = dests[i];
-        items[i].onclick = function() { this_.submit(); };
-    }
-    this.list = new widget.SimpleList(list_elt, items);
-
-    var dom = util.fromTemplate('teleport-dest', {'list': this.list.dom});
-    widget.Form.call(this, this.list, dom);
-}
-TeleportDestDialog.prototype = Object.create(widget.Form.prototype);
-TeleportDestDialog.prototype.constructor = TeleportDestDialog;
-
-TeleportDestDialog.prototype.submit = function() {
-    if (this.onsubmit != null) {
-        this.onsubmit({
-            'dest': this.list.selection().value,
-        });
-    }
-};
-
-
 exports.DIALOG_TYPES = [
     SignTextDialog,
     TeleportSetupDialog,
-    TeleportDestDialog,
+    null,
 ];

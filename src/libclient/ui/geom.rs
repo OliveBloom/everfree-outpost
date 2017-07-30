@@ -1,4 +1,5 @@
 use std::prelude::v1::*;
+use std::mem;
 
 use physics::v3::{V2, scalar, Region};
 
@@ -59,6 +60,9 @@ impl Geom {
         let dest =
             if let Some(ref clip) = self.clip { clip.intersect(raw_dest) }
             else { raw_dest };
+        if dest.is_empty() {
+            return;
+        }
         let dx = raw_dest.min.x as i16;
         let dy = raw_dest.min.y as i16;
 
@@ -139,6 +143,14 @@ impl Geom {
         (self.geom, self.special)
     }
 
+
+    pub fn push_clip(&mut self, clip: Region<V2>) -> Option<Region<V2>> {
+        mem::replace(&mut self.clip, Some(clip))
+    }
+
+    pub fn pop_clip(&mut self, old: Option<Region<V2>>) {
+        self.clip = old;
+    }
 
     pub fn clipped<F: FnMut(&mut Geom)>(&mut self, clip: Region<V2>, mut f: F) {
         let old = self.clip;

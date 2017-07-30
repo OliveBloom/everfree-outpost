@@ -75,7 +75,7 @@ static mut LOG_LEVEL: u8 = 2;
 
 #[inline(always)]
 pub fn should_log(level: u8) -> bool {
-    unsafe { level < LOG_LEVEL }
+    unsafe { level <= LOG_LEVEL }
 }
 
 pub fn log_level(level: u8) {

@@ -17,6 +17,7 @@ use physics::{CHUNK_SIZE, CHUNK_BITS, TILE_SIZE};
 use physics::v3::{V3, V2, Vn, scalar, Region};
 use common::Gauge;
 use common_movement::InputBits;
+use common_proto::extra_arg::{ExtraArg, SimpleArg};
 use common_proto::game::{Request, Response};
 use common_proto::types::LocalTime;
 
@@ -179,8 +180,9 @@ impl<'d, P: Platform> Client<'d, P> {
             Response::PlaneFlags(flags) =>
                 self.set_plane_flags(flags),
 
-            Response::GetInteractArgs(_dialog, _arg) =>
-                error!("NYI: libclient GetInteractArgs"),
+            Response::GetInteractArgs(dialog, args) => {
+                self.open_generic_dialog(dialog, args, Action::Interact);
+            },
 
             Response::GetUseItemArgs(_item, _dialog, _arg) =>
                 error!("NYI: libclient GetUseItemArgs"),
@@ -697,6 +699,49 @@ impl<'d, P: Platform> Client<'d, P> {
         self.ui.root.dialog.inner = AnyDialog::crafting(inv, station, template);
     }
 
+    pub fn open_generic_dialog(&mut self, dialog: u32, arg: ExtraArg, action: Action) {
+        match dialog {
+            2 => {
+                info!("open dialog #2: {:?}", arg);
+                let map = match arg.as_map() {
+                    Some(x) => x,
+                    None => {
+                        error!("TeleportDestDialog: expected Map");
+                        return;
+                    },
+                };
+                let list_val = match map.get(&SimpleArg::Str("dests".to_owned())) {
+                    Some(x) => x,
+                    None => {
+                        error!("TeleportDestDialog: expected key `dests`");
+                        return;
+                    },
+                };
+                let list = match list_val.as_list() {
+                    Some(x) => x,
+                    None => {
+                        error!("TeleportDestDialog: expected `dests` to be List");
+                        return;
+                    },
+                };
+
+                let mut dest_names = Vec::new();
+                for val in list {
+                    let name = match val.as_str() {
+                        Some(x) => x,
+                        None => {
+                            error!("TeleportDestDialog: expected `dests` item to be Str");
+                            return;
+                        },
+                    };
+                    dest_names.push(name.clone());
+                }
+                self.ui.root.dialog.inner = AnyDialog::teleport(dest_names);
+            },
+            _ => error!("unsupported dialog type {}", dialog),
+        }
+    }
+
     pub fn close_dialog(&mut self) {
         use ui::dialogs::AnyDialog;
         self.ui.root.dialog.inner = AnyDialog::none();
@@ -888,7 +933,7 @@ impl<'d, P: Platform> Client<'d, P> {
         self.timing.record_ping(client_send, client_recv, server);
     }
 
-    pub fn predict_arrival(&mut self, extra_delay: Time) -> Time {
+    pub fn predict_arrival(&self, extra_delay: Time) -> Time {
         let client = self.platform.get_time();
         let server = self.timing.predict_confidence(client, 200);
         (server + extra_delay + TICK_MS - 1) & !(TICK_MS - 1)
@@ -986,6 +1031,8 @@ pub trait ClientObj {
     fn platform(&mut self) -> &mut PlatformObj;
     fn ui(&mut self) -> &mut UI;
 
+    fn msg_time(&self) -> LocalTime;
+
     fn handle_hotbar_assign(&mut self, idx: u8, item_id: ItemId, is_ability: bool);
     fn handle_hotbar_drop(&mut self,
                           src_inv: InventoryId,
@@ -999,6 +1046,10 @@ impl<'d, P: Platform> ClientObj for Client<'d, P> {
     fn inventories(&self) -> &Inventories { &self.inventories }
     fn platform(&mut self) -> &mut PlatformObj { &mut self.platform }
     fn ui(&mut self) -> &mut UI { &mut self.ui }
+
+    fn msg_time(&self) -> LocalTime {
+        LocalTime::from_global_32(self.predict_arrival(0))
+    }
 
     fn handle_hotbar_assign(&mut self, idx: u8, item_id: u16, is_ability: bool) {
         self.misc.hotbar.set_slot(&self.data,
@@ -1071,4 +1122,11 @@ fn calc_cursor_pos(data: &Data, pos: V3, anim: u16) -> Option<V2> {
     let tile = (pos + V3::new(16, 16, 16)).div_floor(scalar(TILE_SIZE));
     let pos = tile + DIRS[dir as usize].extend(0);
     Some(V2::new(pos.x, pos.y - pos.z) * scalar(TILE_SIZE) + scalar(TILE_SIZE / 2))
+}
+
+
+pub enum Action {
+    Interact,
+    UseItem(ItemId),
+    UseAbility(ItemId),
 }

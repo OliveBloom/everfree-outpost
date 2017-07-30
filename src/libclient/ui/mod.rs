@@ -159,10 +159,10 @@ pub use self::root::RootDyn as Dyn;
 
 
 pub struct Context {
-    mouse_pos: V2,
-    mouse_down: bool,
-    mouse_down_pos: V2,
-    drag_data: Option<DragData>,
+    pub mouse_pos: V2,
+    pub mouse_down: bool,
+    pub mouse_down_pos: V2,
+    pub drag_data: Option<DragData>,
 }
 
 #[derive(Clone, Debug)]

@@ -14,10 +14,12 @@ use ui::widget::*;
 
 mod inventory;
 mod crafting;
+mod teleport;
 
 pub use self::inventory::{Inventory, InventoryDyn};
 pub use self::inventory::{Container, ContainerDyn};
 pub use self::crafting::{Crafting, CraftingDyn};
+pub use self::teleport::Teleport;
 
 
 pub enum AnyDialog {
@@ -26,6 +28,8 @@ pub enum AnyDialog {
     Ability(Inventory),
     Container(Container),
     Crafting(Crafting),
+
+    Teleport(Teleport),
 }
 
 impl AnyDialog {
@@ -50,6 +54,10 @@ impl AnyDialog {
                     station_id: StructureId,
                     template: u32) -> AnyDialog {
         AnyDialog::Crafting(Crafting::new(inv_id, station_id, template))
+    }
+
+    pub fn teleport(dest_names: Vec<String>) -> AnyDialog {
+        AnyDialog::Teleport(Teleport::new(dest_names))
     }
 
     pub fn is_none(&self) -> bool {
@@ -77,6 +85,7 @@ impl dialog::Inner for AnyDialog {
             AnyDialog::Ability(_) => "Abilities",
             AnyDialog::Container(_) => "Container",
             AnyDialog::Crafting(_) => "Crafting",
+            AnyDialog::Teleport(_) => "Teleport",
         }
     }
 
@@ -141,6 +150,13 @@ impl<'a, 'b> Widget for WidgetPack<'a, AnyDialog, AnyDialogDyn<'b>> {
             AnyDialog::Crafting(ref mut state) => {
                 let dyn = CraftingDyn::new(self.dyn.inventories, self.dyn.data);
                 let mut child = WidgetPack::new(state, &dyn);
+                let rect = Region::sized(child.size()) + pos;
+                v.visit(&mut child, rect);
+            },
+
+            AnyDialog::Teleport(ref mut state) => {
+                let dyn = self.dyn.data;
+                let mut child = WidgetPack::new(state, dyn);
                 let rect = Region::sized(child.size()) + pos;
                 v.visit(&mut child, rect);
             },

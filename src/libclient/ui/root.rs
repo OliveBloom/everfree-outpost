@@ -28,6 +28,10 @@ pub struct Root {
 
 impl Root {
     pub fn new() -> Root {
+        let mut v = vec!["Spawn".to_owned()];
+        for i in 0 .. 100 {
+            v.push(format!("Dest {}", i));
+        }
         Root {
             dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
             debug: debug::Debug::new(),
@@ -116,7 +120,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
         }
     }
 
-    fn render(&mut self, _geom: &mut Geom, _rect: Region<V2>) {
+    fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
     }
 
     fn on_key(&mut self, key: ActionEvent) -> EventStatus {
