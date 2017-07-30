@@ -223,6 +223,11 @@ Connection.prototype._handleMessage = function(evt) {
         case OP_GET_INTERACT_ARGS:
             if (this.onGetInteractArgs != null) {
                 var dialog_id = get32();
+                // TODO - HACK: dispatch TeleportDestDialog to asmlibs
+                if (dialog_id == 2) {
+                    this._asm.handleMessage(new Uint8Array(evt.data));
+                    return;
+                }
                 var args = getArg();
                 this.onGetInteractArgs(dialog_id, args);
             }

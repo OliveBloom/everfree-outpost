@@ -1,6 +1,7 @@
 use std::prelude::v1::*;
 use types::*;
 use std::cell::Cell;
+use common_proto::extra_arg::{self, ExtraArg, SimpleArg};
 use common_proto::game::Request;
 use outpost_ui::event::{KeyEvent, MouseEvent, UIResult};
 use outpost_ui::geom::Point;
@@ -48,6 +49,21 @@ impl Teleport {
             size: Point { x: 200, y: 250 },
         }
     }
+
+    fn handle_event(&self, idx: usize) -> EventStatus {
+        let dest = self.dest_names[idx].clone();
+        EventStatus::Action(box move |c: &mut ClientObj| {
+            let mut m = extra_arg::Map::new();
+            m.insert(SimpleArg::Str("dest".to_owned()),
+                     ExtraArg::Str(dest));
+            let e = ExtraArg::Map(m);
+
+            let msg = Request::InteractWithArgs(c.msg_time(), e);
+            c.platform().send_message(msg);
+
+            c.ui().root.dialog.inner = dialogs::AnyDialog::none();
+        })
+    }
 }
 
 impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
@@ -90,10 +106,7 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
         match r {
             UIResult::Unhandled => EventStatus::Unhandled,
             UIResult::NoEvent => EventStatus::Handled,
-            UIResult::Event(idx) => {
-                info!("mouse event: {}", idx);
-                EventStatus::Handled
-            },
+            UIResult::Event(idx) => self.state.handle_event(idx),
         }
     }
 
@@ -113,10 +126,7 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
         match r {
             UIResult::Unhandled => EventStatus::Unhandled,
             UIResult::NoEvent => EventStatus::Handled,
-            UIResult::Event(idx) => {
-                info!("mouse event: {}", idx);
-                EventStatus::Handled
-            },
+            UIResult::Event(idx) => self.state.handle_event(idx),
         }
     }
 }

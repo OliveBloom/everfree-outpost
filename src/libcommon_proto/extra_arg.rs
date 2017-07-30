@@ -42,6 +42,27 @@ impl ExtraArg {
             e => Err(e),
         }
     }
+
+    pub fn as_str(&self) -> Option<&String> {
+        match *self {
+            ExtraArg::Str(ref s) => Some(s),
+            _ => None,
+        }
+    }
+
+    pub fn as_list(&self) -> Option<&Vec<ExtraArg>> {
+        match *self {
+            ExtraArg::List(ref l) => Some(l),
+            _ => None,
+        }
+    }
+
+    pub fn as_map(&self) -> Option<&Map<SimpleArg, ExtraArg>> {
+        match *self {
+            ExtraArg::Map(ref m) => Some(m),
+            _ => None,
+        }
+    }
 }
 
 
