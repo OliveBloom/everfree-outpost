@@ -39,6 +39,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for TextListItem<'a> {
         let size = ctx.cur_bounds().size();
         // Background bar currently has a fixed size, 13px high.
         let size = Point { x: size.x, y: cmp::min(size.y, 13) };
+        info!("  bounds = {:?}, size = {:?}", ctx.cur_bounds(), size);
 
         let fill_rect = Rect::sized(size).inset(2, 0, 1, 0);
         ctx.draw_ui(atlas::SCROLL_LIST_ENTRY_LEFT, Point { x: 0, y: 0 });

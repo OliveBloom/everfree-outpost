@@ -84,6 +84,27 @@ impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
             },
         }
     }
+
+
+    // Custom impl of `with_surface` to set clipping on the `geom` as well.
+    fn with_surface<F: FnOnce(&mut Self) -> R, R>(&mut self,
+                                                  size: Point,
+                                                  src_pos: Point,
+                                                  dest_rect: Rect,
+                                                  func: F) -> R {
+        let old = self.state_mut().push_surface(size, src_pos, dest_rect);
+        info!("new surface ({:?}, {:?}, {:?}): bounds = {:?}, clip = {:?}",
+              size, src_pos, dest_rect, self.state().bounds, self.state().clip);
+        let clip = self.state().clip.unwrap();
+        let geom_old = self.geom.push_clip(to_region2(clip));
+
+        let r = func(self);
+
+        self.state_mut().pop_surface(old);
+        self.geom.pop_clip(geom_old);
+
+        r
+    }
 }
 
 
