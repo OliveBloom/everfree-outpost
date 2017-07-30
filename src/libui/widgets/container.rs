@@ -21,7 +21,7 @@ impl<W, F> ChildWidget<W, F> {
         ChildWidget {
             w: w,
             f: f,
-            align: Align::Start,
+            align: Align::Stretch,
         }
     }
 
@@ -125,6 +125,7 @@ pub enum Align {
     Start,
     Center,
     End,
+    Stretch,
 }
 
 
@@ -149,13 +150,22 @@ impl<D: Direction> Layout<D> {
         let major = self.major_pos;
         self.major_pos += D::major(size) + self.spacing;
 
-        let minor = match align {
-            Align::Start => 0,
-            Align::Center => (self.minor_size - D::minor(size)) / 2,
-            Align::End => self.minor_size - D::minor(size),
+        let minor_size = D::minor(size);
+        let minor_total = self.minor_size;
+        let (minor0, minor1) = match align {
+            Align::Start => (0, minor_size),
+            Align::Center => {
+                let offset = (minor_total - minor_size) / 2;
+                (offset, offset + minor_size)
+            },
+            Align::End => (minor_total - minor_size, minor_total),
+            Align::Stretch => (0, minor_total),
         };
 
-        Rect::sized(size) + D::make_point(major, minor)
+        Rect {
+            min: D::make_point(major, minor0),
+            max: D::make_point(major + D::major(size), minor1),
+        }
     }
 }
 
