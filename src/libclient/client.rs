@@ -726,7 +726,6 @@ impl<'d, P: Platform> Client<'d, P> {
                 };
 
                 let mut dest_names = Vec::new();
-                for _ in 0 .. 100 {
                 for val in list {
                     let name = match val.as_str() {
                         Some(x) => x,
@@ -736,7 +735,6 @@ impl<'d, P: Platform> Client<'d, P> {
                         },
                     };
                     dest_names.push(name.clone());
-                }
                 }
                 self.ui.root.dialog.inner = AnyDialog::teleport(dest_names);
             },
