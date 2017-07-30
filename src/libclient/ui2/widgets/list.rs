@@ -4,7 +4,7 @@ use std::cmp;
 
 use outpost_ui::context::Context as ContextTrait;
 use outpost_ui::context::Focus;
-use outpost_ui::event::{KeyEvent, MouseEvent, UIResult};
+use outpost_ui::event::{KeyEvent, KeyInterp, MouseEvent, UIResult};
 use outpost_ui::geom::{Point, Rect};
 use outpost_ui::geom::Vertical;
 use outpost_ui::widget::Widget;
@@ -57,8 +57,10 @@ impl<'a, Ctx: Context> Widget<Ctx> for TextListItem<'a> {
     }
 
     fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
-        // TODO
-        UIResult::Unhandled
+        match ctx.interp_key(evt) {
+            Some(KeyInterp::Activate) => UIResult::Event(()),
+            _ => UIResult::Unhandled,
+        }
     }
 
     fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {

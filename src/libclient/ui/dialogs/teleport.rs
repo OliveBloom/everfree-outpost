@@ -90,7 +90,7 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
     fn on_key(&mut self, key: ActionEvent) -> EventStatus {
         let mut ctx = ContextImpl::new(self.dyn, self.state.last_rect);
 
-        let r = self.state.inner().on_key(&mut ctx, KeyEvent::Down(key.code));
+        let r = self.state.inner().on_key(&mut ctx, KeyEvent::Down(key));
         // TODO: keyup?
 
         match r {

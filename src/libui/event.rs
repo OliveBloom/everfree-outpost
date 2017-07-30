@@ -21,6 +21,9 @@ pub enum KeyInterp {
     FocusX(i8),
     /// Change focus to the next widget in the Y direction.
     FocusY(i8),
+
+    /// Activate the focused widget.
+    Activate,
 }
 
 

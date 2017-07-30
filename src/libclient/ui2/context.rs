@@ -13,7 +13,7 @@ use input;
 use ui::Context as Context1;
 use ui::atlas::{self, AtlasEntry};
 use ui::geom::Geom;
-use ui::input::KeyAction;
+use ui::input::{KeyAction, ActionEvent};
 use ui2::util::*;
 
 pub struct ContextImpl<'d, 'a> {
@@ -55,15 +55,19 @@ impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
     fn state(&self) -> &context::CommonState { &self.state }
     fn state_mut(&mut self) -> &mut context::CommonState { &mut self.state }
 
-    type Key = KeyAction;
+    type Key = ActionEvent;
     fn interp_key(&self, evt: KeyEvent<Self>) -> Option<KeyInterp> {
         let interp = match evt {
             KeyEvent::Down(act) => {
-                match act {
-                    KeyAction::MoveLeft => KeyInterp::FocusX(1),
-                    KeyAction::MoveRight => KeyInterp::FocusX(-1),
-                    KeyAction::MoveDown => KeyInterp::FocusY(1),
-                    KeyAction::MoveUp => KeyInterp::FocusY(-1),
+                let mag = if act.shift() { 10 } else { 1 };
+                match act.code {
+                    KeyAction::MoveLeft => KeyInterp::FocusX(mag),
+                    KeyAction::MoveRight => KeyInterp::FocusX(-mag),
+                    KeyAction::MoveDown => KeyInterp::FocusY(mag),
+                    KeyAction::MoveUp => KeyInterp::FocusY(-mag),
+
+                    KeyAction::Select => KeyInterp::Activate,
+
                     _ => return None,
                 }
             },
