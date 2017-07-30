@@ -57,7 +57,8 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
     fn walk_layout<V: Visitor>(&mut self, v: &mut V, pos: V2) {}
 
     fn render(&mut self, geom: &mut Geom, rect: Region<V2>) {
-        let mut ctx = ContextImpl::new(self.dyn, geom, rect);
+        let mut ctx = ContextImpl::new(self.dyn, rect);
+        ctx.set_geom(geom);
 
         /*
         TextListItem {

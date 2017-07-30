@@ -7,6 +7,7 @@ use widget::Widget;
 
 pub enum Void {}
 
+#[derive(Debug)]
 pub struct CommonState {
     pub bounds: Rect,
     pub clip: Option<Rect>,

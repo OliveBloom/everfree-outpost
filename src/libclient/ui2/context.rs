@@ -9,25 +9,43 @@ use physics::v3::{V2, scalar, Region};
 use data::Data;
 use fonts::{self, FontMetrics, FontMetricsExt};
 use input;
+use ui::Context as Context1;
 use ui::atlas::{self, AtlasEntry};
 use ui::geom::Geom;
 use ui2::util::*;
 
 pub struct ContextImpl<'d, 'a> {
     data: &'d Data,
-    geom: &'a mut Geom,
+    geom: Option<&'a mut Geom>,
     state: context::CommonState,
 }
 
 impl<'d, 'a> ContextImpl<'d, 'a> {
     pub fn new(data: &'d Data,
-               geom: &'a mut Geom,
                bounds: Region<V2>) -> ContextImpl<'d, 'a> {
         ContextImpl {
             data: data,
-            geom: geom,
+            geom: None,
             state: context::CommonState::new(from_region2(bounds)),
         }
+    }
+
+    pub fn set_geom(&mut self, geom: &'a mut Geom) {
+        self.geom = Some(geom);
+    }
+
+    pub fn add_mouse_info(&mut self, ctx: &Context1, up: bool) {
+        self.state.mouse_pos = Some(from_v2(ctx.mouse_pos));
+        // ui::Context clears the mouse_down field before dispatching mouse-up events to widgets,
+        // but libui widgets expect mouse_down_pos to still be set during mouse-up handling.  So we
+        // pretend mouse_down is still set when handling mouse-up events.
+        if ctx.mouse_down || up {
+            self.state.mouse_down_pos = Some(from_v2(ctx.mouse_down_pos));
+        }
+    }
+
+    fn geom(&mut self) -> &mut Geom {
+        self.geom.as_mut().expect("ui context has no geom")
     }
 }
 
@@ -41,7 +59,7 @@ impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
     type TextStyle = TextStyle;
     fn draw_str(&mut self, s: &str, style: TextStyle) {
         let pos = to_v2(self.cur_bounds().min);
-        self.geom.draw_str(style.metrics, s, pos);
+        self.geom().draw_str(style.metrics, s, pos);
     }
 
     type ButtonStyle = ButtonStyle;
@@ -64,13 +82,13 @@ impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
                 // Whole bar is the width of the handle.  The caps are 2px narrower than the
                 // handle, and the background is 6px narrower.
                 let bg_rect = bounds.inset(3, 3, 0, 0);
-                self.geom.draw_ui_tiled(atlas::SCROLL_BAR_BAR_BELOW, bg_rect);
+                self.geom().draw_ui_tiled(atlas::SCROLL_BAR_BAR_BELOW, bg_rect);
 
                 let cap_size = atlas::SCROLL_BAR_CAP.size();
                 let cap_rect1 = bounds.inset(1, 1, 0, -cap_size.y);
-                self.geom.draw_ui(atlas::SCROLL_BAR_CAP, cap_rect1.min);
+                self.geom().draw_ui(atlas::SCROLL_BAR_CAP, cap_rect1.min);
                 let cap_rect2 = bounds.inset(1, 1, -cap_size.y, 0);
-                self.geom.draw_ui(atlas::SCROLL_BAR_CAP, cap_rect2.min);
+                self.geom().draw_ui(atlas::SCROLL_BAR_CAP, cap_rect2.min);
 
                 // Caps are each 4px high, but can overlap by 1px with the handle.  The handle
                 // itself is 5px high.  Valid handle offsets are 0 to max_offset, inclusive.
@@ -80,7 +98,7 @@ impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
                 let offset = base_offset + 
                     if max != 0 { max_offset * val as i32 / max as i32 } else { 0 };
                 let handle_pos = bounds.min + V2::new(0, offset);
-                self.geom.draw_ui(atlas::SCROLL_BAR_THUMB, handle_pos);
+                self.geom().draw_ui(atlas::SCROLL_BAR_THUMB, handle_pos);
             },
         }
     }
@@ -93,15 +111,19 @@ impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
                                                   dest_rect: Rect,
                                                   func: F) -> R {
         let old = self.state_mut().push_surface(size, src_pos, dest_rect);
-        info!("new surface ({:?}, {:?}, {:?}): bounds = {:?}, clip = {:?}",
-              size, src_pos, dest_rect, self.state().bounds, self.state().clip);
         let clip = self.state().clip.unwrap();
-        let geom_old = self.geom.push_clip(to_region2(clip));
+        let geom_old = if let Some(geom) = self.geom.as_mut() {
+            geom.push_clip(to_region2(clip))
+        } else {
+            None
+        };
 
         let r = func(self);
 
         self.state_mut().pop_surface(old);
-        self.geom.pop_clip(geom_old);
+        if let Some(geom) = self.geom.as_mut() {
+            geom.pop_clip(geom_old);
+        }
 
         r
     }
@@ -120,12 +142,12 @@ pub trait Context: context::Context<TextStyle=TextStyle,
 impl<'d, 'a> Context for ContextImpl<'d, 'a> {
     fn draw_ui(&mut self, atlas: AtlasEntry, pos: Point) {
         let pos = to_v2(pos + self.cur_bounds().min);
-        self.geom.draw_ui(atlas, pos);
+        self.geom().draw_ui(atlas, pos);
     }
 
     fn draw_ui_tiled(&mut self, atlas: AtlasEntry, rect: Rect) {
         let rect = to_region2(rect + self.cur_bounds().min);
-        self.geom.draw_ui_tiled(atlas, rect);
+        self.geom().draw_ui_tiled(atlas, rect);
     }
 }
 
