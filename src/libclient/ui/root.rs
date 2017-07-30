@@ -28,14 +28,13 @@ pub struct Root {
 
 impl Root {
     pub fn new() -> Root {
+        let mut v = vec!["Spawn".to_owned()];
+        for i in 0 .. 100 {
+            v.push(format!("Dest {}", i));
+        }
         Root {
             //dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
-            dialog: dialog::Dialog::new(dialogs::AnyDialog::teleport(vec![
-                "Dest 1".to_owned(),
-                "Dest 2".to_owned(),
-                "Dest 3".to_owned(),
-                "Spawn".to_owned(),
-            ])),
+            dialog: dialog::Dialog::new(dialogs::AnyDialog::teleport(v)),
             debug: debug::Debug::new(),
             test_list: scroll_list::ScrollList::new(V2::new(150, 100)),
         }

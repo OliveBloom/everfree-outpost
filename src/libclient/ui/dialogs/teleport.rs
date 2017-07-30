@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 use types::*;
 use std::cell::Cell;
 use common_proto::game::Request;
+use outpost_ui::event::{KeyEvent, MouseEvent, UIResult};
 use outpost_ui::geom::Point;
 use outpost_ui::widget::Widget as WidgetTrait;
 use physics::v3::{V2, Region, Align};
@@ -9,10 +10,11 @@ use physics::v3::{V2, Region, Align};
 use client::ClientObj;
 use data::{Data, RecipeDef};
 use input::EventStatus;
+use input::{Button, ButtonEvent};
+use ui::Context as Context1;
 use ui::crafting;
 use ui::dialogs;
 use ui::geom::Geom;
-use ui::input::{KeyAction, ActionEvent};
 use ui::inventory;
 use ui::scroll_list;
 use ui::util;
@@ -60,30 +62,7 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
         let mut ctx = ContextImpl::new(self.dyn, rect);
         ctx.set_geom(geom);
 
-        /*
-        TextListItem {
-            text: "hello",
-            text_width: 100,
-        }.on_paint(&mut ctx);
-        */
-
-        TextList {
-            top: &Cell::new(0),
-            focus: &Cell::new(0),
-            items: &[
-                "good morning".to_owned(),
-                "everfree outpost".to_owned(),
-                "!!!".to_owned(),
-            ],
-            size: Point { x: 300, y: 200 },
-        }.on_paint(&mut ctx);
-
-        /*
-        let l = Label::new("hello, outpost");
-        let st = Cell::new(0);
-        ScrollPane::new(&st, from_v2(V2::new(300, 200)), l).on_paint(&mut ctx);
-        */
-
+        self.state.inner().on_paint(&mut ctx);
     }
 
     /*
@@ -92,17 +71,52 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
 
     fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
     }
+    */
 
     fn on_mouse_down(&mut self,
-                     ctx: &mut Context,
+                     ctx1: &mut Context1,
                      rect: Region<V2>,
                      evt: ButtonEvent) -> EventStatus {
+        let mut ctx = ContextImpl::new(self.dyn, rect);
+        ctx.add_mouse_info(ctx1, false);
+
+        let evt = match evt.button {
+            Button::Left | Button::Middle | Button::Right => MouseEvent::Down(evt.button),
+            Button::WheelUp => MouseEvent::Wheel(1),
+            Button::WheelDown => MouseEvent::Wheel(-1),
+        };
+        let r = self.state.inner().on_mouse(&mut ctx, evt);
+
+        match r {
+            UIResult::Unhandled => EventStatus::Unhandled,
+            UIResult::NoEvent => EventStatus::Handled,
+            UIResult::Event(idx) => {
+                info!("mouse event: {}", idx);
+                EventStatus::Handled
+            },
+        }
     }
 
     fn on_mouse_up(&mut self,
-                   ctx: &mut Context,
+                   ctx1: &mut Context1,
                    rect: Region<V2>,
                    evt: ButtonEvent) -> EventStatus {
+        let mut ctx = ContextImpl::new(self.dyn, rect);
+        ctx.add_mouse_info(ctx1, true);
+
+        let evt = match evt.button {
+            Button::Left | Button::Middle | Button::Right => MouseEvent::Up(evt.button),
+            Button::WheelUp | Button::WheelDown => return EventStatus::Handled,
+        };
+        let r = self.state.inner().on_mouse(&mut ctx, evt);
+
+        match r {
+            UIResult::Unhandled => EventStatus::Unhandled,
+            UIResult::NoEvent => EventStatus::Handled,
+            UIResult::Event(idx) => {
+                info!("mouse event: {}", idx);
+                EventStatus::Handled
+            },
+        }
     }
-    */
 }
