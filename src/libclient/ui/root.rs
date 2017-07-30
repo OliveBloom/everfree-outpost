@@ -33,8 +33,7 @@ impl Root {
             v.push(format!("Dest {}", i));
         }
         Root {
-            //dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
-            dialog: dialog::Dialog::new(dialogs::AnyDialog::teleport(v)),
+            dialog: dialog::Dialog::new(dialogs::AnyDialog::none()),
             debug: debug::Debug::new(),
             test_list: scroll_list::ScrollList::new(V2::new(150, 100)),
         }

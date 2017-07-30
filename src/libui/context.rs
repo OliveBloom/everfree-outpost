@@ -1,6 +1,6 @@
 use std::mem;
 
-use event::{KeyEvent, MouseEvent, UIResult};
+use event::{KeyEvent, KeyInterp, MouseEvent, UIResult};
 use geom::{Point, Rect};
 use widget::Widget;
 
@@ -14,6 +14,20 @@ pub struct CommonState {
     pub mouse_pos: Option<Point>,
     pub mouse_down_pos: Option<Point>,
     pub mouse_grabbed: bool,
+
+    /// The focus state of the current widget.  Note this is tracked only during `on_paint`.
+    pub focus: Focus,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum Focus {
+    /// The current element is not focused.
+    Inactive,
+    /// The current element is focused within its parent container, but its parent (or other
+    /// ancestor) is not focused.
+    Semiactive,
+    /// The current element is focused.
+    Active,
 }
 
 impl CommonState {
@@ -24,6 +38,7 @@ impl CommonState {
             mouse_pos: None,
             mouse_down_pos: None,
             mouse_grabbed: false,
+            focus: Focus::Active,
         }
     }
 
@@ -71,14 +86,30 @@ impl CommonState {
         self.bounds = old_bounds;
         self.clip = old_clip;
     }
+
+
+    pub fn push_focus(&mut self, active: bool) -> Focus {
+        let new_focus = match (active, self.focus) {
+            (true, Focus::Active) => Focus::Active,
+            (true, _) => Focus::Semiactive,
+            (false, _) => Focus::Inactive,
+        };
+        mem::replace(&mut self.focus, new_focus)
+    }
+
+    pub fn pop_focus(&mut self, old: Focus) {
+        self.focus = old;
+    }
 }
 
 pub trait Context: Sized {
-    type Key: Clone;
-    type Button: Clone;
-
     fn state(&self) -> &CommonState;
     fn state_mut(&mut self) -> &mut CommonState;
+
+    type Key: Clone;
+    fn interp_key(&self, evt: KeyEvent<Self>) -> Option<KeyInterp>;
+
+    type Button: Clone;
 
     type TextStyle: TextStyle;
     fn draw_str(&mut self, s: &str, style: Self::TextStyle);
@@ -119,6 +150,13 @@ pub trait Context: Sized {
         let old = self.state_mut().push_surface(size, src_pos, dest_rect);
         let r = func(self);
         self.state_mut().pop_surface(old);
+        r
+    }
+
+    fn with_focus<F: FnOnce(&mut Self) -> R, R>(&mut self, active: bool, func: F) -> R {
+        let old = self.state_mut().push_focus(active);
+        let r = func(self);
+        self.state_mut().pop_focus(old);
         r
     }
 

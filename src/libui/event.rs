@@ -14,6 +14,16 @@ impl<Ctx: Context> Clone for KeyEvent<Ctx> {
     }
 }
 
+pub enum KeyInterp {
+    /// Cycle focus forward/backward.
+    FocusCycle(i8),
+    /// Change focus to the next widget in the X direction.
+    FocusX(i8),
+    /// Change focus to the next widget in the Y direction.
+    FocusY(i8),
+}
+
+
 pub enum MouseEvent<Ctx: Context> {
     Down(Ctx::Button),
     Up(Ctx::Button),

@@ -3,6 +3,7 @@ use std::cell::{Cell, RefCell};
 use std::cmp;
 
 use outpost_ui::context::Context as ContextTrait;
+use outpost_ui::context::Focus;
 use outpost_ui::event::{KeyEvent, MouseEvent, UIResult};
 use outpost_ui::geom::{Point, Rect};
 use outpost_ui::geom::Vertical;
@@ -32,7 +33,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for TextListItem<'a> {
     type Event = ();
 
     fn min_size(&self) -> Point {
-        self.inner::<Ctx>().min_size() + Point { x: 2 + 2, y: 2 + 2 }
+        self.inner::<Ctx>().min_size() + Point { x: 9 + 2, y: 2 + 2 }
     }
 
     fn on_paint(&self, ctx: &mut Ctx) {
@@ -45,7 +46,11 @@ impl<'a, Ctx: Context> Widget<Ctx> for TextListItem<'a> {
         ctx.draw_ui(atlas::SCROLL_LIST_ENTRY_RIGHT, Point { x: size.x - 1, y: 0 });
         ctx.draw_ui_tiled(atlas::SCROLL_LIST_ENTRY_MID, fill_rect);
 
-        let text_bounds = Rect::sized(size).inset(2, 2, 2, 2);
+        if ctx.state().focus >= Focus::Semiactive {
+            ctx.draw_ui(atlas::SCROLL_LIST_MARKER, Point { x: 2, y: 2 });
+        }
+
+        let text_bounds = Rect::sized(size).inset(9, 2, 2, 2);
         ctx.with_bounds(text_bounds, |ctx| {
             self.inner().on_paint(ctx);
         });

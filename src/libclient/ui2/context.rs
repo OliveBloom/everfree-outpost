@@ -1,9 +1,10 @@
 use outpost_ui::context;
-use outpost_ui::geom::{Point, Rect};
 use outpost_ui::context::{
     Context as ContextTrait,
     ScrollBarStyle as ScrollBarStyleTrait,
 };
+use outpost_ui::event::{KeyEvent, KeyInterp};
+use outpost_ui::geom::{Point, Rect};
 use physics::v3::{V2, scalar, Region};
 
 use data::Data;
@@ -12,6 +13,7 @@ use input;
 use ui::Context as Context1;
 use ui::atlas::{self, AtlasEntry};
 use ui::geom::Geom;
+use ui::input::KeyAction;
 use ui2::util::*;
 
 pub struct ContextImpl<'d, 'a> {
@@ -50,11 +52,27 @@ impl<'d, 'a> ContextImpl<'d, 'a> {
 }
 
 impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
-    type Key = input::Key;
-    type Button = input::Button;
-
     fn state(&self) -> &context::CommonState { &self.state }
     fn state_mut(&mut self) -> &mut context::CommonState { &mut self.state }
+
+    type Key = KeyAction;
+    fn interp_key(&self, evt: KeyEvent<Self>) -> Option<KeyInterp> {
+        let interp = match evt {
+            KeyEvent::Down(act) => {
+                match act {
+                    KeyAction::MoveLeft => KeyInterp::FocusX(1),
+                    KeyAction::MoveRight => KeyInterp::FocusX(-1),
+                    KeyAction::MoveDown => KeyInterp::FocusY(1),
+                    KeyAction::MoveUp => KeyInterp::FocusY(-1),
+                    _ => return None,
+                }
+            },
+            _ => return None,
+        };
+        Some(interp)
+    }
+
+    type Button = input::Button;
 
     type TextStyle = TextStyle;
     fn draw_str(&mut self, s: &str, style: TextStyle) {

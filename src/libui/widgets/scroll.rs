@@ -90,6 +90,22 @@ impl<'s, Ctx: Context, W: Widget<Ctx>> ScrollPane<'s, Ctx, W> {
         let top = self.top.get() + offset;
         self.set_top_clamp(top, ctx);
     }
+
+    fn scroll_into_view(&self, rect: Rect, ctx: &Ctx) {
+        let vis0 = self.top.get();
+        let vis1 = vis0 + ctx.cur_bounds().size().y;
+        let target0 = rect.min.y;
+        let target1 = rect.max.y;
+
+        if target0 < vis0 {
+            // Target rect is (partly) off screen, above the viewport.  Scroll up.
+            self.set_top_clamp(target0, ctx);
+        } else if target1 > vis1 {
+            // Scroll so that the bottom of the target is at the bottom of the viewport.
+            self.set_top_clamp(target1 - (vis1 - vis0), ctx);
+        }
+        // Otherwise, vis0 < target0 < target1 < vis1 - the target is fully visible.
+    }
 }
 
 impl<'s, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'s, Ctx, W> {
@@ -112,9 +128,19 @@ impl<'s, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'s, Ctx, W> {
         // TODO: match page up / page down
 
         let (inner_size, src_pos, dest_rect, _bar_rect) = self.child_surface_info(ctx);
-        ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
-            self.child.on_key(ctx, evt)
-        })
+        let (r, req_vis) = ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
+            let r = self.child.on_key(ctx, evt);
+            // This is a bit of a hack but works in the common cases.  If the inner widget
+            // responded to the event, then scroll its requested-visible region into view.
+            let req_vis =
+                if r.is_handled() { self.child.requested_visibility(ctx) }
+                else { None };
+            (r, req_vis)
+        });
+        if let Some(req_vis) = req_vis {
+            self.scroll_into_view(req_vis, ctx);
+        }
+        r
     }
 
     fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
@@ -144,9 +170,17 @@ impl<'s, Ctx: Context, W: Widget<Ctx>> Widget<Ctx> for ScrollPane<'s, Ctx, W> {
             return r;
         }
 
-        ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
-            self.child.on_mouse(ctx, evt)
-        })
+        let (r, req_vis) = ctx.with_surface(inner_size, src_pos, dest_rect, |ctx| {
+            let r = self.child.on_mouse(ctx, evt);
+            let req_vis =
+                if r.is_handled() { self.child.requested_visibility(ctx) }
+                else { None };
+            (r, req_vis)
+        });
+        if let Some(req_vis) = req_vis {
+            self.scroll_into_view(req_vis, ctx);
+        }
+        r
     }
 }
 

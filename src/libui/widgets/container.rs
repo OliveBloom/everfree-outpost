@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use std::ops::Range;
 
 use context::Context;
-use event::{KeyEvent, MouseEvent, UIResult};
+use event::{KeyEvent, KeyInterp, MouseEvent, UIResult};
 use geom::*;
 use widget::Widget;
 
@@ -206,6 +206,24 @@ impl<'s, Ctx: Context, D: Direction, R, C: Contents<Ctx, R>> Group<'s, Ctx, D, R
             .. self
         }
     }
+
+    fn adjust_focus_clamp(&self, delta: i32, len: usize) {
+        if delta >= 0 {
+            let delta = delta as usize;
+            if delta >= len - self.focus.get() {
+                self.focus.set(len - 1);
+            } else {
+                self.focus.set(self.focus.get() + delta);
+            }
+        } else {
+            let delta = (-delta) as usize;
+            if delta > self.focus.get() {
+                self.focus.set(0);
+            } else {
+                self.focus.set(self.focus.get() - delta);
+            }
+        }
+    }
 }
 
 impl<'s, Ctx, D, R, C> Widget<Ctx> for Group<'s, Ctx, D, R, C>
@@ -237,19 +255,57 @@ impl<'s, Ctx, D, R, C> Widget<Ctx> for Group<'s, Ctx, D, R, C>
         v.size
     }
 
+    fn requested_visibility(&self, ctx: &Ctx) -> Option<Rect> {
+        struct ReqVisVisitor<'c, Ctx: Context+'c, D: Direction> {
+            ctx: &'c Ctx,
+            layout: Layout<D>,
+            idx: usize,
+            focus: usize,
+            req_vis: Option<Rect>,
+        }
+        impl<'c, Ctx: Context, D: Direction, R> Visitor<Ctx, R> for ReqVisVisitor<'c, Ctx, D> {
+            fn visit<W, F>(&mut self, cw: &ChildWidget<W, F>)
+                    where W: Widget<Ctx>, F: Fn(W::Event) -> R {
+                let size = cw.w.min_size();
+                let bounds = self.layout.place(size, cw.align);
+
+                if self.idx == self.focus {
+                    self.req_vis = Some(bounds);
+                }
+                self.idx += 1;
+            }
+        }
+
+        let bounds_size = ctx.cur_bounds().size();
+        let mut v: ReqVisVisitor<_, D> = ReqVisVisitor {
+            ctx: ctx,
+            layout: Layout::new(D::minor(bounds_size), self.spacing),
+            idx: 0,
+            focus: self.focus.get(),
+            req_vis: None,
+        };
+        self.contents.accept(&mut v);
+        v.req_vis
+    }
+
     fn on_paint(&self, ctx: &mut Ctx) {
         struct PaintVisitor<'c, Ctx: Context+'c, D: Direction> {
             ctx: &'c mut Ctx,
             layout: Layout<D>,
+            idx: usize,
+            focus: usize,
         }
         impl<'c, Ctx: Context, D: Direction, R> Visitor<Ctx, R> for PaintVisitor<'c, Ctx, D> {
             fn visit<W, F>(&mut self, cw: &ChildWidget<W, F>)
                     where W: Widget<Ctx>, F: Fn(W::Event) -> R {
                 let size = cw.w.min_size();
                 let bounds = self.layout.place(size, cw.align);
-                self.ctx.with_bounds(bounds, |ctx| {
-                    cw.w.on_paint(ctx);
+                self.ctx.with_focus(self.idx == self.focus, |ctx| {
+                    ctx.with_bounds(bounds, |ctx| {
+                        cw.w.on_paint(ctx);
+                    })
                 });
+                self.idx += 1;
             }
         }
 
@@ -257,6 +313,8 @@ impl<'s, Ctx, D, R, C> Widget<Ctx> for Group<'s, Ctx, D, R, C>
         let mut v: PaintVisitor<_, D> = PaintVisitor {
             ctx: ctx,
             layout: Layout::new(D::minor(bounds_size), self.spacing),
+            idx: 0,
+            focus: self.focus.get(),
         };
         self.contents.accept(&mut v);
     }
@@ -292,11 +350,23 @@ impl<'s, Ctx, D, R, C> Widget<Ctx> for Group<'s, Ctx, D, R, C>
             idx: 0,
             focus: self.focus.get(),
             layout: Layout::new(D::minor(bounds_size), self.spacing),
-            event: Some(evt),
+            event: Some(evt.clone()),
             result: UIResult::Unhandled,
         };
         self.contents.accept(&mut v);
-        v.result
+        if v.result.is_handled() {
+            return v.result;
+        }
+
+        let ctx = v.ctx;
+        match ctx.interp_key(evt) {
+            // TODO: respect choice of Direction
+            Some(KeyInterp::FocusY(delta)) => {
+                self.adjust_focus_clamp(delta as i32, v.idx);
+                UIResult::NoEvent
+            },
+            _ => UIResult::Unhandled,
+        }
     }
 
     fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<R> {

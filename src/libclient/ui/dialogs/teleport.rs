@@ -6,7 +6,7 @@ use common_proto::game::Request;
 use outpost_ui::event::{KeyEvent, MouseEvent, UIResult};
 use outpost_ui::geom::Point;
 use outpost_ui::widget::Widget as WidgetTrait;
-use physics::v3::{V2, Region, Align};
+use physics::v3::{V2, Region, Align, scalar};
 
 use client::ClientObj;
 use data::{Data, RecipeDef};
@@ -15,6 +15,7 @@ use input::{Button, ButtonEvent};
 use ui::Context as Context1;
 use ui::crafting;
 use ui::dialogs;
+use ui::input::ActionEvent;
 use ui::geom::Geom;
 use ui::inventory;
 use ui::scroll_list;
@@ -30,6 +31,8 @@ pub struct Teleport {
     dest_names: Vec<String>,
     top: Cell<i32>,
     focus: Cell<usize>,
+    /// Stupid hack to deal with the fact that `on_key` doesn't get the current `rect`.
+    last_rect: Region<V2>,
 }
 
 impl Teleport {
@@ -38,6 +41,7 @@ impl Teleport {
             dest_names: dest_names,
             top: Cell::new(0),
             focus: Cell::new(0),
+            last_rect: Region::sized(V2::new(0, 0)),
         }
     }
 
@@ -79,15 +83,22 @@ impl<'a> Widget for WidgetPack<'a, Teleport, Data> {
         ctx.set_geom(geom);
 
         self.state.inner().on_paint(&mut ctx);
+
+        self.state.last_rect = rect;
     }
 
-    /*
     fn on_key(&mut self, key: ActionEvent) -> EventStatus {
-    }
+        let mut ctx = ContextImpl::new(self.dyn, self.state.last_rect);
 
-    fn on_mouse_move(&mut self, ctx: &mut Context, rect: Region<V2>) -> EventStatus {
+        let r = self.state.inner().on_key(&mut ctx, KeyEvent::Down(key.code));
+        // TODO: keyup?
+
+        match r {
+            UIResult::Unhandled => EventStatus::Unhandled,
+            UIResult::NoEvent => EventStatus::Handled,
+            UIResult::Event(idx) => self.state.handle_event(idx),
+        }
     }
-    */
 
     fn on_mouse_down(&mut self,
                      ctx1: &mut Context1,

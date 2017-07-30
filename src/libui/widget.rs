@@ -9,6 +9,8 @@ pub trait Widget<Ctx: Context> {
 
     fn min_size(&self) -> Point;
 
+    fn requested_visibility(&self, ctx: &Ctx) -> Option<Rect> { None }
+
 
     fn on_paint(&self,
                 ctx: &mut Ctx) {
