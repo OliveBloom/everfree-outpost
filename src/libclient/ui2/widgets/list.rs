@@ -76,7 +76,7 @@ impl<'a, Ctx: Context> Widget<Ctx> for TextListItem<'a> {
 pub struct TextList<'s, 'a> {
     pub top: &'s Cell<i32>,
     pub focus: &'s Cell<usize>,
-    pub items: &'a [&'a str],
+    pub items: &'a [String],
     pub size: Point,
 }
 
@@ -89,7 +89,7 @@ impl<'s, 'a> TextList<'s, 'a> {
         let width = self.size.x;
         let contents = GenWidgets::new(0 .. items.len(), move |idx| {
             ChildWidget::new(TextListItem {
-                text: items[idx],
+                text: &items[idx],
                 text_width: width,
             }, move |()| idx)
         });
