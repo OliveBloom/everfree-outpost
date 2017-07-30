@@ -23,19 +23,19 @@ pub struct TextListItem<'a> {
 }
 
 impl<'a> TextListItem<'a> {
-    fn inner<'d, 'b>(&self) -> WrappedLabel<'a, Context<'d, 'b>> {
+    fn inner<Ctx: Context+'a>(&self) -> impl Widget<Ctx>+'a {
         WrappedLabel::new(self.text, self.text_width - 2 - 2)
     }
 }
 
-impl<'a, 'd, 'b> Widget<Context<'d, 'b>> for TextListItem<'a> {
+impl<'a, Ctx: Context> Widget<Ctx> for TextListItem<'a> {
     type Event = ();
 
     fn min_size(&self) -> Point {
-        self.inner().min_size() + Point { x: 2 + 2, y: 2 + 2 }
+        self.inner::<Ctx>().min_size() + Point { x: 2 + 2, y: 2 + 2 }
     }
 
-    fn on_paint(&self, ctx: &mut Context) {
+    fn on_paint(&self, ctx: &mut Ctx) {
         let size = ctx.cur_bounds().size();
         // Background bar currently has a fixed size, 13px high.
         let size = Point { x: size.x, y: cmp::min(size.y, 13) };
@@ -51,12 +51,12 @@ impl<'a, 'd, 'b> Widget<Context<'d, 'b>> for TextListItem<'a> {
         });
     }
 
-    fn on_key(&self, ctx: &mut Context, evt: KeyEvent<Context>) -> UIResult<Self::Event> {
+    fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
         // TODO
         UIResult::Unhandled
     }
 
-    fn on_mouse(&self, ctx: &mut Context, evt: MouseEvent<Context>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         match evt {
             MouseEvent::Down(_) => UIResult::NoEvent,
             MouseEvent::Up(_) => {
@@ -71,6 +71,7 @@ impl<'a, 'd, 'b> Widget<Context<'d, 'b>> for TextListItem<'a> {
     }
 }
 
+
 pub struct TextList<'s, 'a> {
     pub top: &'s Cell<i32>,
     pub focus: &'s Cell<usize>,
@@ -79,10 +80,10 @@ pub struct TextList<'s, 'a> {
 }
 
 impl<'s, 'a> TextList<'s, 'a> {
-    fn inner<'d, 'b>(&self) ->
-            ScrollPane<'s, Context<'d, 'b>,
-                Group<'s, Context<'d, 'b>, Vertical, usize,
-                    impl Contents<Context<'d, 'b>, usize>+'a>> {
+    fn inner<Ctx: Context+'a>(&self) ->
+            ScrollPane<'s, Ctx,
+                Group<'s, Ctx, Vertical, usize,
+                    impl Contents<Ctx, usize>+'a>> {
         let items = self.items;
         let width = self.size.x;
         let contents = GenWidgets::new(0 .. items.len(), move |idx| {
@@ -95,26 +96,22 @@ impl<'s, 'a> TextList<'s, 'a> {
     }
 }
 
-impl<'s, 'a, 'd, 'b> Widget<Context<'d, 'b>> for TextList<'s, 'a> {
+impl<'s, 'a, Ctx: Context> Widget<Ctx> for TextList<'s, 'a> {
     type Event = usize;
 
     fn min_size(&self) -> Point {
         self.size
     }
 
-    fn on_paint(&self, ctx: &mut Context<'d, 'b>) {
+    fn on_paint(&self, ctx: &mut Ctx) {
         self.inner().on_paint(ctx);
     }
 
-    fn on_key(&self,
-              ctx: &mut Context<'d, 'b>,
-              evt: KeyEvent<Context<'d, 'b>>) -> UIResult<Self::Event> {
+    fn on_key(&self, ctx: &mut Ctx, evt: KeyEvent<Ctx>) -> UIResult<Self::Event> {
         self.inner().on_key(ctx, evt)
     }
 
-    fn on_mouse(&self,
-                ctx: &mut Context<'d, 'b>,
-                evt: MouseEvent<Context<'d, 'b>>) -> UIResult<Self::Event> {
+    fn on_mouse(&self, ctx: &mut Ctx, evt: MouseEvent<Ctx>) -> UIResult<Self::Event> {
         self.inner().on_mouse(ctx, evt)
     }
 }

@@ -127,7 +127,15 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
         use ui2::widgets::list::TextList;
 
         let ui2_rect = rect.inset(200, 200, 150, 150);
-        let mut ctx = ui2::context::Context::new(self.dyn.data, geom, ui2_rect);
+        let mut ctx = ui2::context::ContextImpl::new(self.dyn.data, geom, ui2_rect);
+
+        /*
+        TextListItem {
+            text: "hello",
+            text_width: 100,
+        }.on_paint(&mut ctx);
+        */
+
         TextList {
             top: &Cell::new(0),
             focus: &Cell::new(0),
@@ -138,6 +146,7 @@ impl<'a, 'b> Widget for WidgetPack<'a, Root, RootDyn<'b>> {
             ],
             size: Point { x: 300, y: 200 },
         }.on_paint(&mut ctx);
+
         /*
         let l = Label::new("hello, outpost");
         let st = Cell::new(0);

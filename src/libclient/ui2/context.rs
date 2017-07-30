@@ -13,35 +13,25 @@ use ui::atlas::{self, AtlasEntry};
 use ui::geom::Geom;
 use ui2::util::*;
 
-pub struct Context<'d, 'a> {
+pub struct ContextImpl<'d, 'a> {
     data: &'d Data,
     geom: &'a mut Geom,
     state: context::CommonState,
 }
 
-impl<'d, 'a> Context<'d, 'a> {
+impl<'d, 'a> ContextImpl<'d, 'a> {
     pub fn new(data: &'d Data,
                geom: &'a mut Geom,
-               bounds: Region<V2>) -> Context<'d, 'a> {
-        Context {
+               bounds: Region<V2>) -> ContextImpl<'d, 'a> {
+        ContextImpl {
             data: data,
             geom: geom,
             state: context::CommonState::new(from_region2(bounds)),
         }
     }
-
-    pub fn draw_ui(&mut self, atlas: AtlasEntry, pos: Point) {
-        let pos = to_v2(pos + self.cur_bounds().min);
-        self.geom.draw_ui(atlas, pos);
-    }
-
-    pub fn draw_ui_tiled(&mut self, atlas: AtlasEntry, rect: Rect) {
-        let rect = to_region2(rect + self.cur_bounds().min);
-        self.geom.draw_ui_tiled(atlas, rect);
-    }
 }
 
-impl<'d, 'a> context::Context for Context<'d, 'a> {
+impl<'d, 'a> context::Context for ContextImpl<'d, 'a> {
     type Key = input::Key;
     type Button = input::Button;
 
@@ -95,6 +85,29 @@ impl<'d, 'a> context::Context for Context<'d, 'a> {
         }
     }
 }
+
+
+/// This trait is essentially an inherent impl on `ContextImpl`, but it lets us hide the lifetimes
+/// from users.  This simplifies a lot of signatures in `ui2::widgets`.
+pub trait Context: context::Context<TextStyle=TextStyle,
+                                    ButtonStyle=ButtonStyle,
+                                    ScrollBarStyle=ScrollBarStyle> {
+    fn draw_ui(&mut self, atlas: AtlasEntry, pos: Point);
+    fn draw_ui_tiled(&mut self, atlas: AtlasEntry, rect: Rect);
+}
+
+impl<'d, 'a> Context for ContextImpl<'d, 'a> {
+    fn draw_ui(&mut self, atlas: AtlasEntry, pos: Point) {
+        let pos = to_v2(pos + self.cur_bounds().min);
+        self.geom.draw_ui(atlas, pos);
+    }
+
+    fn draw_ui_tiled(&mut self, atlas: AtlasEntry, rect: Rect) {
+        let rect = to_region2(rect + self.cur_bounds().min);
+        self.geom.draw_ui_tiled(atlas, rect);
+    }
+}
+
 
 
 #[derive(Clone, Copy)]
