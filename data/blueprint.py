@@ -12,3 +12,5 @@ def init():
 
     do_blueprint(icon, 'colored_torches', 'Colored Torches')
     do_blueprint(icon, 'colored_floors', 'Colored Floors')
+    do_blueprint(icon, 'iron_furniture', 'Iron Furniture')
+    do_blueprint(icon, 'iron_walls', 'Iron Walls')

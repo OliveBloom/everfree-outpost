@@ -20,4 +20,6 @@ def register(item_name, what, where):
 
 register('colored_torches', 'colored torches', 'an anvil')
 register('colored_floors', 'colored floors', 'an anvil')
+register('iron_furniture', 'iron furniture', 'a workbench')
+register('iron_walls', 'iron walls', 'a workbench')
 

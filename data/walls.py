@@ -79,7 +79,7 @@ def do_wall_parts(basename, image, door_image=None, extra_parts=()):
 
     return s
 
-def wall_items_recipes(wall, basename, desc, material, icon_offset=(0, 10)):
+def wall_items_recipes(wall, basename, desc, material, icon_offset=(0, 10), ability=None):
     wall_name = '%s Wall' % desc
     door_name = '%s Door' % desc
 
@@ -88,6 +88,7 @@ def wall_items_recipes(wall, basename, desc, material, icon_offset=(0, 10)):
             extract_offset=icon_offset) \
             .display_name(wall_name)
     recipe = RECIPE.from_item(item) \
+            .ability(ability) \
             .input(material, 5) \
             .station('workbench')
 
@@ -95,6 +96,7 @@ def wall_items_recipes(wall, basename, desc, material, icon_offset=(0, 10)):
             name='%s_door' % basename) \
             .display_name(door_name)
     recipe = RECIPE.from_item(item) \
+            .ability(ability) \
             .input(material, 15) \
             .station('workbench')
 
@@ -133,4 +135,5 @@ def init():
 
     wall = do_wall_parts('iron_wall', structures('wall-iron-bars.png'),
             door_image=structures('door-iron.png'))
-    wall_items_recipes(wall, 'iron', 'Iron', 'bar/iron')
+    wall_items_recipes(wall, 'iron', 'Iron', 'bar/iron',
+            ability='blueprint/iron_walls')
