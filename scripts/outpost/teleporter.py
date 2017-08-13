@@ -6,6 +6,7 @@ from outpost_server.outpost.lib import structure_items, tool, util as util2, war
 
 ITEM = DATA.item('teleporter')
 TEMPLATE = DATA.template('teleporter')
+TEMPLATE_ATTACHED = DATA.template('teleporter/attached')
 
 SETUP_DIALOG_ID = 1
 DEST_DIALOG_ID = 2
@@ -44,6 +45,7 @@ class Networks(object):
 
 
 @use.structure(TEMPLATE)
+@use.structure(TEMPLATE_ATTACHED)
 @util.with_args
 def use_structure(e, s, args):
     n = Networks(e.engine)
@@ -66,6 +68,8 @@ def get_structure_args(e, s, args):
     e.controller().get_interact_args(DEST_DIALOG_ID, {'dests': dests})
 
 
+structure_items.register_attachment(TEMPLATE_ATTACHED, 'table')
+
 @use.item(ITEM)
 @util.with_args
 def use_item(e, args):
@@ -81,7 +85,10 @@ def use_item(e, args):
                 'A teleporter named %r already exists on network %r.' % (name, net))
         return
 
-    s = structure_items.place(e, ITEM, TEMPLATE)
+    if structure_items.check_attachment(TEMPLATE_ATTACHED, e.plane(), util.hit_tile(e)):
+        s = structure_items.place(e, ITEM, TEMPLATE_ATTACHED)
+    else:
+        s = structure_items.place(e, ITEM, TEMPLATE)
     s.extra()['network'] = net
     s.extra()['name'] = name
 
@@ -96,6 +103,7 @@ def get_item_args(e, args):
 
 
 @tool.pickaxe(TEMPLATE)
+@tool.pickaxe(TEMPLATE_ATTACHED)
 def pickaxe_structure(e, s, args):
     n = Networks(e.engine)
     net = s.extra()['network']

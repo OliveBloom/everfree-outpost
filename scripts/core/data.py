@@ -145,6 +145,10 @@ class TemplateProxy(DefProxy):
     def layer(self):
         return _DATA.template_layer(self.id)
 
+    @property
+    def size(self):
+        return _DATA.template_size(self.id)
+
 class AnimationProxy(DefProxy):
     @property
     def name(self):

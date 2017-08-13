@@ -24,6 +24,10 @@ WIDE_BUREAU_MESH = Mesh(
         meshes.quad_y(30,  0, 64,  0, 15) +
         meshes.quad_z(15,  0, 64,  6, 30))
 
+TABLE_MESH = Mesh(
+        meshes.quad_y(64,  0, 64,  0, 16) +
+        meshes.quad_z(16,  0, 64,  0, 64))
+
 
 STAIR_N_MESH = Mesh([tuple(x * TILE_SIZE for x in v)
     for v in meshes.quad((0, 1, 0), (1, 1, 0), (1, 0, 1), (0, 0, 1))])
@@ -53,7 +57,7 @@ def do_table(image, variant=None):
     prefix, disp_prefix, material, amount = unpack_variant(variant, 'wood', 20)
 
     s = STRUCTURE.new(prefix + 'table') \
-            .mesh(meshes.solid(2, 2, 1)) \
+            .mesh(TABLE_MESH) \
             .shape(structure.solid(2, 2, 1)) \
             .layer(1) \
             .image(image)
@@ -203,6 +207,25 @@ def do_torch_variant(image, idx, v):
             .input('gem/' + color, 1) \
             .output('torch/' + color, 10)
 
+def do_lamp(image):
+    s = STRUCTURE.new('lamp') \
+            .mesh(meshes.solid(1, 1, 1)) \
+            .shape(structure.solid(1, 1, 1)) \
+            .layer(1) \
+            .image(image.extract((0, 0), (1, 2))) \
+            .light((16, 16, 32), (255, 230, 200), 300)
+    i = ITEM.from_structure(s).display_name('Lamp')
+    r = RECIPE.from_item(i) \
+            .station('workbench') \
+            .input('wood', 5) \
+            .input('stone', 5)
+
+    s = STRUCTURE.new('lamp/off') \
+            .mesh(meshes.solid(1, 1, 1)) \
+            .shape(structure.solid(1, 1, 1)) \
+            .layer(1) \
+            .image(image.extract((1, 0), (1, 2))) \
+
 
 def init():
     tiles = loader('tiles', unit=TILE_SIZE)
@@ -235,3 +258,4 @@ def init():
     do_torch(structures('torch.png'))
     for i, v in enumerate(TORCH_VARIANTS):
         do_torch_variant(structures('torch-%s.png' % v[0]), i, v)
+    do_lamp(structures('furniture-attachments.png').extract((0, 0), (2, 2)))

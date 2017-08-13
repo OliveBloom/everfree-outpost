@@ -141,6 +141,12 @@ define_python_class! {
             Ok(t.layer)
         }
 
+        fn template_size(&this, id: TemplateId) -> PyResult<V3> {
+            let t = pyunwrap!(this.get_template(id),
+                              runtime_error, "no template with that ID");
+            Ok(t.size)
+        }
+
 
         fn animation_count(&this) -> usize {
             this.animations().len()

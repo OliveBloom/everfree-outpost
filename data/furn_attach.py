@@ -33,12 +33,6 @@ def init():
             .layer(2) \
             .light((16, 16, 32), (48, 48, 96), 50)
 
-    s = STRUCTURE.new('lamp') \
-            .shape(structure.solid(1, 1, 1)) \
-            .mesh(meshes.solid(1, 1, 1)) \
-            .image(img_attach.extract((0, 0), (1, 2))) \
-            .layer(1) \
-            .light((16, 16, 32), (255, 230, 200), 300)
     s = STRUCTURE.new('lamp/attached') \
             .shape(structure.empty(1, 1, 1)) \
             .mesh(SOLID_ATTACH_MESH) \
@@ -46,11 +40,17 @@ def init():
             .image(img_attach.extract((0, 0), (1, 2))) \
             .layer(2) \
             .light((16, 16, 48), (255, 230, 200), 300)
+    s = STRUCTURE.new('lamp/off/attached') \
+            .shape(structure.empty(1, 1, 1)) \
+            .mesh(SOLID_ATTACH_MESH) \
+            .image_bounds(SOLID_ATTACH_BOUNDS) \
+            .image(img_attach.extract((1, 0), (1, 2))) \
+            .layer(2)
 
     s = STRUCTURE.new('workbench/attached') \
             .shape(structure.empty(1, 1, 1)) \
             .mesh(BOTTOM_ATTACH_MESH) \
             .image_bounds(BOTTOM_ATTACH_BOUNDS) \
-            .image(img_attach.extract((1, 0))) \
+            .image(img_attach.extract((2, 0))) \
             .layer(2)
 

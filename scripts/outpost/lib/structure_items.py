@@ -1,5 +1,6 @@
 from outpost_server.core import use, util
 from outpost_server.core.data import DATA
+from outpost_server.core.types import V3
 
 from outpost_server.outpost.lib import tool as tool_, ward
 
@@ -40,6 +41,19 @@ def take(e, s, item, ignore_ward=False):
     template = s.template()
     pos = s.pos()
 
+    if template in _BASE_TEMPLATE_CLS:
+        classes = _BASE_TEMPLATE_CLS[template]
+        size = template.size
+        for z in range(size.z):
+            for y in range(size.y):
+                for x in range(size.x):
+                    attached = e.plane().find_structure_at_point_layer(
+                            pos + V3(x, y, z), LAYER_ATTACH)
+                    if attached is None:
+                        continue
+                    if _ATTACH_MAP[attached.template()] in classes:
+                        raise RuntimeError("can't destroy while attachments exist")
+
     if e.inv('main').count_space(item) == 0:
         raise RuntimeError('no space for item in inventory')
     s.destroy()
@@ -60,8 +74,13 @@ def register(item, template=None, tool=None):
     else:
         tool_.handler(tool, template)(lambda e, s, args: take(e, s, item))
 
+# attachment template -> class
 _ATTACH_MAP = {}
+# class -> set of base templates
 _BASE_MAP = {}
+# base template -> set of classes
+_BASE_TEMPLATE_CLS = {}
+# attachment template -> default base template
 _DEFAULT_BASE = {}
 
 def register_attachment(template, cls, default_base=None):
@@ -73,6 +92,7 @@ def register_attachment(template, cls, default_base=None):
 def register_base(template, cls):
     template = DATA.template(template)
     _BASE_MAP.setdefault(cls, set()).add(template)
+    _BASE_TEMPLATE_CLS.setdefault(template, set()).add(cls)
 
 def check_attachment(template, plane, pos):
     """Check if `template` can legally be attached to whatever structure

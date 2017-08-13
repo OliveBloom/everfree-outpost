@@ -1,9 +1,9 @@
-from outpost_server.core import inventory_hooks, use
+from outpost_server.core import inventory_hooks, use, util
 from outpost_server.core.data import DATA
 from outpost_server.core.engine import StructureProxy
 from outpost_server.outpost.lib import structure_items, tool, ward
 
-def register_container(item, template, size):
+def register_container(item, template, size, tool_handler=tool.axe):
     item = DATA.item(item)
     template = DATA.template(template)
 
@@ -17,7 +17,7 @@ def register_container(item, template, size):
         ward.check(e, s.pos())
         e.controller().open_container(e.inv(), s.inv())
 
-    @tool.axe(template)
+    @tool_handler(template)
     def axe_structure(e, s, args):
         structure_items.take(e, s, item)
 
@@ -25,6 +25,16 @@ register_container('chest', 'chest', 30)
 register_container('barrel', 'barrel', 30)
 register_container('cabinets', 'cabinets', 30)
 structure_items.register_attachment('cabinets', 'wall/horiz', 'shelf_collider')
+register_container('bureau', 'bureau', 18)
+register_container('bureau/wide', 'bureau/wide', 30)
+structure_items.register_base('bureau/wide', 'table')
+
+register_container('iron/cabinets', 'iron/cabinets', 30, tool_handler=tool.pickaxe)
+structure_items.register_attachment('iron/cabinets', 'wall/horiz', 'shelf_collider')
+register_container('iron/bureau', 'iron/bureau', 18, tool_handler=tool.pickaxe)
+register_container('iron/bureau/wide', 'iron/bureau/wide', 30, tool_handler=tool.pickaxe)
+structure_items.register_base('iron/bureau/wide', 'table')
+
 
 
 
@@ -90,3 +100,45 @@ def crate_hook(i, sid):
     variant = CRATE_VARIANTS.get(item, CRATE_BASE)
     if s.template != variant:
         s.replace(variant)
+
+
+
+ADD_BOOK_MAP = {}
+
+def register_bookshelf(basename):
+    structure_items.register(basename, basename + '/0')
+    structure_items.register_attachment(basename + '/0', 'wall/horiz', 'shelf_collider')
+    BOOKSHELF = [DATA.template('%s/%d' % (basename, i)) for i in range(3)]
+
+    ADD_BOOK_MAP[BOOKSHELF[0]] = BOOKSHELF[1]
+    ADD_BOOK_MAP[BOOKSHELF[1]] = BOOKSHELF[2]
+
+    @use.structure(BOOKSHELF[2])
+    def use_bookshelf_2(e, s, args):
+        ward.check(e, s.pos())
+        if e.inv().count_space(BOOK) == 0:
+            return
+        s.replace(BOOKSHELF[1])
+        e.inv().bulk_add(BOOK, 1)
+
+    @use.structure(BOOKSHELF[1])
+    def use_bookshelf_1(e, s, args):
+        ward.check(e, s.pos())
+        if e.inv().count_space(BOOK) == 0:
+            return
+        s.replace(BOOKSHELF[0])
+        e.inv().bulk_add(BOOK, 1)
+
+register_bookshelf('bookshelf')
+register_bookshelf('iron/bookshelf')
+
+BOOK = DATA.item('book')
+@use.item(BOOK)
+def use_book(e, args):
+    s = util.hit_structure(e)
+    next_template = ADD_BOOK_MAP.get(s.template())
+    if next_template is None:
+        return
+    ward.check(e, s.pos())
+    e.inv().bulk_remove(BOOK, 1)
+    s.replace(next_template)
