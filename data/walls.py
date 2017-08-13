@@ -129,3 +129,8 @@ def init():
             extra_parts=['window/v%d' % i for i in range(2)] +
                 ['variant/v%d' % i for i in range(3)])
     wall_items_recipes(wall, 'cottage', 'Cottage', 'wood')
+
+
+    wall = do_wall_parts('iron_wall', structures('wall-iron-bars.png'),
+            door_image=structures('door-iron.png'))
+    wall_items_recipes(wall, 'iron', 'Iron', 'bar/iron')

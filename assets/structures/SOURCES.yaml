@@ -15,7 +15,6 @@
 barrel.png: *lpc-base
 cave-junk.png: *lpc-base
 chest.png: *lpc-base
-furniture.png: *lpc-base
 furniture.xcf: *lpc-base
 furniture-planemap.png: *lpc-base
 rock.png: *lpc-base
@@ -23,6 +22,15 @@ stair.png: *lpc-base
 stair-planemap.png: *lpc-base
 trophy.png: *lpc-base
 wood-floor.png: *lpc-base
+
+furniture.png:
+    author: Doomer
+    derived-from: lpc-base-tiles
+    license: GPL 3.0
+    attribution:
+        Bureaus and metal table are by Doomer.  The rest is from LPC base
+        tiles, with some of it recolored.
+
 
 road.png: *nilsson-lpc
 
@@ -168,3 +176,10 @@ workbench.png:
     attribution:
         A table from Sharm's LPC Dungeon Elements, plus tools from Daneeklu's
         farming tilesets.
+
+
+wall-iron-bars.png:
+    derived-from: lpc-dungeon-elements
+
+door-iron.png:
+    derived-from: lpc-doors-animated

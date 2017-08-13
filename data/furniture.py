@@ -16,32 +16,51 @@ SHELF_MESH = Mesh(
         meshes.quad_y(29,  0, 32,  0, 60) +
         meshes.quad_z(60,  0, 32, 20, 29))
 
+BUREAU_MESH = Mesh(
+        meshes.quad_y(24,  0, 32,  0, 24) +
+        meshes.quad_z(24,  0, 32,  9, 24))
+
+WIDE_BUREAU_MESH = Mesh(
+        meshes.quad_y(30,  0, 64,  0, 15) +
+        meshes.quad_z(15,  0, 64,  6, 30))
+
 
 STAIR_N_MESH = Mesh([tuple(x * TILE_SIZE for x in v)
     for v in meshes.quad((0, 1, 0), (1, 1, 0), (1, 0, 1), (0, 0, 1))])
 
 
-def do_bed(image):
-    s = STRUCTURE.new('bed') \
+def unpack_variant(v, default_material, default_amount):
+    if v is None:
+        return ('', '', default_material, default_amount)
+    else:
+        name, disp_name, material, amount = v
+        return (name + '/', disp_name + ' ', material, amount)
+
+def do_bed(image, variant=None):
+    prefix, disp_prefix, material, amount = unpack_variant(variant, 'wood', 20)
+
+    s = STRUCTURE.new(prefix + 'bed') \
             .mesh(BED_MESH) \
             .shape(structure.solid(2, 2, 1)) \
             .layer(1) \
             .image(image)
-    i = ITEM.from_structure(s).display_name('Bed')
+    i = ITEM.from_structure(s).display_name(disp_prefix + 'Bed')
     r = RECIPE.from_item(i) \
             .station('workbench') \
-            .input('wood', 20)
+            .input(material, amount)
 
-def do_table(image):
-    s = STRUCTURE.new('table') \
+def do_table(image, variant=None):
+    prefix, disp_prefix, material, amount = unpack_variant(variant, 'wood', 20)
+
+    s = STRUCTURE.new(prefix + 'table') \
             .mesh(meshes.solid(2, 2, 1)) \
             .shape(structure.solid(2, 2, 1)) \
             .layer(1) \
             .image(image)
-    i = ITEM.from_structure(s).display_name('Table')
+    i = ITEM.from_structure(s).display_name(disp_prefix + 'Table')
     r = RECIPE.from_item(i) \
             .station('workbench') \
-            .input('wood', 20)
+            .input(material, amount)
 
 def do_statue(image):
     s = STRUCTURE.prefixed('statue') \
@@ -60,34 +79,60 @@ def do_statue(image):
             .station('workbench') \
             .input('stone', 50)
 
-def do_shelves(image):
-    image = image.with_unit((32, 96))
-
+def do_shelf_collider():
     STRUCTURE.new('shelf_collider') \
             .parts(()) \
             .shape(structure.solid(1, 1, 2)) \
             .layer(1)
+
+def do_shelves(image, variant=None):
+    prefix, disp_prefix, material, amount = unpack_variant(variant, 'wood', 20)
+
+    image = image.with_unit((32, 96))
 
     s_base = STRUCTURE.child() \
             .mesh(SHELF_MESH) \
             .shape(structure.empty(1, 1, 2)) \
             .layer(2)
 
-    s = s_base.new('cabinets').image(image.extract((0, 0)))
-    i = ITEM.from_structure(s, extract_offset=(0, 16)).display_name('Cabinets')
+    s = s_base.new(prefix + 'cabinets').image(image.extract((0, 0)))
+    i = ITEM.from_structure(s, extract_offset=(0, 16)).display_name(disp_prefix + 'Cabinets')
     r = RECIPE.from_item(i) \
             .station('workbench') \
-            .input('wood', 20)
+            .input(material, amount)
 
-    s = s_base.prefixed('bookshelf')
+    s = s_base.prefixed(prefix + 'bookshelf')
     s.new('0').image(image.extract((1, 0)))
     s.new('1').image(image.extract((2, 0)))
     s.new('2').image(image.extract((3, 0)))
-    i = ITEM.from_structure(s['0'], name='bookshelf', extract_offset=(0, 16)) \
-            .display_name('Bookshelves')
+    i = ITEM.from_structure(s['0'], name=prefix + 'bookshelf', extract_offset=(0, 16)) \
+            .display_name(disp_prefix + 'Bookshelves')
     r = RECIPE.from_item(i) \
             .station('workbench') \
-            .input('wood', 20)
+            .input(material, amount)
+
+def do_bureau(image, variant=None):
+    prefix, disp_prefix, material, amount = unpack_variant(variant, 'wood', 20)
+
+    s = STRUCTURE.new(prefix + 'bureau') \
+            .mesh(BUREAU_MESH) \
+            .shape(structure.solid(1, 1, 1)) \
+            .layer(1) \
+            .image(image.extract((0, 0), (1, 2)))
+    i = ITEM.from_structure(s).display_name(disp_prefix + 'Bureau')
+    r = RECIPE.from_item(i) \
+            .station('workbench') \
+            .input(material, amount)
+
+    s = STRUCTURE.new(prefix + 'bureau/wide') \
+            .mesh(WIDE_BUREAU_MESH) \
+            .shape(structure.solid(2, 1, 1)) \
+            .layer(1) \
+            .image(image.extract((1, 0), (2, 2)))
+    i = ITEM.from_structure(s).display_name('Wide ' + disp_prefix + 'Bureau')
+    r = RECIPE.from_item(i) \
+            .station('workbench') \
+            .input(material, amount)
 
 def do_trophy(image):
     s = STRUCTURE.new('trophy') \
@@ -168,10 +213,17 @@ def init():
 
     furniture = structures('furniture.png')
 
+    v_iron = ('iron', 'Iron', 'bar/iron', 10)
     do_bed(furniture.extract((0, 0), (2, 3)))
+    do_bed(furniture.extract((12, 0), (2, 3)), ('double', 'Double ', 'wood', 30))
     do_table(furniture.extract((2, 0), (2, 3)))
+    do_table(furniture.extract((2, 3), (2, 3)), v_iron)
+    do_bureau(furniture.extract((8, 0), (3, 2)))
+    do_bureau(furniture.extract((8, 3), (3, 2)), v_iron)
     do_statue(structures('statue.png'))
+    do_shelf_collider()
     do_shelves(furniture.extract((4, 0), (4, 3)))
+    do_shelves(furniture.extract((4, 3), (4, 3)), v_iron)
     do_trophy(structures('trophy.png'))
     do_fountain(structures('fountain.png'))
     do_stair(structures('stair.png'))
