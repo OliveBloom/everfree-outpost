@@ -28,7 +28,7 @@
 (1) cave_junk/2
 
 [choose_structure cave/floor/ore]
-(3) ore_vein/copper
+(2) ore_vein/copper
 (1) ore_vein/iron
 
 [choose_structure cave/floor/large]
@@ -57,16 +57,19 @@
 (4) 8-12 book
 (6) fountain
 (1) trophy
+(5) 10-20 ore/iron
 
 [choose_item dungeon/chest/large]
 (2) *random_hat
-(2) *random_blueprint
-(6) *random_socks
+(4) *random_blueprint
+(4) *random_socks
 
 
 [choose_item random_blueprint]
 (1) blueprint/colored_torches
 (1) blueprint/colored_floors
+(2) blueprint/iron_walls
+(4) blueprint/iron_furniture
 
 [choose_item random_hat]
 (1) hat
