@@ -66,7 +66,7 @@ def do_floor_structure(image, basename):
     sb = STRUCTURE.prefixed(basename) \
             .shape(structure.floor(1, 1, 1)) \
             .mesh(meshes.bottom(1, 1)) \
-            .bounds(((0, 0, 0), (TILE_SIZE, TILE_SIZE, 0))) \
+            .image_bounds(((0, 0, 0), (TILE_SIZE, TILE_SIZE, 0))) \
             .layer(0)
     for k,v in image.chop(TERRAIN_PARTS2).items():
         sb.new(k).image(v)

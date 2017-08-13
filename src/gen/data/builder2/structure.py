@@ -72,7 +72,7 @@ class StructureBuilder(BuilderBase):
 
     image = dict_modifier('image')
     mesh = dict_modifier('mesh')
-    bounds = dict_modifier('bounds')
+    image_bounds = dict_modifier('image_bounds')
     shape = dict_modifier('shape')
     layer = dict_modifier('layer')
     parts = dict_modifier('parts')

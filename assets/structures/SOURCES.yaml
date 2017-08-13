@@ -31,6 +31,12 @@ furniture.png:
         Bureaus and metal table are by Doomer.  The rest is from LPC base
         tiles, with some of it recolored.
 
+furniture-attachments.png:
+    derived-from: lpc-base-tiles, daneeklu-farming-tilesets
+    attribution: >
+        Lamp: from LPC base tiles, `victoria.png`.
+        Workbench tools: from farming tilesets.
+
 
 road.png: *nilsson-lpc
 
