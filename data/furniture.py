@@ -8,9 +8,9 @@ from outpost_data.outpost.lib import meshes
 
 
 BED_MESH = Mesh(
-        meshes.quad_y(64,  8, 56,  0, 10) +
-        meshes.quad_z(10,  8, 56,  2, 64) +
-        meshes.quad_y( 2,  8, 56, 10, 20))
+        meshes.quad_y(64,  0, 64,  0, 10) +
+        meshes.quad_z(10,  0, 64,  2, 64) +
+        meshes.quad_y( 2,  0, 64, 10, 20))
 
 SHELF_MESH = Mesh(
         meshes.quad_y(29,  0, 32,  0, 60) +
@@ -244,7 +244,7 @@ def init():
 
     v_iron = ('iron', 'Iron', 'bar/iron', 10, 'blueprint/iron_furniture')
     do_bed(furniture.extract((0, 0), (2, 3)))
-    do_bed(furniture.extract((12, 0), (2, 3)),
+    do_bed(furniture.extract((11, 0), (2, 3)),
             ('double', 'Double ', 'wood', 30, None))
     do_table(furniture.extract((2, 0), (2, 3)))
     do_table(furniture.extract((2, 3), (2, 3)), v_iron)
