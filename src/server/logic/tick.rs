@@ -18,12 +18,16 @@ pub fn tick(eng: &mut Engine) {
     eng.timer.schedule(next, |eng| eng.tick());
 
     for (cid, (act, args)) in eng.input.actions() {
-        if let Some(e) = eng.world.client(cid).pawn() {
-            if !e.activity().interruptible() {
-                continue;
+        let mut ok = false;
+        if let Some(c) = eng.world.get_client(cid) {
+            if let Some(e) = c.pawn() {
+                if e.activity().interruptible() {
+                    ok = true;
+                }
             }
-        } else {
-            // No pawn
+        }
+        if !ok {
+            // No client, or no pawn, or pawn is in an uninterruptible activity.
             continue;
         }
 
