@@ -2,7 +2,7 @@
 
 Dependencies:
 
- - rust-lang/rust 1.14.0
+ - rust-lang/rust 1.16.0
  - kripken/emscripten-fastcomp 1.37.0  (Other Emscripten components
    are not required)
 
