@@ -1,5 +1,6 @@
 import argparse
 import os
+import shlex
 import subprocess
 import sys
 
@@ -20,6 +21,9 @@ def build_parser():
 
     args.add_argument('--reconfigure', action='store_true', default=False,
             help='reuse cached configuration info when possible')
+    # Internal option, used when regenerating build.ninja on config changes
+    args.add_argument('--regenerate', action='store_true', default=False,
+            help=argparse.SUPPRESS)
 
     args.add_argument('--components', default='all',
             help='list of components to build')
@@ -120,13 +124,49 @@ def header(i):
         site_config = %{i.site_config_path}
     ''', os=os, **locals())
 
+def regenerate_rule(i, raw_args):
+    args = ' '.join(shlex.quote(arg) for arg in raw_args
+            if arg not in ('--regenerate', '--reconfigure'))
+
+    dep_list = []
+    for k, v in sys.modules.items():
+        if k.startswith('configure.') or k == '__main__':
+            path = getattr(v, '__file__', None)
+            if path is not None:
+                rel_path = os.path.relpath(path, i.root_dir)
+                dep_list.append(os.path.join('$root', rel_path))
+    dep_list.sort()
+    deps = ' '.join(dep_list)
+
+    return template('''
+        rule configure
+            command = ./configure %args --regenerate
+            generator = 1
+
+        build build.ninja: configure | %deps
+    ''', **locals())
 
 if __name__ == '__main__':
-    parser = build_parser()
-    args = parser.parse_args(sys.argv[1:])
-
     log = open('config.log', 'w')
-    log.write('Arguments: %r\n\n' % (sys.argv[1:],))
+
+    raw_args = sys.argv[1:]
+    if '--regenerate' not in raw_args and 'OUTPOST_CONFIGURE_ARGS' in os.environ:
+        env_args = shlex.split(os.environ['OUTPOST_CONFIGURE_ARGS'])
+        msg = 'Extra args from $OUTPOST_CONFIGURE_ARGS: %r' % (env_args)
+        print(msg)
+        log.write(msg)
+        raw_args.extend(env_args)
+    log.write('Arguments: %r\n\n' % (raw_args,))
+
+    parser = build_parser()
+    args = parser.parse_args(raw_args)
+
+
+    # Patch up args a bit
+
+    if args.regenerate:
+        args.reconfigure = True
+
 
     i, ok = checks.run(args, log)
     if not ok:
@@ -364,6 +404,9 @@ if __name__ == '__main__':
         # dist rules go at the top so other parts can refer to `dist.copy`
         dist.components(i, i.components),
         '',
+
+        '# Misc',
+        regenerate_rule(i, raw_args),
 
         'default $builddir/dist.stamp',
         '', # ensure there's a newline after the last command
