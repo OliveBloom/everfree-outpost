@@ -34,7 +34,17 @@ def read_config():
 
     def decrypt(k):
         value = get(k)
-        return box.decrypt(URLSafeBase64Encoder.decode(value.encode('ascii')))
+        if value is None:
+            return None
+        enc_bs = URLSafeBase64Encoder.decode(value.encode('ascii'))
+        dec_bs = box.decrypt(enc_bs)
+        return dec_bs
+
+    def decrypt_str(k):
+        dec_bs = decrypt(k)
+        if dec_bs is None:
+            return None
+        return dec_bs.decode('utf-8')
 
 
     reserved_names_path = get_default('reserved_names', None)
@@ -54,9 +64,9 @@ def read_config():
             'db_type': get_default('db_type', 'postgres'),
             'db_name': get('db_name'),
             'db_user': get('db_user'),
-            'db_pass': decrypt('db_pass').decode('utf-8'),
-            'db_host': get_default('db_host', None),
-            'db_connstr': get_default('db_connstr', None),
+            'db_pass': decrypt_str('db_pass'),
+            'db_host': get('db_host'),
+            'db_connstr': get('db_connstr'),
 
             'allowed_origin': get('allowed_origin'),
             'redir_url': get_default('redir_url', None),
@@ -71,6 +81,8 @@ if cfg['db_type'] == 'postgres':
     from db_postgres import Database
 elif cfg['db_type'] == 'mysql':
     from db_mysql import Database
+elif cfg['db_type'] == 'sqlite':
+    from db_sqlite import Database
 else:
     raise ValueError('db_type must be "postgres" or "mysql" (got %r)' % cfg['db_type'])
 db = Database(cfg)
