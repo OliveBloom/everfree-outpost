@@ -24,7 +24,13 @@ def read_config():
     config = configparser.ConfigParser()
     config.read_file(open('outpost_auth.ini'))
 
-    box = get_config_key()
+    box = None
+
+    def get_box():
+        nonlocal box
+        if box is None:
+            box = get_config_key()
+        return box
 
     def decode_b64(v):
         bs = URLSafeBase64Encoder.decode(v.encode('ascii'))
@@ -32,7 +38,7 @@ def read_config():
 
     def decrypt(v):
         enc_bs = URLSafeBase64Encoder.decode(v.encode('ascii'))
-        dec_bs = box.decrypt(enc_bs)
+        dec_bs = get_box().decrypt(enc_bs)
         return dec_bs
 
     def get_bin(k, default=None):
