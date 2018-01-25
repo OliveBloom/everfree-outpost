@@ -29,7 +29,7 @@ class Database:
             curs = self.db.cursor()
             curs.execute("SELECT value FROM counter;")
             uid, = curs.fetchone()
-            curs.execute("UPDATE counter SET value = ?;", (uid,))
+            curs.execute("UPDATE counter SET value = ?;", (uid + 1,))
             return uid
 
     def lookup_user(self, name):
