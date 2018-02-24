@@ -1,5 +1,6 @@
 import argparse
 import os
+import shlex
 import subprocess
 import sys
 
@@ -20,6 +21,9 @@ def build_parser():
 
     args.add_argument('--reconfigure', action='store_true', default=False,
             help='reuse cached configuration info when possible')
+    # Internal option, used when regenerating build.ninja on config changes
+    args.add_argument('--regenerate', action='store_true', default=False,
+            help=argparse.SUPPRESS)
 
     args.add_argument('--components', default='all',
             help='list of components to build')
@@ -72,6 +76,10 @@ def build_parser():
     args.add_argument('--site-config',
             help='YAML file containing site-specific config')
 
+    args.add_argument('--nix-patch-elf-loader', metavar='LD_LINUX',
+            help='''(advanced) patch compiled binaries to remove references
+                to nix paths''')
+
     return args
 
 
@@ -120,13 +128,51 @@ def header(i):
         site_config = %{i.site_config_path}
     ''', os=os, **locals())
 
+def regenerate_rule(i, raw_args):
+    args = ' '.join(shlex.quote(arg) for arg in raw_args
+            if arg not in ('--regenerate', '--reconfigure'))
+
+    dep_list = []
+    for k, v in sys.modules.items():
+        if k.startswith('configure.') or k == '__main__':
+            path = getattr(v, '__file__', None)
+            if path is not None:
+                rel_path = os.path.relpath(path, i.root_dir)
+                dep_list.append(os.path.join('$root', rel_path))
+    dep_list.sort()
+    deps = ' '.join(dep_list)
+
+    return template('''
+        rule configure
+            command = ./configure %args --regenerate
+            generator = 1
+
+        build build.ninja: configure | %deps
+    ''', **locals())
 
 if __name__ == '__main__':
-    parser = build_parser()
-    args = parser.parse_args(sys.argv[1:])
-
     log = open('config.log', 'w')
-    log.write('Arguments: %r\n\n' % (sys.argv[1:],))
+
+    raw_args = sys.argv[1:]
+    if '--regenerate' not in raw_args and 'OUTPOST_CONFIGURE_ARGS' in os.environ:
+        env_args = shlex.split(os.environ['OUTPOST_CONFIGURE_ARGS'])
+        lines = ['Extra args from $OUTPOST_CONFIGURE_ARGS:'] + \
+                ['  %r' % a for a in env_args]
+        for l in lines:
+            print(l)
+            log.write(l)
+        raw_args.extend(env_args)
+    log.write('Arguments: %r\n\n' % (raw_args,))
+
+    parser = build_parser()
+    args = parser.parse_args(raw_args)
+
+
+    # Patch up args a bit
+
+    if args.regenerate:
+        args.reconfigure = True
+
 
     i, ok = checks.run(args, log)
     if not ok:
@@ -138,9 +184,11 @@ if __name__ == '__main__':
     if i.python3_config is not None:
         py_includes = subprocess.check_output((i.python3_config, '--includes')).decode().strip()
         py_ldflags = subprocess.check_output((i.python3_config, '--ldflags')).decode().strip()
+        py_libs = subprocess.check_output((i.python3_config, '--libs')).decode().strip()
     else:
         py_includes = None
         py_ldflags = None
+        py_libs = None
 
     if i.debug:
         dist_manifest_base = 'debug.manifest'
@@ -195,7 +243,8 @@ if __name__ == '__main__':
                 'server_bundle', 'server_config', 'server_extra',
                 'server_types', 'server_world_types',),
             dyn_deps=('syntax_exts',),
-            src_file='$root/src/server/main.rs'),
+            src_file='$root/src/server/main.rs',
+            extra_flags=py_libs),
         native.rust('generate_terrain', 'bin',
             ('physics', 'terrain_gen',
                 'server_bundle', 'server_config', 'server_extra', 'server_types',
@@ -364,6 +413,9 @@ if __name__ == '__main__':
         # dist rules go at the top so other parts can refer to `dist.copy`
         dist.components(i, i.components),
         '',
+
+        '# Misc',
+        regenerate_rule(i, raw_args),
 
         'default $builddir/dist.stamp',
         '', # ensure there's a newline after the last command

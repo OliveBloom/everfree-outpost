@@ -24,20 +24,47 @@ def read_config():
     config = configparser.ConfigParser()
     config.read_file(open('outpost_auth.ini'))
 
-    box = get_config_key()
+    box = None
 
-    def get(k):
-        return config['DEFAULT'].get(k)
+    def get_box():
+        nonlocal box
+        if box is None:
+            box = get_config_key()
+        return box
 
-    def get_default(k, default):
-        return config['DEFAULT'].get(k, default)
+    def decode_b64(v):
+        bs = URLSafeBase64Encoder.decode(v.encode('ascii'))
+        return bs
 
-    def decrypt(k):
-        value = get(k)
-        return box.decrypt(URLSafeBase64Encoder.decode(value.encode('ascii')))
+    def decrypt(v):
+        enc_bs = URLSafeBase64Encoder.decode(v.encode('ascii'))
+        dec_bs = get_box().decrypt(enc_bs)
+        return dec_bs
+
+    def get_bin(k, default=None):
+        v = config['DEFAULT'].get(k, default)
+        if not isinstance(v, str):
+            return v
+
+        # `b64!` prefix denotes values that have been base64 encoded
+        if v.startswith('b64!'):
+            return decode_b64(v[len('b64!'):])
+
+        # `enc!` prefix denotes values encrypted with `box`
+        if v.startswith('enc!'):
+            return decrypt(v[len('enc!'):])
+
+        return v.encode('utf-8')
+
+    def get(k, default=None):
+        v = get_bin(k, default=default)
+        if isinstance(v, bytes):
+            return v.decode('utf-8')
+        else:
+            return v
 
 
-    reserved_names_path = get_default('reserved_names', None)
+    reserved_names_path = get('reserved_names')
     if reserved_names_path is not None:
         with open(reserved_names_path) as f:
             reserved_names = json.load(f)
@@ -46,21 +73,21 @@ def read_config():
 
 
     return {
-            'flask_debug': int(get_default('flask_debug', 0)),
-            'flask_secret_key': decrypt('flask_secret_key'),
+            'flask_debug': bool(int(get('flask_debug', '0'))),
+            'flask_secret_key': get_bin('flask_secret_key'),
 
-            'signing_key': nacl.signing.SigningKey(decrypt('signing_key')),
+            'signing_key': nacl.signing.SigningKey(get_bin('signing_key')),
 
-            'db_type': get_default('db_type', 'postgres'),
+            'db_type': get('db_type', 'postgres'),
             'db_name': get('db_name'),
             'db_user': get('db_user'),
-            'db_pass': decrypt('db_pass').decode('utf-8'),
-            'db_host': get_default('db_host', None),
-            'db_connstr': get_default('db_connstr', None),
+            'db_pass': get('db_pass'),
+            'db_host': get('db_host'),
+            'db_connstr': get('db_connstr'),
 
             'allowed_origin': get('allowed_origin'),
-            'redir_url': get_default('redir_url', None),
-            'secure': int(get_default('secure', 0)),
+            'redir_url': get('redir_url'),
+            'secure': int(get('secure', '0')),
 
             'reserved_names': reserved_names,
             }
@@ -71,6 +98,8 @@ if cfg['db_type'] == 'postgres':
     from db_postgres import Database
 elif cfg['db_type'] == 'mysql':
     from db_mysql import Database
+elif cfg['db_type'] == 'sqlite':
+    from db_sqlite import Database
 else:
     raise ValueError('db_type must be "postgres" or "mysql" (got %r)' % cfg['db_type'])
 db = Database(cfg)

@@ -6,7 +6,7 @@ from configure.util import join, maybe
 
 def rules(i):
     fastcomp = lambda p: os.path.join(i.emscripten_fastcomp_prefix, 'bin', p) \
-            if i.emscripten_fastcomp_prefix is not None else p
+            if i.emscripten_fastcomp_prefix else p
 
     compile_base = join(
             i.rustc_feature_env,

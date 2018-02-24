@@ -10,20 +10,24 @@ def rules(i):
             command = touch $out
             description = STAMP $out
 
+        copy_files = $python3 $root/mk/misc/copy_files.py $
+        %if i.nix_patch_elf_loader
+            --patchelf %{i.patchelf} $
+            --set-elf-loader %{i.nix_patch_elf_loader}
+        %end
+
         rule copy_file
             # Use -f to avoid "text file busy" when copying binaries
-            command = cp -f $in $out
+            command = $copy_files --mode file $in $out
             description = COPY $out
 
         rule copy_dir_stamp
-            command = $python3 $root/mk/misc/clone_dir.py --mode dir $
-                $copy_src $copy_dest $stamp
+            command = $copy_files --mode dir --stamp $out $copy_src $copy_dest
             description = COPY $copy_dest ($stamp)
             depfile = $stamp.d
 
         rule copy_list_stamp
-            command = $python3 $root/mk/misc/clone_dir.py --mode list $
-                $list_src $copy_dest $stamp
+            command = $copy_files --mode list --stamp $out $list_src $copy_dest
             description = COPY $copy_dest ($stamp)
             depfile = $stamp.d
     ''', **locals())
@@ -57,7 +61,7 @@ def from_manifest(contents, manifest_stamp):
             src = src[1:]
             stamp = '$builddir/dist_%s.stamp' % dest.strip('/').replace('/', '_')
             add_build('''
-                build %stamp: copy_list_stamp | %src $root/mk/misc/clone_dir.py
+                build %stamp: copy_list_stamp | %src $root/mk/misc/copy_files.py
                     list_src = %src
                     copy_dest = $dist/%dest
                     stamp = %stamp
@@ -67,7 +71,7 @@ def from_manifest(contents, manifest_stamp):
         elif dest.endswith('/'):
             stamp = '$builddir/dist_%s.stamp' % dest.strip('/').replace('/', '_')
             add_build('''
-                build %stamp: copy_dir_stamp | %src $root/mk/misc/clone_dir.py
+                build %stamp: copy_dir_stamp | %src $root/mk/misc/copy_files.py
                     copy_src = %src
                     copy_dest = $dist/%dest
                     stamp = %stamp
@@ -76,7 +80,7 @@ def from_manifest(contents, manifest_stamp):
 
         else:
             add_build('''
-                build $dist/%dest: copy_file %src
+                build $dist/%dest: copy_file %src | $root/mk/misc/copy_files.py
             ''', **locals())
             dist_deps.append('$dist/%s' % dest)
 
