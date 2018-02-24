@@ -184,9 +184,11 @@ if __name__ == '__main__':
     if i.python3_config is not None:
         py_includes = subprocess.check_output((i.python3_config, '--includes')).decode().strip()
         py_ldflags = subprocess.check_output((i.python3_config, '--ldflags')).decode().strip()
+        py_libs = subprocess.check_output((i.python3_config, '--libs')).decode().strip()
     else:
         py_includes = None
         py_ldflags = None
+        py_libs = None
 
     if i.debug:
         dist_manifest_base = 'debug.manifest'
@@ -241,7 +243,8 @@ if __name__ == '__main__':
                 'server_bundle', 'server_config', 'server_extra',
                 'server_types', 'server_world_types',),
             dyn_deps=('syntax_exts',),
-            src_file='$root/src/server/main.rs'),
+            src_file='$root/src/server/main.rs',
+            extra_flags=py_libs),
         native.rust('generate_terrain', 'bin',
             ('physics', 'terrain_gen',
                 'server_bundle', 'server_config', 'server_extra', 'server_types',
