@@ -76,6 +76,10 @@ def build_parser():
     args.add_argument('--site-config',
             help='YAML file containing site-specific config')
 
+    args.add_argument('--nix-patch-elf-loader', metavar='LD_LINUX',
+            help='''(advanced) patch compiled binaries to remove references
+                to nix paths''')
+
     return args
 
 
@@ -152,9 +156,11 @@ if __name__ == '__main__':
     raw_args = sys.argv[1:]
     if '--regenerate' not in raw_args and 'OUTPOST_CONFIGURE_ARGS' in os.environ:
         env_args = shlex.split(os.environ['OUTPOST_CONFIGURE_ARGS'])
-        msg = 'Extra args from $OUTPOST_CONFIGURE_ARGS: %r' % (env_args)
-        print(msg)
-        log.write(msg)
+        lines = ['Extra args from $OUTPOST_CONFIGURE_ARGS:'] + \
+                ['  %r' % a for a in env_args]
+        for l in lines:
+            print(l)
+            log.write(l)
         raw_args.extend(env_args)
     log.write('Arguments: %r\n\n' % (raw_args,))
 
