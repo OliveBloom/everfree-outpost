@@ -417,6 +417,10 @@ if __name__ == '__main__':
         '# Misc',
         regenerate_rule(i, raw_args),
 
+        native.rust('render_map', 'bin',
+            ('physics', 'server_bundle', 'server_config', 'server_extra',
+                'server_types', 'common_util', 'server_world_types')),
+
         'default $builddir/dist.stamp',
         '', # ensure there's a newline after the last command
         ))
