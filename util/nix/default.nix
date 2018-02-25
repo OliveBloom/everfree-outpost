@@ -103,6 +103,10 @@ let pkgs = import <nixpkgs> {};
         num-traits = rustDep "num-traits-0.1.36" {
             sha256 = "1wzf0jd77dbagjqk9ygd6dy1729zg7gj7flf3sa54n7qvfhcwi79";
         };
+        num-rational = rustDep "num-rational-0.1.36" {
+            sha256 = "0jibhs8xiap2wlv1xjwdvhyj4yrxwfisqbnfm53vjm5ldlijp87p";
+            dependencies = [ num-traits num-integer ];
+        };
 
         sdl2 = rustDep "sdl2-0.29.0" {
             sha256 = "1f3va8g5ng5xv2mnbdi3ayg3lg08yidrwgqhy2j47xjishg8bihk";
@@ -133,10 +137,35 @@ let pkgs = import <nixpkgs> {};
 
         png = rustDep "png-0.6.2" {
             sha256 = "03i78w5jbvk9y6babfrh7h0akvg81pcyyhniilv24z5v0vh5jvjs";
-            dependencies = [ inflate num-iter bitflags ];
+            dependencies = [ inflate deflate num-iter bitflags ];
+            features = [ "png-encoding" ];
         };
         inflate = rustDep "inflate-0.1.1" {
             sha256 = "112kh9hjcjjxdybl032mdhpwnr3qxw8j0ch6hwanwpcf3gz42g1h";
+        };
+        deflate = rustDep "deflate-0.7.17" {
+            sha256 = "022jfc5rwhd9xgsgap8983ihnginmymcsh733g37dmsq2k6yq10x";
+            dependencies = [ byteorder adler32 ];
+        };
+        adler32 = rustDep "adler32-1.0.2" {
+            sha256 = "1974q3nysai026zhz24df506cxwi09jdzqksll4h7ibpb5n9g1d4";
+        };
+
+        image = rustDep "image-0.12.3" {
+            sha256 = "12xdzi29vr19gz3h93c1ihyvyv9xar9sp0inrjwwvlbjvn8nn0p9";
+            dependencies = [ byteorder enum_primitive
+                num-iter num-rational num-traits
+                png
+            ];
+            features = [ "png_codec" "png" ];
+        };
+        byteorder = rustDep "byteorder-1.2.1" {
+            sha256 = "1wsxnqcscg4gchdmgdbwc78lw2qx2i6bnjd564xq7h7qc4fp2157";
+            features = [ "std" ];
+        };
+        enum_primitive = rustDep "enum_primitive-0.1.1" {
+            sha256 = "1a225rlsz7sz3nn14dar71kp2f9v08s3rwl6j55xp51mv01f695y";
+            dependencies = [ num-traits ];
         };
     };
 
