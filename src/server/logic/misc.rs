@@ -271,6 +271,8 @@ pub fn is_cave(eng: &mut Engine,
 
 fn is_plain_cave(p: &ObjectRef<world::Plane>,
                  pos: V3) -> bool {
+    // FIXME: This currently crashes if pos.z >= 16.  I patched around this in
+    // scripts/outpost/cave.py because that's easier than rebuilding the server at this point.
     let data = p.world().data();
     let tc = unwrap_or!(p.get_terrain_chunk(pos.reduce().div_floor(scalar(CHUNK_SIZE))),
                         return false);

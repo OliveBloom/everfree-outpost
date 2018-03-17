@@ -13,6 +13,10 @@ def cave_junk(e, s, args):
 
 
 def mine_wall(e, args):
+    # Awful hack to work around a crash in logic::misc::is_cave
+    if util.hit_tile(e).z >= 16:
+        return
+
     if not e.plane().is_cave(util.hit_tile(e)):
         return
 
