@@ -1,7 +1,7 @@
 
 with builtins;
 
-let pkgs = import <nixpkgs> {};
+let pkgs = import ./pinned-nixpkgs.nix {};
     inherit (pkgs) stdenv lib fetchurl fetchzip callPackage buildEnv;
 
     pinnedRust = import ./pinned-rust.nix pkgs {

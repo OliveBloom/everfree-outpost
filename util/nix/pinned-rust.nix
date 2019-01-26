@@ -1,4 +1,5 @@
-pkgs@{ stdenv, lib, fetchurl, fetchzip, callPackage, runCommand, ... }:
+pkgs@{ stdenv, lib, fetchurl, fetchzip, callPackage, runCommand,
+    recurseIntoAttrs, makeRustPlatform, ... }:
 { minorVersion, srcHash, bootstrapHashes }:
 
 
@@ -32,34 +33,20 @@ let platform =
         versionType = "bootstrap";
     };
 
-    filterMap = f: l: builtins.filter (x: x != null) (map f l);
+    rustPlatform = recurseIntoAttrs (makeRustPlatform bootstrap);
+
 
     src = fetchurl {
         url = "https://static.rust-lang.org/dist/rustc-${buildVersion}-src.tar.gz";
         sha256 = srcHash;
     };
 
-    rustc = lib.overrideDerivation pkgs.rustc (old: {
-        name = "rustc-${buildVersion}";
+    rustc = pkgs.rustc.override {
         version = buildVersion;
-        src = src;
-        configureFlags = filterMap
-            (s:
-                # --disable-locked-deps exists only from 1.17 onward
-                if s == "--disable-locked-deps" && lessThan minorVersion 17
-                then null
-                # Replace the old --local-rust-root with our new
-                # rustc-bootstrap derivation
-                else if lib.hasPrefix "--local-rust-root=" s
-                then "--local-rust-root=${bootstrap.rustc}"
-                else s) old.configureFlags;
-        nativeBuildInputs = map
-            (drv:
-                # Replace the old rustc-bootstrap dependency with a new one
-                if lib.hasPrefix "rustc-bootstrap" drv.name
-                then bootstrap.rustc
-                else drv) old.nativeBuildInputs;
-    });
+        patches = [];
+        targetPatches = [];
+        inherit rustPlatform src;
+    };
 
     rustSrc = runCommand "unpack-rust-src-${buildVersion}" {
         src = src;
