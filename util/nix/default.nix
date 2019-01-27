@@ -197,7 +197,7 @@ in pkgs.mkShell {
         inherit rustc emscriptenFastcomp Wand;
         inherit (pkgs)
             stdenv ninja
-            python3 closurecompiler optipng
+            python3 closurecompiler yuicompressor optipng
             SDL2 boost websocketpp ncurses
             patchelf;
         glibc_out = pkgs.glibc.out;
