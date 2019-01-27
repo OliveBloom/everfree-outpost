@@ -6,7 +6,7 @@ def configure(ctx):
     ctx.detect('closure_compiler', 'Closure Compiler',
             ('closure-compiler',), chk_closure)
     ctx.detect('yui_compressor', 'YUI Compressor',
-            ('yui-compressor',), chk_yui)
+            ('yui-compressor', 'yuicompressor'), chk_yui)
 
 def requirements(ctx):
     return ('closure_compiler', 'yui_compressor')
