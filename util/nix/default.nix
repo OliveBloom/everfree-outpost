@@ -189,15 +189,25 @@ let pkgs = import ./pinned-nixpkgs.nix {};
     inherit (pinnedImagemagick) Wand;
 
 
+    # We need this ancient version of closure-compiler.  Outpost was originally
+    # built against this version since it's what Debian shipped at the time.
+    # The closure-compiler command line syntax has changed significantly since
+    # then.
+    closurecompiler = import ./pinned-closurecompiler.nix pkgs {
+        version = "20130603";
+        sha256 = "0bk0s8p9r9an5m0l8y23wjlx490k15i4zah0a384a2akzji8y095";
+    };
+
+
     elfLoader = import ./elf-loader.nix pkgs;
 
 
 in pkgs.mkShell {
     buildInputs = attrValues {
-        inherit rustc emscriptenFastcomp Wand;
+        inherit rustc emscriptenFastcomp Wand closurecompiler;
         inherit (pkgs)
             stdenv ninja
-            python3 closurecompiler yuicompressor optipng
+            python3 yuicompressor optipng
             SDL2 boost websocketpp ncurses
             patchelf;
         glibc_out = pkgs.glibc.out;
